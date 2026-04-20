@@ -17,5 +17,14 @@ spring:
       ddl-auto: update
     show-sql: true
 
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8060/eureka/
+
 
 
