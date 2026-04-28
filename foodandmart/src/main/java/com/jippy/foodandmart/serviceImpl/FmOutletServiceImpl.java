@@ -407,7 +407,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         FmOutlet outlet = outletRepository.findById(outletId)
                 .orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
 
-        log.debug("SERVICE: Outlet found for outletId={}", outletId);
+        log.info("SERVICE: Outlet found for outletId={}", outletId);
 
         // Update outlet timings if they are provided in request
         if (dto.getOutletTimings() != null) {

@@ -20,13 +20,13 @@ public class FmOutletAddress {
     @Column(name = "address_id")
     private Integer addressId;
 
-    @Column(name = "outlet_id", nullable = false)
-    private Integer outletId;
-
-    @JsonIgnore
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "outlet_id", insertable = false, updatable = false)
-    private FmOutlet outlet;
+//    @Column(name = "outlet_id", nullable = false)
+//    private Integer outletId;
+//
+//    @JsonIgnore
+//    @OneToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "outlet_id", insertable = false, updatable = false)
+//    private FmOutlet outlet;
 
     @Column(name = "jippy_address_id", nullable = false)
     private Integer jippyAddressId;

@@ -71,9 +71,9 @@ public class FmOutlet {
     @JoinColumn(name = "merchant_id", insertable = false, updatable = false)
     private FmMerchant merchant;
 
-    @JsonIgnore
-    @OneToOne(mappedBy = "outlet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private FmOutletAddress address;
+//    @JsonIgnore
+//    @OneToOne(mappedBy = "outlet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+//    private FmOutletAddress address;
 
     @JsonIgnore
     @OneToMany(mappedBy = "outlet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

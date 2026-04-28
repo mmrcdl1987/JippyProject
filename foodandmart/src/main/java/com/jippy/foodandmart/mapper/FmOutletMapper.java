@@ -181,7 +181,7 @@ public final class FmOutletMapper {
     public static FmOutletAddress toAddressEntity(FmOutletRequestDTO dto, Integer outletId,
                                                   Integer stateId, Integer areaId) {
         FmOutletAddress address = new FmOutletAddress();
-        address.setOutletId(outletId);
+//        address.setOutletId(outletId);
         address.setJippyAddressId(outletId);
         address.setBuildingNumber(safe(dto.getBuildingNumber()));
         address.setRoad(safe(dto.getRoad()));
