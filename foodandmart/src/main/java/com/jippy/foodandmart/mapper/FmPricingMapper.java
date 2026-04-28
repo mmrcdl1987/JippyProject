@@ -1,5 +1,5 @@
 package com.jippy.foodandmart.mapper;
-import com.jippy.foodandmart.constants.AppConstants;
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmProductResponseDto;
 import com.jippy.foodandmart.entity.FmProductOnlinePricing;
 import org.springframework.stereotype.Component;
@@ -32,11 +32,11 @@ public class FmPricingMapper {
         ProductOnlinePricingEntity.setCreatedAt(LocalDateTime.now());
         ProductOnlinePricingEntity.setUpdatedAt(LocalDateTime.now());
 
-        ProductOnlinePricingEntity.setCreatedBy(AppConstants.DEFAULT_CREATED_BY);
-        ProductOnlinePricingEntity.setUpdatedBy(AppConstants.DEFAULT_CREATED_BY);
+        ProductOnlinePricingEntity.setCreatedBy(FmAppConstants.DEFAULT_CREATED_BY);
+        ProductOnlinePricingEntity.setUpdatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
         ProductOnlinePricingEntity.setIsApproved(true);
-        ProductOnlinePricingEntity.setApprovedBy(AppConstants.DEFAULT_CREATED_BY);
+        ProductOnlinePricingEntity.setApprovedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
         return ProductOnlinePricingEntity;
     }

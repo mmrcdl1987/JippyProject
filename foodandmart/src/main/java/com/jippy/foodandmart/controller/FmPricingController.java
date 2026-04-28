@@ -1,6 +1,6 @@
 package com.jippy.foodandmart.controller;
 
-import com.jippy.foodandmart.constants.AppConstants;
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.service.IPricingService;
 import jakarta.validation.Valid;
@@ -71,8 +71,8 @@ public class FmPricingController {
 
         return ResponseEntity.ok(
                 new FmResponseDto(
-                        AppConstants.STATUS_200,
-                        AppConstants.MSG_PRICE_UPDATED
+                        FmAppConstants.STATUS_200,
+                        FmAppConstants.MSG_PRICE_UPDATED
                 )
         );
     }
@@ -91,8 +91,8 @@ public class FmPricingController {
 
         return ResponseEntity.ok(
                 new FmResponseDto(
-                        AppConstants.STATUS_200,
-                        AppConstants.MSG_PRICE_UPDATED
+                        FmAppConstants.STATUS_200,
+                        FmAppConstants.MSG_PRICE_UPDATED
                 )
         );
     }

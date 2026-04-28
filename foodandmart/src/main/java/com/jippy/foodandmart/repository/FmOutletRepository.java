@@ -1,7 +1,6 @@
 package com.jippy.foodandmart.repository;
 
-
-import com.jippy.foodandmart.entity.FmOutlet;
+import com.jippy.foodandmart.entity .FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,9 +10,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
+    Optional<FmOutlet> findByOutletPhone(String phone);
+    boolean existsByOutletPhone(String phone);
+    boolean existsByMerchantIdAndOutletName(Integer merchantId, String outletName);
+    List<FmOutlet> findByMerchantId(Integer merchantId);
+
 
     @Query(value = """
                SELECT
@@ -214,5 +219,4 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
         WHERE outlet_id IN (:ids)
         """, nativeQuery = true)
     int approveOutlets(@Param("ids") List<Integer> ids);
-
 }
