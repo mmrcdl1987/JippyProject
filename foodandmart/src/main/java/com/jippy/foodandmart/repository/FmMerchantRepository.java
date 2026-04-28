@@ -1,13 +1,22 @@
 package com.jippy.foodandmart.repository;
 
-
 import com.jippy.foodandmart.entity.FmMerchant;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
+@Repository
 public interface FmMerchantRepository extends JpaRepository<FmMerchant, Integer> {
+    Optional<FmMerchant> findByMerchantEmail(String email);
+    Optional<FmMerchant> findByMerchantPhone(String phone);
+    boolean existsByMerchantEmail(String email);
+    boolean existsByMerchantPhone(String phone);
+
+
     @Query(value = """
             SELECT 
                 m.merchant_id AS merchantId,

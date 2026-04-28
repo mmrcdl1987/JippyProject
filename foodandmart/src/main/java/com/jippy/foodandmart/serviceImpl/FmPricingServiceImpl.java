@@ -1,5 +1,5 @@
 package com.jippy.foodandmart.serviceImpl;
-import com.jippy.foodandmart.constants.AppConstants;
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmProduct;
@@ -49,8 +49,8 @@ public class FmPricingServiceImpl implements IPricingService {
         }
 
         List<FmOutlet> outlets = isApproved
-                ? outletRepo.findApprovedOutlets(areaId, AppConstants.ADDRESS_MERCHANT_TYPE, search)
-                : outletRepo.findUnapprovedOutlets(areaId, AppConstants.ADDRESS_MERCHANT_TYPE, search);
+                ? outletRepo.findApprovedOutlets(areaId, FmAppConstants.ADDRESS_MERCHANT_TYPE, search)
+                : outletRepo.findUnapprovedOutlets(areaId, FmAppConstants.ADDRESS_MERCHANT_TYPE, search);
 
         if (outlets.isEmpty()) {
             log.warn("No outlets found for areaId={}", areaId);
@@ -226,7 +226,7 @@ public class FmPricingServiceImpl implements IPricingService {
 
         log.info("Validating priceModel via Feign: {}", priceModel);
 
-        ResponseEntity<List<DivPriceModelDto>> response =
+        ResponseEntity<List<FmDivPriceModelDto>> response =
                 divisionFeignClient.getPriceModels();
 
         if (response == null || response.getBody() == null) {
@@ -234,7 +234,7 @@ public class FmPricingServiceImpl implements IPricingService {
             throw new PricingException("Unable to fetch pricing models");
         }
 
-        List<DivPriceModelDto> models = response.getBody();
+        List<FmDivPriceModelDto> models = response.getBody();
 
         boolean valid = models.stream()
                 .anyMatch(m -> m.getPriceModelName().equalsIgnoreCase(priceModel));
@@ -256,8 +256,8 @@ public class FmPricingServiceImpl implements IPricingService {
                     productId,
                     outletCategoryId,
                     price,
-                    AppConstants.DEFAULT_CREATED_BY,
-                    AppConstants.DEFAULT_CREATED_BY
+                    FmAppConstants.DEFAULT_CREATED_BY,
+                    FmAppConstants.DEFAULT_CREATED_BY
             );
             log.debug("Updated price | productId={} | outletCategoryId={}", productId, outletCategoryId);
 
