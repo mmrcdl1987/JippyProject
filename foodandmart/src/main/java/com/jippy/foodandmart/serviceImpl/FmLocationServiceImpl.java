@@ -39,8 +39,8 @@ public class FmLocationServiceImpl implements IFmLocationService {
     @Autowired
     private FmAreaRepository areaRepository;
 
-    @Autowired
-    private DivisionFeignClient priceModelFeignClient;
+//    @Autowired
+//    private DivisionFeignClient priceModelFeignClient;
 
     //  Fetch all states
     @Override
@@ -52,12 +52,12 @@ public class FmLocationServiceImpl implements IFmLocationService {
         List<FmStateDto> stateDtoList = new ArrayList<>();
 
 
-        ResponseEntity<List<FmDivPriceModelDto>> priceModelDtoListResponse = priceModelFeignClient.getPriceModels();
-        List<FmDivPriceModelDto> priceModelDtoList = priceModelDtoListResponse.getBody();
-        for(FmDivPriceModelDto divPriceModelDto:priceModelDtoList){
-            logger.info("PriceModelId : {} ", divPriceModelDto.getPriceModelId());
-            logger.info("PriceModelName : {} ", divPriceModelDto.getPriceModelName());
-        }
+//        ResponseEntity<List<FmDivPriceModelDto>> priceModelDtoListResponse = priceModelFeignClient.getPriceModels();
+//        List<FmDivPriceModelDto> priceModelDtoList = priceModelDtoListResponse.getBody();
+//        for(FmDivPriceModelDto divPriceModelDto:priceModelDtoList){
+//            logger.info("PriceModelId : {} ", divPriceModelDto.getPriceModelId());
+//            logger.info("PriceModelName : {} ", divPriceModelDto.getPriceModelName());
+//        }
 
         if (states != null && !states.isEmpty()) {
             for (FmState  state : states) {
