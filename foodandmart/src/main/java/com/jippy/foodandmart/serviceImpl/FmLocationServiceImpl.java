@@ -1,7 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 
 
-import com.jippy.foodandmart.dto.DivPriceModelDto;
+import com.jippy.foodandmart.dto.FmDivPriceModelDto;
 import com.jippy.foodandmart.dto.FmAreaDto;
 import com.jippy.foodandmart.dto.FmCityDto;
 import com.jippy.foodandmart.dto.FmStateDto;
@@ -52,9 +52,9 @@ public class FmLocationServiceImpl implements IFmLocationService {
         List<FmStateDto> stateDtoList = new ArrayList<>();
 
 
-        ResponseEntity<List<DivPriceModelDto>> priceModelDtoListResponse = priceModelFeignClient.getPriceModels();
-        List<DivPriceModelDto> priceModelDtoList = priceModelDtoListResponse.getBody();
-        for(DivPriceModelDto divPriceModelDto:priceModelDtoList){
+        ResponseEntity<List<FmDivPriceModelDto>> priceModelDtoListResponse = priceModelFeignClient.getPriceModels();
+        List<FmDivPriceModelDto> priceModelDtoList = priceModelDtoListResponse.getBody();
+        for(FmDivPriceModelDto divPriceModelDto:priceModelDtoList){
             logger.info("PriceModelId : {} ", divPriceModelDto.getPriceModelId());
             logger.info("PriceModelName : {} ", divPriceModelDto.getPriceModelName());
         }

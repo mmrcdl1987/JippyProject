@@ -4,10 +4,17 @@ import com.jippy.foodandmart.entity.FmProduct;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
+@Repository
 public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
+    List<FmProduct> findByOutletCategoryId(Integer outletCategoryId);
+    Optional<FmProduct> findByOutletCategoryIdAndProductNameIgnoreCase(Integer outletCategoryId, String productName);
+    boolean existsByOutletCategoryIdAndProductNameIgnoreCase(Integer outletCategoryId, String productName);
+    long countByOutletCategoryId(Integer outletCategoryId);
 
     // APPROVED FLOW (WITH PRICING - NEW DESIGN)
     @Query(value = """
