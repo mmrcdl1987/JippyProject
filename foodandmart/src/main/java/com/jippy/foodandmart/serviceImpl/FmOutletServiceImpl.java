@@ -71,7 +71,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         List<FmOutlet> outlets = outletRepository.findAll();
         List<FmOutletSummaryDTO> result = new ArrayList<>();
         for (FmOutlet o : outlets) {
-            FmOutletAddress addr = addressRepository.findByOutletId(o.getOutletId()).orElse(null);
+            FmOutletAddress addr = addressRepository.findByJippyAddressId(o.getOutletId()).orElse(null);
             result.add(FmOutletSummaryDTO.from(o, 0, addr));
         }
         return result;
@@ -82,7 +82,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         List<FmOutlet> outlets = outletRepository.findByMerchantId(merchantId);
         List<FmOutletSummaryDTO> result = new ArrayList<>();
         for (FmOutlet o : outlets) {
-            FmOutletAddress addr = addressRepository.findByOutletId(o.getOutletId()).orElse(null);
+            FmOutletAddress addr = addressRepository.findByJippyAddressId(o.getOutletId()).orElse(null);
             result.add(FmOutletSummaryDTO.from(o, 0, addr));
         }
         return result;

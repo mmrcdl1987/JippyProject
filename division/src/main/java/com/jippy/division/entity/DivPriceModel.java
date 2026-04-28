@@ -6,7 +6,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "price_model")
+@Table(name = "price_model", schema = "jippy_division")
 @Data
 public class DivPriceModel {
 
