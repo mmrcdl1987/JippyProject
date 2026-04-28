@@ -288,7 +288,7 @@ public class FmPricingServiceImpl implements IPricingService {
             return base.add(value);
         }
 
-        if ("PERCENT".equalsIgnoreCase(type)) {
+        if ("PERCENTAGE".equalsIgnoreCase(type)) {
             return base.add(
                     base.multiply(value)
                             .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)

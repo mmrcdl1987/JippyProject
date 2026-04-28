@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FmOutletAddressRepository extends JpaRepository<FmOutletAddress, Integer> {
-    java.util.Optional<FmOutletAddress> findByOutletId(Integer outletId);
+    java.util.Optional<FmOutletAddress> findByJippyAddressId(Integer outletId);
 }

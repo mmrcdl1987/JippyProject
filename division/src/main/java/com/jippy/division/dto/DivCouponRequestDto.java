@@ -20,10 +20,11 @@ public class DivCouponRequestDto {
     @NotNull
     private Double discountValue;
     private Double minOrderValue;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+   @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startDate;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endDate;
+
     private Integer usageLimitPerUser;
     private Integer paymentMode;
     private Integer createdBy;

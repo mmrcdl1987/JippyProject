@@ -196,7 +196,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
           AND a.address_type = :addressType
           AND EXISTS (
               SELECT 1
-              FROM jippy_division.product_online_pricing pop
+              FROM jippy_fm.product_online_pricing pop
               JOIN jippy_fm.outlet_categories oc 
                 ON pop.outlet_category_id = oc.outlet_category_id
               WHERE oc.outlet_id = o.outlet_id

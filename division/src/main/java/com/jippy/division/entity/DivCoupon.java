@@ -6,7 +6,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "coupons")
+@Table(name = "coupons" ,schema = "jippy_division")
 @Data
 public class DivCoupon {
 
@@ -56,9 +56,5 @@ public class DivCoupon {
 
     @Column(name = "updated_by")
     private Integer updatedBy;
-
-
-
-
 
 }
