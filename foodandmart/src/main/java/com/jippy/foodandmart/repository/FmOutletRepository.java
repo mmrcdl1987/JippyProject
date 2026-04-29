@@ -1,18 +1,24 @@
 package com.jippy.foodandmart.repository;
 
-
-import com.jippy.foodandmart.entity.FmOutlet;
+import com.jippy.foodandmart.entity .FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
+    Optional<FmOutlet> findByOutletPhone(String phone);
+    boolean existsByOutletPhone(String phone);
+    boolean existsByMerchantIdAndOutletName(Integer merchantId, String outletName);
+    List<FmOutlet> findByMerchantId(Integer merchantId);
+
 
     @Query(value = """
                SELECT
@@ -163,4 +169,54 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
     List<FmOutletByMerchantProjection> getOutletsByMerchantId(
             @Param("merchantId") Integer merchantId
     );
+
+    //  UNAPPROVED OUTLETS (NO CHANGE)
+    @Query(value = """
+        SELECT o.*
+        FROM jippy_fm.outlets o
+        JOIN jippy_fm.address a 
+          ON a.jippy_address_id = o.outlet_id
+        WHERE a.area_id = :areaId
+          AND a.address_type = :addressType
+          AND o.is_approved = false
+          AND (:search IS NULL OR o.outlet_name ILIKE CONCAT('%', :search, '%'))
+        """, nativeQuery = true)
+    List<FmOutlet> findUnapprovedOutlets(
+            @Param("areaId") Integer areaId,
+            @Param("addressType") String addressType,
+            @Param("search") String search
+    );
+    // APPROVED OUTLETS (FIXED - remove duplicates properly)
+    @Query(value = """
+        SELECT o.*
+        FROM jippy_fm.outlets o
+        JOIN jippy_fm.address a 
+          ON a.jippy_address_id = o.outlet_id
+        WHERE a.area_id = :areaId
+          AND a.address_type = :addressType
+          AND EXISTS (
+              SELECT 1
+              FROM jippy_fm.product_online_pricing pop
+              JOIN jippy_fm.outlet_categories oc 
+                ON pop.outlet_category_id = oc.outlet_category_id
+              WHERE oc.outlet_id = o.outlet_id
+          )
+          AND (:search IS NULL OR o.outlet_name ILIKE CONCAT('%', :search, '%'))
+        """, nativeQuery = true)
+    List<FmOutlet> findApprovedOutlets(
+            @Param("areaId") Integer areaId,
+            @Param("addressType") String addressType,
+            @Param("search") String search
+    );
+
+
+    //  APPROVE OUTLETS (NO CHANGE)
+    @Modifying
+    @Query(value = """
+        UPDATE jippy_fm.outlets
+        SET is_approved = true,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE outlet_id IN (:ids)
+        """, nativeQuery = true)
+    int approveOutlets(@Param("ids") List<Integer> ids);
 }

@@ -1,19 +1,19 @@
 package com.jippy.foodandmart.dto;
 
-import lombok.Data;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-@Data
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FmProductDto {
-    private Integer productId;
-    private String productName;
-    private String description;
-//    accept both merchant price and online price as the same field "price".
+    private Integer    productId;
+    private String     productName;
+    private String     description;
+    private BigDecimal merchantPrice;
     private BigDecimal Price;
-    private Boolean isVeg;
-    private Boolean hasProductVariants;
-
+    private Boolean    isVeg;
+    private Boolean    hasProductVariants;
+    private List<FmProductVariantDTO> variants;
     private List<FmProductTimingDto> productTimings;
 }

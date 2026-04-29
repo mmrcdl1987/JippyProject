@@ -1,3 +1,4 @@
+
 package com.jippy.notification.service;
 
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -70,6 +71,11 @@ public class NOutletNotificationService {
 
         log.info("Sending FCM notification | orderId={}, topic={}", event.getOrderId(), topic);
 
+    public void processNotification(NOrderEvent orderEvent) {
+
+        try {
+            
+        String outletTopic = "outlet_" + orderEvent.getOutletId();
         Message message = Message.builder()
                 .setTopic(topic)
                 .setNotification(com.google.firebase.messaging.Notification.builder()
@@ -78,8 +84,6 @@ public class NOutletNotificationService {
                         .build())
                 .putData("orderId", String.valueOf(event.getOrderId()))
                 .build();
-
-        try {
             FirebaseMessaging.getInstance().send(message);
 
             log.info("FCM sent successfully | orderId={}, topic={}", event.getOrderId(), topic);
@@ -89,4 +93,3 @@ public class NOutletNotificationService {
             throw new NotificationException("Failed to send FCM notification");
         }
     }
-}

@@ -1,6 +1,4 @@
 package com.jippy.foodandmart.controller;
-
-
 import com.jippy.foodandmart.dto.FmAreaDto;
 import com.jippy.foodandmart.dto.FmCityDto;
 import com.jippy.foodandmart.dto.FmStateDto;
@@ -15,17 +13,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/fm/location")
 @Tag(name = "Location API", description = "APIs for fetching State, City, Area data")
 public class FmLocationController {
-
-    private static final Logger logger =
-            LoggerFactory.getLogger(FmLocationController.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(FmLocationController.class);
     @Autowired
     private IFmLocationService locationService;
 

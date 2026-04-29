@@ -111,10 +111,10 @@ public class DivCouponController {
     }
 
 
-    @GetMapping("/getPriceModels")
+    @GetMapping(value = "/getPriceModels",produces = "application/json")
     public ResponseEntity<List<DivPriceModelDto>> getPriceModels(){
         logger.info("getPriceModels API initiated");
-        List<DivPriceModelDto> priceModelDtoList =couponService.getAllPricelModels();
+        List<DivPriceModelDto> priceModelDtoList =couponService.getAllPriceModels();
         logger.info("getPriceModels API Response : {}", priceModelDtoList.toString());
         return  ResponseEntity.status(HttpStatus.OK).body(priceModelDtoList);
     }

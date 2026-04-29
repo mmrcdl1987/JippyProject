@@ -20,7 +20,7 @@ public class COorderController {
     @GetMapping("/order")
      public String order(){
         logger.info("order api is called");
-        COOrderService.placeOrder();
+       // COOrderService.placeOrder();
         return "order api is called";
      }
 }

@@ -20,5 +20,5 @@ public interface ICouponService {
 
     List<DivCouponResponseDto> getAllCoupons(int page, int size);
 
-    List<DivPriceModelDto> getAllPricelModels();
+    List<DivPriceModelDto> getAllPriceModels();
 }

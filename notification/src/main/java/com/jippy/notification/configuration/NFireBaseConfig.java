@@ -35,11 +35,13 @@ public class NFireBaseConfig {
 //        }
 //    }
 
-        private static final String FIREBASE_FILE = "jippy-firebase-key.json";
-
-        @PostConstruct
-        public void initialize() {
-
+ private static final String FIREBASE_FILE = "jippy-firebase-key.json";
+ @PostConstruct
+    public void initialize() {
+        try {
+            // Load the JSON file from the resources folder
+            InputStream serviceAccount = new ClassPathResource(FIREBASE_FILE).getInputStream();
+            //InputStream serviceAccount = new ClassPathResource(".json").getInputStream();
             if (!FirebaseApp.getApps().isEmpty()) {
                 log.info("Firebase already initialized");
                 return;

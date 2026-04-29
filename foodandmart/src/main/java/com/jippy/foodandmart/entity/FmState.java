@@ -1,17 +1,13 @@
 package com.jippy.foodandmart.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "state", schema = "jippy_fm")
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FmState {
 
     @Id
@@ -19,7 +15,7 @@ public class FmState {
     @Column(name = "state_id")
     private Integer stateId;
 
-    @Column(name = "state_name")
+    @Column(name = "state_name", length = 100, nullable = false)
     private String stateName;
 
     @Column(name = "created_at")

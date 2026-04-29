@@ -147,7 +147,7 @@ public class CouponService implements ICouponService {
 
 
     @Override
-    public List<DivPriceModelDto> getAllPricelModels() {
+    public List<DivPriceModelDto> getAllPriceModels() {
         List<DivPriceModel> priceModelList = priceModelRepository.findAll();
         List<DivPriceModelDto> priceModelDtoList = List.of();
         if(!priceModelList.isEmpty()){
