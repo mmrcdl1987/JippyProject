@@ -18,7 +18,7 @@ spring:
     show-sql: true
 
     kafka:
-      bootstrap-servers: localhost:9092
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
       consumer:
         # Starts reading from the beginning of the topic if no offset is found
         auto-offset-reset: earliest

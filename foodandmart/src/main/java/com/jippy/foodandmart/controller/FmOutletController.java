@@ -167,7 +167,8 @@ public class FmOutletController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(FmApiResponse.error("No data rows found in file"));
 
-        FmBulkOutletResultDTO result = outletService.bulkUpload(rows);
+        //FmBulkOutletResultDTO result = outletService.bulkUpload(rows);
+        FmBulkOutletResultDTO result = outletBulkUpload(rows);
         String message = String.format("Upload complete: %d success, %d failed out of %d rows",
                 result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
         HttpStatus status = result.getFailureCount() == 0 ? HttpStatus.OK
@@ -514,4 +515,43 @@ public class FmOutletController {
 
         return ResponseEntity.ok(response);
     }
+
+
+    public FmBulkOutletResultDTO outletBulkUpload(List<FmOutletRequestDTO> rows) {
+        int total = rows.size(), success = 0;
+        List<FmBulkOutletResultDTO.OutletCredential> credentials = new ArrayList<>();
+        List<FmBulkOutletResultDTO.OutletError>      errors      = new ArrayList<>();
+
+        for (int i = 0; i < rows.size(); i++) {
+            int rowNum = i + 3;
+            FmOutletRequestDTO dto = rows.get(i);
+            try {
+                FmOutletCreatedDTO created = outletService.createOutlet(dto);
+                success++;
+                FmBulkOutletResultDTO.OutletCredential cred = new FmBulkOutletResultDTO.OutletCredential();
+                cred.setOutletId(created.getOutletId());
+                cred.setOutletName(created.getOutletName());
+                cred.setOutletLoginId(created.getOutletLoginId());
+                cred.setOutletPassword(created.getOutletPassword());
+                credentials.add(cred);
+            } catch (Exception e) {
+                log.warn("[BULK] Row {} failed: {}", rowNum, e.getMessage());
+                FmBulkOutletResultDTO.OutletError err = new FmBulkOutletResultDTO.OutletError();
+                err.setRowNumber(rowNum);
+                err.setOutletName(dto.getOutletName());
+                err.setReason(e.getMessage());
+                errors.add(err);
+                //throw new RuntimeException(e.getMessage());
+            }
+        }
+
+        FmBulkOutletResultDTO result = new FmBulkOutletResultDTO();
+        result.setTotalRows(total);
+        result.setSuccessCount(success);
+        result.setFailureCount(total - success);
+        result.setCredentials(credentials);
+        result.setErrors(errors);
+        return result;
+    }
+
 }

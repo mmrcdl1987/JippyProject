@@ -17,8 +17,8 @@ public class NFireBaseConfig {
     public void initialize() {
         try {
             // Load the JSON file from the resources folder
-            //InputStream serviceAccount = new ClassPathResource("jippy-firebase-key.json").getInputStream();
-            InputStream serviceAccount = new ClassPathResource(".json").getInputStream();
+            InputStream serviceAccount = new ClassPathResource("jippy-firebase-key.json").getInputStream();
+            //InputStream serviceAccount = new ClassPathResource(".json").getInputStream();
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))

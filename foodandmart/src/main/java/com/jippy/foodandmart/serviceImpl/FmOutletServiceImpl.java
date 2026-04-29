@@ -97,7 +97,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     // ── Single Create ─────────────────────────────────────────────────────────
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW,rollbackFor =  Exception.class)
     public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
         log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}",
                 dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
@@ -129,7 +129,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     // ── Bulk Upload ───────────────────────────────────────────────────────────
-
+   /* @Transactional(rollbackFor =  Exception.class)
     @Override
     public FmBulkOutletResultDTO bulkUpload(List<FmOutletRequestDTO> rows) {
         int total = rows.size(), success = 0;
@@ -155,6 +155,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 err.setOutletName(dto.getOutletName());
                 err.setReason(e.getMessage());
                 errors.add(err);
+                throw new RuntimeException(e.getMessage());
             }
         }
 
@@ -165,7 +166,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         result.setCredentials(credentials);
         result.setErrors(errors);
         return result;
-    }
+    }*/
 
     // ── Validation ────────────────────────────────────────────────────────────
 
@@ -294,24 +295,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
             log.warn("[OUTLET] Username collision resolved: final={}", username);
         }
 
-//        Employee employee = new Employee();
-//        employee.setEmployeeName(outletName);
-//        employee.setEmail("outlet" + outletId + "@jippy.internal");
-//        employee.setMobileNumber(phone);
-//        employee.setIsActive(AppConstants.FLAG_YES);
-//        employee = employeeRepository.save(employee);
-
-//        User user = new User();
-//        user.setUsername(username);
-//        user.setPassword(password);
-//        user.setEmployeeId(employee.getEmployeeId());
-//        user.setUserType(AppConstants.TYPE_OUTLET);
-//        user.setIsActive(AppConstants.FLAG_YES);
-//        userRepository.save(user);
-       // log.info("[OUTLET] User saved: username={}, outletId={}", username, outletId);
-//        Roles role =roleRepository.findByRoleName(AppConstants.TYPE_OUTLET);
-//
-//        MerchantMapper.toUserRolesEntity()
         FmUser users = FmMerchantMapper.toUserEntity(username, password, outletId);
         users = userRepository.save(users);
         log.info("[OUTLET] User saved: username={}, outletId={}", username, outletId);

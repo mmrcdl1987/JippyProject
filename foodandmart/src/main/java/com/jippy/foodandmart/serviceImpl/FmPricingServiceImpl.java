@@ -49,8 +49,8 @@ public class FmPricingServiceImpl implements IPricingService {
         }
 
         List<FmOutlet> outlets = isApproved
-                ? outletRepo.findApprovedOutlets(areaId, FmAppConstants.ADDRESS_MERCHANT_TYPE, search)
-                : outletRepo.findUnapprovedOutlets(areaId, FmAppConstants.ADDRESS_MERCHANT_TYPE, search);
+                ? outletRepo.findApprovedOutlets(areaId, FmAppConstants.TYPE_OUTLET, search)
+                : outletRepo.findUnapprovedOutlets(areaId, FmAppConstants.TYPE_OUTLET, search);
 
         if (outlets.isEmpty()) {
             log.warn("No outlets found for areaId={}", areaId);

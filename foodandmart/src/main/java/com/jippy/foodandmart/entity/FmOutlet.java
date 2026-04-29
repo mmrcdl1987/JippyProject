@@ -54,7 +54,7 @@ public class FmOutlet {
      * oulet_location GEOGRAPHY(POINT, 4326) — note the DB column has a typo "oulet" (single-l),
      * kept intentionally to match the existing DDL.
      */
-    @Column(name = "oulet_location", columnDefinition = "geography(Point,4326)")
+    @Column(name = "outlet_location", columnDefinition = "geography(Point,4326)")
     private Point outletLocation;
 
     @Column(name = "created_at")
