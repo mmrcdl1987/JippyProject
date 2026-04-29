@@ -71,19 +71,17 @@ public class NOutletNotificationService {
 
         log.info("Sending FCM notification | orderId={}, topic={}", event.getOrderId(), topic);
 
-    public void processNotification(NOrderEvent orderEvent) {
-
         try {
-            
-        String outletTopic = "outlet_" + orderEvent.getOutletId();
-        Message message = Message.builder()
-                .setTopic(topic)
-                .setNotification(com.google.firebase.messaging.Notification.builder()
-                        .setTitle(notification.getSubject())
-                        .setBody(notification.getMessage())
-                        .build())
-                .putData("orderId", String.valueOf(event.getOrderId()))
-                .build();
+
+            String outletTopic = "outlet_" + event.getOutletId();
+            Message message = Message.builder()
+                    .setTopic(topic)
+                    .setNotification(com.google.firebase.messaging.Notification.builder()
+                            .setTitle(notification.getSubject())
+                            .setBody(notification.getMessage())
+                            .build())
+                    .putData("orderId", String.valueOf(event.getOrderId()))
+                    .build();
             FirebaseMessaging.getInstance().send(message);
 
             log.info("FCM sent successfully | orderId={}, topic={}", event.getOrderId(), topic);
@@ -92,4 +90,5 @@ public class NOutletNotificationService {
             log.error("FCM failed | orderId={}, topic={}, error={}", event.getOrderId(), topic, e.getMessage(), e);
             throw new NotificationException("Failed to send FCM notification");
         }
+    }
     }

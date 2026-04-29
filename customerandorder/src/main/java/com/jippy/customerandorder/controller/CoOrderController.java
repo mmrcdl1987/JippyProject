@@ -2,6 +2,7 @@ package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.dto.CoPlaceOrderRequestDto;
 import com.jippy.customerandorder.dto.CoPlaceOrderResponseDto;
+import com.jippy.customerandorder.iservice.IOrderService;
 import com.jippy.customerandorder.serviceImpl.COOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class CoOrderController {
 
-    private final COOrderService orderService;
+    private final IOrderService orderService;
 
 
     @PostMapping

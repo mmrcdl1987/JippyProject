@@ -13,17 +13,17 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     properties:
       hibernate:
-        default_schema: jippy_customer_and_order
+        default_schema: jippy_notification
       ddl-auto: update
     show-sql: true
 
     kafka:
-      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
       consumer:
         # Starts reading from the beginning of the topic if no offset is found
         auto-offset-reset: earliest
         key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+        value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
         properties:
           # CRITICAL: Tell Spring which Java packages are safe to deserialize
           spring.json.trusted.packages: "com.jippy.notification.dto"

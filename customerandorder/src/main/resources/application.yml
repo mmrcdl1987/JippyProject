@@ -33,7 +33,7 @@ management:
 
     #  Kafka Producer Configuration
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       # Serializes the Message Key (Order ID) as a String
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

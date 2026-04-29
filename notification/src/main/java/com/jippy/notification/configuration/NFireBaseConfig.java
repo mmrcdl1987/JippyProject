@@ -35,33 +35,31 @@ public class NFireBaseConfig {
 //        }
 //    }
 
- private static final String FIREBASE_FILE = "jippy-firebase-key.json";
- @PostConstruct
+    private static final String FIREBASE_FILE = "jippy-firebase-key.json";
+
+    @PostConstruct
     public void initialize() {
-        try {
-            // Load the JSON file from the resources folder
-            InputStream serviceAccount = new ClassPathResource(FIREBASE_FILE).getInputStream();
-            //InputStream serviceAccount = new ClassPathResource(".json").getInputStream();
-            if (!FirebaseApp.getApps().isEmpty()) {
-                log.info("Firebase already initialized");
-                return;
-            }
 
-            try (InputStream serviceAccount =
-                         new ClassPathResource(FIREBASE_FILE).getInputStream()) {
-
-                FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                        .build();
-
-                FirebaseApp.initializeApp(options);
-
-                log.info("Firebase initialized successfully");
-
-            } catch (Exception ex) {
-                log.error("Firebase initialization failed", ex);
-                throw new NotificationException("Firebase initialization failed");
-            }
+        if (!FirebaseApp.getApps().isEmpty()) {
+            log.info("Firebase already initialized");
+            return;
         }
+
+        try (InputStream serviceAccount =
+                     new ClassPathResource(FIREBASE_FILE).getInputStream()) {
+
+            FirebaseOptions options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .build();
+
+            FirebaseApp.initializeApp(options);
+
+            log.info("Firebase initialized successfully");
+
+        } catch (Exception ex) {
+            log.error("Firebase initialization failed", ex);
+            throw new NotificationException("Firebase initialization failed");
+        }
+    }
 
 }

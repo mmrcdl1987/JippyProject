@@ -12,7 +12,7 @@ import com.jippy.customerandorder.repository.CoOrderItemRepository;
 import com.jippy.customerandorder.repository.CoOrderPriceBreakupRepository;
 import com.jippy.customerandorder.repository.CoOrderRepository;
 import com.jippy.customerandorder.repository.CoOrderSequenceRepository;
-import com.jippy.customerandorder.service.IOrderService;
+import com.jippy.customerandorder.iservice.IOrderService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
