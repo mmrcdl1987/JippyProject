@@ -18,7 +18,6 @@ public class CoOrderController {
 
     private final IOrderService orderService;
 
-
     @PostMapping
     public ResponseEntity<CoPlaceOrderResponseDto> placeOrder(
             @Valid @RequestBody CoPlaceOrderRequestDto placeOrderRequestDto) {
@@ -33,4 +32,5 @@ public class CoOrderController {
 
         return ResponseEntity.ok(response);
     }
+
 }
