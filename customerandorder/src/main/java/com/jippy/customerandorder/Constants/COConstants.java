@@ -9,4 +9,8 @@ public class COConstants {
     public static final String MSG_ORDER_CREATED = "Order created successfully";
     public static final String ORDER_STATUS_PLACED = "PLACED";
     public static final String MSG_ORDER_ITEMS_EMPTY = "Order items cannot be empty";
+    public static final String MSG_CART_ADDED = "Item added to cart";
+    public static final String MSG_CART_UPDATED = "Cart updated";
+    public static final String MSG_CART_REMOVED = "Item removed from cart";
+    public static final String MSG_INVALID_QUANTITY = "Quantity cannot be negative";
 }
