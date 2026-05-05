@@ -259,7 +259,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         if (isBlank(dto.getBuildingNumber()) && isBlank(dto.getRoad())) return;
         Integer stateId = resolveStateId(dto.getStateName());
         Integer areaId  = resolveAreaId(dto.getAreaName());
-        FmOutletAddress address = FmOutletMapper.toAddressEntity(dto, outletId, stateId, areaId);
+        FmAddressRequestDto AddressReqDto = FmOutletMapper.convertToAddressReqDto(dto, outletId, stateId, areaId);
+        FmOutletAddress address = FmOutletMapper.toAddressEntity(AddressReqDto);
         addressRepository.save(address);
         log.info("[OUTLET] Address saved for outletId={}", outletId);
     }
@@ -576,5 +577,28 @@ public class FmOutletServiceImpl implements IFmOutletService {
             default:
                 throw new ResourceNotFoundException("Invalid day: " + day);
         }
+    }
+
+    //   for feign client to save address details of driver service implementation
+    @Override
+    @Transactional
+    public FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto) {
+        FmOutletAddress address = FmOutletMapper.toAddressEntity(fmAddressRequestDto);
+        FmOutletAddress fmAddress= addressRepository.save(address);
+        FmAddressRequestDto responseDto = FmOutletMapper.toAddressRequestDto(fmAddress);
+        log.info("address saved for driver ID  ={}", address.getAddressId());
+
+        return fmAddressRequestDto;
+    }
+
+    //    for feign client to get address details of driver service implementation
+    @Override
+    @Transactional
+    public FmAddressRequestDto getAddressDetails(Integer addressId) {
+        FmOutletAddress address = addressRepository.findByJippyAddressId(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+        FmAddressRequestDto addressResponseDto = FmOutletMapper.toAddressRequestDto(address);
+        log.info("address details fetched for address ID  ={}", addressId);
+        return addressResponseDto;
     }
 }

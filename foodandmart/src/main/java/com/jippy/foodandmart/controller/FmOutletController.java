@@ -6,6 +6,7 @@ import com.jippy.foodandmart.exception.InvalidUserTypeException;
 import com.jippy.foodandmart.service.IFmOutletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -553,5 +554,19 @@ public class FmOutletController {
         result.setErrors(errors);
         return result;
     }
+
+// End Points for getting address data from FM_Microservice to CO_Microservice
+    @PostMapping("/saveAddressDetails")
+    public ResponseEntity<FmAddressRequestDto>  saveAddressDetails(@RequestBody FmAddressRequestDto fmAddressRequestDto) {
+        FmAddressRequestDto savedAddress = outletService.saveAddressDetails(fmAddressRequestDto);
+        return ResponseEntity.ok(savedAddress);
+    }
+    @GetMapping("/getAddressDetails")
+    public ResponseEntity<FmAddressRequestDto>  getAddressDetails(@RequestParam Integer driverId) {
+        FmAddressRequestDto getAddress = outletService.getAddressDetails(driverId);
+        return ResponseEntity.ok(getAddress);
+    }
+
+
 
 }

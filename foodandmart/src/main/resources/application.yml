@@ -6,9 +6,9 @@ spring:
     name: foodandmart
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://187.127.156.147:5431/fm_db
+    username: fm_user
+    password: fm_password
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -20,9 +20,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-    properties:
-      hibernate:
-        default_schema: jippy_fm
+
 
 eureka:
   instance:

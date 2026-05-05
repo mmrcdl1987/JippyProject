@@ -13,4 +13,5 @@ public class COConstants {
     public static final String MSG_CART_UPDATED = "Cart updated";
     public static final String MSG_CART_REMOVED = "Item removed from cart";
     public static final String MSG_INVALID_QUANTITY = "Quantity cannot be negative";
+    public static final String TYPE_DRIVER="DRIVER";
 }
