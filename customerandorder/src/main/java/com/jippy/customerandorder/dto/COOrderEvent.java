@@ -9,11 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class COOrderEvent {
 
-    private Integer orderId;
+    private String orderId;
     private Integer customerId;
     private Integer outletId;
     private Integer driverId;
-    private String status;        // e.g., "PLACED", "PICKED_UP", "DELIVERED"
+    private String status;// e.g., "PLACED", "PICKED_UP", "DELIVERED"
     //private String cityName;      // Useful for routing to regional FCM topics
 
 }

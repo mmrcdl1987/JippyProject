@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class NOrderEvent {
 
-    private Integer orderId;
+    private String orderId;
     private Integer customerId;
     private Integer outletId;
     private Integer driverId;

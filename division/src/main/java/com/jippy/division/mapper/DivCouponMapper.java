@@ -1,10 +1,14 @@
 package com.jippy.division.mapper;
 
+import com.jippy.division.dto.DivPriceModelDto;
 import com.jippy.division.dto.DivCouponRequestDto;
 import com.jippy.division.dto.DivCouponResponseDto;
 import com.jippy.division.entity.DivCoupon;
+import com.jippy.division.entity.DivPriceModel;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DivCouponMapper {
 
@@ -65,4 +69,17 @@ public class DivCouponMapper {
         return divCouponResponseDto;
     }
 
+    public static List<DivPriceModelDto> topriceDto(List<DivPriceModel> priceModelList) {
+
+        List<DivPriceModelDto> priceModelDtoList = new ArrayList<>();
+        for(DivPriceModel priceModel:priceModelList){
+            DivPriceModelDto priceModelDto = new DivPriceModelDto();
+            priceModelDto.setPriceModelId(priceModel.getPriceModelId());
+            priceModelDto.setPriceModelName(priceModel.getPriceModelName());
+            priceModelDto.setCreatedBy(priceModel.getCreatedBy());
+            priceModelDto.setCreatedAt(priceModel.getCreatedAt());
+            priceModelDtoList.add(priceModelDto);
+        }
+        return priceModelDtoList;
+    }
 }

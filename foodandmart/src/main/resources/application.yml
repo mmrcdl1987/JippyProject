@@ -1,18 +1,28 @@
 server:
   port: 8080
+
 spring:
   application:
-    name: food and mart
+    name: foodandmart
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/jippy_fm
+    url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-        ddl-auto: update
+      ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        default_schema: jippy_fm
 
 eureka:
   instance:
@@ -21,4 +31,19 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8060/eureka/
+      defaultZone: http://localhost:8070/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true

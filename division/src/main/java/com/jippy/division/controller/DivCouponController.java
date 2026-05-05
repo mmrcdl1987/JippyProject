@@ -1,6 +1,7 @@
 package com.jippy.division.controller;
 
 import com.jippy.division.constants.DivAppConstants;
+import com.jippy.division.dto.DivPriceModelDto;
 import com.jippy.division.dto.DivCouponRequestDto;
 import com.jippy.division.dto.DivCouponResponseDto;
 import com.jippy.division.dto.DivResponseDto;
@@ -109,5 +110,13 @@ public class DivCouponController {
         return ResponseEntity.ok(coupons);
     }
 
+
+    @GetMapping(value = "/getPriceModels",produces = "application/json")
+    public ResponseEntity<List<DivPriceModelDto>> getPriceModels(){
+        logger.info("getPriceModels API initiated");
+        List<DivPriceModelDto> priceModelDtoList =couponService.getAllPriceModels();
+        logger.info("getPriceModels API Response : {}", priceModelDtoList.toString());
+        return  ResponseEntity.status(HttpStatus.OK).body(priceModelDtoList);
+    }
 
 }

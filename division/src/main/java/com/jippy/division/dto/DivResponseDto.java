@@ -21,6 +21,7 @@ public class DivResponseDto {
             description = "Status message of REST API",example = "Request Processed Successfully"
     )
     private String statusMsg;
+    //private T data;
 
 
 }
