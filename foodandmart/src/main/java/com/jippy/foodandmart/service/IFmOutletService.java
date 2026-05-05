@@ -32,4 +32,8 @@ public interface IFmOutletService {
 
     //    for update outlet details by outlet id
     FmOutletDetailsDto updateOutletDetails(Integer outletId, FmOutletDetailsDto dto, String userType);
+
+    FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto);
+
+    FmAddressRequestDto getAddressDetails(Integer addressId);
 }

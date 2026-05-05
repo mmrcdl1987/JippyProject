@@ -136,6 +136,7 @@
 
 package com.jippy.foodandmart.mapper;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmOutletAddress;
@@ -175,23 +176,54 @@ public final class FmOutletMapper {
         return outlet;
     }
 
+    public static  FmAddressRequestDto toAddressRequestDto(FmOutletAddress fmOutletAddress){
+        FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
+        fmAddressRequestDto.setJippyAddressId(fmOutletAddress.getJippyAddressId());
+        fmAddressRequestDto.setBuildingNumber(fmOutletAddress.getBuildingNumber());
+        fmAddressRequestDto.setRoad(fmOutletAddress.getRoad());
+        fmAddressRequestDto.setLandmark(fmOutletAddress.getLandmark());
+        fmAddressRequestDto.setCityId(fmOutletAddress.getCityId());
+        fmAddressRequestDto.setStateId(fmOutletAddress.getStateId());
+        fmAddressRequestDto.setAreaId(fmOutletAddress.getAreaId());
+        fmAddressRequestDto.setAddressType(fmOutletAddress.getAddressType());
+        return fmAddressRequestDto;
+
+    }
+
+//    for feign client to map the address details from Outletdto to AddressRequestdto to send to address microservice
+    public static  FmAddressRequestDto convertToAddressReqDto(FmOutletRequestDTO dto, Integer outletId, Integer stateId,Integer areaId){
+ FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
+ fmAddressRequestDto.setAddressType(FmAppConstants.TYPE_OUTLET);
+ fmAddressRequestDto.setJippyAddressId(outletId);
+ fmAddressRequestDto.setBuildingNumber(dto.getBuildingNumber());
+ fmAddressRequestDto.setRoad(dto.getRoad());
+ fmAddressRequestDto.setLandmark(dto.getLandmark());
+ fmAddressRequestDto.setCityId(dto.getCityId()!=null?dto.getCityId():0);
+    fmAddressRequestDto.setStateId(stateId);
+    fmAddressRequestDto.setAreaId(areaId);
+ return fmAddressRequestDto;
+
+
+    }
+
     /**
      * Builds an {@link FmOutletAddress} from the DTO plus resolved integer FKs.
      */
-    public static FmOutletAddress toAddressEntity(FmOutletRequestDTO dto, Integer outletId,
-                                                  Integer stateId, Integer areaId) {
+
+
+    public static FmOutletAddress toAddressEntity(FmAddressRequestDto dto){
+
         FmOutletAddress address = new FmOutletAddress();
-//        address.setOutletId(outletId);
-        address.setJippyAddressId(outletId);
+        address.setJippyAddressId(dto.getJippyAddressId());
         address.setBuildingNumber(safe(dto.getBuildingNumber()));
         address.setRoad(safe(dto.getRoad()));
         address.setLandmark(safe(dto.getLandmark()));
         address.setCityId(dto.getCityId() != null ? dto.getCityId() : 0);
-        address.setStateId(stateId);
-        address.setAreaId(areaId);
-        address.setAddressType("OUTLET");
+        address.setStateId(dto.getStateId());
+        address.setAreaId(dto.getAreaId());
+        address.setAddressType(dto.getAddressType());
         return address;
-    }
+}
 
     // ── Entity → DTO ──────────────────────────────────────────────────────────
 
