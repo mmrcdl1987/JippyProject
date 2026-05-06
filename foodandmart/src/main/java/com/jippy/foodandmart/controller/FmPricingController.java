@@ -96,4 +96,22 @@ public class FmPricingController {
                 )
         );
     }
+
+    @GetMapping("/{productId}")
+    public ResponseEntity<FmProductDetailResponseDto> getProductById(
+            @PathVariable Integer productId) {
+
+        log.info("GET PRODUCT START | productId={}", productId);
+
+        FmProductDetailResponseDto data = pricingService.getProductById(productId);
+
+        if (data == null) {
+            log.error("Product not found | productId={}", productId);
+            throw new RuntimeException("Product not found");
+        }
+
+        log.info("GET PRODUCT SUCCESS | productId={}", productId);
+
+        return ResponseEntity.ok(data);
+    }
 }
