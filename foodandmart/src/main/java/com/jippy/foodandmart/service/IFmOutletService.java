@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.service;
 
+import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 
@@ -32,4 +33,9 @@ public interface IFmOutletService {
 
     //    for update outlet details by outlet id
     FmOutletDetailsDto updateOutletDetails(Integer outletId, FmOutletDetailsDto dto, String userType);
+    /**
+     * Customer App: fetch active outlets within default 3 km of the customer.
+     * Always uses DEFAULT_RADIUS_KM = 3.0 km — no caller override.
+     */
+    FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng);
 }

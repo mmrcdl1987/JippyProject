@@ -38,4 +38,15 @@ public class FmAppConstants {
     public static final String COPY_STATUS_FAILED  = "FAILED";
 
     public static final String  UN_APPROVED="NOT_APPROVED";
+
+
+
+
+    public static final String STATUS_201 = "201";
+    public static final String STATUS_404 = "404";
+    public static final String MSG_200    = "Request processed successfully";
+    public static final String MSG_201    = "Created successfully";
+
+    // Geo constants
+    public static final double DEFAULT_RADIUS_KM = 3.0;
 }
