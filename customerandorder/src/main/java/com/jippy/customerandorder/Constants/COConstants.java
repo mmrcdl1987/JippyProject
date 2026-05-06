@@ -13,5 +13,8 @@ public class COConstants {
     public static final String MSG_CART_UPDATED = "Cart updated";
     public static final String MSG_CART_REMOVED = "Item removed from cart";
     public static final String MSG_INVALID_QUANTITY = "Quantity cannot be negative";
+    public static final String MSG_CART_EMPTY = "Cart is empty";
+    public static final String MSG_PRODUCT_FETCH_FAILED = "Unable to fetch product details";
+    public static final String MSG_CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String TYPE_DRIVER="DRIVER";
 }

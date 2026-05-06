@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.controller;
 
+import com.jippy.customerandorder.dto.CoCartResponseDto;
 import com.jippy.customerandorder.dto.CoCartUpdateRequestDto;
 
 import com.jippy.customerandorder.iservice.ICartService;
@@ -26,7 +27,22 @@ public class COCartController {
 
         String response = cartService.updateCart(request);
 
-        log.info("Cart update completed | response={}", response);
+        log.info("Cart update completed successfully | customerId={}, response={}", 
+                request.getCustomerId(), response);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{customerId}")
+    public ResponseEntity<CoCartResponseDto> getCart(
+            @PathVariable Integer customerId) {
+
+        log.info("API hit: get cart | customerId={}", customerId);
+
+        CoCartResponseDto response = cartService.getCart(customerId);
+
+        log.info("Cart fetched successfully | customerId={}, items={}, grandTotal={}", 
+                customerId, response.getItems().size(), response.getGrandTotal());
 
         return ResponseEntity.ok(response);
     }

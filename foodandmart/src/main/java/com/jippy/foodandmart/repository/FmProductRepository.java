@@ -56,4 +56,6 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
         WHERE product_id = :productId
         """, nativeQuery = true)
     Integer findOutletCategoryId(@Param("productId") Integer productId);
+
+    Optional<FmProduct> findById(Integer productId);
 }

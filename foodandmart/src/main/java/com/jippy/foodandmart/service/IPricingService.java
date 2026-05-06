@@ -1,11 +1,11 @@
 package com.jippy.foodandmart.service;
 
-import com.jippy.foodandmart.dto.FmBulkPriceUpdateRequestDto;
-import com.jippy.foodandmart.dto.FmOutletDto;
-import com.jippy.foodandmart.dto.FmPriceUpdateRequestDto;
-import com.jippy.foodandmart.dto.FmProductResponseDto;
+import com.jippy.foodandmart.dto.*;
+import com.jippy.foodandmart.entity.FmProduct;
 
 import java.util.List;
+import java.util.Optional;
+
 public interface IPricingService {
 
 
@@ -16,5 +16,8 @@ public interface IPricingService {
     void updatePrices(FmPriceUpdateRequestDto dto, boolean isApproved);
 
     void bulkUpdatePrices(FmBulkPriceUpdateRequestDto dto, boolean isApproved);
+
+    FmProductDetailResponseDto getProductById(Integer productId);
+
 }
 

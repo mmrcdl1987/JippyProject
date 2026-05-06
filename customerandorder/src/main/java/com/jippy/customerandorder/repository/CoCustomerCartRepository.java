@@ -3,6 +3,7 @@ package com.jippy.customerandorder.repository;
 import com.jippy.customerandorder.entity.CoCustomerCart;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface CoCustomerCartRepository extends JpaRepository<CoCustomerCart, Integer> {
@@ -10,4 +11,7 @@ public interface CoCustomerCartRepository extends JpaRepository<CoCustomerCart, 
             Integer customerId,
             Integer productId
     );
+
+    List<CoCustomerCart> findByCustomerId(Integer customerId);
+
 }

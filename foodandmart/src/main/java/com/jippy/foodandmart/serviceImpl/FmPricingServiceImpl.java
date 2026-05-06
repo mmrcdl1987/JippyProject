@@ -4,8 +4,10 @@ import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmProduct;
 import com.jippy.foodandmart.exception.PricingException;
+import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
 import com.jippy.foodandmart.mapper.FmPricingMapper;
+import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.repository.FmOutletRepository;
 import com.jippy.foodandmart.repository.FmPricingRepository;
 import com.jippy.foodandmart.repository.FmProductRepository;
@@ -30,6 +32,7 @@ public class FmPricingServiceImpl implements IPricingService {
     private final FmPricingRepository pricingRepo;
     private final FmPricingMapper pricingMapper;
     private final DivisionFeignClient divisionFeignClient;
+    private final FmProductMapper productMapper;
 
     //  GET OUTLETS BASED ON CONDITION IS_APPROVED
     @Override
@@ -296,6 +299,42 @@ public class FmPricingServiceImpl implements IPricingService {
         }
 
         throw new PricingException("Invalid pricing type");
+    }
+
+    @Override
+    public FmProductDetailResponseDto getProductById(Integer productId) {
+
+        log.info("SERVICE START: Fetch product details | productId={}", productId);
+
+        // VALIDATE INPUT
+        if (productId == null || productId <= 0) {
+            log.warn("Invalid product ID provided | productId={}", productId);
+            throw new PricingException("Invalid product ID");
+        }
+
+        // FETCH PRODUCT FROM DATABASE
+        log.debug("Querying product repository | productId={}", productId);
+
+        FmProduct product = productRepo.findById(productId)
+                .orElseThrow(() -> {
+                    log.error("Product not found in database | productId={}", productId);
+                    return new ResourceNotFoundException("Product not found with id: " + productId);
+                });
+
+        log.debug("Product found in DB | productId={}, name={}", 
+                product.getProductId(), product.getProductName());
+
+        // MAP ENTITY TO DTO
+        log.debug("Mapping product entity to response DTO | productId={}", productId);
+
+        FmProductDetailResponseDto response = productMapper.toDto(product);
+
+        log.debug("DTO mapping completed successfully | productId={}", productId);
+
+        log.info("SERVICE END: Product details fetched successfully | productId={}, productName={}",
+                productId, response.getProductName());
+
+        return response;
     }
 }
 
