@@ -38,4 +38,8 @@ public interface IFmOutletService {
      * Always uses DEFAULT_RADIUS_KM = 3.0 km — no caller override.
      */
     FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng);
+
+    FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto);
+
+    FmAddressRequestDto getAddressDetails(Integer addressId);
 }

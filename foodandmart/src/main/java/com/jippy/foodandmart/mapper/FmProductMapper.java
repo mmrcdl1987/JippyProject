@@ -1,9 +1,11 @@
 package com.jippy.foodandmart.mapper;
 
+import com.jippy.foodandmart.dto.FmProductDetailResponseDto;
 import com.jippy.foodandmart.dto.FmProductDto;
 import com.jippy.foodandmart.dto.FmProductVariantDTO;
 import com.jippy.foodandmart.entity.FmProduct;
 import com.jippy.foodandmart.entity.FmProductVariant;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
  * together (a product DTO always carries its variants). Keeping them in one
  * mapper avoids a tiny separate VariantMapper file.</p>
  */
+@Component
 public  class FmProductMapper {
 
     /**
@@ -131,4 +134,26 @@ public  class FmProductMapper {
         dto.setMerchantPrice(variant.getMerchantPrice());
         return dto;
     }
+
+    public FmProductDetailResponseDto toDto(FmProduct product) {
+
+            if (product == null) {
+                return null;
+            }
+
+            FmProductDetailResponseDto dto = new FmProductDetailResponseDto();
+
+            dto.setProductId(product.getProductId());
+            dto.setOutletCategoryId(product.getOutletCategoryId());
+            dto.setProductName(product.getProductName());
+            dto.setDescription(product.getDescription());
+            dto.setMerchantPrice(product.getMerchantPrice());
+            dto.setIsVeg(product.getIsVeg());
+            dto.setHasProductVariants(product.getHasProductVariants());
+            dto.setImageLink(product.getImageLink());
+            dto.setPhotos(product.getPhotos());
+            dto.setThumbnail(product.getThumbnail());
+
+            return dto;
+        }
 }

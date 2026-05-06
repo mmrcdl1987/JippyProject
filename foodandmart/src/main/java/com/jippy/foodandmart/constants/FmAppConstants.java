@@ -5,7 +5,6 @@ public class FmAppConstants {
     public static final String MSG_PRICE_UPDATED = "Prices updated successfully";
     public static final String ADDRESS_MERCHANT_TYPE = "merchant";
     public static final int DEFAULT_CREATED_BY = 1;
-    // ── Status ────────────────────────────────────────────────────────────────
     public static final String STATUS_PENDING   = "PENDING";
     public static final String STATUS_ACTIVE    = "ACTIVE";
     public static final String STATUS_INACTIVE  = "INACTIVE";
@@ -49,4 +48,5 @@ public class FmAppConstants {
 
     // Geo constants
     public static final double DEFAULT_RADIUS_KM = 3.0;
+    public static final String MSG_SUCCESS = "Success";
 }
