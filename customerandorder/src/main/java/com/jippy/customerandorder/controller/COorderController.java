@@ -1,26 +1,36 @@
 package com.jippy.customerandorder.controller;
 
-import com.jippy.customerandorder.service.COOrderService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.jippy.customerandorder.dto.CoPlaceOrderRequestDto;
+import com.jippy.customerandorder.dto.CoPlaceOrderResponseDto;
+import com.jippy.customerandorder.iservice.IOrderService;
+import com.jippy.customerandorder.serviceImpl.COOrderService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/orders")
-public class COorderController {
+@RequiredArgsConstructor
+@Slf4j
+public class CoOrderController {
 
-    public  static Logger logger = LoggerFactory.getLogger(COorderController.class);
+    private final IOrderService orderService;
 
-    @Autowired
-    COOrderService COOrderService;
+    @PostMapping
+    public ResponseEntity<CoPlaceOrderResponseDto> placeOrder(
+            @Valid @RequestBody CoPlaceOrderRequestDto placeOrderRequestDto) {
 
-    @GetMapping("/order")
-     public String order(){
-        logger.info("order api is called");
-       // COOrderService.placeOrder();
-        return "order api is called";
-     }
+        log.info("API hit: place order | customerId={}, outletId={}",
+                placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId());
+
+        CoPlaceOrderResponseDto response = orderService.placeOrder(placeOrderRequestDto);
+
+        log.info("Order placed successfully | customerId={}, outletId={}, orderId={}",
+                placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId(), response.getOrderId());
+
+        return ResponseEntity.ok(response);
+    }
+
 }
