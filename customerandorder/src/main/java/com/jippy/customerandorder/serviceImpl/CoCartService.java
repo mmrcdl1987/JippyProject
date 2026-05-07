@@ -7,7 +7,7 @@ import com.jippy.customerandorder.dto.CoCartUpdateRequestDto;
 import com.jippy.customerandorder.dto.FmProductDetailResponseDto;
 import com.jippy.customerandorder.entity.CoCustomerCart;
 import com.jippy.customerandorder.exception.CartException;
-import com.jippy.customerandorder.feignClient.ProductFeignClient;
+import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICartService;
 import com.jippy.customerandorder.repository.CoCustomerCartRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import java.util.List;
 public class CoCartService implements ICartService {
 
     private final CoCustomerCartRepository cartRepository;
-    private final ProductFeignClient productFeignClient;
+    private final FMFeignClient productFeignClient;
 
 
     public String updateCart(CoCartUpdateRequestDto dto) {

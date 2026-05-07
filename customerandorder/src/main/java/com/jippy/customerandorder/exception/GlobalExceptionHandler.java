@@ -70,19 +70,13 @@ public class GlobalExceptionHandler {
                         LocalDateTime.now()
                 ));
     }
-//    // Handle all other exceptions
-//    @ExceptionHandler(Exception.class)
-//    public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
-//
-//        // Print full error in console imp for debugging
-//        ex.printStackTrace();
-//
-//        Map<String, String> error = new HashMap<>();
-//
-//        // Return actual error message instead of generic message
-//        error.put("message", ex.getMessage());
-//
-//        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-//    }
+    @ExceptionHandler(CoZoneException.class)
+    public ResponseEntity<Map<String, String>> handleZoneException(CoZoneException ex) {
+
+        Map<String, String> error = new HashMap<>();
+        error.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
 
 }

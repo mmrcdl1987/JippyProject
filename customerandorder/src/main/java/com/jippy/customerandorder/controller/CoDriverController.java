@@ -1,13 +1,17 @@
 package com.jippy.customerandorder.controller;
 
 
+import com.jippy.customerandorder.Constants.COConstants;
 import com.jippy.customerandorder.dto.CoDriverDto;
+import com.jippy.customerandorder.dto.CoResponseDto;
+import com.jippy.customerandorder.dto.CoZoneDto;
 import com.jippy.customerandorder.iservice.ICoDriverService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,5 +42,15 @@ public class CoDriverController {
         log.info("GET API called with id to get all details of driver : {}", driverId);
 
         return ResponseEntity.ok(driverService.getDriverDetails(driverId));
+    }
+
+    @PostMapping("/createZones")
+    @Operation(summary = "Create Zones", description = "Create Zones")
+    public ResponseEntity<CoResponseDto> createZones(@Valid @RequestBody CoZoneDto zoneDto) {
+
+        log.info("POST API called for created zones:");
+        String message = driverService.createZones(zoneDto);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_201,message));
     }
 }

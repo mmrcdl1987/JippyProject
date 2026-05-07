@@ -17,4 +17,5 @@ public class COConstants {
     public static final String MSG_PRODUCT_FETCH_FAILED = "Unable to fetch product details";
     public static final String MSG_CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String TYPE_DRIVER="DRIVER";
+    public static final String STATUS_201="201";
 }

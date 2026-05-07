@@ -3,9 +3,12 @@ package com.jippy.customerandorder.mapper;
 
 import com.jippy.customerandorder.dto.CoAddressRequestDto;
 import com.jippy.customerandorder.dto.CoDriverDto;
+import com.jippy.customerandorder.dto.CoZoneDto;
 import com.jippy.customerandorder.entity.CoDriver;
 import com.jippy.customerandorder.entity.CoDriverKyc;
+import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoBadRequestException;
+import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -127,5 +130,14 @@ public class CoDriverMapper {
         return dto;
 
 
+    }
+
+    public static CoZone mapToZoneEntity(CoZoneDto zoneDto, Polygon polygon) {
+        CoZone zone = new CoZone();
+        zone.setZoneName(zoneDto.getZoneName());
+        zone.setBoundary(polygon);
+        zone.setCreatedAt(LocalDateTime.now());
+        zone.setCreatedBy(zoneDto.getCreatedBy());
+        return zone;
     }
 }
