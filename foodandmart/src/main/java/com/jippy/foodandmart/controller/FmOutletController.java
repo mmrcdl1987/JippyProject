@@ -1,11 +1,16 @@
 package com.jippy.foodandmart.controller;
 
+import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.exception.InvalidUserTypeException;
 import com.jippy.foodandmart.service.IFmOutletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -553,6 +558,51 @@ public class FmOutletController {
         result.setCredentials(credentials);
         result.setErrors(errors);
         return result;
+    }
+    @Operation(
+            summary = "Customer App: Nearby outlets within 3 km (USE THIS FOR MOBILE APP)",
+            description = """
+                    Returns all active outlets (is_active = 'Y') within 3 km of the customer's
+                    current GPS location, sorted nearest-first.
+                    
+                    This is the correct endpoint for the mobile/customer app. It returns:
+                      • distanceKm      — straight-line distance via PostGIS
+                      • roadDistance    — actual road distance via Google Maps (e.g. "1.4 km")
+                      • deliveryTime    — estimated delivery time via Google Maps (e.g. "14 mins")
+                      • openingTime     — today's opening time from outlet_days table
+                      • closingTime     — today's closing time from outlet_days table
+                      • openNow         — whether the outlet is currently open
+                    
+                    Prerequisites for non-null roadDistance and deliveryTime:
+                      1. Set google.maps.api-key in application.yml (or GOOGLE_MAPS_API_KEY env var)
+                      2. Enable Distance Matrix API in Google Cloud Console
+                    
+                    Prerequisites for non-null distanceKm:
+                      1. outlet_location must be set in jippy_fm.outlets for each outlet
+                      2. Run: UPDATE jippy_fm.outlets
+                                SET outlet_location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
+                              WHERE outlet_location IS NULL;
+                    
+                    Example:
+                      GET /api/outlets/customer/nearby?lat=17.385&lng=78.4867
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully",
+                    content = @Content(schema = @Schema(implementation = FmCustomerNearbyResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "lat or lng parameter is missing / invalid")
+    })
+    @GetMapping("/customer/nearby")
+    public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(
+            @Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true)
+            @RequestParam double lat,
+
+            @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true)
+            @RequestParam double lng) {
+
+        log.info("GET /api/outlets/customer/nearby lat={}, lng={}", lat, lng);
+        FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng);
+        return ResponseEntity.ok(response);
     }
 
 // End Points for getting address data from FM_Microservice to CO_Microservice
