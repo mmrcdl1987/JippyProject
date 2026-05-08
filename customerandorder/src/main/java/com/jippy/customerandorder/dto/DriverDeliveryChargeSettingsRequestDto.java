@@ -1,0 +1,33 @@
+package com.jippy.customerandorder.dto;
+
+import jakarta.validation.constraints.DecimalMin;
+
+import lombok.*;
+
+import java.math.BigDecimal;
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+public class DriverDeliveryChargeSettingsRequestDto {
+
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal pickUpKmsRangeFrom;
+
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal pickUpKmsRangeTo;
+
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal unitPricePerPickKm;
+
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal deliveryKmsRangeFrom;
+
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal deliveryKmsRangeTo;
+
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal unitPricePerDeliverKm;
+
+    private Integer createdBy;
+}

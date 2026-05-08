@@ -7,19 +7,40 @@ import org.locationtech.jts.geom.Polygon;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "zones",schema = "jippy_customer_and_order")
+@Table(name = "zones", schema = "jippy_customer_and_order")
 @Data
 public class CoZone {
 
+    // Primary key of zones table
     @Id
-    @GeneratedValue(strategy =  GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "zone_id")
     private Integer zoneId;
+
+    // Name of the zone
+    @Column(name = "zone_name")
     private String zoneName;
 
-    @Column(columnDefinition = "geometry(Polygon, 4326)")
+    // Polygon boundary of zone
+    @Column(
+            name = "boundary",
+            columnDefinition = "geometry(Polygon, 4326)"
+    )
     private Polygon boundary;
+
+    // Record creation timestamp
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+
+    // User who created record
+    @Column(name = "created_by")
     private Integer createdBy;
+
+    // Record update timestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // User who updated record
+    @Column(name = "updated_by")
     private Integer updatedBy;
 }

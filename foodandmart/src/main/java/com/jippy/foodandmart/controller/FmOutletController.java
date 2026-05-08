@@ -616,7 +616,14 @@ public class FmOutletController {
         FmAddressRequestDto getAddress = outletService.getAddressDetails(driverId);
         return ResponseEntity.ok(getAddress);
     }
+    @RequestMapping("/location/{outletId}")
+    public ResponseEntity<OutletLocationResponseDto> getOutletLocation(@PathVariable Integer outletId) {
+        log.info("REST request to get location for outletId: {}", outletId);
 
+        OutletLocationResponseDto response = outletService.getOutletLocation(outletId);
 
+        log.debug("Returning location response for outletId: {}", outletId);
 
+        return ResponseEntity.ok(response);
+    }
 }
