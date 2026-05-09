@@ -64,6 +64,29 @@ public class GlobalExceptionHandler {
                         ex.getMessage(),
                         LocalDateTime.now()
                 ));
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    }
+
+    // GENERIC EXCEPTION
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleException(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+
+        ex.printStackTrace();
+
+        Map<String, Object> error = new HashMap<>();
+
+        error.put("apiPath", request.getRequestURI());
+        error.put("errorCode", "INTERNAL_SERVER_ERROR");
+        error.put("errorMessage", ex.getMessage());
+        error.put("errorTime", LocalDateTime.now());
+
+        return new ResponseEntity<>(
+                error,
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
     // ── GENERIC EXCEPTIONS ────────────────────────────────────────────────────
 
