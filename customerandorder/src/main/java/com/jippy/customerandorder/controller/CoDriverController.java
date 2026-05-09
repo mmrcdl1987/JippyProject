@@ -1,13 +1,17 @@
 package com.jippy.customerandorder.controller;
 
 
+import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoDriverDto;
+import com.jippy.customerandorder.dto.CoResponseDto;
+import com.jippy.customerandorder.dto.CoZoneDto;
 import com.jippy.customerandorder.iservice.ICoDriverService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +24,7 @@ public class CoDriverController {
 
     private final ICoDriverService driverService;
 
-//    post driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
+    //    post driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
     @PostMapping("/postDriverDetails")
     @Operation(summary = "Create Driver", description = "Creates driver, KYC, and address")
     public ResponseEntity<CoDriverDto> postDriverDetails(@Valid @RequestBody CoDriverDto dto) {
@@ -30,7 +34,7 @@ public class CoDriverController {
         return ResponseEntity.ok(driverService.postDriverDetails(dto));
     }
 
-//    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
+    //    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
     @GetMapping("/getDriverDetails")
     @Operation(summary = "Get Driver", description = "Fetch driver by ID")
     public ResponseEntity<CoDriverDto> getDriverDetails(@RequestParam Integer driverId) {
@@ -39,4 +43,26 @@ public class CoDriverController {
 
         return ResponseEntity.ok(driverService.getDriverDetails(driverId));
     }
+
+//    update driver details ,driver kyc from this this(Co Microservice)
+//    and address Details from (FM microservices)
+    @PutMapping("/updateDriverDetails")
+    @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields")
+    public ResponseEntity<CoDriverDto> updateDriverDetails(@RequestParam Integer driverId, @Valid @RequestBody CoDriverDto dto) {
+
+        log.info("Updating driver with id: {}", driverId);
+
+        return ResponseEntity.ok(driverService.updateDriverDetails(driverId, dto));
+    }
+
+    @PostMapping("/createZones")
+    @Operation(summary = "Create Zones", description = "Create Zones")
+    public ResponseEntity<CoResponseDto> createZones(@Valid @RequestBody CoZoneDto zoneDto) {
+
+        log.info("POST API called for created zones:");
+        String message = driverService.createZones(zoneDto);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_201, message));
+    }
+
 }

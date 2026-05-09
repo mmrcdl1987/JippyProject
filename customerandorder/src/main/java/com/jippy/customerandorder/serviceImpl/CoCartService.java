@@ -7,7 +7,7 @@ import com.jippy.customerandorder.dto.CoCartUpdateRequestDto;
 import com.jippy.customerandorder.dto.FmProductDetailResponseDto;
 import com.jippy.customerandorder.entity.CoCustomerCart;
 import com.jippy.customerandorder.exception.CartException;
-import com.jippy.customerandorder.feignClient.ProductFeignClient;
+import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICartService;
 import com.jippy.customerandorder.repository.CoCustomerCartRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import java.util.List;
 public class CoCartService implements ICartService {
 
     private final CoCustomerCartRepository cartRepository;
-    private final ProductFeignClient productFeignClient;
+    private final FMFeignClient fmFeignClient;
 
 
     public String updateCart(CoCartUpdateRequestDto dto) {
@@ -190,7 +190,7 @@ public class CoCartService implements ICartService {
             try {
                 log.debug("Fetching product details from food service | productId={}, customerId={}",
                         cart.getProductId(), customerId);
-                product = productFeignClient.getProductById(cart.getProductId());
+                product = fmFeignClient.getProductById(cart.getProductId());
                 log.debug("Product fetched successfully | productId={}, customerId={}",
                         cart.getProductId(), customerId);
             } catch (Exception ex) {

@@ -3,9 +3,12 @@ package com.jippy.customerandorder.mapper;
 
 import com.jippy.customerandorder.dto.CoAddressRequestDto;
 import com.jippy.customerandorder.dto.CoDriverDto;
+import com.jippy.customerandorder.dto.CoZoneDto;
 import com.jippy.customerandorder.entity.CoDriver;
 import com.jippy.customerandorder.entity.CoDriverKyc;
+import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoBadRequestException;
+import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -61,9 +64,7 @@ public class CoDriverMapper {
         }
 
         // If all KYC fields are empty, skip creation
-        if (dto.getAadharNumber() == null &&
-                dto.getDrivingLicenseNumber() == null &&
-                dto.getRcCopy() == null) {
+        if (dto.getAadharNumber() == null && dto.getDrivingLicenseNumber() == null && dto.getRcCopy() == null) {
             return null;
         }
 
@@ -81,6 +82,10 @@ public class CoDriverMapper {
 
     // Convert Driver entity to DTO
     // Includes KYC details if available
+//    For post and update driver details API, we will use this method to convert entity
+//    to dto and set address details through feign client response
+// used for updating driver details and getting
+// driver details with address details through feign client response
     public static CoDriverDto mapToDriverDto(CoDriver driver, CoAddressRequestDto coAddressRequestDtoFeign) {
 
         // Check if entity is null
@@ -114,7 +119,7 @@ public class CoDriverMapper {
         }
 
 //        set address through feign client response
-        if(coAddressRequestDtoFeign != null) {
+        if (coAddressRequestDtoFeign != null) {
             dto.setBuildingNumber(coAddressRequestDtoFeign.getBuildingNumber());
             dto.setRoad(coAddressRequestDtoFeign.getRoad());
             dto.setLandmark(coAddressRequestDtoFeign.getLandmark());
@@ -126,6 +131,39 @@ public class CoDriverMapper {
 
         return dto;
 
+
+    }
+
+    public static CoZone mapToZoneEntity(CoZoneDto zoneDto, Polygon polygon) {
+        CoZone zone = new CoZone();
+        zone.setZoneName(zoneDto.getZoneName());
+        zone.setBoundary(polygon);
+        zone.setCreatedAt(LocalDateTime.now());
+        zone.setCreatedBy(zoneDto.getCreatedBy());
+        return zone;
+    }
+
+    // Update editable driver fields only
+    public static void updateDriverEntity(CoDriver existingDriver, CoDriverDto dto) {
+
+        // Update allowed only this fields
+        existingDriver.setFirstName(dto.getFirstName());
+        existingDriver.setLastName(dto.getLastName());
+
+        existingDriver.setNomineeName(dto.getNomineeName());
+        existingDriver.setNomineePhoneNumber(dto.getNomineePhoneNumber());
+        existingDriver.setIsNomineeVerified(dto.getIsNomineeVerified());
+
+        existingDriver.setFamilyMemberName(dto.getFamilyMemberName());
+        existingDriver.setFamilyMemberPhoneNumber(dto.getFamilyMemberPhoneNumber());
+        existingDriver.setIsFamilyMemberVerified(dto.getIsFamilyMemberVerified());
+
+        existingDriver.setUpdatedAt(LocalDateTime.now());
+        existingDriver.setUpdatedBy(1);
+
+        // restricting updation of 5 feilds as per requirement
+        // phoneNumber,email,kyc details(more 3 feilds namely aadharNumber , drivingLicenseNumber, rcCopy)
+        // should not be updated through this method
 
     }
 }

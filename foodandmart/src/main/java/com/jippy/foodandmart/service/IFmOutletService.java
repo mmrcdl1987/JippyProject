@@ -42,4 +42,6 @@ public interface IFmOutletService {
     FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto);
 
     FmAddressRequestDto getAddressDetails(Integer addressId);
+
+    OutletLocationResponseDto getOutletLocation(Integer outletId);
 }

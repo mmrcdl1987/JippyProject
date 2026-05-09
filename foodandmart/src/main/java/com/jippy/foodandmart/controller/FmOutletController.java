@@ -627,17 +627,15 @@ public class FmOutletController {
         FmAddressRequestDto getAddress = outletService.getAddressDetails(driverId);
         return ResponseEntity.ok(getAddress);
     }
+    @RequestMapping("/location/{outletId}")
+    public ResponseEntity<OutletLocationResponseDto> getOutletLocation(@PathVariable Integer outletId) {
+        log.info("REST request to get location for outletId: {}", outletId);
+
+        OutletLocationResponseDto response = outletService.getOutletLocation(outletId);
 
 
-    @GetMapping("/specialized-outlets/area")
-    public FmNearbyOutletResponseDto
-    fetchSpecializedOutletsByAreaId(
-            @RequestParam Integer areaId) {
+        log.debug("Returning location response for outletId: {}", outletId);
 
-        return service
-                .fetchSpecializedOutletsByAreaId(
-                        areaId
-                );
+        return ResponseEntity.ok(response);
     }
-
 }

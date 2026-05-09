@@ -15,15 +15,13 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    // ── BUSINESS EXCEPTIONS ────────────────────────────────────────────────────
 
-    // BUSINESS EXCEPTION
+    // Handle OrderException (parent of CartException)
     @ExceptionHandler(OrderException.class)
     public ResponseEntity<CoErrorResponseDto> handleOrderException(
             OrderException ex,
             HttpServletRequest request) {
-
-        log.error("OrderException | path={} | message={}",
-                request.getRequestURI(), ex.getMessage(), ex);
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
@@ -34,56 +32,92 @@ public class GlobalExceptionHandler {
                         LocalDateTime.now()
                 ));
     }
-    // Handle custom bad request exceptions
+
+    // Handle CartException specifically
+    @ExceptionHandler(CartException.class)
+    public ResponseEntity<CoErrorResponseDto> handleCartException(
+            CartException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new CoErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()
+                ));
+    }
+
+    // ── CUSTOM BAD REQUEST EXCEPTIONS ──────────────────────────────────────────
+
     @ExceptionHandler(CoBadRequestException.class)
-    public ResponseEntity<Map<String, String>> handleBadRequest(CoBadRequestException ex) {
+    public ResponseEntity<CoErrorResponseDto> handleBadRequest(
+            CoBadRequestException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new CoErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()
+                ));
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    }
+
+    // GENERIC EXCEPTION
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleException(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+
+        ex.printStackTrace();
+
+        Map<String, Object> error = new HashMap<>();
+
+        error.put("apiPath", request.getRequestURI());
+        error.put("errorCode", "INTERNAL_SERVER_ERROR");
+        error.put("errorMessage", ex.getMessage());
+        error.put("errorTime", LocalDateTime.now());
+
+        return new ResponseEntity<>(
+                error,
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
+    }
+    // ── GENERIC EXCEPTIONS ────────────────────────────────────────────────────
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleException(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+
+        ex.printStackTrace();
+
+        Map<String, Object> error = new HashMap<>();
+
+        error.put("apiPath", request.getRequestURI());
+        error.put("errorCode", "INTERNAL_SERVER_ERROR");
+        error.put("errorMessage", ex.getMessage());
+        error.put("errorTime", LocalDateTime.now());
+
+        return new ResponseEntity<>(
+                error,
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
+    }
+    @ExceptionHandler(CoZoneException.class)
+    public ResponseEntity<Map<String, String>> handleZoneException(CoZoneException ex) {
 
         Map<String, String> error = new HashMap<>();
         error.put("message", ex.getMessage());
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
-    // Handle resource not found
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException ex) {
-
-        Map<String, String> error = new HashMap<>();
-        error.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
-    }
-
-    // GENERIC EXCEPTION
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<CoErrorResponseDto> handleGlobalException(
-            Exception ex,
-            HttpServletRequest request) {
-
-        log.error("Unhandled Exception | path={}", request.getRequestURI(), ex);
-
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new CoErrorResponseDto(
-                        request.getRequestURI(),
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Internal server error",
-                        LocalDateTime.now()
-                ));
-    }
-//    // Handle all other exceptions
-//    @ExceptionHandler(Exception.class)
-//    public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
-//
-//        // Print full error in console imp for debugging
-//        ex.printStackTrace();
-//
-//        Map<String, String> error = new HashMap<>();
-//
-//        // Return actual error message instead of generic message
-//        error.put("message", ex.getMessage());
-//
-//        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-//    }
 
     @ExceptionHandler(CoBusinessException.class)
     public ResponseEntity<?> handleBusinessException(CoBusinessException ex) {

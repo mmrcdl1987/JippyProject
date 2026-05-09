@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.repository;
 
+import com.jippy.foodandmart.dto.OutletLocationProjection;
 import com.jippy.foodandmart.entity .FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
@@ -311,4 +312,15 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             @Param("customerLng") double customerLng
     );
 
+
+    @Query(value = """
+            SELECT
+                outlet_id AS outletId,
+                ST_Y(outlet_location::geometry) AS latitude,
+                ST_X(outlet_location::geometry) AS longitude
+            FROM jippy_fm.outlets
+            WHERE outlet_id = :outletId
+            """, nativeQuery = true)
+    OutletLocationProjection getOutletLocation(
+            @Param("outletId") Integer outletId);
 }
