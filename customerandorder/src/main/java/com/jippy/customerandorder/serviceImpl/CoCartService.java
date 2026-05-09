@@ -25,7 +25,7 @@ import java.util.List;
 public class CoCartService implements ICartService {
 
     private final CoCustomerCartRepository cartRepository;
-    private final FMFeignClient productFeignClient;
+    private final FMFeignClient fmFeignClient;
 
 
     public String updateCart(CoCartUpdateRequestDto dto) {
@@ -190,7 +190,7 @@ public class CoCartService implements ICartService {
             try {
                 log.debug("Fetching product details from food service | productId={}, customerId={}",
                         cart.getProductId(), customerId);
-                product = productFeignClient.getProductById(cart.getProductId());
+                product = fmFeignClient.getProductById(cart.getProductId());
                 log.debug("Product fetched successfully | productId={}, customerId={}",
                         cart.getProductId(), customerId);
             } catch (Exception ex) {
