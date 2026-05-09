@@ -55,20 +55,24 @@ public class GlobalExceptionHandler {
 
     // GENERIC EXCEPTION
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<CoErrorResponseDto> handleGlobalException(
+    public ResponseEntity<Map<String, Object>> handleException(
             Exception ex,
-            HttpServletRequest request) {
+            HttpServletRequest request
+    ) {
 
-        log.error("Unhandled Exception | path={}", request.getRequestURI(), ex);
+        ex.printStackTrace();
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new CoErrorResponseDto(
-                        request.getRequestURI(),
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Internal server error",
-                        LocalDateTime.now()
-                ));
+        Map<String, Object> error = new HashMap<>();
+
+        error.put("apiPath", request.getRequestURI());
+        error.put("errorCode", "INTERNAL_SERVER_ERROR");
+        error.put("errorMessage", ex.getMessage());
+        error.put("errorTime", LocalDateTime.now());
+
+        return new ResponseEntity<>(
+                error,
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
     @ExceptionHandler(CoZoneException.class)
     public ResponseEntity<Map<String, String>> handleZoneException(CoZoneException ex) {

@@ -11,4 +11,6 @@ public interface ICoDriverService {
     CoDriverDto getDriverDetails(Integer driverId);
 
     String createZones(CoZoneDto zoneDto);
+
+    CoDriverDto updateDriverDetails(Integer driverId, CoDriverDto dto);
 }

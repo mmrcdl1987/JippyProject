@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,10 +62,10 @@ public class CoDriverServiceImpl implements ICoDriverService {
         coAddressRequestDto.setStateId(dto.getStateId());
         coAddressRequestDto.setAreaId(dto.getAreaId());
         coAddressRequestDto.setAddressType(COConstants.TYPE_DRIVER);
-       CoAddressRequestDto coAddressRequestDtoFeign = FMFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+        CoAddressRequestDto coAddressRequestDtoFeign = FMFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
 
         // Convert Entity → DTO
-        CoDriverDto mapToDriverDto = CoDriverMapper.mapToDriverDto(savedDriver,coAddressRequestDtoFeign);
+        CoDriverDto mapToDriverDto = CoDriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
 
         return mapToDriverDto;
     }
@@ -75,15 +76,58 @@ public class CoDriverServiceImpl implements ICoDriverService {
 
         log.info("Fetching driver with id: {}", driverId);
 
-        CoDriver driver = driverRepository.findById(driverId)
-                .orElseThrow(() -> {
-                    log.error("Driver not found with id: {}", driverId);
-                    return new ResourceNotFoundException("Driver not found with id: " + driverId);
-                });
+        CoDriver driver = driverRepository.findById(driverId).orElseThrow(() -> {
+            log.error("Driver not found with id: {}", driverId);
+            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+        });
         CoAddressRequestDto coGetAddressRequestDtoFeign = FMFeignClient.getAddressDetails(driverId).getBody();
         CoDriverDto driverDto = CoDriverMapper.mapToDriverDto(driver, coGetAddressRequestDtoFeign);
 
         return driverDto;
+    }
+
+    //    updating driver details, only editable fields (not phone, email, or KYC)
+//    and address details through feign client
+    @Override
+    @Transactional
+    public CoDriverDto updateDriverDetails(Integer driverId, CoDriverDto dto) {
+
+        log.info("Updating driver with id: {}", driverId);
+
+        // Fetch existing driver from DB
+        CoDriver existingDriver = driverRepository.findById(driverId).orElseThrow(() -> {
+            log.error("Driver not found with id: {}", driverId);
+
+            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+        });
+
+        // Update only editable fields using mapper
+        CoDriverMapper.updateDriverEntity(existingDriver, dto);
+
+        // Save updated driver to entity
+        CoDriver updatedDriver = driverRepository.save(existingDriver);
+
+        log.info("Driver updated successfully with id: {}", driverId);
+
+        // Update address through feign client
+        CoAddressRequestDto addressDto = new CoAddressRequestDto();
+
+        addressDto.setJippyAddressId(driverId);
+        addressDto.setBuildingNumber(dto.getBuildingNumber());
+        addressDto.setRoad(dto.getRoad());
+        addressDto.setLandmark(dto.getLandmark());
+        addressDto.setCityId(dto.getCityId());
+        addressDto.setStateId(dto.getStateId());
+        addressDto.setAreaId(dto.getAreaId());
+        addressDto.setAddressType(COConstants.TYPE_DRIVER);
+
+        // Save/update address
+        CoAddressRequestDto updatedAddress = FMFeignClient.saveAddressDetails(addressDto).getBody();
+
+        // Convert updated entity → response DTO with updated address details
+        CoDriverDto response = CoDriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
+
+        return response;
     }
 
     @Transactional
@@ -95,29 +139,27 @@ public class CoDriverServiceImpl implements ICoDriverService {
         if (existingZone.isPresent()) {
             if (zoneRepository.existsBySpatialBoundary(polygon)) {
                 throw new CoZoneException("A boundary with this exact shape already exists!");
-            }else{
+            } else {
                 log.info("Updating existing zone with id: {}", existingZone.get().getZoneId());
                 CoZone zoneToUpdate = existingZone.get();
                 zoneToUpdate.setBoundary(polygon);
                 zoneToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
                 zoneToUpdate.setUpdatedBy(zoneDto.getCreatedBy());
                 zoneRepository.save(zoneToUpdate);
-                return "Zone:" +zoneToUpdate.getZoneName()+ " updated successfully!";
+                return "Zone:" + zoneToUpdate.getZoneName() + " updated successfully!";
             }
         }
         CoZone zone = CoDriverMapper.mapToZoneEntity(zoneDto, polygon);
-        CoZone savedZone =  zoneRepository.save(zone);
+        CoZone savedZone = zoneRepository.save(zone);
         log.info("New zone is created with id: {}", savedZone.getZoneId());
 
-        return "Zone:" +zone.getZoneName()+ " created successfully!";
+        return "Zone:" + zone.getZoneName() + " created successfully!";
     }
 
     private Polygon convertToJtsPolygon(List<CoZoneDto.CoordinateDTO> boundary) {
         GeometryFactory factory = new GeometryFactory();
 
-        Coordinate[] coords = boundary.stream()
-                .map(p -> new Coordinate(p.getLongitude(), p.getLatitude()))
-                .toArray(Coordinate[]::new);
+        Coordinate[] coords = boundary.stream().map(p -> new Coordinate(p.getLongitude(), p.getLatitude())).toArray(Coordinate[]::new);
 
         // JTS requires the linear ring to be closed (first == last)
         return factory.createPolygon(coords);
