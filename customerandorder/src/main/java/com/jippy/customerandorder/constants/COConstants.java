@@ -1,4 +1,4 @@
-package com.jippy.customerandorder.Constants;
+package com.jippy.customerandorder.constants;
 
 public class COConstants {
     private COConstants(){}
@@ -17,4 +17,8 @@ public class COConstants {
     public static final String MSG_PRODUCT_FETCH_FAILED = "Unable to fetch product details";
     public static final String MSG_CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String TYPE_DRIVER="DRIVER";
+    public static final String CUSTOMER = "CUSTOMER";
+    public static final String OUTLET = "OUTLET";
+    public static final String ORDER_STATUS_REJECTED = "REJECTED";
+    public static final String ORDER_STATUS_CANCELLED = "CANCELLED";
 }

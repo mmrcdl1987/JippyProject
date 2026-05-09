@@ -3,14 +3,14 @@ package com.jippy.notification.service;
 import com.jippy.notification.constants.NConstants;
 import com.jippy.notification.dto.NOrderEvent;
 import com.jippy.notification.entity.Notification;
-import com.jippy.notification.entity.NotificationRecipient;
 import com.jippy.notification.entity.OrderNotificationStatus;
 import com.jippy.notification.exception.NotificationException;
-import com.jippy.notification.repository.NotificationRecipientRepository;
 import com.jippy.notification.repository.NotificationRepository;
 import com.jippy.notification.repository.OrderNotificationStatusRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,100 +21,172 @@ import java.time.LocalDateTime;
 @Slf4j
 public class NotificationService {
 
-    private final NotificationRepository notificationRepository;
-    private final NotificationRecipientRepository recipientRepository;
-    private final OrderNotificationStatusRepository statusRepository;
+    private final NotificationRepository
+            notificationRepository;
+
+    private final OrderNotificationStatusRepository
+            statusRepository;
 
     @Transactional
-    public Notification processNotification(NOrderEvent event) {
+    public OrderNotificationStatus processNotification(
+            NOrderEvent event) {
 
-        // Null validation
-        if (event == null || event.getOrderId() == null || event.getOutletId() == null) {
-            log.error("Invalid event data");
-            throw new NotificationException("Invalid order event data");
+        /*
+         * VALIDATION
+         */
+        if (event == null
+                || event.getOrderId() == null
+                || event.getOutletId() == null) {
+
+            throw new NotificationException(
+                    "Invalid event data"
+            );
         }
 
-        log.info("Processing notification | orderId={}, outletId={}", event.getOrderId(), event.getOutletId());
+        /*
+         * SUBJECT
+         */
+        String subject;
 
-        try {
-            // FETCH TEMPLATE (ADMIN CREATED)
-            Notification notification = notificationRepository
-                    .findByRoleAndSubject(
-                            NConstants.ROLE_OUTLET,
-                            NConstants.SUBJECT_NEW_ORDER
+        if ("REJECTED".equalsIgnoreCase(
+                event.getStatus())) {
+
+            subject =
+                    NConstants.SUBJECT_REJECTED_ORDER;
+
+        } else {
+
+            subject =
+                    NConstants.SUBJECT_NEW_ORDER;
+        }
+
+        /*
+         * FETCH TEMPLATE
+         */
+        Notification notification =
+                notificationRepository
+                        .findByRoleAndSubject(
+                                NConstants.ROLE_OUTLET,
+                                subject
+                        )
+                        .orElseThrow(() ->
+                                new NotificationException(
+                                        "Notification template not found"
+                                ));
+
+        /*
+         * CHECK DUPLICATE
+         */
+        boolean exists =
+                statusRepository
+                        .existsByOrderIdAndNotificationRecipientId(
+                                event.getOrderId(),
+                                event.getOutletId()
+                        );
+
+        if (exists) {
+
+            log.info(
+                    "Duplicate notification skipped orderId={}",
+                    event.getOrderId()
+            );
+
+            return statusRepository
+                    .findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
+                            event.getOrderId(),
+                            event.getOutletId()
                     )
-                    .orElseThrow(() -> new NotificationException(
-                            "Notification template not found"));
-
-            log.info("Notification template found | notificationId={}", notification.getNotificationId());
-
-            // SAVE RECIPIENT
-            NotificationRecipient recipient = new NotificationRecipient();
-            recipient.setNotificationId(notification.getNotificationId());
-            recipient.setRecipientId(event.getOutletId());
-            recipient.setCreatedAt(LocalDateTime.now());
-            recipient.setCreatedBy(1);
-
-            recipientRepository.save(recipient);
-
-            log.info("Recipient saved | notificationId={}, outletId={}",
-                    notification.getNotificationId(), event.getOutletId());
-
-            // SAVE STATUS (FALSE)
-            OrderNotificationStatus status = new OrderNotificationStatus();
-            status.setOrderId(event.getOrderId());
-            status.setNotificationId(notification.getNotificationId());
-            status.setNotificationStatus(false);
-            status.setChangedAt(LocalDateTime.now());
-
-            statusRepository.save(status);
-
-            log.info("Notification status saved | orderId={}, notificationId={}", 
-                    event.getOrderId(), notification.getNotificationId());
-
-            return notification;
-
-        } catch (NotificationException e) {
-            log.error("Notification exception | orderId={}, error={}", event.getOrderId(), e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error processing notification | orderId={}, error={}",
-                    event.getOrderId(), e.getMessage(), e);
-            throw new NotificationException("Failed to process notification");
+                    .orElseThrow(() ->
+                            new NotificationException(
+                                    "Notification status not found"
+                            ));
         }
+
+        /*
+         * SAVE STATUS
+         */
+        OrderNotificationStatus status =
+                OrderNotificationStatus.builder()
+
+                        .orderId(
+                                event.getOrderId()
+                        )
+
+                        .notificationId(
+                                notification.getNotificationId()
+                        )
+
+                        .notificationRecipientId(
+                                event.getOutletId()
+                        )
+
+                        .recipientType(
+                                NConstants.ROLE_OUTLET
+                        )
+
+                        .notificationStatus(false)
+
+                        .createdAt(
+                                LocalDateTime.now()
+                        )
+
+                        .createdBy(1)
+
+                        .build();
+
+        statusRepository.save(status);
+
+        log.info(
+                "Notification stored orderId={}",
+                event.getOrderId()
+        );
+
+        return status;
     }
 
     @Transactional
-    public void markAsSent(String orderId, Integer notificationId) {
+    public void markAsSent(
+            String orderId,
+            Integer recipientId) {
 
-        // Null validation
-        if (orderId == null || orderId.isEmpty() || notificationId == null || notificationId <= 0) {
-            log.error("Invalid parameters for marking notification as sent | orderId={}, notificationId={}", 
-                    orderId, notificationId);
-            throw new NotificationException("Invalid parameters for notification status update");
-        }
+        OrderNotificationStatus status =
+                statusRepository
+                        .findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
+                                orderId,
+                                recipientId
+                        )
+                        .orElseThrow(() ->
+                                new NotificationException(
+                                        "Notification status not found"
+                                ));
 
-        log.info("Marking notification as sent | orderId={}, notificationId={}", orderId, notificationId);
+        status.setNotificationStatus(true);
 
-        try {
-            OrderNotificationStatus status = statusRepository
-                    .findByOrderIdAndNotificationId(orderId, notificationId)
-                    .orElseThrow(() -> new NotificationException("Notification status not found for orderId: " + orderId));
+        status.setUpdatedAt(
+                LocalDateTime.now()
+        );
 
-            status.setNotificationStatus(true);
-            status.setChangedAt(LocalDateTime.now());
+        status.setUpdatedBy(1);
 
-            statusRepository.save(status);
+        statusRepository.save(status);
 
-            log.info("Notification marked as SENT successfully | orderId={}, notificationId={}", orderId, notificationId);
+        log.info(
+                "Notification marked SENT orderId={}",
+                orderId
+        );
+    }
 
-        } catch (NotificationException e) {
-            log.error("Notification exception | orderId={}, error={}", orderId, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Error updating status | orderId={}, notificationId={}, error={}", 
-                    orderId, notificationId, e.getMessage(), e);
-            throw new NotificationException("Failed to update notification status");
-        }
+    public Notification getNotificationTemplate(
+            String subject) {
+
+        return notificationRepository
+                .findByRoleAndSubject(
+                        NConstants.ROLE_OUTLET,
+                        subject
+                )
+                .orElseThrow(() ->
+                        new NotificationException(
+                                "Notification template not found"
+                        ));
     }
 }

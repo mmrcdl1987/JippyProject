@@ -5,9 +5,9 @@ spring:
     name: notification
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://187.127.156.147:5434/n_db
+    username: n_user
+    password: n_password
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -17,23 +17,23 @@ spring:
       ddl-auto: update
     show-sql: true
 
-    kafka:
-      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-      consumer:
-        # Starts reading from the beginning of the topic if no offset is found
-        auto-offset-reset: earliest
-        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        properties:
-          # CRITICAL: Tell Spring which Java packages are safe to deserialize
-          spring.json.trusted.packages: "com.jippy.notification.dto"
-          # Maps the incoming JSON back to your OrderEvent class
-          spring.json.value.default.type: "com.jippy.notification.dto.OrderEvent"
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:187.127.156.147:9092}
+    consumer:
+      # Starts reading from the beginning of the topic if no offset is found
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        # CRITICAL: Tell Spring which Java packages are safe to deserialize
+        spring.json.trusted.packages: "com.jippy.notification.dto"
+        # Maps the incoming JSON back to your OrderEvent class
+        spring.json.value.default.type: "com.jippy.notification.dto.OrderEvent"
 
-  # Custom Firebase Path
- # app:
-  #  firebase:
-   #   config-path: classpath:jippy-firebase-key.json
+    # Custom Firebase Path
+    # app:
+    #  firebase:
+    #   config-path: classpath:jippy-firebase-key.json
 
 eureka:
   instance:

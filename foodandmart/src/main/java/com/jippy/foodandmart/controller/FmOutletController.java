@@ -4,6 +4,7 @@ import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.exception.InvalidUserTypeException;
+import com.jippy.foodandmart.service.FmSpecializedOutletService;
 import com.jippy.foodandmart.service.IFmOutletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,6 +42,7 @@ import java.util.function.Function;
 public class FmOutletController {
 
     private final IFmOutletService outletService;
+    private final FmSpecializedOutletService service;
 
     private static final String CUSTOMER = "CUSTOMER";
     private static final String MERCHANT = "MERCHANT";
@@ -269,8 +271,8 @@ public class FmOutletController {
      * filled by humans. The service layer resolves the state name to an integer
      * FK via the states lookup table.</p>
      *
-     * @param row    the Excel row to map
-     * @param col    the column-name-to-index map built from the header row
+     * @param row the Excel row to map
+     * @param col the column-name-to-index map built from the header row
      * @return a populated {@link FmOutletRequestDTO}
      */
     private FmOutletRequestDTO mapExcelRow(Row row, Map<String, Integer> col) {
@@ -351,7 +353,10 @@ public class FmOutletController {
             // Parse "HH:mm-HH:mm" range from cell if present
             if (val.contains("-")) {
                 String[] parts = val.split("-");
-                if (parts.length == 2) { open = parts[0].trim(); close = parts[1].trim(); }
+                if (parts.length == 2) {
+                    open = parts[0].trim();
+                    close = parts[1].trim();
+                }
             }
             // Build OutletDayDTO using setter methods instead of builder
             FmOutletDayDTO dayDto = new FmOutletDayDTO();
@@ -437,8 +442,11 @@ public class FmOutletController {
      */
     private Integer parseIntOrNull(String s) {
         if (s == null || s.isBlank()) return null;
-        try { return Integer.parseInt(s.trim().replaceAll("\\.0$", "")); }
-        catch (Exception e) { return null; }
+        try {
+            return Integer.parseInt(s.trim().replaceAll("\\.0$", ""));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     //    for getOutletDetails API - to fetch outlet details including menu, categories,
@@ -457,8 +465,7 @@ public class FmOutletController {
             @RequestParam Integer outletId,
 
             @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true)
-            @RequestParam String userType)
-    {
+            @RequestParam String userType) {
 
         log.info("Fetching outlet details for outletId: {}, userType: {}", outletId, userType);
 
@@ -474,6 +481,7 @@ public class FmOutletController {
 
         return ResponseEntity.ok(outletDetails);
     }
+
     @Operation(
             summary = "Get Outlets by Merchant ID",
             description = "Fetch all outlets for a merchant with state, city, and area details. Throws error if outlet is not approved."
@@ -498,6 +506,7 @@ public class FmOutletController {
 
         return ResponseEntity.ok(OutletByMerchantDetails);
     }
+
     //Update outlet details
     @PutMapping("/editAndUpdateOutletProducts")
     @Operation(
@@ -515,7 +524,7 @@ public class FmOutletController {
         log.info("Received request to update outlet with id={}", outletId);
 
         // Call service
-        FmOutletDetailsDto response =  outletService.updateOutletDetails(outletId, dto, userType);
+        FmOutletDetailsDto response = outletService.updateOutletDetails(outletId, dto, userType);
 
         log.info("Successfully updated outlet with id={}", outletId);
 
@@ -526,7 +535,7 @@ public class FmOutletController {
     public FmBulkOutletResultDTO outletBulkUpload(List<FmOutletRequestDTO> rows) {
         int total = rows.size(), success = 0;
         List<FmBulkOutletResultDTO.OutletCredential> credentials = new ArrayList<>();
-        List<FmBulkOutletResultDTO.OutletError>      errors      = new ArrayList<>();
+        List<FmBulkOutletResultDTO.OutletError> errors = new ArrayList<>();
 
         for (int i = 0; i < rows.size(); i++) {
             int rowNum = i + 3;
@@ -559,6 +568,7 @@ public class FmOutletController {
         result.setErrors(errors);
         return result;
     }
+
     @Operation(
             summary = "Customer App: Nearby outlets within 3 km (USE THIS FOR MOBILE APP)",
             description = """
@@ -605,18 +615,29 @@ public class FmOutletController {
         return ResponseEntity.ok(response);
     }
 
-// End Points for getting address data from FM_Microservice to CO_Microservice
+    // End Points for getting address data from FM_Microservice to CO_Microservice
     @PostMapping("/saveAddressDetails")
-    public ResponseEntity<FmAddressRequestDto>  saveAddressDetails(@RequestBody FmAddressRequestDto fmAddressRequestDto) {
+    public ResponseEntity<FmAddressRequestDto> saveAddressDetails(@RequestBody FmAddressRequestDto fmAddressRequestDto) {
         FmAddressRequestDto savedAddress = outletService.saveAddressDetails(fmAddressRequestDto);
         return ResponseEntity.ok(savedAddress);
     }
+
     @GetMapping("/getAddressDetails")
-    public ResponseEntity<FmAddressRequestDto>  getAddressDetails(@RequestParam Integer driverId) {
+    public ResponseEntity<FmAddressRequestDto> getAddressDetails(@RequestParam Integer driverId) {
         FmAddressRequestDto getAddress = outletService.getAddressDetails(driverId);
         return ResponseEntity.ok(getAddress);
     }
 
 
+    @GetMapping("/specialized-outlets/area")
+    public FmNearbyOutletResponseDto
+    fetchSpecializedOutletsByAreaId(
+            @RequestParam Integer areaId) {
+
+        return service
+                .fetchSpecializedOutletsByAreaId(
+                        areaId
+                );
+    }
 
 }

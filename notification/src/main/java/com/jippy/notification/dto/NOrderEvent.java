@@ -10,9 +10,19 @@ import lombok.NoArgsConstructor;
 public class NOrderEvent {
 
     private String orderId;
+
     private Integer customerId;
+
     private Integer outletId;
+
     private Integer driverId;
-    private String status;        // e.g., "PLACED", "PICKED_UP", "DELIVERED"
-   // private String cityName;      // Useful for routing to regional FCM topics
+
+    private String status;
+
+    /*
+     * SPECIALIZED OUTLET FLOW
+     */
+    private Integer areaId;
+
+    private Integer rejectedOutletId;
 }

@@ -1,5 +1,5 @@
 package com.jippy.customerandorder.mapper;
-import com.jippy.customerandorder.Constants.COConstants;
+import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoOrderItemDto;
 import com.jippy.customerandorder.dto.CoPlaceOrderRequestDto;
 import com.jippy.customerandorder.entity.CoOrder;

@@ -272,8 +272,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         Integer areaId  = resolveAreaId(dto.getAreaName());
         FmAddressRequestDto AddressReqDto = FmOutletMapper.convertToAddressReqDto(dto, outletId, stateId, areaId);
         FmOutletAddress address = FmOutletMapper.toAddressEntity(AddressReqDto);
-        Integer areaId = resolveAreaId(dto.getAreaName());
-        FmOutletAddress address = FmOutletMapper.toAddressEntity(dto, outletId, stateId, areaId);
+//        Integer areaId = resolveAreaId(dto.getAreaName());
+//        FmOutletAddress address = FmOutletMapper.toAddressEntity(dto, outletId, stateId, areaId);
         addressRepository.save(address);
         log.info("[OUTLET] Address saved for outletId={}", outletId);
     }

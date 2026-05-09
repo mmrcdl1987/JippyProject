@@ -85,4 +85,9 @@ public class GlobalExceptionHandler {
 //        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
 //    }
 
+    @ExceptionHandler(CoBusinessException.class)
+    public ResponseEntity<?> handleBusinessException(CoBusinessException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
 }

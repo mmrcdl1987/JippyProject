@@ -19,48 +19,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class NOutletNotificationService {
+public class NSpecializedOutletNotificationService {
 
     private final NotificationService
             notificationService;
 
     @KafkaListener(
-            topics = "new-orders",
-            groupId = "outlet-group"
+            topics = "co-order-events",
+            groupId = "specialized-outlet-group"
     )
     @Transactional
     public void consume(
             NOrderEvent event) {
 
-        /*
-         * NULL VALIDATION
-         */
         if (event == null) {
 
-            log.error("Order event is null");
-
-            return;
-        }
-
-        /*
-         * FIELD VALIDATION
-         */
-        if (event.getOrderId() == null
-                || event.getOutletId() == null) {
-
-            log.error(
-                    "Invalid event data | orderId={}, outletId={}",
-                    event.getOrderId(),
-                    event.getOutletId()
-            );
+            log.error("Kafka event is null");
 
             return;
         }
 
         log.info(
-                "Start processing order event | orderId={}, outletId={}",
+                "Received Kafka event orderId={} outletId={} status={}",
                 event.getOrderId(),
-                event.getOutletId()
+                event.getOutletId(),
+                event.getStatus()
         );
 
         try {
@@ -118,28 +101,17 @@ public class NOutletNotificationService {
                     );
 
             log.info(
-                    "Order event processed successfully | orderId={}",
-                    event.getOrderId()
+                    "Notification processed successfully outletId={}",
+                    event.getOutletId()
             );
 
-        } catch (NotificationException e) {
+        } catch (Exception ex) {
 
             log.error(
-                    "Notification processing failed | orderId={}, outletId={}, error={}",
+                    "Notification processing failed orderId={} outletId={}",
                     event.getOrderId(),
                     event.getOutletId(),
-                    e.getMessage(),
-                    e
-            );
-
-        } catch (Exception e) {
-
-            log.error(
-                    "Unexpected error processing order event | orderId={}, outletId={}, error={}",
-                    event.getOrderId(),
-                    event.getOutletId(),
-                    e.getMessage(),
-                    e
+                    ex
             );
         }
     }
@@ -148,28 +120,11 @@ public class NOutletNotificationService {
             NOrderEvent event,
             Notification notification) {
 
-        if (NConstants.TOPIC_PREFIX == null) {
-
-            log.error(
-                    "Topic prefix configuration is missing"
-            );
-
-            throw new NotificationException(
-                    "Firebase topic configuration missing"
-            );
-        }
-
-        String topic =
-                NConstants.TOPIC_PREFIX
-                        + event.getOutletId();
-
-        log.info(
-                "Sending FCM notification | orderId={}, topic={}",
-                event.getOrderId(),
-                topic
-        );
-
         try {
+
+            String topic =
+                    NConstants.TOPIC_PREFIX
+                            + event.getOutletId();
 
             Message message =
                     Message.builder()
@@ -190,38 +145,47 @@ public class NOutletNotificationService {
 
                             .putData(
                                     "orderId",
-                                    String.valueOf(
-                                            event.getOrderId()
-                                    )
+                                    event.getOrderId()
                             )
 
                             .putData(
                                     "status",
+                                    event.getStatus()
+                            )
+
+                            .putData(
+                                    "areaId",
                                     String.valueOf(
-                                            event.getStatus()
+                                            event.getAreaId()
+                                    )
+                            )
+
+                            .putData(
+                                    "rejectedOutletId",
+                                    String.valueOf(
+                                            event.getRejectedOutletId()
                                     )
                             )
 
                             .build();
 
-            FirebaseMessaging
-                    .getInstance()
-                    .send(message);
+            String response =
+                    FirebaseMessaging
+                            .getInstance()
+                            .send(message);
 
             log.info(
-                    "FCM sent successfully | orderId={}, topic={}",
-                    event.getOrderId(),
-                    topic
+                    "FCM sent successfully topic={} response={}",
+                    topic,
+                    response
             );
 
-        } catch (FirebaseMessagingException e) {
+        } catch (FirebaseMessagingException ex) {
 
             log.error(
-                    "FCM failed | orderId={}, topic={}, error={}",
-                    event.getOrderId(),
-                    topic,
-                    e.getMessage(),
-                    e
+                    "FCM failed outletId={}",
+                    event.getOutletId(),
+                    ex
             );
 
             throw new NotificationException(
