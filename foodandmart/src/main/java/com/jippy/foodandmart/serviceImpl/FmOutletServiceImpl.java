@@ -1,10 +1,12 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
+import com.jippy.foodandmart.mapper.FmNearbyOutletMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
@@ -43,7 +45,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class FmOutletServiceImpl implements IFmOutletService {
-    private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private final FmOutletRepository outletRepository;
     private final FmOutletAddressRepository addressRepository;
     private final FmOutletDayRepository dayRepository;
@@ -60,6 +61,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmCategoryRepository categoryRepository;
     private final FmProductVariantRepository productVariantRepository;
     private final FmGoogleMapsService googleMapsService;
+
+    private static final GeometryFactory GEO_FACTORY =
+            new GeometryFactory(new PrecisionModel(), 4326);
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -97,7 +101,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     @Override
     public FmOutlet getOutletById(Integer id) {
-        return outletRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Outlet ID " + id + " does not exist"));
+        return outletRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Outlet ID " + id + " does not exist"));
     }
 
     // ── Single Create ─────────────────────────────────────────────────────────
@@ -105,7 +110,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
-        log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
+        log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}",
+                dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
 
         validateOutletRequest(dto);
 
@@ -178,17 +184,24 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private void validateOutletRequest(FmOutletRequestDTO dto) {
         List<String> errs = new ArrayList<>();
 
-        if (isBlank(dto.getOutletName())) errs.add("Outlet name is required");
-        else if (dto.getOutletName().length() > 100) errs.add("Outlet name must not exceed 100 characters");
+        if (isBlank(dto.getOutletName()))
+            errs.add("Outlet name is required");
+        else if (dto.getOutletName().length() > 100)
+            errs.add("Outlet name must not exceed 100 characters");
 
-        if (dto.getMerchantId() == null) errs.add("Merchant ID is required");
+        if (dto.getMerchantId() == null)
+            errs.add("Merchant ID is required");
 
-        if (isBlank(dto.getCuisineType())) errs.add("Cuisine type is required");
-        else if (dto.getCuisineType().length() > 100) errs.add("Cuisine type must not exceed 100 characters");
+        if (isBlank(dto.getCuisineType()))
+            errs.add("Cuisine type is required");
+        else if (dto.getCuisineType().length() > 100)
+            errs.add("Cuisine type must not exceed 100 characters");
 
-        if (isBlank(dto.getOutletPhone())) errs.add("Outlet phone is required");
+        if (isBlank(dto.getOutletPhone()))
+            errs.add("Outlet phone is required");
         else if (!dto.getOutletPhone().trim().matches("^[6-9]\\d{9}$"))
-            errs.add("Outlet phone must be a valid 10-digit Indian mobile number, got: '" + dto.getOutletPhone().trim() + "'");
+            errs.add("Outlet phone must be a valid 10-digit Indian mobile number, got: '"
+                    + dto.getOutletPhone().trim() + "'");
 
         if (!isBlank(dto.getBuildingNumber()) || !isBlank(dto.getRoad())) {
             if (isBlank(dto.getAreaName())) {
@@ -204,14 +217,19 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 errs.add("Landmark must not exceed 150 characters");
         }
 
-        if (!errs.isEmpty()) throw new IllegalArgumentException("Validation failed: " + String.join("; ", errs));
+        if (!errs.isEmpty())
+            throw new IllegalArgumentException("Validation failed: " + String.join("; ", errs));
     }
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
     private Integer resolveStateId(String stateName) {
-        if (isBlank(stateName)) throw new IllegalArgumentException("State name is required");
-        return stateRepository.findByStateNameIgnoreCase(stateName.trim()).orElseThrow(() -> new IllegalArgumentException("State '" + stateName.trim() + "' not found in states table.")).getStateId();
+        if (isBlank(stateName))
+            throw new IllegalArgumentException("State name is required");
+        return stateRepository.findByStateNameIgnoreCase(stateName.trim())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "State '" + stateName.trim() + "' not found in states table."))
+                .getStateId();
     }
 
     /**
@@ -226,8 +244,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
      * @throws IllegalArgumentException if the name is blank or not found in the area table
      */
     private Integer resolveAreaId(String areaName) {
-        if (isBlank(areaName)) throw new IllegalArgumentException("Area name is required");
-        return areaRepository.findByAreaNameIgnoreCase(areaName.trim()).orElseThrow(() -> new IllegalArgumentException("Area '" + areaName.trim() + "' not found in area table.")).getAreaId();
+        if (isBlank(areaName))
+            throw new IllegalArgumentException("Area name is required");
+        return areaRepository.findByAreaNameIgnoreCase(areaName.trim())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Area '" + areaName.trim() + "' not found in area table."))
+                .getAreaId();
     }
 
     private Point buildPoint(String latStr, String lonStr) {
@@ -247,11 +269,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private void saveAddress(FmOutletRequestDTO dto, Integer outletId) {
         if (isBlank(dto.getBuildingNumber()) && isBlank(dto.getRoad())) return;
         Integer stateId = resolveStateId(dto.getStateName());
-        Integer areaId = resolveAreaId(dto.getAreaName());
+        Integer areaId  = resolveAreaId(dto.getAreaName());
         FmAddressRequestDto AddressReqDto = FmOutletMapper.convertToAddressReqDto(dto, outletId, stateId, areaId);
         FmOutletAddress address = FmOutletMapper.toAddressEntity(AddressReqDto);
-        //Integer areaId = resolveAreaId(dto.getAreaName());
-        //FmOutletAddress address = FmOutletMapper.toAddressEntity(dto, outletId, stateId, areaId);
+//        Integer areaId = resolveAreaId(dto.getAreaName());
+//        FmOutletAddress address = FmOutletMapper.toAddressEntity(dto, outletId, stateId, areaId);
         addressRepository.save(address);
         log.info("[OUTLET] Address saved for outletId={}", outletId);
     }
@@ -275,7 +297,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("[OUTLET] Operating slots saved for outletId={}", outletId);
     }
 
-    private void saveOutletUser(String loginId, String password, String phone, Integer outletId, String outletName) {
+    private void saveOutletUser(String loginId, String password,
+                                String phone, Integer outletId, String outletName) {
         String username = loginId;
         if (userRepository.existsByUsername(username)) {
             String base = username;
@@ -298,7 +321,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         //  Fetch role_permissions
 
-        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRoleId(role.getRoleId());
+        List<FmRolePermissions> rolePermissionsList =
+                rolePermissionsRepository.findByRoleId(role.getRoleId());
 
         if (rolePermissionsList.isEmpty()) {
             throw new RuntimeException("No permissions mapped to role");
@@ -307,7 +331,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         //  Map user → role_permissions
         for (FmRolePermissions rp : rolePermissionsList) {
 
-            FmUserRolePermissions urp = FmMerchantMapper.toUserRolesEntity(users, rp);
+            FmUserRolePermissions urp =
+                    FmMerchantMapper.toUserRolesEntity(users, rp);
 
             userRolesRepository.save(urp);
         }
@@ -319,7 +344,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private LocalTime parseTime(String s, LocalTime fallback) {
         if (s == null || s.isBlank()) return fallback;
         try {
-            return s.length() == 5 ? LocalTime.parse(s, DateTimeFormatter.ofPattern("HH:mm")) : LocalTime.parse(s);
+            return s.length() == 5
+                    ? LocalTime.parse(s, DateTimeFormatter.ofPattern("HH:mm"))
+                    : LocalTime.parse(s);
         } catch (Exception e) {
             return fallback;
         }
@@ -374,7 +401,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         // Fetch the outlet from database using outletId
         // If not found, throw exception
-        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
+        FmOutlet outlet = outletRepository.findById(outletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
 
         log.info("SERVICE: Outlet found for outletId={}", outletId);
 
@@ -382,7 +410,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         if (dto.getOutletTimings() != null) {
 
             // Fetch all existing outlet timing records for this outlet
-            List<FmOutletDay> outletDaysList = dayRepository.findByOutletId(outletId);
+            List<FmOutletDay> outletDaysList =
+                    dayRepository.findByOutletId(outletId);
 
             // Loop through each timing received in request
             for (FmOutletTimingDto timingDto : dto.getOutletTimings()) {
@@ -397,13 +426,16 @@ public class FmOutletServiceImpl implements IFmOutletService {
                     if (outletDay.getDayOfWeekId().equals(dayId)) {
 
                         // Update isOpen only if value is provided
-                        if (timingDto.getIsOpen() != null) outletDay.setIsOpen(timingDto.getIsOpen());
+                        if (timingDto.getIsOpen() != null)
+                            outletDay.setIsOpen(timingDto.getIsOpen());
 
                         // Update opening time only if value is provided
-                        if (timingDto.getOpeningTime() != null) outletDay.setOpeningTime(timingDto.getOpeningTime());
+                        if (timingDto.getOpeningTime() != null)
+                            outletDay.setOpeningTime(timingDto.getOpeningTime());
 
                         // Update closing time only if value is provided
-                        if (timingDto.getClosingTime() != null) outletDay.setClosingTime(timingDto.getClosingTime());
+                        if (timingDto.getClosingTime() != null)
+                            outletDay.setClosingTime(timingDto.getClosingTime());
                     }
                 }
             }
@@ -423,10 +455,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 log.debug("SERVICE: Processing categoryId={}", categoryDto.getCategoryId());
 
                 // Fetch category from database using categoryId
-                FmCategory category = categoryRepository.findById(categoryDto.getCategoryId()).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+                FmCategory category = categoryRepository.findById(categoryDto.getCategoryId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
                 // Update category name only if provided
-                if (categoryDto.getCategoryName() != null) category.setCategoryName(categoryDto.getCategoryName());
+                if (categoryDto.getCategoryName() != null)
+                    category.setCategoryName(categoryDto.getCategoryName());
 
                 // Process products inside this category
                 if (categoryDto.getProducts() != null) {
@@ -437,16 +471,20 @@ public class FmOutletServiceImpl implements IFmOutletService {
                         log.debug("SERVICE: Updating productId={}", productDto.getProductId());
 
                         // Fetch product from database using productId
-                        FmProduct product = productRepository.findById(productDto.getProductId()).orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+                        FmProduct product = productRepository.findById(productDto.getProductId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
                         // Update product name if provided
-                        if (productDto.getProductName() != null) product.setProductName(productDto.getProductName());
+                        if (productDto.getProductName() != null)
+                            product.setProductName(productDto.getProductName());
 
                         // Update description if provided
-                        if (productDto.getDescription() != null) product.setDescription(productDto.getDescription());
+                        if (productDto.getDescription() != null)
+                            product.setDescription(productDto.getDescription());
 
                         // Update veg flag if provided
-                        if (productDto.getIsVeg() != null) product.setIsVeg(productDto.getIsVeg());
+                        if (productDto.getIsVeg() != null)
+                            product.setIsVeg(productDto.getIsVeg());
 
                         // Update product variant flag if provided
                         if (productDto.getHasProductVariants() != null)
@@ -458,23 +496,30 @@ public class FmOutletServiceImpl implements IFmOutletService {
                             for (FmProductVariantDTO vDto : productDto.getVariants()) {
 
                                 // Fetch existing variant from DB
-                                FmProductVariant variant = productVariantRepository.findById(vDto.getVariantId()).orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
+                                FmProductVariant variant = productVariantRepository
+                                        .findById(vDto.getVariantId())
+                                        .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
                                 // Update variant name if provided
-                                if (vDto.getVariantName() != null) variant.setVariantName(vDto.getVariantName());
+                                if (vDto.getVariantName() != null)
+                                    variant.setVariantName(vDto.getVariantName());
 
                                 // Update variant price if provided
-                                if (vDto.getPrice() != null) variant.setMerchantPrice(vDto.getPrice());
+                                if (vDto.getPrice() != null)
+                                    variant.setMerchantPrice(vDto.getPrice());
                             }
                         }
                         // Update product price if provided
-                        if (productDto.getPrice() != null) product.setMerchantPrice(productDto.getPrice());
+                        if (productDto.getPrice() != null)
+                            product.setMerchantPrice(productDto.getPrice());
 
                         // Update product timings if provided
                         if (productDto.getProductTimings() != null) {
 
                             // Fetch existing product timing records
-                            List<FmProductAvailableTiming> timings = productAvailableTimingRepository.findByProductId(productDto.getProductId());
+                            List<FmProductAvailableTiming> timings =
+                                    productAvailableTimingRepository
+                                            .findByProductId(productDto.getProductId());
 
                             // Loop through each timing from request
                             for (FmProductTimingDto timingDto : productDto.getProductTimings()) {
@@ -493,7 +538,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
                                             timing.setStartTime(timingDto.getStartTime());
 
                                         // Update end time if provided
-                                        if (timingDto.getEndTime() != null) timing.setEndTime(timingDto.getEndTime());
+                                        if (timingDto.getEndTime() != null)
+                                            timing.setEndTime(timingDto.getEndTime());
                                     }
                                 }
                             }
@@ -551,7 +597,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Transactional
     public FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto) {
         FmOutletAddress address = FmOutletMapper.toAddressEntity(fmAddressRequestDto);
-        FmOutletAddress fmAddress = addressRepository.save(address);
+        FmOutletAddress fmAddress= addressRepository.save(address);
         FmAddressRequestDto responseDto = FmOutletMapper.toAddressRequestDto(fmAddress);
         log.info("address saved for driver ID  ={}", address.getAddressId());
 
@@ -562,7 +608,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     @Transactional
     public FmAddressRequestDto getAddressDetails(Integer addressId) {
-        FmOutletAddress address = addressRepository.findByJippyAddressId(addressId).orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+        FmOutletAddress address = addressRepository.findByJippyAddressId(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
         FmAddressRequestDto addressResponseDto = FmOutletMapper.toAddressRequestDto(address);
         log.info("address details fetched for address ID  ={}", addressId);
         return addressResponseDto;
@@ -636,7 +683,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
 //    }
 
 
-    //    // CUSTOMER NEARBY OUTLETS
+//    // CUSTOMER NEARBY OUTLETS
 //
 //        @Override
 //        public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat,
@@ -811,158 +858,194 @@ public class FmOutletServiceImpl implements IFmOutletService {
 //        }
 //}
 //
-    @Override
-    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng) {
+@Override
+public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat,
+                                                              double customerLng) {
 
-        double radiusKm = FmAppConstants.DEFAULT_RADIUS_KM;
+    double radiusKm = FmAppConstants.DEFAULT_RADIUS_KM;
 
-        log.info("[OutletService] fetchCustomerNearbyOutlets lat={} lng={} radius={} km", customerLat, customerLng, radiusKm);
+    log.info("[OutletService] fetchCustomerNearbyOutlets lat={} lng={} radius={} km",
+            customerLat, customerLng, radiusKm);
 
-        List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(customerLat, customerLng);
+    List<Object[]> rows =
+            outletRepository.findCustomerNearbyOutlets(customerLat, customerLng);
 
-        if (rows.isEmpty()) {
+    if (rows.isEmpty()) {
 
-            return new FmCustomerNearbyResponseDto(customerLat, customerLng, radiusKm, 0, List.of());
-        }
+        return new FmCustomerNearbyResponseDto(
+                customerLat,
+                customerLng,
+                radiusKm,
+                0,
+                List.of()
+        );
+    }
 
-        List<FmNearbyOutletDto> outlets = new ArrayList<>();
+    List<FmNearbyOutletDto> outlets = new ArrayList<>();
 
-        for (Object[] row : rows) {
+    for (Object[] row : rows) {
 
-            FmNearbyOutletDto dto = new FmNearbyOutletDto();
+        FmNearbyOutletDto dto = new FmNearbyOutletDto();
 
-            /*
-             * QUERY COLUMN INDEXES
-             *
-             * 0  -> outlet_id
-             * 1  -> outlet_name
-             * 2  -> merchant_id
-             * 3  -> cuisine_type
-             * 4  -> outlet_phone
-             * 5  -> radius
-             * 6  -> review
-             * 7  -> subscription_status
-             * 8  -> promotion_status
-             * 9  -> is_active
-             * 10 -> is_approved
-             * 11 -> employee_id
-             * 12 -> opening_time
-             * 13 -> closing_time
-             * 14 -> outlet_day_id
-             * 15 -> day_of_week_id
-             * 16 -> distance_km
-             * 17 -> latitude
-             * 18 -> longitude
-             */
+        /*
+         * QUERY COLUMN INDEXES
+         *
+         * 0  -> outlet_id
+         * 1  -> outlet_name
+         * 2  -> merchant_id
+         * 3  -> cuisine_type
+         * 4  -> outlet_phone
+         * 5  -> radius
+         * 6  -> review
+         * 7  -> subscription_status
+         * 8  -> promotion_status
+         * 9  -> is_active
+         * 10 -> is_approved
+         * 11 -> employee_id
+         * 12 -> opening_time
+         * 13 -> closing_time
+         * 14 -> outlet_day_id
+         * 15 -> day_of_week_id
+         * 16 -> distance_km
+         * 17 -> latitude
+         * 18 -> longitude
+         */
 
-            dto.setOutletId(row[0] != null ? ((Number) row[0]).intValue() : null);
+        dto.setOutletId(
+                row[0] != null
+                        ? ((Number) row[0]).intValue()
+                        : null
+        );
 
-            dto.setOutletName((String) row[1]);
+        dto.setOutletName((String) row[1]);
 
-            dto.setCuisineType((String) row[3]);
+        dto.setCuisineType((String) row[3]);
 
-            dto.setOutletPhone((String) row[4]);
+        dto.setOutletPhone((String) row[4]);
 
-            dto.setRadius(row[5] != null ? ((Number) row[5]).doubleValue() : null);
+        dto.setRadius(
+                row[5] != null
+                        ? ((Number) row[5]).doubleValue()
+                        : null
+        );
 
-            dto.setReview(row[6] != null ? ((Number) row[6]).doubleValue() : null);
+        dto.setReview(
+                row[6] != null
+                        ? ((Number) row[6]).doubleValue()
+                        : null
+        );
 
-            dto.setSubscriptionStatus((String) row[7]);
+        dto.setSubscriptionStatus((String) row[7]);
 
-            dto.setPromotionStatus((String) row[8]);
+        dto.setPromotionStatus((String) row[8]);
 
-            dto.setOpeningTime(row[12] != null ? row[12].toString() : null);
+        dto.setOpeningTime(
+                row[12] != null
+                        ? row[12].toString()
+                        : null
+        );
 
-            dto.setClosingTime(row[13] != null ? row[13].toString() : null);
+        dto.setClosingTime(
+                row[13] != null
+                        ? row[13].toString()
+                        : null
+        );
 
-            dto.setDistanceKm(row[16] != null ? ((Number) row[16]).doubleValue() : null);
+        dto.setDistanceKm(
+                row[16] != null
+                        ? ((Number) row[16]).doubleValue()
+                        : null
+        );
 
-            /*
-             * OPEN NOW
-             */
+        /*
+         * OPEN NOW
+         */
 
-            Boolean openNow = false;
+        Boolean openNow = false;
 
-            if (row[12] != null && row[13] != null) {
+        if (row[12] != null && row[13] != null) {
 
-                LocalTime openingTime = ((java.sql.Time) row[12]).toLocalTime();
+            LocalTime openingTime =
+                    ((java.sql.Time) row[12]).toLocalTime();
 
-                LocalTime closingTime = ((java.sql.Time) row[13]).toLocalTime();
+            LocalTime closingTime =
+                    ((java.sql.Time) row[13]).toLocalTime();
 
-                LocalTime currentTime = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+            LocalTime currentTime =
+                    LocalTime.now(ZoneId.of("Asia/Kolkata"));
 
-                if (closingTime.isAfter(openingTime)) {
+            if (closingTime.isAfter(openingTime)) {
 
-                    openNow = !currentTime.isBefore(openingTime) && currentTime.isBefore(closingTime);
-
-                } else {
-
-                    /*
-                     * OVERNIGHT CASE
-                     */
-
-                    openNow = !currentTime.isBefore(openingTime) || currentTime.isBefore(closingTime);
-                }
-            }
-
-            dto.setOpenNow(openNow);
-
-            /*
-             * GOOGLE MAPS LOGIC
-             */
-
-            Double outletLat = null;
-            Double outletLng = null;
-
-            if (row[17] != null) {
-                outletLat = ((Number) row[17]).doubleValue();
-            }
-
-            if (row[18] != null) {
-                outletLng = ((Number) row[18]).doubleValue();
-            }
-
-            if (outletLat != null && outletLng != null) {
-
-                FmGoogleMapsService.DistanceResult maps = googleMapsService.getDistanceAndDuration(customerLat, customerLng, outletLat, outletLng);
-
-                dto.setRoadDistance(maps.roadDistance());
-
-                if (maps.deliveryTime() != null) {
-
-                    dto.setDeliveryTime(maps.deliveryTime());
-
-                } else {
-
-                    /*
-                     * FALLBACK DELIVERY TIME
-                     */
-
-                    if (dto.getDistanceKm() != null && dto.getDistanceKm() > 0) {
-
-                        int travelMins = (int) Math.ceil((dto.getDistanceKm() / 20.0) * 60);
-
-                        dto.setDeliveryTime((5 + travelMins) + " mins");
-
-                    } else {
-
-                        dto.setDeliveryTime("10 mins");
-                    }
-                }
+                openNow =
+                        !currentTime.isBefore(openingTime)
+                                && currentTime.isBefore(closingTime);
 
             } else {
 
                 /*
-                 * IF LAT LNG NOT AVAILABLE
+                 * OVERNIGHT CASE
                  */
 
-                dto.setRoadDistance(null);
+                openNow =
+                        !currentTime.isBefore(openingTime)
+                                || currentTime.isBefore(closingTime);
+            }
+        }
 
-                if (dto.getDistanceKm() != null && dto.getDistanceKm() > 0) {
+        dto.setOpenNow(openNow);
 
-                    int travelMins = (int) Math.ceil((dto.getDistanceKm() / 20.0) * 60);
+        /*
+         * GOOGLE MAPS LOGIC
+         */
 
-                    dto.setDeliveryTime((5 + travelMins) + " mins");
+        Double outletLat = null;
+        Double outletLng = null;
+
+        if (row[17] != null) {
+            outletLat = ((Number) row[17]).doubleValue();
+        }
+
+        if (row[18] != null) {
+            outletLng = ((Number) row[18]).doubleValue();
+        }
+
+        if (outletLat != null && outletLng != null) {
+
+            FmGoogleMapsService.DistanceResult maps =
+                    googleMapsService.getDistanceAndDuration(
+                            customerLat,
+                            customerLng,
+                            outletLat,
+                            outletLng
+                    );
+
+            dto.setRoadDistance(
+                    maps.roadDistance()
+            );
+
+            if (maps.deliveryTime() != null) {
+
+                dto.setDeliveryTime(
+                        maps.deliveryTime()
+                );
+
+            } else {
+
+                /*
+                 * FALLBACK DELIVERY TIME
+                 */
+
+                if (dto.getDistanceKm() != null
+                        && dto.getDistanceKm() > 0) {
+
+                    int travelMins =
+                            (int) Math.ceil(
+                                    (dto.getDistanceKm() / 20.0) * 60
+                            );
+
+                    dto.setDeliveryTime(
+                            (5 + travelMins) + " mins"
+                    );
 
                 } else {
 
@@ -970,32 +1053,41 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 }
             }
 
-            outlets.add(dto);
+        } else {
+
+            /*
+             * IF LAT LNG NOT AVAILABLE
+             */
+
+            dto.setRoadDistance(null);
+
+            if (dto.getDistanceKm() != null
+                    && dto.getDistanceKm() > 0) {
+
+                int travelMins =
+                        (int) Math.ceil(
+                                (dto.getDistanceKm() / 20.0) * 60
+                        );
+
+                dto.setDeliveryTime(
+                        (5 + travelMins) + " mins"
+                );
+
+            } else {
+
+                dto.setDeliveryTime("10 mins");
+            }
         }
 
-        return new FmCustomerNearbyResponseDto(customerLat, customerLng, radiusKm, outlets.size(), outlets);
+        outlets.add(dto);
     }
 
-    @Override
-    public OutletLocationResponseDto getOutletLocation(Integer outletId) {
-        // Use parameterized logging to avoid unnecessary String concatenation
-        log.info("Fetching location details for outletId: {}", outletId);
-
-        OutletLocationProjection projection = outletRepository.getOutletLocation(outletId);
-
-        if (projection == null) {
-            // Log the error locally before throwing to capture the failure context in the server logs
-            log.error("Location retrieval failed: Outlet with ID {} does not exist or has no coordinates", outletId);
-
-            throw new ResourceNotFoundException("Outlet not found with ID: " + outletId);
-        }
-
-        OutletLocationResponseDto response = new OutletLocationResponseDto();
-        response.setOutletId(projection.getOutletId());
-        response.setLatitude(projection.getLatitude());
-        response.setLongitude(projection.getLongitude());
-
-        log.info("Successfully mapped location data for outletId: {}", outletId);
-        return response;
-    }
+    return new FmCustomerNearbyResponseDto(
+            customerLat,
+            customerLng,
+            radiusKm,
+            outlets.size(),
+            outlets
+    );
+}
 }

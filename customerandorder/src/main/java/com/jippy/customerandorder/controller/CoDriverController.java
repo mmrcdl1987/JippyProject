@@ -1,7 +1,7 @@
 package com.jippy.customerandorder.controller;
 
 
-import com.jippy.customerandorder.Constants.COConstants;
+import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoDriverDto;
 import com.jippy.customerandorder.dto.CoResponseDto;
 import com.jippy.customerandorder.dto.CoZoneDto;

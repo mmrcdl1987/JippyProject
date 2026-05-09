@@ -1,6 +1,6 @@
 package com.jippy.customerandorder.serviceImpl;
 
-import com.jippy.customerandorder.Constants.COConstants;
+import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoCartItemResponseDto;
 import com.jippy.customerandorder.dto.CoCartResponseDto;
 import com.jippy.customerandorder.dto.CoCartUpdateRequestDto;

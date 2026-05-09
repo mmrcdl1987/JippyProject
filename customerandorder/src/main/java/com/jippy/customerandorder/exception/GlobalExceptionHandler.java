@@ -119,4 +119,9 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(CoBusinessException.class)
+    public ResponseEntity<?> handleBusinessException(CoBusinessException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
 }

@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Firebase secret key
+notification/src/main/resources/jippy-firebase-key.json
+
+# JVM crash logs
+notification/hs_err_pid*.log
