@@ -617,7 +617,25 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     @Override
     public OutletLocationResponseDto getOutletLocation(Integer outletId) {
-        return null;
+        // Use parameterized logging to avoid unnecessary String concatenation
+        log.info("Fetching location details for outletId: {}", outletId);
+
+        OutletLocationProjection projection = outletRepository.getOutletLocation(outletId);
+
+        if (projection == null) {
+            // Log the error locally before throwing to capture the failure context in the server logs
+            log.error("Location retrieval failed: Outlet with ID {} does not exist or has no coordinates", outletId);
+
+            throw new ResourceNotFoundException("Outlet not found with ID: " + outletId);
+        }
+
+        OutletLocationResponseDto response = new OutletLocationResponseDto();
+        response.setOutletId(projection.getOutletId());
+        response.setLatitude(projection.getLatitude());
+        response.setLongitude(projection.getLongitude());
+
+        log.info("Successfully mapped location data for outletId: {}", outletId);
+        return response;
     }
 //    @Override
 //    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat,
