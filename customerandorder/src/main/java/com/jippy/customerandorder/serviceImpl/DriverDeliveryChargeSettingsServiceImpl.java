@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.serviceImpl;
-import com.jippy.customerandorder.Constants.COConstants;
+
+import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.DriverDeliveryChargeSettingsRequestDto;
 import com.jippy.customerandorder.dto.DriverDeliveryChargeSettingsResponseDto;
 import com.jippy.customerandorder.entity.DriverDeliveryChargeSettings;

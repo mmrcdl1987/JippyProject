@@ -51,21 +51,21 @@ public class GlobalExceptionHandler {
 
     // ── CUSTOM BAD REQUEST EXCEPTIONS ──────────────────────────────────────────
 
-    @ExceptionHandler(CoBadRequestException.class)
-    public ResponseEntity<CoErrorResponseDto> handleBadRequest(
-            CoBadRequestException ex,
-            HttpServletRequest request) {
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new CoErrorResponseDto(
-                        request.getRequestURI(),
-                        HttpStatus.BAD_REQUEST,
-                        ex.getMessage(),
-                        LocalDateTime.now()
-                ));
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
-    }
+//    @ExceptionHandler(CoBadRequestException.class)
+//    public ResponseEntity<CoErrorResponseDto> handleBadRequest(
+//            CoBadRequestException ex,
+//            HttpServletRequest request) {
+//
+//        return ResponseEntity
+//                .status(HttpStatus.BAD_REQUEST)
+//                .body(new CoErrorResponseDto(
+//                        request.getRequestURI(),
+//                        HttpStatus.BAD_REQUEST,
+//                        ex.getMessage(),
+//                        LocalDateTime.now()
+//                ));
+//        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+//    }
 
     // GENERIC EXCEPTION
     @ExceptionHandler(Exception.class)
@@ -88,28 +88,28 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
-    // ── GENERIC EXCEPTIONS ────────────────────────────────────────────────────
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(
-            Exception ex,
-            HttpServletRequest request
-    ) {
-
-        ex.printStackTrace();
-
-        Map<String, Object> error = new HashMap<>();
-
-        error.put("apiPath", request.getRequestURI());
-        error.put("errorCode", "INTERNAL_SERVER_ERROR");
-        error.put("errorMessage", ex.getMessage());
-        error.put("errorTime", LocalDateTime.now());
-
-        return new ResponseEntity<>(
-                error,
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
-    }
+//    // ── GENERIC EXCEPTIONS ────────────────────────────────────────────────────
+//
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<Map<String, Object>> handleException(
+//            Exception ex,
+//            HttpServletRequest request
+//    ) {
+//
+//        ex.printStackTrace();
+//
+//        Map<String, Object> error = new HashMap<>();
+//
+//        error.put("apiPath", request.getRequestURI());
+//        error.put("errorCode", "INTERNAL_SERVER_ERROR");
+//        error.put("errorMessage", ex.getMessage());
+//        error.put("errorTime", LocalDateTime.now());
+//
+//        return new ResponseEntity<>(
+//                error,
+//                HttpStatus.INTERNAL_SERVER_ERROR
+//        );
+//    }
     @ExceptionHandler(CoZoneException.class)
     public ResponseEntity<Map<String, String>> handleZoneException(CoZoneException ex) {
 

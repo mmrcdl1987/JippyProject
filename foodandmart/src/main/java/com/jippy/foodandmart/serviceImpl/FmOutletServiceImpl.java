@@ -614,6 +614,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("address details fetched for address ID  ={}", addressId);
         return addressResponseDto;
     }
+
+    @Override
+    public OutletLocationResponseDto getOutletLocation(Integer outletId) {
+        return null;
+    }
 //    @Override
 //    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat,
 //                                                                  double customerLng) {
