@@ -3,6 +3,7 @@ package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoDriverDto;
+import com.jippy.customerandorder.dto.CoDriverEarningsDto;
 import com.jippy.customerandorder.dto.CoResponseDto;
 import com.jippy.customerandorder.dto.CoZoneDto;
 import com.jippy.customerandorder.iservice.ICoDriverService;
@@ -11,9 +12,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/co/driver")
@@ -44,7 +48,7 @@ public class CoDriverController {
         return ResponseEntity.ok(driverService.getDriverDetails(driverId));
     }
 
-//    update driver details ,driver kyc from this this(Co Microservice)
+    //    update driver details ,driver kyc from this this(Co Microservice)
 //    and address Details from (FM microservices)
     @PutMapping("/updateDriverDetails")
     @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields")
@@ -63,6 +67,18 @@ public class CoDriverController {
         String message = driverService.createZones(zoneDto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_201, message));
+    }
+
+    @GetMapping("/fetchEarnings")
+    @Operation(summary = "Fetch Driver Earnings", description = "Fetch total earnings and orders count for a driver on a particular date")
+    public ResponseEntity<CoDriverEarningsDto> fetchEarnings(
+            @RequestParam Integer driverId,
+             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        log.info("date format must be [YYYY-MM-dd] for date: {}", date);
+        log.info("Fetch earnings API called for driver id: {}", driverId );
+
+        return ResponseEntity.ok(driverService.fetchEarnings(driverId, date));
     }
 
 }
