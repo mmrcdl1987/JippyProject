@@ -5,10 +5,25 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+
 @Repository
 public interface OrderNotificationStatusRepository
         extends JpaRepository<OrderNotificationStatus, Integer> {
 
-    Optional<OrderNotificationStatus> findByOrderIdAndNotificationId(
-            String orderId, Integer notificationId);
+    /*
+     * FETCH LATEST STATUS
+     */
+    Optional<OrderNotificationStatus>
+    findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
+            String orderId,
+            Integer notificationRecipientId
+    );
+
+    /*
+     * CHECK DUPLICATE
+     */
+    boolean existsByOrderIdAndNotificationRecipientId(
+            String orderId,
+            Integer notificationRecipientId
+    );
 }

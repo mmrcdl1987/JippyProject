@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.repository;
 
+import com.jippy.foodandmart.dto.OutletLocationProjection;
 import com.jippy.foodandmart.entity .FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
@@ -219,4 +220,107 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
         WHERE outlet_id IN (:ids)
         """, nativeQuery = true)
     int approveOutlets(@Param("ids") List<Integer> ids);
+
+    @Query(value = """
+
+        SELECT
+            o.outlet_id,
+            o.outlet_name,
+            o.merchant_id,
+            o.cuisine_type,
+            o.outlet_phone,
+            o.radius,
+            o.review,
+            o.subscription_status,
+            o.promotion_status,
+            o.is_active,
+            o.is_approved,
+            o.employee_id,
+
+            od.opening_time,
+            od.closing_time,
+            od.outlet_day_id,
+            od.day_of_week_id,
+
+            ROUND(
+                CAST(
+                    ST_Distance(
+                        o.outlet_location::geography,
+                        ST_SetSRID(
+                            ST_MakePoint(:customerLng, :customerLat),
+                            4326
+                        )::geography
+                    ) / 1000.0 AS numeric
+                ),
+                2
+            ) AS distance_km,
+
+            /*
+             * GOOGLE MAPS
+             */
+
+            ST_Y(o.outlet_location::geometry) AS latitude,
+
+            ST_X(o.outlet_location::geometry) AS longitude
+
+        FROM jippy_fm.outlets o
+
+        LEFT JOIN jippy_fm.outlet_subscription_plans osp
+               ON o.outlet_id = osp.outlet_id
+              AND CURRENT_DATE BETWEEN
+                  osp.subscription_from_date
+                  AND osp.subscription_to_date
+
+        LEFT JOIN jippy_fm.subscription_plans sp
+               ON osp.subscription_plan_id = sp.subscription_plan_id
+
+        JOIN jippy_fm.outlet_days od
+               ON od.outlet_id = o.outlet_id
+
+        JOIN jippy_fm.days_of_week dow
+               ON dow.day_id = od.day_of_week_id
+
+        WHERE o.is_active = 'Y'
+          AND o.outlet_location IS NOT NULL
+          AND o.is_approved = true
+
+          AND ST_DWithin(
+                o.outlet_location::geography,
+                ST_SetSRID(
+                    ST_MakePoint(:customerLng, :customerLat),
+                    4326
+                )::geography,
+
+                COALESCE(sp.radius_in_kms * 1000, 3000)
+              )
+
+          AND od.day_of_week_id =
+              EXTRACT(
+                  ISODOW FROM
+                  (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
+              )
+
+          AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time
+              BETWEEN od.opening_time
+              AND od.closing_time
+
+        ORDER BY distance_km ASC
+
+        """, nativeQuery = true)
+    List<Object[]> findCustomerNearbyOutlets(
+            @Param("customerLat") double customerLat,
+            @Param("customerLng") double customerLng
+    );
+
+
+    @Query(value = """
+            SELECT
+                outlet_id AS outletId,
+                ST_Y(outlet_location::geometry) AS latitude,
+                ST_X(outlet_location::geometry) AS longitude
+            FROM jippy_fm.outlets
+            WHERE outlet_id = :outletId
+            """, nativeQuery = true)
+    OutletLocationProjection getOutletLocation(
+            @Param("outletId") Integer outletId);
 }

@@ -92,6 +92,14 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-spatial</artifactId>
+        </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -118,7 +126,11 @@
                 <version>3.5.1</version>
                 <configuration>
                     <to>
-                        <image>docker.io/mmrcdl1987/jippyproject/${project.artifactId}:s1</image>
+                        <image>docker.io/mmrcdl1987/jippyproject-${project.artifactId}:s2</image>
+                        <auth>
+                            <username></username>
+                            <password></password>
+                        </auth>
                     </to>
                 </configuration>
             </plugin>

@@ -3,8 +3,9 @@ package com.jippy.customerandorder.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
+import org.locationtech.jts.geom.Point;
+
 
 @Entity
 @Table(name = "customer_delivery_addresses", schema = "jippy_customer_and_order")
@@ -19,6 +20,12 @@ public class CoCustomerDeliveryAddress {
 
     @Column(name = "customer_id", nullable = false)
     private Integer customerId;
+
+    @Column(
+            name = "location",
+            columnDefinition = "GEOGRAPHY(POINT)"
+    )
+    private Point location;
 
     private String doorNo;
     private String buildingName;

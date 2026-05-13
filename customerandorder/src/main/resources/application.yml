@@ -4,17 +4,28 @@ spring:
   application:
     name: customerandorder
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://187.127.156.147:5433/co_db
+    username: co_user
+    password: co_password
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     properties:
       hibernate:
-        default_schema: jippy_customer_and_order
       ddl-auto: update
     show-sql: true
+
+  #  Kafka Producer Configuration
+  kafka:
+    bootstrap-servers: 187.127.156.147:9092
+    producer:
+      # Serializes the Message Key (Order ID) as a String
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Serializes the OrderEvent object into a JSON string
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    properties:
+      # Ensures the message is acknowledged by Kafka brokers
+      acks: all
 
 management:
   endpoints:
@@ -31,17 +42,7 @@ management:
       probes:
         enabled: true
 
-    #  Kafka Producer Configuration
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      # Serializes the Message Key (Order ID) as a String
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      # Serializes the OrderEvent object into a JSON string
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-    properties:
-      # Ensures the message is acknowledged by Kafka brokers
-      acks: all
+
 
 eureka:
   instance:

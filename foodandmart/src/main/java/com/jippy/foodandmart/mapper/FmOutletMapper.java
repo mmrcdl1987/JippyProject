@@ -136,6 +136,9 @@
 
 package com.jippy.foodandmart.mapper;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
+import com.jippy.division.dto.FmNearbyOutletDto;
+import com.jippy.foodandmart.dto.FmOutletDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmOutletAddress;
@@ -155,10 +158,13 @@ import java.util.Map;
 @Slf4j
 public final class FmOutletMapper {
 
+    public static FmNearbyOutletMapper NearbyOutletMapper;
+
     /**
      * Private constructor — static utility class, must not be instantiated.
      */
-    private FmOutletMapper() {}
+    private FmOutletMapper() {
+    }
 
     // ── DTO → Entity (Outlet Creation) ────────────────────────────────────────
 
@@ -175,23 +181,54 @@ public final class FmOutletMapper {
         return outlet;
     }
 
+    public static  FmAddressRequestDto toAddressRequestDto(FmOutletAddress fmOutletAddress){
+        FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
+        fmAddressRequestDto.setJippyAddressId(fmOutletAddress.getJippyAddressId());
+        fmAddressRequestDto.setBuildingNumber(fmOutletAddress.getBuildingNumber());
+        fmAddressRequestDto.setRoad(fmOutletAddress.getRoad());
+        fmAddressRequestDto.setLandmark(fmOutletAddress.getLandmark());
+        fmAddressRequestDto.setCityId(fmOutletAddress.getCityId());
+        fmAddressRequestDto.setStateId(fmOutletAddress.getStateId());
+        fmAddressRequestDto.setAreaId(fmOutletAddress.getAreaId());
+        fmAddressRequestDto.setAddressType(fmOutletAddress.getAddressType());
+        return fmAddressRequestDto;
+
+    }
+
+//    for feign client to map the address details from Outletdto to AddressRequestdto to send to address microservice
+    public static  FmAddressRequestDto convertToAddressReqDto(FmOutletRequestDTO dto, Integer outletId, Integer stateId,Integer areaId){
+ FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
+ fmAddressRequestDto.setAddressType(FmAppConstants.TYPE_OUTLET);
+ fmAddressRequestDto.setJippyAddressId(outletId);
+ fmAddressRequestDto.setBuildingNumber(dto.getBuildingNumber());
+ fmAddressRequestDto.setRoad(dto.getRoad());
+ fmAddressRequestDto.setLandmark(dto.getLandmark());
+ fmAddressRequestDto.setCityId(dto.getCityId()!=null?dto.getCityId():0);
+    fmAddressRequestDto.setStateId(stateId);
+    fmAddressRequestDto.setAreaId(areaId);
+ return fmAddressRequestDto;
+
+
+    }
+
     /**
      * Builds an {@link FmOutletAddress} from the DTO plus resolved integer FKs.
      */
-    public static FmOutletAddress toAddressEntity(FmOutletRequestDTO dto, Integer outletId,
-                                                  Integer stateId, Integer areaId) {
+
+
+    public static FmOutletAddress toAddressEntity(FmAddressRequestDto dto){
+
         FmOutletAddress address = new FmOutletAddress();
-//        address.setOutletId(outletId);
-        address.setJippyAddressId(outletId);
+        address.setJippyAddressId(dto.getJippyAddressId());
         address.setBuildingNumber(safe(dto.getBuildingNumber()));
         address.setRoad(safe(dto.getRoad()));
         address.setLandmark(safe(dto.getLandmark()));
         address.setCityId(dto.getCityId() != null ? dto.getCityId() : 0);
-        address.setStateId(stateId);
-        address.setAreaId(areaId);
-        address.setAddressType("OUTLET");
+        address.setStateId(dto.getStateId());
+        address.setAreaId(dto.getAreaId());
+        address.setAddressType(dto.getAddressType());
         return address;
-    }
+}
 
     // ── Entity → DTO ──────────────────────────────────────────────────────────
 
@@ -328,5 +365,35 @@ public final class FmOutletMapper {
 
     private static String safe(String s) {
         return s != null ? s.trim() : "";
+    }
+
+    public static FmOutletDto mapRowToDto(Object[] row) {
+        FmOutletDto dto = new FmOutletDto();
+        dto.setOutletId(toInt(row[0]));
+        dto.setOutletName(row[1] != null ? row[1].toString() : null);
+        dto.setMerchantId(toInt(row[2]));
+        dto.setCuisineType(row[3] != null ? row[3].toString() : null);
+        dto.setOutletPhone(row[4] != null ? row[4].toString() : null);
+        dto.setRadius(toDouble(row[5]));
+        dto.setReview(toDouble(row[6]));
+        dto.setSubscriptionStatus(row[7] != null ? row[7].toString() : null);
+        dto.setPromotionStatus(row[8] != null ? row[8].toString() : null);
+        dto.setIsActive(row[9] != null && "Y".equalsIgnoreCase(row[9].toString()));
+        dto.setIsApproved(row[10] != null && (Boolean) row[10]);
+        // distance_km only present in nearby query (index 16)
+        if (row.length > 16 && row[16] != null) {
+            dto.setDistanceKm(toDouble(row[16]));
+        }
+        return dto;
+    }
+
+    private static Integer toInt(Object o) {
+
+        return o == null ? null : ((Number) o).intValue();
+    }
+
+    private static Double toDouble(Object o) {
+
+        return o == null ? null : Double.parseDouble(o.toString());
     }
 }

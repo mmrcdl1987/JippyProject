@@ -16,4 +16,6 @@ public class COOrderEvent {
     private String status;// e.g., "PLACED", "PICKED_UP", "DELIVERED"
     //private String cityName;      // Useful for routing to regional FCM topics
 
+    private Integer areaId;              // for routing by area
+    private Integer rejectedOutletId;   // to skip that outlet
 }

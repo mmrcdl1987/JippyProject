@@ -1,6 +1,6 @@
 package com.jippy.customerandorder.mapper;
 
-import com.jippy.customerandorder.Constants.COConstants;
+import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.COOrderEvent;
 import com.jippy.customerandorder.entity.CoOrder;
 
