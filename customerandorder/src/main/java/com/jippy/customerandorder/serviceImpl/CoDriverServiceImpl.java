@@ -2,20 +2,17 @@ package com.jippy.customerandorder.serviceImpl;
 
 
 import com.jippy.customerandorder.constants.COConstants;
-import com.jippy.customerandorder.dto.CoAddressRequestDto;
-import com.jippy.customerandorder.dto.CoDriverDto;
-import com.jippy.customerandorder.dto.CoDriverEarningsDto;
-import com.jippy.customerandorder.dto.CoZoneDto;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoDriver;
 import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoZoneException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICoDriverService;
 import com.jippy.customerandorder.mapper.CoDriverMapper;
-import com.jippy.customerandorder.repository.CoDriverEarningsProjection;
-import com.jippy.customerandorder.repository.CoDriverRepository;
-import com.jippy.customerandorder.repository.CoOrderRepository;
-import com.jippy.customerandorder.repository.CoZoneRepository;
+import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
+import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
+import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
+import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,12 +21,10 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +36,8 @@ public class CoDriverServiceImpl implements ICoDriverService {
     private final CoDriverRepository driverRepository;
     private final CoZoneRepository zoneRepository;
     private final CoOrderRepository ordersRepository;
+    private final CoDriverOrderRepository driverOrderRepository;
+    private final CoOrderRejectionRepository orderRejectionRepository;
 
     @Autowired
     private FMFeignClient FMFeignClient;
@@ -137,7 +134,7 @@ public class CoDriverServiceImpl implements ICoDriverService {
     }
 
 
-//    to fetch driver earnings for a given date, default to current date if not provided,
+    //    to fetch driver earnings for a given date, default to current date if not provided,
 //    and total orders count for that day, and total earnings for that day
     @Override
     @Transactional
@@ -146,16 +143,15 @@ public class CoDriverServiceImpl implements ICoDriverService {
         log.info("Fetching earnings for driver id: {} and date: {}", driverId, date);
 
         // Validate driver exists
-        driverRepository.findById(driverId).orElseThrow(
-                () -> new ResourceNotFoundException("Driver not found with id: " + driverId));
+        driverRepository.findById(driverId).orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + driverId));
 
         // Fetch orders count for the driver on the given date
 //        Long ordersCount = ordersRepository.countOrdersByDriverAndDate(driverId, date);
 
         // Fetch total earnings for the driver on the given date
-     // Fetch earnings + count together to avoid multiple DB calls
+        // Fetch earnings + count together to avoid multiple DB calls
 
-        CoDriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders  = ordersRepository.fetchDriverEarnings(driverId, date);
+        CoDriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders = ordersRepository.fetchDriverEarnings(driverId, date);
 
         // Prepare response DTO
         CoDriverEarningsDto DriverEarningsDto = new CoDriverEarningsDto();
@@ -168,6 +164,73 @@ public class CoDriverServiceImpl implements ICoDriverService {
         log.info("Successfully fetched earnings for driver id: {}", driverId);
 
         return DriverEarningsDto;
+    }
+
+    // for a given driver, fetch order earnings history with details like order id, pick up and delivery distance,
+    // charges, total fee, surge fee, tips, order status, and outlet name for each order
+    @Override
+    public List<CoDriverOrderHistoryDto> fetchOrderEarningsHistory(Integer driverId) {
+
+        log.info("Fetching order earnings history for driver id: {}", driverId);
+
+        // Check driver exists or not
+        driverRepository.findById(driverId).orElseThrow(() -> {
+
+            log.error("Driver not found with id: {}", driverId);
+
+            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+        });
+
+        // Fetch records from database
+        List<CoDriverOrderHistoryProjection> projections = driverOrderRepository.fetchOrderEarningsHistory(driverId);
+
+        // Create response list to hold order history details
+        List<CoDriverOrderHistoryDto> ProjectionResponse = new ArrayList<>();
+
+        // Loop through all records and set values in response DTO,
+        // also fetch outlet name from FM microservice for each record
+        for (CoDriverOrderHistoryProjection projection : projections) {
+
+            // Fetch outlet name from FM microservice
+            String FmOutletName = FMFeignClient.fetchOutletName(projection.getOutletId());
+
+            // Convert projection → DTO using mapper
+            CoDriverOrderHistoryDto dto = CoDriverMapper.mapToDriverOrderHistoryDto(projection, FmOutletName);
+
+            // Add DTO to response list
+            ProjectionResponse.add(dto);
+        }
+
+        log.info("Successfully fetched order earnings history for driver id: {}", driverId);
+
+        return ProjectionResponse;
+    }
+
+    @Override
+    public CoDriverTotalEarningsDto fetchTotalEarnings(Integer driverId) {
+
+        log.info("Fetching total earnings for driver id: {}", driverId);
+
+        // Validate driver exists
+        driverRepository.findById(driverId).orElseThrow(() -> {
+
+            log.error("Driver not found with id: {}", driverId);
+
+            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+        });
+
+        // Fetch earnings data
+        CoDriverTotalEarningsProjection projection = driverOrderRepository.fetchTotalEarnings(driverId);
+
+        // Fetch rejected orders count
+        Long rejectedOrders = orderRejectionRepository.fetchRejectedOrdersCount(driverId);
+
+        // Convert to DTO using mapper
+        CoDriverTotalEarningsDto response = CoDriverMapper.mapToTotalEarningsDto(driverId, projection, rejectedOrders);
+
+        log.info("Successfully fetched total earnings for driver id: {}", driverId);
+
+        return response;
     }
 
     @Transactional
