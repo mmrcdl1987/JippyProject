@@ -27,10 +27,10 @@ public class FmSecurityConfig {
     @Autowired
     FmCustomAccessDeniedHandler customAccessDeniedHandler;
 
-    @Bean
+   /* @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(); // Essential for hashing Jippy user passwords
-    }
+    }*/
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
