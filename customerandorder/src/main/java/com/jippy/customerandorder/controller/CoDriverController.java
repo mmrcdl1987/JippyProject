@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/co/driver")
+@RequestMapping("/api/co/driver")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Driver API", description = "Driver and KYC operations")

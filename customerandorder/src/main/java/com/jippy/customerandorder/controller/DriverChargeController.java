@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/driver-charge")
+@RequestMapping("/api/co/driver-charge")
 @RequiredArgsConstructor
 @Slf4j
 public class DriverChargeController {

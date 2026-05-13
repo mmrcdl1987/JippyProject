@@ -1,0 +1,17 @@
+server:
+  port: 8084
+
+jwt:
+  secret: ks93w6IjKBc8TckMt9xjYSj2rE8YHJvduMBJiXBytHk=
+spring:
+  application:
+   name: gatewayserver
+
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/

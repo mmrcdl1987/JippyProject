@@ -19,7 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/merchants")
+@RequestMapping("/api/fm/merchants")
 @RequiredArgsConstructor
 @Slf4j
 public class FmMerchantController {

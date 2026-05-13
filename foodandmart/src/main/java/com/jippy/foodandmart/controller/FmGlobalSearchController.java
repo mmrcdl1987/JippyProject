@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/search")
+@RequestMapping("/api/fm/search")
 public class FmGlobalSearchController {
 
     /** Maximum results returned per entity section to keep payloads small. */

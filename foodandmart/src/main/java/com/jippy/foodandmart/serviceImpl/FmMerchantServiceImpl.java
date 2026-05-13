@@ -1,5 +1,6 @@
 		package com.jippy.foodandmart.serviceImpl;
 
+        import com.jippy.foodandmart.config.FmPasswordConfig;
         import com.jippy.foodandmart.constants.FmAppConstants;
         import com.jippy.foodandmart.dto.FmBulkUploadResultDTO;
         import com.jippy.foodandmart.dto.FmMerchantDto;
@@ -19,6 +20,7 @@
         import lombok.extern.slf4j.Slf4j;
         import org.springframework.beans.factory.annotation.Autowired;
         import org.springframework.context.annotation.Lazy;
+        import org.springframework.security.crypto.password.PasswordEncoder;
         import org.springframework.stereotype.Service;
         import org.springframework.transaction.annotation.Propagation;
         import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +52,7 @@
 		    private final FmUserRolesRepository userRolesRepository;
 		    private final FmRoleRepository roleRepository;
 		 	private final FmRolePermissionsRepository rolePermissionsRepository;
+             private final PasswordEncoder passwordEncoder;
 		    @Lazy
 		    @Autowired
 		    private IFmMerchantService self;
@@ -62,7 +65,9 @@
 										 FmEmployeeRepository employeeRepository,
 										 Validator validator,
 										 FmRoleRepository roleRepository,
-										 FmUserRolesRepository userRolesRepository, FmRolePermissionsRepository rolePermissionsRepository) {
+										 FmUserRolesRepository userRolesRepository,
+                                         FmRolePermissionsRepository rolePermissionsRepository,
+                                         PasswordEncoder passwordEncoder) {
 		        this.merchantRepository    = merchantRepository;
 		        this.merchantKycRepository = merchantKycRepository;
 		        this.bankDetailsRepository = bankDetailsRepository;
@@ -72,6 +77,7 @@
 		        this.roleRepository        = roleRepository;
 		        this.userRolesRepository   = userRolesRepository;
 				this.rolePermissionsRepository = rolePermissionsRepository;
+                this.passwordEncoder = passwordEncoder;
 		    }
 		
 		    // ── Queries ───────────────────────────────────────────────────────────────
@@ -224,29 +230,20 @@
 		        String username = dto.getFirstName().trim().toLowerCase().replaceAll("\\s+", "") + phoneLast4;
 		        String password = emailFirst4 + phoneLast4;
 
-//		        Roles role = roleRepository.findByRoleName(AppConstants.TYPE_MERCHANT);
-//		        User user = MerchantMapper.toUserEntity(username, password, merchantId);
-//		        userRepository.save(user);
-//		       RolePerissions rolePerissions = MerchantMapper.toRolePermissionsEntity(role);
-//
-//
-//				// UserRole userRoles = MerchantMapper.toUserRolesEntity(user, role);
-//		        userRolesRepository.save(userRoles);
-//		        log.info("[MERCHANT] Portal user created: username={}, merchantId={}", username, merchantId);
-//		    }
+                 String encodedPassword = passwordEncoder.encode(password);
 				//  Save user
-				FmUser user = FmMerchantMapper.toUserEntity(username, password, merchantId);
+				FmUser user = FmMerchantMapper.toUserEntity(username, encodedPassword, merchantId);
 				user = userRepository.save(user);
 
 				// Fetch role
-				FmRoles role = roleRepository.findByRoleName(FmAppConstants.TYPE_MERCHANT);
+				FmRoles role = roleRepository.findByRoleName(FmAppConstants.ROLE_MERCHANT);
 				if (role == null) {
 					throw new RuntimeException("Role not found");
 				}
 
 				//  Fetch role_permissions
 				List<FmRolePermissions> rolePermissionsList =
-						rolePermissionsRepository.findByRoleId(role.getRoleId());
+						rolePermissionsRepository.findByRole(role);
 
 				if (rolePermissionsList.isEmpty()) {
 					throw new RuntimeException("No permissions mapped to role");

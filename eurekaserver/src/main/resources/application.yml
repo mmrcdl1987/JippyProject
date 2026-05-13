@@ -2,7 +2,7 @@ spring:
   application:
     name: eurekaserver
 server:
-  port: 8060
+  port: 8070
 
 eureka:
   instance:

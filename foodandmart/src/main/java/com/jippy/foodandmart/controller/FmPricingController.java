@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/pricing")
+@RequestMapping("/api/fm/pricing")
 @RequiredArgsConstructor
 public class FmPricingController {
 
@@ -56,6 +56,7 @@ public class FmPricingController {
         return ResponseEntity.ok(response);
     }
 
+    // @PreAuthorize("hasAnyRole('VIEWER', 'EDITOR', 'ADMIN')")
     //  UPDATE PRICES
     @PostMapping("/update")
     public ResponseEntity<FmResponseDto> updatePrices(
