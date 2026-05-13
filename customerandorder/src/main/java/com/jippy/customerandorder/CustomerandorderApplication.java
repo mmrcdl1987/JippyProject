@@ -5,8 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 
-@SpringBootApplication
-//@EnableFeignClients(basePackages = "com.jippy.customerandorder.feignClient")
+@SpringBootApplication(exclude = {
+        org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration.class,
+        org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration.class
+})
 @EnableFeignClients
 public class CustomerandorderApplication {
 

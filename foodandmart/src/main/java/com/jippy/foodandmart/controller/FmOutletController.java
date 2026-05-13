@@ -36,7 +36,7 @@ import java.util.function.Function;
  * in private helpers to keep the service layer free of file-format concerns.</p>
  */
 @RestController
-@RequestMapping("/api/outlets")
+@RequestMapping("/api/fm/outlets")
 @RequiredArgsConstructor
 @Slf4j
 public class FmOutletController {

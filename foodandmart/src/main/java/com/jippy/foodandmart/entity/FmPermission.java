@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "permissions")
+@Table(name = "permissions",schema = "jippy_fm")
 public class FmPermission {
 
     @Id

@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/zones")
+@RequestMapping("/api/co/zones")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Zone Assignment To Driver API", description = "APIs for assigning zone to driver")

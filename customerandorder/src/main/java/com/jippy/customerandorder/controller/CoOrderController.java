@@ -10,14 +10,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/co")
 @RequiredArgsConstructor
 @Slf4j
 public class CoOrderController {
 
     private final IOrderService orderService;
 
-    @PostMapping
+    @PostMapping("/placeOrder")
     public ResponseEntity<CoPlaceOrderResponseDto> placeOrder(
             @Valid @RequestBody CoPlaceOrderRequestDto placeOrderRequestDto) {
 
@@ -30,6 +30,12 @@ public class CoOrderController {
                 placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId(), response.getOrderId());
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/test")
+    public String test() {
+        return "Hello from CoOrderController!";
+
     }
 
 }

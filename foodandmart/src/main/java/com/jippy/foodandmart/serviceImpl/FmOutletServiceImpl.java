@@ -21,6 +21,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +62,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmCategoryRepository categoryRepository;
     private final FmProductVariantRepository productVariantRepository;
     private final FmGoogleMapsService googleMapsService;
+    private final PasswordEncoder passwordEncoder;
 
     private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -295,19 +297,20 @@ public class FmOutletServiceImpl implements IFmOutletService {
             log.warn("[OUTLET] Username collision resolved: final={}", username);
         }
 
-        FmUser users = FmMerchantMapper.toUserEntity(username, password, outletId);
+        String encodedPassword = passwordEncoder.encode(password);
+        FmUser users = FmMerchantMapper.toUserEntity(username, encodedPassword, outletId);
         users = userRepository.save(users);
         log.info("[OUTLET] User saved: username={}, outletId={}", username, outletId);
 
         // Fetch role
-        FmRoles role = roleRepository.findByRoleName(FmAppConstants.TYPE_OUTLET);
+        FmRoles role = roleRepository.findByRoleName(FmAppConstants.ROLE_OUTLET);
         if (role == null) {
             throw new RuntimeException("Role not found");
         }
 
         //  Fetch role_permissions
 
-        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRoleId(role.getRoleId());
+        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
 
         if (rolePermissionsList.isEmpty()) {
             throw new RuntimeException("No permissions mapped to role");

@@ -1,5 +1,9 @@
 server:
   port: 8082
+
+jwt:
+  secret: ks93w6IjKBc8TckMt9xjYSj2rE8YHJvduMBJiXBytHk=
+
 spring:
   application:
     name: customerandorder

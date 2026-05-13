@@ -20,6 +20,9 @@ public class FmAppConstants {
     public static final String TYPE_MERCHANT = "MERCHANT";
     public static final String TYPE_OUTLET   = "OUTLET";
 
+    public static final String ROLE_MERCHANT = "ROLE_MERCHANT";
+    public static final String ROLE_OUTLET   = "ROLE_OUTLET";
+
     // ── Role IDs ──────────────────────────────────────────────────────────────
     public static final int ROLE_ID_OUTLET   = 2;
     public static final int ROLE_ID_MERCHANT = 3;
