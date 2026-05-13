@@ -25,4 +25,8 @@ public interface FMFeignClient {
 
     @GetMapping("/api/outlets/specialized-outlets/area")
     FmNearbyOutletResponseDto fetchSpecializedOutletsByAreaId(@RequestParam Integer areaId);
+
+    // Fetch outlet name using outlet id
+    @GetMapping("/api/outlets/fetchOutletName")
+    String fetchOutletName(@RequestParam Integer outletId);
 }

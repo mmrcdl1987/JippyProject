@@ -23,16 +23,15 @@ public interface IFmOutletService {
     //FmBulkOutletResultDTO bulkUpload(List<FmOutletRequestDTO> rows);
 
 
-
-
     //     for api to get outlet details by outlet id and user type (merchant or customer)
     FmOutletDetailsDto getOutletDetails(Integer outletId, String userType);
 
     //    for api to get all outlets by merchant id
-   List<FmOutletByMerchantDto> getOutletsByFmMerchantId(Integer merchantId);
+    List<FmOutletByMerchantDto> getOutletsByFmMerchantId(Integer merchantId);
 
     //    for update outlet details by outlet id
     FmOutletDetailsDto updateOutletDetails(Integer outletId, FmOutletDetailsDto dto, String userType);
+
     /**
      * Customer App: fetch active outlets within default 3 km of the customer.
      * Always uses DEFAULT_RADIUS_KM = 3.0 km — no caller override.
@@ -44,4 +43,6 @@ public interface IFmOutletService {
     FmAddressRequestDto getAddressDetails(Integer addressId);
 
     OutletLocationResponseDto getOutletLocation(Integer outletId);
+
+    public String fetchOutletName(Integer outletId);
 }

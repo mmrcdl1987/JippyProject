@@ -60,15 +60,12 @@ public class FmOutletController {
      * @return 201 with an {@link FmOutletCreatedDTO} including portal credentials
      */
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutlet(
-            @Valid @RequestBody FmOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutlet(@Valid @RequestBody FmOutletRequestDTO dto) {
 
-        log.info("[OUTLET] POST /api/outlets name={}, merchantId={}, phone={}",
-                dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
+        log.info("[OUTLET] POST /api/outlets name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
         FmOutletCreatedDTO saved = outletService.createOutlet(dto);
         log.info("[OUTLET] Created: outletId={}, loginId={}", saved.getOutletId(), saved.getOutletLoginId());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(FmApiResponse.success("Outlet created successfully", saved));
+        return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Outlet created successfully", saved));
     }
 
     /**
@@ -93,11 +90,9 @@ public class FmOutletController {
      * @return 200 with list of {@link FmOutletSummaryDTO} for that merchant
      */
     @GetMapping("/merchant/{merchantId}")
-    public ResponseEntity<FmApiResponse<List<FmOutletSummaryDTO>>> getOutletsByMerchant(
-            @PathVariable Integer merchantId) {
+    public ResponseEntity<FmApiResponse<List<FmOutletSummaryDTO>>> getOutletsByMerchant(@PathVariable Integer merchantId) {
         log.info("[OUTLET] GET /api/outlets/merchant/{}", merchantId);
-        return ResponseEntity.ok(FmApiResponse.success("Outlets fetched",
-                outletService.getOutletsByMerchantId(merchantId)));
+        return ResponseEntity.ok(FmApiResponse.success("Outlets fetched", outletService.getOutletsByMerchantId(merchantId)));
     }
 
     /**
@@ -144,15 +139,12 @@ public class FmOutletController {
      * @return 200/207/400 depending on success/partial success/full failure
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FmApiResponse<FmBulkOutletResultDTO>> uploadFile(
-            @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<FmApiResponse<FmBulkOutletResultDTO>> uploadFile(@RequestParam("file") MultipartFile file) {
 
-        log.info("[BULK] POST /api/outlets/upload file={}, size={} bytes",
-                file.getOriginalFilename(), file.getSize());
+        log.info("[BULK] POST /api/outlets/upload file={}, size={} bytes", file.getOriginalFilename(), file.getSize());
 
         if (file.isEmpty())
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(FmApiResponse.error("Uploaded file is empty"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Uploaded file is empty"));
 
         List<FmOutletRequestDTO> rows;
         try {
@@ -162,25 +154,20 @@ public class FmOutletController {
             } else if (fn.endsWith(".csv")) {
                 rows = parseCsv(file.getInputStream());
             } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(FmApiResponse.error("Only .xlsx or .csv files are supported"));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Only .xlsx or .csv files are supported"));
             }
         } catch (Exception e) {
             log.error("[BULK] File parse error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(FmApiResponse.error("Failed to parse file: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Failed to parse file: " + e.getMessage()));
         }
 
         if (rows.isEmpty())
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(FmApiResponse.error("No data rows found in file"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("No data rows found in file"));
 
         //FmBulkOutletResultDTO result = outletService.bulkUpload(rows);
         FmBulkOutletResultDTO result = outletBulkUpload(rows);
-        String message = String.format("Upload complete: %d success, %d failed out of %d rows",
-                result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
-        HttpStatus status = result.getFailureCount() == 0 ? HttpStatus.OK
-                : (result.getSuccessCount() == 0 ? HttpStatus.BAD_REQUEST : HttpStatus.MULTI_STATUS);
+        String message = String.format("Upload complete: %d success, %d failed out of %d rows", result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
+        HttpStatus status = result.getFailureCount() == 0 ? HttpStatus.OK : (result.getSuccessCount() == 0 ? HttpStatus.BAD_REQUEST : HttpStatus.MULTI_STATUS);
         return ResponseEntity.status(status).body(FmApiResponse.success(message, result));
     }
 
@@ -211,8 +198,7 @@ public class FmOutletController {
             Map<String, Integer> colMap = new HashMap<>();
             for (int i = 0; i <= headerRow.getLastCellNum(); i++) {
                 Cell c = headerRow.getCell(i);
-                if (c != null)
-                    colMap.put(c.toString().trim().toLowerCase().replaceAll("\\s+", ""), i);
+                if (c != null) colMap.put(c.toString().trim().toLowerCase().replaceAll("\\s+", ""), i);
             }
             // Row 1 is the template instruction row — skip it; data starts at row index 2
             for (int r = 2; r <= sheet.getLastRowNum(); r++) {
@@ -248,8 +234,7 @@ public class FmOutletController {
                 String peek = sc.nextLine();
                 String first = peek.split(",")[0].trim().toLowerCase();
                 // Skip the indicator row if present (first cell is "req")
-                if (!first.equals("req") && !first.isBlank())
-                    list.add(mapCsvRow(peek.split(",", -1), colMap));
+                if (!first.equals("req") && !first.isBlank()) list.add(mapCsvRow(peek.split(",", -1), colMap));
             }
             while (sc.hasNextLine()) {
                 String[] cells = sc.nextLine().split(",", -1);
@@ -451,21 +436,16 @@ public class FmOutletController {
 
     //    for getOutletDetails API - to fetch outlet details including menu, categories,
     //    product timings and outlet timings based on user type (customer or merchant)
-    @Operation(
-            summary = "Get Outlet Details",
-            description = "Fetch outlet details including menu, categories, product timings and outlet timings based on user type"
-    )
+    @Operation(summary = "Get Outlet Details", description = "Fetch outlet details including menu, categories, product timings and outlet timings based on user type")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid userType")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Outlet not found")
     @GetMapping("/getOutletDetails")
     public ResponseEntity<FmOutletDetailsDto> getOutletDetails(
 
-            @Parameter(description = "Outlet ID", required = true)
-            @RequestParam Integer outletId,
+            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId,
 
-            @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true)
-            @RequestParam String userType) {
+            @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true) @RequestParam String userType) {
 
         log.info("Fetching outlet details for outletId: {}, userType: {}", outletId, userType);
 
@@ -474,18 +454,14 @@ public class FmOutletController {
             throw new InvalidUserTypeException("Invalid userType. Allowed values: CUSTOMER or MERCHANT");
         }
 
-        FmOutletDetailsDto outletDetails =
-                outletService.getOutletDetails(outletId, userType);
+        FmOutletDetailsDto outletDetails = outletService.getOutletDetails(outletId, userType);
 
         log.info("Successfully fetched outlet details for outletId: {}, userType: {}", outletId, userType);
 
         return ResponseEntity.ok(outletDetails);
     }
 
-    @Operation(
-            summary = "Get Outlets by Merchant ID",
-            description = "Fetch all outlets for a merchant with state, city, and area details. Throws error if outlet is not approved."
-    )
+    @Operation(summary = "Get Outlets by Merchant ID", description = "Fetch all outlets for a merchant with state, city, and area details. Throws error if outlet is not approved.")
     //    for getOutletsByMerchant API - to fetch outlet's, address-state,city,area details based on merchant id
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Outlets fetched successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Outlet not approved")
@@ -493,14 +469,11 @@ public class FmOutletController {
     @GetMapping("/getOutletsByMerchant")
     public ResponseEntity<List<FmOutletByMerchantDto>> getOutletsByFmMerchant(
 
-            @Parameter(description = "Merchant ID", required = true)
-            @RequestParam Integer merchantId
-    ) {
+            @Parameter(description = "Merchant ID", required = true) @RequestParam Integer merchantId) {
 
         log.info("Fetching outlets for merchantId={}", merchantId);
 
-        List<FmOutletByMerchantDto> OutletByMerchantDetails =
-                outletService.getOutletsByFmMerchantId(merchantId);
+        List<FmOutletByMerchantDto> OutletByMerchantDetails = outletService.getOutletsByFmMerchantId(merchantId);
 
         log.info("Successfully fetched outlets for merchantId={}", merchantId);
 
@@ -509,17 +482,10 @@ public class FmOutletController {
 
     //Update outlet details
     @PutMapping("/editAndUpdateOutletProducts")
-    @Operation(
-            summary = "Update outlet details",
-            description = "Updates outlet timings, categories, products and product timings. "
-                    + "OutletId, outletName and outletPhone are not editable."
-    )
+    @Operation(summary = "Update outlet details", description = "Updates outlet timings, categories, products and product timings. " + "OutletId, outletName and outletPhone are not editable.")
     public ResponseEntity<FmOutletDetailsDto> updateOutletDetails(
 
-            @Parameter(description = "Outlet ID", required = true)
-            @RequestParam Integer outletId,
-            @RequestParam String userType,
-            @RequestBody FmOutletDetailsDto dto) {
+            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId, @RequestParam String userType, @RequestBody FmOutletDetailsDto dto) {
 
         log.info("Received request to update outlet with id={}", outletId);
 
@@ -569,46 +535,36 @@ public class FmOutletController {
         return result;
     }
 
-    @Operation(
-            summary = "Customer App: Nearby outlets within 3 km (USE THIS FOR MOBILE APP)",
-            description = """
-                    Returns all active outlets (is_active = 'Y') within 3 km of the customer's
-                    current GPS location, sorted nearest-first.
-                    
-                    This is the correct endpoint for the mobile/customer app. It returns:
-                      • distanceKm      — straight-line distance via PostGIS
-                      • roadDistance    — actual road distance via Google Maps (e.g. "1.4 km")
-                      • deliveryTime    — estimated delivery time via Google Maps (e.g. "14 mins")
-                      • openingTime     — today's opening time from outlet_days table
-                      • closingTime     — today's closing time from outlet_days table
-                      • openNow         — whether the outlet is currently open
-                    
-                    Prerequisites for non-null roadDistance and deliveryTime:
-                      1. Set google.maps.api-key in application.yml (or GOOGLE_MAPS_API_KEY env var)
-                      2. Enable Distance Matrix API in Google Cloud Console
-                    
-                    Prerequisites for non-null distanceKm:
-                      1. outlet_location must be set in jippy_fm.outlets for each outlet
-                      2. Run: UPDATE jippy_fm.outlets
-                                SET outlet_location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
-                              WHERE outlet_location IS NULL;
-                    
-                    Example:
-                      GET /api/outlets/customer/nearby?lat=17.385&lng=78.4867
-                    """
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully",
-                    content = @Content(schema = @Schema(implementation = FmCustomerNearbyResponseDto.class))),
-            @ApiResponse(responseCode = "400", description = "lat or lng parameter is missing / invalid")
-    })
+    @Operation(summary = "Customer App: Nearby outlets within 3 km (USE THIS FOR MOBILE APP)", description = """
+            Returns all active outlets (is_active = 'Y') within 3 km of the customer's
+            current GPS location, sorted nearest-first.
+            
+            This is the correct endpoint for the mobile/customer app. It returns:
+              • distanceKm      — straight-line distance via PostGIS
+              • roadDistance    — actual road distance via Google Maps (e.g. "1.4 km")
+              • deliveryTime    — estimated delivery time via Google Maps (e.g. "14 mins")
+              • openingTime     — today's opening time from outlet_days table
+              • closingTime     — today's closing time from outlet_days table
+              • openNow         — whether the outlet is currently open
+            
+            Prerequisites for non-null roadDistance and deliveryTime:
+              1. Set google.maps.api-key in application.yml (or GOOGLE_MAPS_API_KEY env var)
+              2. Enable Distance Matrix API in Google Cloud Console
+            
+            Prerequisites for non-null distanceKm:
+              1. outlet_location must be set in jippy_fm.outlets for each outlet
+              2. Run: UPDATE jippy_fm.outlets
+                        SET outlet_location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
+                      WHERE outlet_location IS NULL;
+            
+            Example:
+              GET /api/outlets/customer/nearby?lat=17.385&lng=78.4867
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully", content = @Content(schema = @Schema(implementation = FmCustomerNearbyResponseDto.class))), @ApiResponse(responseCode = "400", description = "lat or lng parameter is missing / invalid")})
     @GetMapping("/customer/nearby")
-    public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(
-            @Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true)
-            @RequestParam double lat,
+    public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(@Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true) @RequestParam double lat,
 
-            @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true)
-            @RequestParam double lng) {
+                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng) {
 
         log.info("GET /api/outlets/customer/nearby lat={}, lng={}", lat, lng);
         FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng);
@@ -627,6 +583,14 @@ public class FmOutletController {
         FmAddressRequestDto getAddress = outletService.getAddressDetails(driverId);
         return ResponseEntity.ok(getAddress);
     }
+
+//    for Feign  in the CO_Microservice to just fetch
+    @GetMapping("/fetchOutletName")
+    public ResponseEntity<String> fetchOutletName(@RequestParam Integer outletId) {
+
+        return ResponseEntity.ok(outletService.fetchOutletName(outletId));
+    }
+
     @RequestMapping("/location/{outletId}")
     public ResponseEntity<OutletLocationResponseDto> getOutletLocation(@PathVariable Integer outletId) {
         log.info("REST request to get location for outletId: {}", outletId);

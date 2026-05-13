@@ -1,11 +1,10 @@
 package com.jippy.customerandorder.iservice;
 
 
-import com.jippy.customerandorder.dto.CoDriverDto;
-import com.jippy.customerandorder.dto.CoDriverEarningsDto;
-import com.jippy.customerandorder.dto.CoZoneDto;
+import com.jippy.customerandorder.dto.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface ICoDriverService {
 
@@ -18,4 +17,8 @@ public interface ICoDriverService {
     CoDriverDto updateDriverDetails(Integer driverId, CoDriverDto dto);
 
     CoDriverEarningsDto fetchEarnings(Integer driverId, LocalDate date);
+
+    List<CoDriverOrderHistoryDto> fetchOrderEarningsHistory(Integer driverId);
+
+    CoDriverTotalEarningsDto fetchTotalEarnings(Integer driverId);
 }
