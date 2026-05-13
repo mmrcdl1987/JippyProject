@@ -1,13 +1,13 @@
 package com.jippy.customerandorder.mapper;
 
 
-import com.jippy.customerandorder.dto.CoAddressRequestDto;
-import com.jippy.customerandorder.dto.CoDriverDto;
-import com.jippy.customerandorder.dto.CoZoneDto;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoDriver;
 import com.jippy.customerandorder.entity.CoDriverKyc;
 import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoBadRequestException;
+import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
+import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
@@ -166,4 +166,75 @@ public class CoDriverMapper {
         // should not be updated through this method
 
     }
+
+    //    for api to fetchOrderEarningsHistory mapper
+// Convert projection data to DTO
+    public static CoDriverOrderHistoryDto mapToDriverOrderHistoryDto(CoDriverOrderHistoryProjection projection, String outletName) {
+
+        // Create DTO object
+        CoDriverOrderHistoryDto dto = new CoDriverOrderHistoryDto();
+
+        // Set driver id
+        dto.setDriverId(projection.getDriverId());
+
+        // Set order id
+        dto.setOrderId(projection.getOrderId());
+
+        // Set pick up distance
+        dto.setPickUpDistanceInKms(projection.getPickUpDistanceInKms());
+
+        // Set delivery distance
+        dto.setDeliveryDistanceInKms(projection.getDeliveryDistanceInKms());
+
+        // Set pick up charges
+        dto.setPickUpCharges(projection.getPickUpCharges());
+
+        // Set delivery charges
+        dto.setDeliverCharges(projection.getDeliverCharges());
+
+        // Set total delivery fee
+        dto.setTotalDeliveryFee(projection.getTotalDeliveryFee());
+
+        // Set surge fee
+        dto.setSurgeFee(projection.getSurgeFee());
+
+        // Set tips
+        dto.setTips(projection.getTips());
+
+        // Set order status
+        dto.setOrderStatus(projection.getOrderStatus());
+
+        // Set outlet name
+        dto.setOutletName(outletName);
+
+        return dto;
+    }
+
+    // Convert projection to DTO for api fetchTotalEarnings
+    public static CoDriverTotalEarningsDto mapToTotalEarningsDto(Integer driverId, CoDriverTotalEarningsProjection projection, Long rejectedOrders) {
+
+        CoDriverTotalEarningsDto dto = new CoDriverTotalEarningsDto();
+
+        dto.setDriverId(driverId);
+
+        dto.setTotalPickUpCharges(projection.getTotalPickUpCharges());
+
+        dto.setTotalDeliveryCharges(projection.getTotalDeliveryCharges());
+
+        dto.setTotalTips(projection.getTotalTips());
+
+        dto.setTotalSurgeFee(projection.getTotalSurgeFee());
+
+        dto.setTotalEarnings(projection.getTotalEarnings());
+
+        dto.setCompletedOrders(projection.getCompletedOrders());
+
+        dto.setRejectedOrders(rejectedOrders);
+
+//    total_orders = completed orders(from driver_orders table) + rejected orders (rejection_order table)
+        dto.setTotalOrders(projection.getCompletedOrders() + rejectedOrders);
+
+        return dto;
+    }
+
 }

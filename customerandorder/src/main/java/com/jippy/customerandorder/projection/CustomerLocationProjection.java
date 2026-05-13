@@ -1,4 +1,4 @@
-package com.jippy.customerandorder.dto;
+package com.jippy.customerandorder.projection;
 
 public interface CustomerLocationProjection {
 

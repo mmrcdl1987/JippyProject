@@ -1,6 +1,6 @@
 package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
-import com.jippy.customerandorder.dto.CustomerLocationProjection;
+import com.jippy.customerandorder.projection.CustomerLocationProjection;
 import com.jippy.customerandorder.dto.DriverChargeCalculationRequestDto;
 import com.jippy.customerandorder.dto.DriverChargeCalculationResponseDto;
 import com.jippy.customerandorder.dto.OutletLocationResponseDto;
