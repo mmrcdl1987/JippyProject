@@ -4,6 +4,7 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoDriver;
+import com.jippy.customerandorder.entity.CoDriverIncentiveSettings;
 import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoZoneException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
@@ -17,12 +18,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +41,7 @@ public class CoDriverServiceImpl implements ICoDriverService {
     private final CoOrderRepository ordersRepository;
     private final CoDriverOrderRepository driverOrderRepository;
     private final CoOrderRejectionRepository orderRejectionRepository;
-
+    private final CoDriverIncentiveSettingsRepository driverIncentivesettingsRepository;
     @Autowired
     private FMFeignClient FMFeignClient;
 
@@ -66,6 +69,8 @@ public class CoDriverServiceImpl implements ICoDriverService {
         coAddressRequestDto.setAreaId(dto.getAreaId());
         coAddressRequestDto.setAddressType(COConstants.TYPE_DRIVER);
         CoAddressRequestDto coAddressRequestDtoFeign = FMFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+
+//        driver wallet details , create entity ,repo
 
         // Convert Entity → DTO
         CoDriverDto mapToDriverDto = CoDriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
@@ -154,16 +159,39 @@ public class CoDriverServiceImpl implements ICoDriverService {
         CoDriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders = ordersRepository.fetchDriverEarnings(driverId, date);
 
         // Prepare response DTO
-        CoDriverEarningsDto DriverEarningsDto = new CoDriverEarningsDto();
+        CoDriverEarningsDto driverEarningsDto = new CoDriverEarningsDto();
 
-        DriverEarningsDto.setDriverId(driverId);
-        DriverEarningsDto.setCurrentDate(date);
-        DriverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCount());
-        DriverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarnings());
+        driverEarningsDto.setDriverId(driverId);
+        driverEarningsDto.setCurrentDate(date);
+        driverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCount());
+        driverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarnings());
 
-        log.info("Successfully fetched earnings for driver id: {}", driverId);
+        //
+        // new requirement : Calculate Incentive Bonus (Range-Based Logic)
 
-        return DriverEarningsDto;
+        BigDecimal bonus = BigDecimal.ZERO;
+
+        // Fetch all slabs sorted by orders_count ascending
+        List<CoDriverIncentiveSettings> slabs = driverIncentivesettingsRepository.findAllSlabs();
+
+        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCount().intValue();
+
+        log.info("Total orders completed by driver {}: {}", driverId, orders);
+
+        //Instead of loop → use mapper
+        // Find correct slab → assign its final value (no addition of values)
+        bonus = CoDriverMapper.calculateIncentiveBonus(slabs, orders);
+
+        log.info("Calculated bonus from mapper: {}", bonus);
+
+        // Step 5: Set bonus into DTO
+        driverEarningsDto.setDriverIncentiveBonus(bonus);
+
+        log.info("Final incentive bonus for driver {}: {}", driverId, bonus);
+
+        log.info("Successfully fetched earnings for driverId: {}", driverId);
+
+        return driverEarningsDto;
     }
 
     // for a given driver, fetch order earnings history with details like order id, pick up and delivery distance,
