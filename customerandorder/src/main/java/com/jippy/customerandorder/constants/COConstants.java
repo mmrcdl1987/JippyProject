@@ -1,5 +1,7 @@
 package com.jippy.customerandorder.constants;
 
+import java.math.BigDecimal;
+
 public class COConstants {
     private COConstants(){}
     public static final String STATUS_200 = "200";
@@ -57,4 +59,8 @@ public class COConstants {
     public static final String TAX_PERCENTAGE = "5";
 
     public static final String COD_LIMIT = "499";
+
+    public static final BigDecimal DRIVER_DEFAULT_COD_AMOUNT =BigDecimal.valueOf(1000);
+
+    public static  final Boolean DRIVER_ORDERS_LOCK = false;
 }

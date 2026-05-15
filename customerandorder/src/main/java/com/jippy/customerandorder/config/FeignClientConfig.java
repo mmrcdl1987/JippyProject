@@ -1,4 +1,4 @@
-package com.jippy.customerandorder;
+package com.jippy.customerandorder.config;
 
 import feign.RequestInterceptor;
 import jakarta.servlet.http.HttpServletRequest;

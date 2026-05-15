@@ -29,7 +29,8 @@ public class CoDriverController {
     //    post driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
     @PostMapping("/postDriverDetails")
     @Operation(summary = "Create Driver", description = "Creates driver, KYC, and address")
-    public ResponseEntity<CoDriverDto> postDriverDetails(@Valid @RequestBody CoDriverDto dto) {
+    public ResponseEntity<CoDriverDto> postDriverDetails
+    ( @Valid @RequestBody CoDriverDto dto) {
 
         log.info("POST API called that created driver:");
 
@@ -39,7 +40,9 @@ public class CoDriverController {
     //    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
     @GetMapping("/getDriverDetails")
     @Operation(summary = "Get Driver", description = "Fetch driver by ID")
-    public ResponseEntity<CoDriverDto> getDriverDetails(@RequestParam Integer driverId) {
+    public ResponseEntity<CoDriverDto> getDriverDetails(
+
+            @RequestParam Integer driverId) {
 
         log.info("GET API called with id to get all details of driver : {}", driverId);
 
@@ -50,7 +53,10 @@ public class CoDriverController {
 //    and address Details from (FM microservices)
     @PutMapping("/updateDriverDetails")
     @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields")
-    public ResponseEntity<CoDriverDto> updateDriverDetails(@RequestParam Integer driverId, @Valid @RequestBody CoDriverDto dto) {
+    public ResponseEntity<CoDriverDto> updateDriverDetails(
+
+            @RequestParam Integer driverId,
+            @RequestBody CoDriverDto dto) {
 
         log.info("Updating driver with id: {}", driverId);
 
@@ -69,7 +75,8 @@ public class CoDriverController {
 
     @GetMapping("/fetchEarnings")
     @Operation(summary = "Fetch Driver Earnings", description = "Fetch total earnings and orders count for a driver on a particular date")
-    public ResponseEntity<CoDriverEarningsDto> fetchEarnings(@RequestParam Integer driverId, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+    public ResponseEntity<CoDriverEarningsDto> fetchEarnings
+            (@RequestParam Integer driverId, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         log.info("date format must be [YYYY-MM-dd] for date: {}", date);
         log.info("Fetch earnings API called for driver id: {}", driverId);
@@ -82,7 +89,9 @@ public class CoDriverController {
 //    use CoDriverController microservice
     @GetMapping("/fetchOrderEarningsHistory")
     @Operation(summary = "Fetch Order Earnings History", description = "Fetch complete order earnings history of driver")
-    public ResponseEntity<List<CoDriverOrderHistoryDto>> fetchOrderEarningsHistory(@RequestParam Integer driverId) {
+    public ResponseEntity<List<CoDriverOrderHistoryDto>> fetchOrderEarningsHistory(
+
+            @RequestParam Integer driverId){
 
         log.info("Fetch order earnings history API called for driver id: {}", driverId);
 
@@ -94,7 +103,9 @@ public class CoDriverController {
 //    which is sum of all these and also count of rejected orders for that driver
     @GetMapping("/fetchTotalEarnings")
     @Operation(summary = "Fetch Total Earnings", description = "Fetch total earnings details of driver")
-    public ResponseEntity<CoDriverTotalEarningsDto> fetchTotalEarnings(@RequestParam Integer driverId) {
+    public ResponseEntity<CoDriverTotalEarningsDto> fetchTotalEarnings(
+
+            @RequestParam Integer driverId) {
 
         log.info("Fetch total earnings API called for driver id: {}", driverId);
 
