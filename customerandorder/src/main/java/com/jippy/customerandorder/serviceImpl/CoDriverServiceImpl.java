@@ -5,6 +5,7 @@ import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoDriver;
 import com.jippy.customerandorder.entity.CoDriverIncentiveSettings;
+import com.jippy.customerandorder.entity.CoDriverWallet;
 import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoZoneException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
@@ -18,15 +19,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
-import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -42,8 +42,8 @@ public class CoDriverServiceImpl implements ICoDriverService {
     private final CoDriverOrderRepository driverOrderRepository;
     private final CoOrderRejectionRepository orderRejectionRepository;
     private final CoDriverIncentiveSettingsRepository driverIncentivesettingsRepository;
-    @Autowired
-    private FMFeignClient FMFeignClient;
+    private final CoDriverWalletRepository driverWalletRepository;
+    private final FMFeignClient fmFeignClient;
 
     @Override
     @Transactional
@@ -68,9 +68,26 @@ public class CoDriverServiceImpl implements ICoDriverService {
         coAddressRequestDto.setStateId(dto.getStateId());
         coAddressRequestDto.setAreaId(dto.getAreaId());
         coAddressRequestDto.setAddressType(COConstants.TYPE_DRIVER);
-        CoAddressRequestDto coAddressRequestDtoFeign = FMFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+        CoAddressRequestDto coAddressRequestDtoFeign = null;
+        try {
+            coAddressRequestDtoFeign =
+                    fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+        } catch (Exception e) {
+            log.error("Address service failed, but continuing driver creation", e);
+        }
+//        create driver wallet details , create entity ,repo
+        CoDriverWallet wallet = new CoDriverWallet();
 
-//        driver wallet details , create entity ,repo
+        wallet.setDriverId(savedDriver.getDriverId()); // FROM DRIVER TABLE
+
+//        from CO constants default values
+        wallet.setTotalCodAmount(COConstants.DRIVER_DEFAULT_COD_AMOUNT); // default 1000
+        wallet.setOrdersLock(COConstants.DRIVER_ORDERS_LOCK); // default false
+
+        wallet.setCreatedAt(LocalDateTime.now());
+        wallet.setCreatedBy(savedDriver.getDriverId());
+
+        driverWalletRepository.save(wallet);
 
         // Convert Entity → DTO
         CoDriverDto mapToDriverDto = CoDriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
@@ -88,10 +105,16 @@ public class CoDriverServiceImpl implements ICoDriverService {
             log.error("Driver not found with id: {}", driverId);
             return new ResourceNotFoundException("Driver not found with id: " + driverId);
         });
-        CoAddressRequestDto coGetAddressRequestDtoFeign = FMFeignClient.getAddressDetails(driverId).getBody();
-        CoDriverDto driverDto = CoDriverMapper.mapToDriverDto(driver, coGetAddressRequestDtoFeign);
 
-        return driverDto;
+        CoAddressRequestDto address = null;
+
+        try {
+            address = fmFeignClient.getAddressDetails(driverId).getBody();
+        } catch (Exception e) {
+            log.error("Failed to fetch address from FM", e);
+        }
+
+        return CoDriverMapper.mapToDriverDto(driver, address);
     }
 
     //    updating driver details, only editable fields (not phone, email, or KYC)
@@ -130,8 +153,13 @@ public class CoDriverServiceImpl implements ICoDriverService {
         addressDto.setAddressType(COConstants.TYPE_DRIVER);
 
         // Save/update address
-        CoAddressRequestDto updatedAddress = FMFeignClient.saveAddressDetails(addressDto).getBody();
+        CoAddressRequestDto updatedAddress = null;
 
+        try {
+            updatedAddress = fmFeignClient.saveAddressDetails(addressDto).getBody();
+        } catch (Exception e) {
+            log.error("Address update failed", e);
+        }
         // Convert updated entity → response DTO with updated address details
         CoDriverDto response = CoDriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
 
@@ -174,8 +202,9 @@ public class CoDriverServiceImpl implements ICoDriverService {
         // Fetch all slabs sorted by orders_count ascending
         List<CoDriverIncentiveSettings> slabs = driverIncentivesettingsRepository.findAllSlabs();
 
-        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCount().intValue();
-
+        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCount() != null
+                ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCount().intValue()
+                : 0;
         log.info("Total orders completed by driver {}: {}", driverId, orders);
 
         //Instead of loop → use mapper
@@ -220,7 +249,7 @@ public class CoDriverServiceImpl implements ICoDriverService {
         for (CoDriverOrderHistoryProjection projection : projections) {
 
             // Fetch outlet name from FM microservice
-            String FmOutletName = FMFeignClient.fetchOutletName(projection.getOutletId());
+            String FmOutletName = fmFeignClient.fetchOutletName(projection.getOutletId());
 
             // Convert projection → DTO using mapper
             CoDriverOrderHistoryDto dto = CoDriverMapper.mapToDriverOrderHistoryDto(projection, FmOutletName);
