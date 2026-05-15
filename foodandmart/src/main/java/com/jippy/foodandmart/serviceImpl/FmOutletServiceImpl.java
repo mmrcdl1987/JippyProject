@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class FmOutletServiceImpl implements IFmOutletService {
+    private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private final FmOutletRepository outletRepository;
     private final FmOutletAddressRepository addressRepository;
     private final FmOutletDayRepository dayRepository;
@@ -63,8 +64,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmProductVariantRepository productVariantRepository;
     private final FmGoogleMapsService googleMapsService;
     private final PasswordEncoder passwordEncoder;
-
-    private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -102,13 +101,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     @Override
     public FmOutlet getOutletById(Integer id) {
-        return outletRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Outlet ID " + id + " does not exist"));
-    }
-
-//    to fetch outlet name by outlet id for order details in customer and order microservices
-    public String fetchOutletName(Integer outletId) {
-
-        return outletRepository.fetchOutletName(outletId);
+        return outletRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Outlet ID " + id + " does not exist"));
     }
 
     // ── Single Create ─────────────────────────────────────────────────────────
@@ -602,6 +596,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("Successfully mapped location data for outletId: {}", outletId);
         return response;
     }
+
+    //    to fetch outlet name by outlet id for order details in customer and order microservices
+    public String fetchOutletName(Integer outletId) {
+
+        return outletRepository.fetchOutletName(outletId);
+    }
+
 //    @Override
 //    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat,
 //                                                                  double customerLng) {

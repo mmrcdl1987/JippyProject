@@ -1,6 +1,6 @@
 package com.jippy.customerandorder.feignClients;
 
-import com.jippy.customerandorder.FeignClientConfig;
+import com.jippy.customerandorder.config.FeignClientConfig;
 import com.jippy.customerandorder.dto.CoAddressRequestDto;
 import com.jippy.customerandorder.dto.FmNearbyOutletResponseDto;
 import com.jippy.customerandorder.dto.FmProductDetailResponseDto;

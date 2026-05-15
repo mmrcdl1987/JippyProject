@@ -22,11 +22,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<FmApiResponse<Void>> handleValidationErrors(MethodArgumentNotValidException ex) {
-        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(FieldError::getDefaultMessage).collect(Collectors.toList());
+        List<String> errors = ex.getBindingResult().getFieldErrors().stream().map(FieldError::getDefaultMessage).collect(Collectors.toList());
         log.warn("Validation failed: {} error(s): {}", errors.size(), errors);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(FmApiResponse.error("Validation failed", errors));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Validation failed", errors));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -68,8 +66,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<FmApiResponse<Void>> handleFileSizeExceeded(MaxUploadSizeExceededException ex) {
         log.warn("File too large: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(FmApiResponse.error("File size exceeds the maximum allowed limit."));
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(FmApiResponse.error("File size exceeds the maximum allowed limit."));
     }
 
     // --- Routing and Global Errors ---
@@ -83,7 +80,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<FmApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected server error: {}", ex.getMessage(), ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(FmApiResponse.error("An internal server error occurred. Please try again later."));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(FmApiResponse.error("An internal server error occurred. Please try again later."));
     }
+
+    @ExceptionHandler(OutletUnavailabilityException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleOutletUnavailabilityException(OutletUnavailabilityException ex) {
+
+        log.warn("Outlet unavailability exception occurred | error={}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(OutletUnavailabilitySchedulerException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleOutletUnavailabilitySchedulerException(OutletUnavailabilitySchedulerException ex) {
+
+        log.error("Outlet unavailability scheduler exception occurred | error={}", ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(FmApiResponse.error(ex.getMessage()));
+    }
+
 }
