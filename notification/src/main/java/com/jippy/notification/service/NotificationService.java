@@ -21,26 +21,19 @@ import java.time.LocalDateTime;
 @Slf4j
 public class NotificationService {
 
-    private final NotificationRepository
-            notificationRepository;
+    private final NotificationRepository notificationRepository;
 
-    private final OrderNotificationStatusRepository
-            statusRepository;
+    private final OrderNotificationStatusRepository statusRepository;
 
     @Transactional
-    public OrderNotificationStatus processNotification(
-            NOrderEvent event) {
+    public OrderNotificationStatus processNotification(NOrderEvent event) {
 
         /*
          * VALIDATION
          */
-        if (event == null
-                || event.getOrderId() == null
-                || event.getOutletId() == null) {
+        if (event == null || event.getOrderId() == null || event.getOutletId() == null) {
 
-            throw new NotificationException(
-                    "Invalid event data"
-            );
+            throw new NotificationException("Invalid event data");
         }
 
         /*
@@ -48,145 +41,78 @@ public class NotificationService {
          */
         String subject;
 
-        if ("REJECTED".equalsIgnoreCase(
-                event.getStatus())) {
+        if ("REJECTED".equalsIgnoreCase(event.getStatus())) {
 
-            subject =
-                    NConstants.SUBJECT_REJECTED_ORDER;
+            subject = NConstants.SUBJECT_REJECTED_ORDER;
 
         } else {
 
-            subject =
-                    NConstants.SUBJECT_NEW_ORDER;
+            subject = NConstants.SUBJECT_NEW_ORDER;
         }
 
         /*
          * FETCH TEMPLATE
          */
-        Notification notification =
-                notificationRepository
-                        .findByRoleAndSubject(
-                                NConstants.ROLE_OUTLET,
-                                subject
-                        )
-                        .orElseThrow(() ->
-                                new NotificationException(
-                                        "Notification template not found"
-                                ));
+        Notification notification = notificationRepository.findByRoleAndSubject(NConstants.ROLE_OUTLET, subject).orElseThrow(() -> new NotificationException("Notification template not found"));
 
         /*
          * CHECK DUPLICATE
          */
-        boolean exists =
-                statusRepository
-                        .existsByOrderIdAndNotificationRecipientId(
-                                event.getOrderId(),
-                                event.getOutletId()
-                        );
+        boolean exists = statusRepository.existsByOrderIdAndNotificationRecipientId(event.getOrderId(), event.getOutletId());
 
         if (exists) {
 
-            log.info(
-                    "Duplicate notification skipped orderId={}",
-                    event.getOrderId()
-            );
+            log.info("Duplicate notification skipped orderId={}", event.getOrderId());
 
-            return statusRepository
-                    .findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
-                            event.getOrderId(),
-                            event.getOutletId()
-                    )
-                    .orElseThrow(() ->
-                            new NotificationException(
-                                    "Notification status not found"
-                            ));
+            return statusRepository.findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(event.getOrderId(), event.getOutletId()).orElseThrow(() -> new NotificationException("Notification status not found"));
         }
 
         /*
          * SAVE STATUS
          */
-        OrderNotificationStatus status =
-                OrderNotificationStatus.builder()
+        OrderNotificationStatus status = OrderNotificationStatus.builder()
 
-                        .orderId(
-                                event.getOrderId()
-                        )
+                .orderId(event.getOrderId())
 
-                        .notificationId(
-                                notification.getNotificationId()
-                        )
+                .notificationId(notification.getNotificationId())
 
-                        .notificationRecipientId(
-                                event.getOutletId()
-                        )
+                .notificationRecipientId(event.getOutletId())
 
-                        .recipientType(
-                                NConstants.ROLE_OUTLET
-                        )
+                .recipientType(NConstants.ROLE_OUTLET)
 
-                        .notificationStatus(false)
+                .notificationStatus(false)
 
-                        .createdAt(
-                                LocalDateTime.now()
-                        )
+                .createdAt(LocalDateTime.now())
 
-                        .createdBy(1)
+                .createdBy(1)
 
-                        .build();
+                .build();
 
         statusRepository.save(status);
 
-        log.info(
-                "Notification stored orderId={}",
-                event.getOrderId()
-        );
+        log.info("Notification stored orderId={}", event.getOrderId());
 
         return status;
     }
 
     @Transactional
-    public void markAsSent(
-            String orderId,
-            Integer recipientId) {
+    public void markAsSent(String orderId, Integer recipientId) {
 
-        OrderNotificationStatus status =
-                statusRepository
-                        .findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
-                                orderId,
-                                recipientId
-                        )
-                        .orElseThrow(() ->
-                                new NotificationException(
-                                        "Notification status not found"
-                                ));
+        OrderNotificationStatus status = statusRepository.findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(orderId, recipientId).orElseThrow(() -> new NotificationException("Notification status not found"));
 
         status.setNotificationStatus(true);
 
-        status.setUpdatedAt(
-                LocalDateTime.now()
-        );
+        status.setUpdatedAt(LocalDateTime.now());
 
         status.setUpdatedBy(1);
 
         statusRepository.save(status);
 
-        log.info(
-                "Notification marked SENT orderId={}",
-                orderId
-        );
+        log.info("Notification marked SENT orderId={}", orderId);
     }
 
-    public Notification getNotificationTemplate(
-            String subject) {
+    public Notification getNotificationTemplate(String subject) {
 
-        return notificationRepository
-                .findByRoleAndSubject(
-                        NConstants.ROLE_OUTLET,
-                        subject
-                )
-                .orElseThrow(() ->
-                        new NotificationException(
-                                "Notification template not found"
-                        ));
+        return notificationRepository.findByRoleAndSubject(NConstants.ROLE_OUTLET, subject).orElseThrow(() -> new NotificationException("Notification template not found"));
     }
 }

@@ -41,9 +41,11 @@ public class FmOutlet {
     private String promotionStatus;
     @Column(name = "review", precision = 2, scale = 1)
     private BigDecimal review;
+
     @Column(name = "is_active", length = 1)
     @Builder.Default
     private String isActive = "Y";
+
     @Column(name = "employee_id")
     private Integer employeeId;
     @Column(name = "is_approved", nullable = false)
@@ -70,6 +72,8 @@ public class FmOutlet {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "merchant_id", insertable = false, updatable = false)
     private FmMerchant merchant;
+
+    private Boolean isToggle;
 
 //    @JsonIgnore
 //    @OneToOne(mappedBy = "outlet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

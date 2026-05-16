@@ -1,6 +1,14 @@
 package com.jippy.foodandmart.constants;
 
-public class FmAppConstants {
+public final class FmAppConstants {
+
+    public static final String ROLE_OUTLET   = "ROLE_OUTLET";
+
+    private FmAppConstants() {
+    }
+
+    // ───────────────── STATUS CODES ─────────────────
+
     public static final String STATUS_200 = "200";
     public static final String MSG_PRICE_UPDATED = "Prices updated successfully";
     public static final String ADDRESS_MERCHANT_TYPE = "merchant";
@@ -19,9 +27,6 @@ public class FmAppConstants {
     // ── User Types ────────────────────────────────────────────────────────────
     public static final String TYPE_MERCHANT = "MERCHANT";
     public static final String TYPE_OUTLET   = "OUTLET";
-
-    public static final String ROLE_MERCHANT = "ROLE_MERCHANT";
-    public static final String ROLE_OUTLET   = "ROLE_OUTLET";
 
     // ── Role IDs ──────────────────────────────────────────────────────────────
     public static final int ROLE_ID_OUTLET   = 2;
@@ -46,10 +51,60 @@ public class FmAppConstants {
 
     public static final String STATUS_201 = "201";
     public static final String STATUS_404 = "404";
-    public static final String MSG_200    = "Request processed successfully";
-    public static final String MSG_201    = "Created successfully";
 
-    // Geo constants
-    public static final double DEFAULT_RADIUS_KM = 3.0;
-    public static final String MSG_SUCCESS = "Success";
+    // ───────────────── COMMON MESSAGES ─────────────────
+
+    public static final String MSG_200 =
+            "Request processed successfully";
+
+    public static final String MSG_201 =
+            "Created successfully";
+
+    public static final String MSG_SUCCESS =
+            "Success";
+
+    // ───────────────── GEO CONSTANTS ─────────────────
+
+    public static final Double DEFAULT_RADIUS_KM = 3.0;
+
+    // ───────────────── UNAVAILABILITY SUCCESS ─────────────────
+
+    public static final String MSG_UNAVAILABILITY_CREATED =
+            "Unavailability created successfully";
+
+    // ───────────────── UNAVAILABILITY VALIDATIONS ─────────────────
+
+    public static final String MSG_INVALID_TYPE =
+            "Invalid unavailability type";
+
+    public static final String MSG_INVALID_DATE_RANGE =
+            "Unavailability to date must be greater than from date";
+
+    // ───────────────── UNAVAILABILITY NOT FOUND ─────────────────
+
+    public static final String MSG_PRODUCT_NOT_FOUND =
+            "Product not found";
+
+    public static final String MSG_OUTLET_NOT_FOUND =
+            "Outlet not found";
+
+    public static final String MSG_OUTLET_CATEGORY_NOT_FOUND =
+            "Outlet category not found";
+
+    public static final String MSG_OUTLET_DAY_NOT_FOUND =
+            "Outlet day not found";
+
+    // ───────────────── UNAVAILABILITY TYPES ─────────────────
+
+    public static final String PRODUCT =
+            "PRODUCT";
+
+    public static final String OUTLET =
+            "OUTLET";
+
+    public static final String OUTLET_CATEGORY =
+            "OUTLET_CATEGORY";
+
+    public static final String OUTLET_DAY =
+            "OUTLET_DAY";
 }

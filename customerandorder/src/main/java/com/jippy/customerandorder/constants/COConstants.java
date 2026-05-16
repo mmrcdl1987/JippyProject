@@ -3,6 +3,17 @@ package com.jippy.customerandorder.constants;
 import java.math.BigDecimal;
 
 public class COConstants {
+    public static final String MSG_ORDER_SETTINGS_NOT_FOUND =
+            "Order settings not found";
+
+    public static final String MSG_ORDER_SETTINGS_UPDATED =
+            "Order settings updated successfully";
+
+    public static final String MSG_ORDER_SETTINGS_CREATED =
+            "Order settings created successfully";
+
+    public static final String MSG_CHECKOUT_SUCCESS =
+            "Checkout calculated successfully";
     private COConstants(){}
     public static final String STATUS_200 = "200";
     public static final String STATUS_400 = "400";
@@ -63,4 +74,10 @@ public class COConstants {
     public static final BigDecimal DRIVER_DEFAULT_COD_AMOUNT =BigDecimal.valueOf(1000);
 
     public static  final Boolean DRIVER_ORDERS_LOCK = false;
+
+
+
 }
+
+
+

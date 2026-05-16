@@ -4,6 +4,7 @@ import com.jippy.foodandmart.dto.OutletLocationProjection;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -313,6 +314,39 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             WHERE outlet_id = :outletId
             """, nativeQuery = true)
     OutletLocationProjection getOutletLocation(@Param("outletId") Integer outletId);
+
+    boolean existsByOutletId(Integer outletId);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE FmOutlet o
+            SET o.isToggle = false
+            WHERE o.outletId = :outletId
+            """)
+    void disableOutlet(Integer outletId);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE FmOutlet o
+            SET o.isToggle = true
+            WHERE o.outletId = :outletId
+            """)
+    void enableOutlet(Integer outletId);
+
+    @Modifying
+    @Query("""
+           UPDATE FmOutlet o
+           SET o.isActive = :status,
+               o.isToggle = false
+           WHERE o.outletId = :outletId
+           """)
+    void permanentlyCloseOutlet(
+            @Param("outletId")
+            Integer outletId,
+            @Param("status")
+            String status);
 
 
     //    for fetching outlet name by outlet id to show in order details page and driver app
