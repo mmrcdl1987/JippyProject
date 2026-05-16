@@ -23,7 +23,7 @@ import java.util.*;
  * POST  /api/update-menu/{outletId}/upload    → upload .xlsx or .csv to upsert menu products
  */
 @RestController
-@RequestMapping("/api/update-menu")
+@RequestMapping("/api/fm/update-menu")
 @RequiredArgsConstructor
 @Slf4j
 public class FmUpdateMenuController {

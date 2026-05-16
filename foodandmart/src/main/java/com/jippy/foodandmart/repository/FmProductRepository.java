@@ -1,7 +1,9 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProduct;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -58,4 +60,37 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     Integer findOutletCategoryId(@Param("productId") Integer productId);
 
     Optional<FmProduct> findById(Integer productId);
+
+    boolean existsByProductId(Integer productId);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE FmProduct p
+            SET p.isToggle = false
+            WHERE p.productId = :productId
+            """)
+    void disableProduct(Integer productId);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE FmProduct p
+            SET p.isToggle = true
+            WHERE p.productId = :productId
+            """)
+    void enableProduct(Integer productId);
+
+    @Modifying
+    @Query("""
+           UPDATE FmProduct p
+           SET p.isActive = :status,
+               p.isToggle = false
+           WHERE p.productId = :productId
+           """)
+    void permanentlyCloseProduct(
+            @Param("productId")
+            Integer productId,
+            @Param("status")
+            String status);
 }

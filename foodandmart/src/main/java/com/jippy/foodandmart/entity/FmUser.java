@@ -2,8 +2,15 @@ package com.jippy.foodandmart.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users", schema = "jippy_fm")
@@ -12,7 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FmUser {
+public class FmUser implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,14 +45,17 @@ public class FmUser {
     @Column(name = "updated_by")
     private Integer updatedBy;
 
-    @ManyToMany
+   /* @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_role_permissions",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_permission_id")
     )
-//    @Builder.Default
-//    private Set<Roles> roles = new HashSet<>();
+    private Set<FmUserRolePermissions> rolePermission;*/
+
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id") // Points to the user_id column in user_role_permissions
+    private Set<FmUserRolePermissions> userRolePermissions;
 
     @PrePersist
     public void prePersist() {
@@ -57,4 +67,28 @@ public class FmUser {
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return userRolePermissions.stream()
+                .map(urp -> urp.getRolePermission().getRole().getRoleName())
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return "Y".equalsIgnoreCase(this.isActive);
+    }
+
+    @Override
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override
+    public boolean isAccountNonLocked() { return true; }
+
+    @Override
+    public boolean isCredentialsNonExpired() { return true; }
 }

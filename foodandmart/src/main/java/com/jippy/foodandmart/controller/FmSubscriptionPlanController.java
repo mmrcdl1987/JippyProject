@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/fm/subscription")
+@RequestMapping("api/fm/subscription")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Subscription Plans API", description = "Create and Update Subscription Plans")

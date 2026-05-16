@@ -29,10 +29,15 @@ public class FmOutletCategory {
     @JoinColumn(name = "category_id", nullable = false, insertable = false, updatable = false)
     private FmCategory category;
 
+    @Column(name = "is_active", length = 1)
+    @Builder.Default
+    private String isActive = "Y";
+
     @Column(name = "created_at") private LocalDateTime createdAt;
     @Column(name = "created_by") private Integer createdBy;
     @Column(name = "updated_at") private LocalDateTime updatedAt;
     @Column(name = "updated_by") private Integer updatedBy;
+    private Boolean isToggle;
 
     @PrePersist public void prePersist() { this.createdAt = LocalDateTime.now(); }
     @PreUpdate  public void preUpdate()  { this.updatedAt = LocalDateTime.now(); }

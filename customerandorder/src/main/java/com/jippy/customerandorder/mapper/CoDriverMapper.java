@@ -1,17 +1,21 @@
 package com.jippy.customerandorder.mapper;
 
 
-import com.jippy.customerandorder.dto.CoAddressRequestDto;
-import com.jippy.customerandorder.dto.CoDriverDto;
-import com.jippy.customerandorder.dto.CoZoneDto;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoDriver;
+import com.jippy.customerandorder.entity.CoDriverIncentiveSettings;
 import com.jippy.customerandorder.entity.CoDriverKyc;
 import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoBadRequestException;
+import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
+import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
+import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 public class CoDriverMapper {
@@ -166,4 +170,115 @@ public class CoDriverMapper {
         // should not be updated through this method
 
     }
+
+    //    for api to fetchOrderEarningsHistory mapper
+// Convert projection data to DTO
+    public static CoDriverOrderHistoryDto mapToDriverOrderHistoryDto(CoDriverOrderHistoryProjection projection, String outletName) {
+
+        // Create DTO object
+        CoDriverOrderHistoryDto dto = new CoDriverOrderHistoryDto();
+
+        // Set driver id
+        dto.setDriverId(projection.getDriverId());
+
+        // Set order id
+        dto.setOrderId(projection.getOrderId());
+
+        // Set pick up distance
+        dto.setPickUpDistanceInKms(projection.getPickUpDistanceInKms());
+
+        // Set delivery distance
+        dto.setDeliveryDistanceInKms(projection.getDeliveryDistanceInKms());
+
+        // Set pick up charges
+        dto.setPickUpCharges(projection.getPickUpCharges());
+
+        // Set delivery charges
+        dto.setDeliverCharges(projection.getDeliverCharges());
+
+        // Set total delivery fee
+        dto.setTotalDeliveryFee(projection.getTotalDeliveryFee());
+
+        // Set surge fee
+        dto.setSurgeFee(projection.getSurgeFee());
+
+        // Set tips
+        dto.setTips(projection.getTips());
+
+        // Set order status
+        dto.setOrderStatus(projection.getOrderStatus());
+
+        // Set outlet name
+        dto.setOutletName(outletName);
+
+        return dto;
+    }
+
+    // Convert projection to DTO for api fetchTotalEarnings
+    public static CoDriverTotalEarningsDto mapToTotalEarningsDto(Integer driverId, CoDriverTotalEarningsProjection projection, Long rejectedOrders) {
+
+        CoDriverTotalEarningsDto dto = new CoDriverTotalEarningsDto();
+
+        dto.setDriverId(driverId);
+
+        dto.setTotalPickUpCharges(projection.getTotalPickUpCharges());
+
+        dto.setTotalDeliveryCharges(projection.getTotalDeliveryCharges());
+
+        dto.setTotalTips(projection.getTotalTips());
+
+        dto.setTotalSurgeFee(projection.getTotalSurgeFee());
+
+        dto.setTotalEarnings(projection.getTotalEarnings());
+
+        dto.setCompletedOrders(projection.getCompletedOrders());
+
+        dto.setRejectedOrders(rejectedOrders);
+
+//    total_orders = completed orders(from driver_orders table) + rejected orders (rejection_order table)
+        dto.setTotalOrders(projection.getCompletedOrders() + rejectedOrders);
+
+        return dto;
+    }
+
+//    this method will calculate incentive bonus for driver based on slabs defined in
+//    CoDriverIncentiveSettings table and total orders count for the day
+// ex :9 ≤ 10 < 15 → TRUE --> bonus = 120 assigned from table incentive amount
+//Find correct slab → we just assign its final value not adding Find all slabs → sum values
+    public static BigDecimal calculateIncentiveBonus(List<CoDriverIncentiveSettings> slabs, Integer orders) {
+
+//       initialize bonus to zero
+        BigDecimal bonus = BigDecimal.ZERO;
+
+        for (int i = 0; i < slabs.size(); i++) {
+
+            CoDriverIncentiveSettings current = slabs.get(i);
+
+            // Case 1: Last slab (no upper bound)
+                // comparing 2 slabs
+            if (i == slabs.size() - 1) {
+
+                if (orders >= current.getOrdersCount()) {
+//                    Pick ONE slab → assign its value
+                    bonus = current.getIncentiveAmount();
+                    break; // no need to check further as this is the last slab
+                }
+
+            } else {
+
+                CoDriverIncentiveSettings next = slabs.get(i + 1);
+
+                // Case 2: Range check (current ≤ orders < next)
+//                 As 9(current slab) ≤ 10 < 15(next slab)
+                if (orders >= current.getOrdersCount() && orders < next.getOrdersCount()) {
+
+                    bonus = current.getIncentiveAmount();
+                    break; // slab found, exit loop
+                }
+            }
+        }
+
+        return bonus;
+    }
+
 }

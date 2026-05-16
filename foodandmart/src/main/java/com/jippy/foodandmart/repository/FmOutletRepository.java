@@ -1,9 +1,10 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.dto.OutletLocationProjection;
-import com.jippy.foodandmart.entity .FmOutlet;
+import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,8 +17,11 @@ import java.util.Optional;
 @Repository
 public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
     Optional<FmOutlet> findByOutletPhone(String phone);
+
     boolean existsByOutletPhone(String phone);
+
     boolean existsByMerchantIdAndOutletName(Integer merchantId, String outletName);
+
     List<FmOutlet> findByMerchantId(Integer merchantId);
 
 
@@ -167,150 +171,138 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 WHERE o.merchant_id = :merchantId --for Api response @query
                  --WHERE o.merchant_id = :1 -- for postgres SQL testing used
             """, nativeQuery = true)
-    List<FmOutletByMerchantProjection> getOutletsByMerchantId(
-            @Param("merchantId") Integer merchantId
-    );
+    List<FmOutletByMerchantProjection> getOutletsByMerchantId(@Param("merchantId") Integer merchantId);
 
     //  UNAPPROVED OUTLETS (NO CHANGE)
     @Query(value = """
-        SELECT o.*
-        FROM jippy_fm.outlets o
-        JOIN jippy_fm.address a 
-          ON a.jippy_address_id = o.outlet_id
-        WHERE a.area_id = :areaId
-          AND a.address_type = :addressType
-          AND o.is_approved = false
-          AND (:search IS NULL OR o.outlet_name ILIKE CONCAT('%', :search, '%'))
-        """, nativeQuery = true)
-    List<FmOutlet> findUnapprovedOutlets(
-            @Param("areaId") Integer areaId,
-            @Param("addressType") String addressType,
-            @Param("search") String search
-    );
+            SELECT o.*
+            FROM jippy_fm.outlets o
+            JOIN jippy_fm.address a 
+              ON a.jippy_address_id = o.outlet_id
+            WHERE a.area_id = :areaId
+              AND a.address_type = :addressType
+              AND o.is_approved = false
+              AND (:search IS NULL OR o.outlet_name ILIKE CONCAT('%', :search, '%'))
+            """, nativeQuery = true)
+    List<FmOutlet> findUnapprovedOutlets(@Param("areaId") Integer areaId, @Param("addressType") String addressType, @Param("search") String search);
+
     // APPROVED OUTLETS (FIXED - remove duplicates properly)
     @Query(value = """
-        SELECT o.*
-        FROM jippy_fm.outlets o
-        JOIN jippy_fm.address a 
-          ON a.jippy_address_id = o.outlet_id
-        WHERE a.area_id = :areaId
-          AND a.address_type = :addressType
-          AND EXISTS (
-              SELECT 1
-              FROM jippy_fm.product_online_pricing pop
-              JOIN jippy_fm.outlet_categories oc 
-                ON pop.outlet_category_id = oc.outlet_category_id
-              WHERE oc.outlet_id = o.outlet_id
-          )
-          AND (:search IS NULL OR o.outlet_name ILIKE CONCAT('%', :search, '%'))
-        """, nativeQuery = true)
-    List<FmOutlet> findApprovedOutlets(
-            @Param("areaId") Integer areaId,
-            @Param("addressType") String addressType,
-            @Param("search") String search
-    );
+            SELECT o.*
+            FROM jippy_fm.outlets o
+            JOIN jippy_fm.address a 
+              ON a.jippy_address_id = o.outlet_id
+            WHERE a.area_id = :areaId
+              AND a.address_type = :addressType
+              AND EXISTS (
+                  SELECT 1
+                  FROM jippy_fm.product_online_pricing pop
+                  JOIN jippy_fm.outlet_categories oc 
+                    ON pop.outlet_category_id = oc.outlet_category_id
+                  WHERE oc.outlet_id = o.outlet_id
+              )
+              AND (:search IS NULL OR o.outlet_name ILIKE CONCAT('%', :search, '%'))
+            """, nativeQuery = true)
+    List<FmOutlet> findApprovedOutlets(@Param("areaId") Integer areaId, @Param("addressType") String addressType, @Param("search") String search);
 
 
     //  APPROVE OUTLETS (NO CHANGE)
     @Modifying
     @Query(value = """
-        UPDATE jippy_fm.outlets
-        SET is_approved = true,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE outlet_id IN (:ids)
-        """, nativeQuery = true)
+            UPDATE jippy_fm.outlets
+            SET is_approved = true,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE outlet_id IN (:ids)
+            """, nativeQuery = true)
     int approveOutlets(@Param("ids") List<Integer> ids);
 
     @Query(value = """
-
-        SELECT
-            o.outlet_id,
-            o.outlet_name,
-            o.merchant_id,
-            o.cuisine_type,
-            o.outlet_phone,
-            o.radius,
-            o.review,
-            o.subscription_status,
-            o.promotion_status,
-            o.is_active,
-            o.is_approved,
-            o.employee_id,
-
-            od.opening_time,
-            od.closing_time,
-            od.outlet_day_id,
-            od.day_of_week_id,
-
-            ROUND(
-                CAST(
-                    ST_Distance(
-                        o.outlet_location::geography,
-                        ST_SetSRID(
-                            ST_MakePoint(:customerLng, :customerLat),
-                            4326
-                        )::geography
-                    ) / 1000.0 AS numeric
-                ),
-                2
-            ) AS distance_km,
-
-            /*
-             * GOOGLE MAPS
-             */
-
-            ST_Y(o.outlet_location::geometry) AS latitude,
-
-            ST_X(o.outlet_location::geometry) AS longitude
-
-        FROM jippy_fm.outlets o
-
-        LEFT JOIN jippy_fm.outlet_subscription_plans osp
-               ON o.outlet_id = osp.outlet_id
-              AND CURRENT_DATE BETWEEN
-                  osp.subscription_from_date
-                  AND osp.subscription_to_date
-
-        LEFT JOIN jippy_fm.subscription_plans sp
-               ON osp.subscription_plan_id = sp.subscription_plan_id
-
-        JOIN jippy_fm.outlet_days od
-               ON od.outlet_id = o.outlet_id
-
-        JOIN jippy_fm.days_of_week dow
-               ON dow.day_id = od.day_of_week_id
-
-        WHERE o.is_active = 'Y'
-          AND o.outlet_location IS NOT NULL
-          AND o.is_approved = true
-
-          AND ST_DWithin(
-                o.outlet_location::geography,
-                ST_SetSRID(
-                    ST_MakePoint(:customerLng, :customerLat),
-                    4326
-                )::geography,
-
-                COALESCE(sp.radius_in_kms * 1000, 3000)
-              )
-
-          AND od.day_of_week_id =
-              EXTRACT(
-                  ISODOW FROM
-                  (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
-              )
-
-          AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time
-              BETWEEN od.opening_time
-              AND od.closing_time
-
-        ORDER BY distance_km ASC
-
-        """, nativeQuery = true)
-    List<Object[]> findCustomerNearbyOutlets(
-            @Param("customerLat") double customerLat,
-            @Param("customerLng") double customerLng
-    );
+            
+            SELECT
+                o.outlet_id,
+                o.outlet_name,
+                o.merchant_id,
+                o.cuisine_type,
+                o.outlet_phone,
+                o.radius,
+                o.review,
+                o.subscription_status,
+                o.promotion_status,
+                o.is_active,
+                o.is_approved,
+                o.employee_id,
+            
+                od.opening_time,
+                od.closing_time,
+                od.outlet_day_id,
+                od.day_of_week_id,
+            
+                ROUND(
+                    CAST(
+                        ST_Distance(
+                            o.outlet_location::geography,
+                            ST_SetSRID(
+                                ST_MakePoint(:customerLng, :customerLat),
+                                4326
+                            )::geography
+                        ) / 1000.0 AS numeric
+                    ),
+                    2
+                ) AS distance_km,
+            
+                /*
+                 * GOOGLE MAPS
+                 */
+            
+                ST_Y(o.outlet_location::geometry) AS latitude,
+            
+                ST_X(o.outlet_location::geometry) AS longitude
+            
+            FROM jippy_fm.outlets o
+            
+            LEFT JOIN jippy_fm.outlet_subscription_plans osp
+                   ON o.outlet_id = osp.outlet_id
+                  AND CURRENT_DATE BETWEEN
+                      osp.subscription_from_date
+                      AND osp.subscription_to_date
+            
+            LEFT JOIN jippy_fm.subscription_plans sp
+                   ON osp.subscription_plan_id = sp.subscription_plan_id
+            
+            JOIN jippy_fm.outlet_days od
+                   ON od.outlet_id = o.outlet_id
+            
+            JOIN jippy_fm.days_of_week dow
+                   ON dow.day_id = od.day_of_week_id
+            
+            WHERE o.is_active = 'Y'
+              AND o.outlet_location IS NOT NULL
+              AND o.is_approved = true
+            
+              AND ST_DWithin(
+                    o.outlet_location::geography,
+                    ST_SetSRID(
+                        ST_MakePoint(:customerLng, :customerLat),
+                        4326
+                    )::geography,
+            
+                    COALESCE(sp.radius_in_kms * 1000, 3000)
+                  )
+            
+              AND od.day_of_week_id =
+                  EXTRACT(
+                      ISODOW FROM
+                      (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
+                  )
+            
+              AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time
+                  BETWEEN od.opening_time
+                  AND od.closing_time
+            
+            ORDER BY distance_km ASC
+            
+            """, nativeQuery = true)
+    List<Object[]> findCustomerNearbyOutlets(@Param("customerLat") double customerLat, @Param("customerLng") double customerLng);
 
 
     @Query(value = """
@@ -321,6 +313,47 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             FROM jippy_fm.outlets
             WHERE outlet_id = :outletId
             """, nativeQuery = true)
-    OutletLocationProjection getOutletLocation(
-            @Param("outletId") Integer outletId);
+    OutletLocationProjection getOutletLocation(@Param("outletId") Integer outletId);
+
+    boolean existsByOutletId(Integer outletId);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE FmOutlet o
+            SET o.isToggle = false
+            WHERE o.outletId = :outletId
+            """)
+    void disableOutlet(Integer outletId);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE FmOutlet o
+            SET o.isToggle = true
+            WHERE o.outletId = :outletId
+            """)
+    void enableOutlet(Integer outletId);
+
+    @Modifying
+    @Query("""
+           UPDATE FmOutlet o
+           SET o.isActive = :status,
+               o.isToggle = false
+           WHERE o.outletId = :outletId
+           """)
+    void permanentlyCloseOutlet(
+            @Param("outletId")
+            Integer outletId,
+            @Param("status")
+            String status);
+
+
+    //    for fetching outlet name by outlet id to show in order details page and driver app
+    @Query(value = """
+            SELECT outlet_name
+            FROM "jippy_fm"."outlets"
+            WHERE outlet_id = :outletId
+            """, nativeQuery = true)
+    String fetchOutletName(@Param("outletId") Integer outletId);
 }

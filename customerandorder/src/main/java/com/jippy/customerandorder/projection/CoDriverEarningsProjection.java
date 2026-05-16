@@ -1,4 +1,4 @@
-package com.jippy.customerandorder.repository;
+package com.jippy.customerandorder.projection;
 
 import java.math.BigDecimal;
 

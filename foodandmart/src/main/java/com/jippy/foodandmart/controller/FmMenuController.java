@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/menu")
+@RequestMapping("/api/fm/menu")
 @RequiredArgsConstructor
 @Slf4j
 public class FmMenuController {

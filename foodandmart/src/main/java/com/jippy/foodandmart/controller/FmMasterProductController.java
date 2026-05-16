@@ -20,7 +20,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/master-products")
+@RequestMapping("/api/fm/master-products")
 @RequiredArgsConstructor
 public class FmMasterProductController {
 

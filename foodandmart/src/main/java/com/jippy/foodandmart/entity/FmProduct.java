@@ -58,6 +58,12 @@ public class FmProduct {
     @Column(name = "updated_by")
     private Integer updatedBy;
 
+    @Column(name = "is_active", length = 1)
+    @Builder.Default
+    private String isActive = "Y";
+
+    private Boolean isToggle;
+
     @JsonIgnore
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default

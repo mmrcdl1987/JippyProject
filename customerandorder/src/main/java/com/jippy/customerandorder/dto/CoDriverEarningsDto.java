@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -15,4 +16,9 @@ public class CoDriverEarningsDto {
     private Long ordersCountToday;
 
     private BigDecimal totalEarningsToday;
+
+//    after new requirement of driver incentive bonus we are adding this field
+//    to show the total incentive bonus for the day in driver earnings api response
+@JsonInclude(JsonInclude.Include.ALWAYS)
+    private BigDecimal driverIncentiveBonus;
 }

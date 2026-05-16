@@ -2,20 +2,19 @@ package com.jippy.customerandorder.serviceImpl;
 
 
 import com.jippy.customerandorder.constants.COConstants;
-import com.jippy.customerandorder.dto.CoAddressRequestDto;
-import com.jippy.customerandorder.dto.CoDriverDto;
-import com.jippy.customerandorder.dto.CoDriverEarningsDto;
-import com.jippy.customerandorder.dto.CoZoneDto;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoDriver;
+import com.jippy.customerandorder.entity.CoDriverIncentiveSettings;
+import com.jippy.customerandorder.entity.CoDriverWallet;
 import com.jippy.customerandorder.entity.CoZone;
 import com.jippy.customerandorder.exception.CoZoneException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICoDriverService;
 import com.jippy.customerandorder.mapper.CoDriverMapper;
-import com.jippy.customerandorder.repository.CoDriverEarningsProjection;
-import com.jippy.customerandorder.repository.CoDriverRepository;
-import com.jippy.customerandorder.repository.CoOrderRepository;
-import com.jippy.customerandorder.repository.CoZoneRepository;
+import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
+import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
+import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
+import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,13 +22,12 @@ import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,9 +39,11 @@ public class CoDriverServiceImpl implements ICoDriverService {
     private final CoDriverRepository driverRepository;
     private final CoZoneRepository zoneRepository;
     private final CoOrderRepository ordersRepository;
-
-    @Autowired
-    private FMFeignClient FMFeignClient;
+    private final CoDriverOrderRepository driverOrderRepository;
+    private final CoOrderRejectionRepository orderRejectionRepository;
+    private final CoDriverIncentiveSettingsRepository driverIncentivesettingsRepository;
+    private final CoDriverWalletRepository driverWalletRepository;
+    private final FMFeignClient fmFeignClient;
 
     @Override
     @Transactional
@@ -68,7 +68,26 @@ public class CoDriverServiceImpl implements ICoDriverService {
         coAddressRequestDto.setStateId(dto.getStateId());
         coAddressRequestDto.setAreaId(dto.getAreaId());
         coAddressRequestDto.setAddressType(COConstants.TYPE_DRIVER);
-        CoAddressRequestDto coAddressRequestDtoFeign = FMFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+        CoAddressRequestDto coAddressRequestDtoFeign = null;
+        try {
+            coAddressRequestDtoFeign =
+                    fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+        } catch (Exception e) {
+            log.error("Address service failed, but continuing driver creation", e);
+        }
+//        create driver wallet details , create entity ,repo
+        CoDriverWallet wallet = new CoDriverWallet();
+
+        wallet.setDriverId(savedDriver.getDriverId()); // FROM DRIVER TABLE
+
+//        from CO constants default values
+        wallet.setTotalCodAmount(COConstants.DRIVER_DEFAULT_COD_AMOUNT); // default 1000
+        wallet.setOrdersLock(COConstants.DRIVER_ORDERS_LOCK); // default false
+
+        wallet.setCreatedAt(LocalDateTime.now());
+        wallet.setCreatedBy(savedDriver.getDriverId());
+
+        driverWalletRepository.save(wallet);
 
         // Convert Entity → DTO
         CoDriverDto mapToDriverDto = CoDriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
@@ -86,10 +105,16 @@ public class CoDriverServiceImpl implements ICoDriverService {
             log.error("Driver not found with id: {}", driverId);
             return new ResourceNotFoundException("Driver not found with id: " + driverId);
         });
-        CoAddressRequestDto coGetAddressRequestDtoFeign = FMFeignClient.getAddressDetails(driverId).getBody();
-        CoDriverDto driverDto = CoDriverMapper.mapToDriverDto(driver, coGetAddressRequestDtoFeign);
 
-        return driverDto;
+        CoAddressRequestDto address = null;
+
+        try {
+            address = fmFeignClient.getAddressDetails(driverId).getBody();
+        } catch (Exception e) {
+            log.error("Failed to fetch address from FM", e);
+        }
+
+        return CoDriverMapper.mapToDriverDto(driver, address);
     }
 
     //    updating driver details, only editable fields (not phone, email, or KYC)
@@ -128,8 +153,13 @@ public class CoDriverServiceImpl implements ICoDriverService {
         addressDto.setAddressType(COConstants.TYPE_DRIVER);
 
         // Save/update address
-        CoAddressRequestDto updatedAddress = FMFeignClient.saveAddressDetails(addressDto).getBody();
+        CoAddressRequestDto updatedAddress = null;
 
+        try {
+            updatedAddress = fmFeignClient.saveAddressDetails(addressDto).getBody();
+        } catch (Exception e) {
+            log.error("Address update failed", e);
+        }
         // Convert updated entity → response DTO with updated address details
         CoDriverDto response = CoDriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
 
@@ -137,7 +167,7 @@ public class CoDriverServiceImpl implements ICoDriverService {
     }
 
 
-//    to fetch driver earnings for a given date, default to current date if not provided,
+    //    to fetch driver earnings for a given date, default to current date if not provided,
 //    and total orders count for that day, and total earnings for that day
     @Override
     @Transactional
@@ -146,28 +176,118 @@ public class CoDriverServiceImpl implements ICoDriverService {
         log.info("Fetching earnings for driver id: {} and date: {}", driverId, date);
 
         // Validate driver exists
-        driverRepository.findById(driverId).orElseThrow(
-                () -> new ResourceNotFoundException("Driver not found with id: " + driverId));
+        driverRepository.findById(driverId).orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + driverId));
 
         // Fetch orders count for the driver on the given date
 //        Long ordersCount = ordersRepository.countOrdersByDriverAndDate(driverId, date);
 
         // Fetch total earnings for the driver on the given date
-     // Fetch earnings + count together to avoid multiple DB calls
+        // Fetch earnings + count together to avoid multiple DB calls
 
-        CoDriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders  = ordersRepository.fetchDriverEarnings(driverId, date);
+        CoDriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders = ordersRepository.fetchDriverEarnings(driverId, date);
 
         // Prepare response DTO
-        CoDriverEarningsDto DriverEarningsDto = new CoDriverEarningsDto();
+        CoDriverEarningsDto driverEarningsDto = new CoDriverEarningsDto();
 
-        DriverEarningsDto.setDriverId(driverId);
-        DriverEarningsDto.setCurrentDate(date);
-        DriverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCount());
-        DriverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarnings());
+        driverEarningsDto.setDriverId(driverId);
+        driverEarningsDto.setCurrentDate(date);
+        driverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCount());
+        driverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarnings());
 
-        log.info("Successfully fetched earnings for driver id: {}", driverId);
+        //
+        // new requirement : Calculate Incentive Bonus (Range-Based Logic)
 
-        return DriverEarningsDto;
+        BigDecimal bonus = BigDecimal.ZERO;
+
+        // Fetch all slabs sorted by orders_count ascending
+        List<CoDriverIncentiveSettings> slabs = driverIncentivesettingsRepository.findAllSlabs();
+
+        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCount() != null
+                ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCount().intValue()
+                : 0;
+        log.info("Total orders completed by driver {}: {}", driverId, orders);
+
+        //Instead of loop → use mapper
+        // Find correct slab → assign its final value (no addition of values)
+        bonus = CoDriverMapper.calculateIncentiveBonus(slabs, orders);
+
+        log.info("Calculated bonus from mapper: {}", bonus);
+
+        // Step 5: Set bonus into DTO
+        driverEarningsDto.setDriverIncentiveBonus(bonus);
+
+        log.info("Final incentive bonus for driver {}: {}", driverId, bonus);
+
+        log.info("Successfully fetched earnings for driverId: {}", driverId);
+
+        return driverEarningsDto;
+    }
+
+    // for a given driver, fetch order earnings history with details like order id, pick up and delivery distance,
+    // charges, total fee, surge fee, tips, order status, and outlet name for each order
+    @Override
+    public List<CoDriverOrderHistoryDto> fetchOrderEarningsHistory(Integer driverId) {
+
+        log.info("Fetching order earnings history for driver id: {}", driverId);
+
+        // Check driver exists or not
+        driverRepository.findById(driverId).orElseThrow(() -> {
+
+            log.error("Driver not found with id: {}", driverId);
+
+            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+        });
+
+        // Fetch records from database
+        List<CoDriverOrderHistoryProjection> projections = driverOrderRepository.fetchOrderEarningsHistory(driverId);
+
+        // Create response list to hold order history details
+        List<CoDriverOrderHistoryDto> ProjectionResponse = new ArrayList<>();
+
+        // Loop through all records and set values in response DTO,
+        // also fetch outlet name from FM microservice for each record
+        for (CoDriverOrderHistoryProjection projection : projections) {
+
+            // Fetch outlet name from FM microservice
+            String FmOutletName = fmFeignClient.fetchOutletName(projection.getOutletId());
+
+            // Convert projection → DTO using mapper
+            CoDriverOrderHistoryDto dto = CoDriverMapper.mapToDriverOrderHistoryDto(projection, FmOutletName);
+
+            // Add DTO to response list
+            ProjectionResponse.add(dto);
+        }
+
+        log.info("Successfully fetched order earnings history for driver id: {}", driverId);
+
+        return ProjectionResponse;
+    }
+
+    @Override
+    public CoDriverTotalEarningsDto fetchTotalEarnings(Integer driverId) {
+
+        log.info("Fetching total earnings for driver id: {}", driverId);
+
+        // Validate driver exists
+        driverRepository.findById(driverId).orElseThrow(() -> {
+
+            log.error("Driver not found with id: {}", driverId);
+
+            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+        });
+
+        // Fetch earnings data
+        CoDriverTotalEarningsProjection projection = driverOrderRepository.fetchTotalEarnings(driverId);
+
+        // Fetch rejected orders count
+        Long rejectedOrders = orderRejectionRepository.fetchRejectedOrdersCount(driverId);
+
+        // Convert to DTO using mapper
+        CoDriverTotalEarningsDto response = CoDriverMapper.mapToTotalEarningsDto(driverId, projection, rejectedOrders);
+
+        log.info("Successfully fetched total earnings for driver id: {}", driverId);
+
+        return response;
     }
 
     @Transactional

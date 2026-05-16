@@ -1,6 +1,6 @@
 package com.jippy.customerandorder.repository;
 
-import com.jippy.customerandorder.dto.CustomerLocationProjection;
+import com.jippy.customerandorder.projection.CustomerLocationProjection;
 import com.jippy.customerandorder.entity.CoCustomerDeliveryAddress;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
