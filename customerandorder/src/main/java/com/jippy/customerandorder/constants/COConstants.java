@@ -57,4 +57,50 @@ public class COConstants {
     public static final String TAX_PERCENTAGE = "5";
 
     public static final String COD_LIMIT = "499";
+
+    // WALLET MESSAGES
+
+    public static final Integer MINIMUM_POINTS_REQUIRED = 1000;
+
+    public static final Integer AMOUNT_PER_1000_POINTS = 100;
+
+    public static final String WELCOME_POINTS = "WELCOME_POINTS";
+
+    public static final String WALLET_NOT_FOUND = "Wallet not found";
+
+    public static final String MINIMUM_POINTS_REQUIRED_MESSAGE = "Minimum 1000 points needed to convert";
+
+    public static final String POINTS_CONVERTED_SUCCESS = "Points converted successfully";
+
+    public static final String CUSTOMER_CREATED_SUCCESS = "Customer created successfully";
+
+    public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
+
+    public static final String PHONE_ALREADY_EXISTS = "Phone number already exists";
+
+    public static final String WELCOME_POINTS_NOT_CONFIGURED = "WELCOME_POINTS not configured";
+    public static final String POINTS_CONVERTED = "POINTS_CONVERTED";
+
+    public static final String DAILY_STREAK_POINTS = "DAILY_STREAK_POINTS";
+
+    public static final String STREAK_UPDATED = "Daily streak updated";
+
+    public static final String STREAK_REWARD = "STREAK_REWARD";
+
+    public static final String ALREADY_CHECKED_IN = "Already checked in today";
+
+    public static final String STREAK_SETTINGS_NOT_FOUND = "Daily streak settings not configured";
+    public static final String POINTS_TRANSFERRED = "POINTS_TRANSFERRED";
+
+    public static final String POINTS_RECEIVED = "POINTS_RECEIVED";
+
+    public static final String INSUFFICIENT_POINTS = "Insufficient wallet points";
+
+    public static final String RECEIVER_NOT_FOUND = "Receiver customer not found";
+
+    public static final String CANNOT_TRANSFER_SELF = "Cannot transfer points to same customer";
+
+    public static final String CUSTOMER_NOT_FOUND = "Customer not found";
+
+    public static final String POINTS_TRANSFER_SUCCESS = "Wallet points transferred successfully";
 }
