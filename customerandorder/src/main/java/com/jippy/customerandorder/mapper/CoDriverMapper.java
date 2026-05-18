@@ -2,14 +2,10 @@ package com.jippy.customerandorder.mapper;
 
 
 import com.jippy.customerandorder.dto.*;
-import com.jippy.customerandorder.entity.CoDriver;
-import com.jippy.customerandorder.entity.CoDriverIncentiveSettings;
-import com.jippy.customerandorder.entity.CoDriverKyc;
-import com.jippy.customerandorder.entity.CoZone;
+import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
 import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
-import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
@@ -241,7 +237,7 @@ public class CoDriverMapper {
         return dto;
     }
 
-//    this method will calculate incentive bonus for driver based on slabs defined in
+    //    this method will calculate incentive bonus for driver based on slabs defined in
 //    CoDriverIncentiveSettings table and total orders count for the day
 // ex :9 ≤ 10 < 15 → TRUE --> bonus = 120 assigned from table incentive amount
 //Find correct slab → we just assign its final value not adding Find all slabs → sum values
@@ -255,7 +251,7 @@ public class CoDriverMapper {
             CoDriverIncentiveSettings current = slabs.get(i);
 
             // Case 1: Last slab (no upper bound)
-                // comparing 2 slabs
+            // comparing 2 slabs
             if (i == slabs.size() - 1) {
 
                 if (orders >= current.getOrdersCount()) {
@@ -279,6 +275,25 @@ public class CoDriverMapper {
         }
 
         return bonus;
+    }
+
+    public static CoDriverWalletTransactions mapToTransaction(Integer walletId, String orderId, double amount) {
+
+        CoDriverWalletTransactions txn = new CoDriverWalletTransactions();
+
+        // Wallet reference
+        txn.setDriverWalletId(walletId);
+
+        // Order reference
+        txn.setOrderId(orderId);
+
+        // COD deducted amount
+        txn.setCodAmount(BigDecimal.valueOf(amount));
+
+        // Audit field
+        txn.setCreatedAt(LocalDateTime.now());
+
+        return txn;
     }
 
 }

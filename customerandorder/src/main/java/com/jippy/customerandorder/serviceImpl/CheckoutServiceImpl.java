@@ -168,7 +168,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
         response.setCodAvailable(true);
 
-        response.setMessage(COConstants.MSG_CHECKOUT_SUCCESS);
+//        response.setMessage(COConstants.MSG_CHECKOUT_SUCCESS);
 
         log.info("CHECKOUT SERVICE SUCCESS");
 
