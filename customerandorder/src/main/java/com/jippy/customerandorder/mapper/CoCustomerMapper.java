@@ -1,15 +1,19 @@
 package com.jippy.customerandorder.mapper;
 
 import com.jippy.customerandorder.dto.CoCustomerRequestDto;
+import com.jippy.customerandorder.dto.CoCustomerResponseDto;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.entity.CoCustomerWallet;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Component
 public class CoCustomerMapper {
 
-    private CoCustomerMapper() {}
+    private CoCustomerMapper() {
+    }
     // CUSTOMER MAPPER
 
 
@@ -43,17 +47,10 @@ public class CoCustomerMapper {
     }
 
 
-
     // WALLET MAPPER
 
 
-    public static CoCustomerWallet mapToWallet(
-
-            CoCustomer customer,
-
-            Integer balancePoints,
-
-            Integer createdBy) {
+    public static CoCustomerWallet mapToWallet(CoCustomer customer, Integer balancePoints, Integer createdBy) {
 
         CoCustomerWallet wallet = new CoCustomerWallet();
 
@@ -71,30 +68,33 @@ public class CoCustomerMapper {
     }
 
 
-
     // REFERRAL CODE GENERATOR
 
 
-    private static String generateReferralCode(
+    private static String generateReferralCode(String firstName, String lastName, String phoneNumber) {
 
-            String firstName,
+        String firstPart = firstName.substring(0, Math.min(3, firstName.length()));
 
-            String lastName,
+        String lastPart = lastName.substring(0, Math.min(2, lastName.length()));
 
-            String phoneNumber) {
-
-        String firstPart =
-
-                firstName.substring(0, Math.min(3, firstName.length()));
-
-        String lastPart =
-
-                lastName.substring(0, Math.min(2, lastName.length()));
-
-        String phoneLast3 =
-
-                phoneNumber.substring(phoneNumber.length() - 3);
+        String phoneLast3 = phoneNumber.substring(phoneNumber.length() - 3);
 
         return (firstPart + phoneLast3 + lastPart).toUpperCase();
+    }
+
+    public CoCustomerResponseDto mapToResponse(CoCustomer customer) {
+
+        CoCustomerResponseDto dto =
+                new CoCustomerResponseDto();
+
+        dto.setCustomerId(customer.getCustomerId());
+        dto.setFirstName(customer.getFirstName());
+        dto.setLastName(customer.getLastName());
+        dto.setEmail(customer.getEmail());
+        dto.setPhoneNumber(customer.getPhoneNumber());
+        dto.setReferralCode(customer.getReferralCode());
+        dto.setCustomerStatusId(customer.getCustomerStatusId());
+
+        return dto;
     }
 }

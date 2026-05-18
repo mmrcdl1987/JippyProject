@@ -10,6 +10,7 @@ import com.jippy.customerandorder.mapper.CoCustomerMapper;
 import com.jippy.customerandorder.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,9 +34,10 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
     private final CoCustomerStreakRepository streakRepository;
 
+    private final CoCustomerMapper customerMapper;
+
 
     // CREATE CUSTOMER
-
     @Override
     public CoCustomer createCustomer(CoCustomerRequestDto dto) {
 
@@ -68,8 +70,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // FETCH WALLET SETTINGS
 
-        CoWalletSettings walletSettings = walletSettingsRepository
-                .findByPointsType(COConstants.WELCOME_POINTS).orElseThrow(() -> {
+        CoWalletSettings walletSettings = walletSettingsRepository.findByPointsType(COConstants.WELCOME_POINTS).orElseThrow(() -> {
             log.error("WELCOME_POINTS not configured");
 
             return new CoBusinessException(COConstants.WELCOME_POINTS_NOT_CONFIGURED);
@@ -77,8 +78,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // CREATE WALLET
 
-        CoCustomerWallet wallet = CoCustomerMapper.mapToWallet(savedCustomer, walletSettings
-                .getNumOfPoints(), dto.getCreatedBy());
+        CoCustomerWallet wallet = CoCustomerMapper.mapToWallet(savedCustomer, walletSettings.getNumOfPoints(), dto.getCreatedBy());
         walletRepository.save(wallet);
         log.info("Wallet created successfully");
 
@@ -179,8 +179,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         log.info("Daily streak started");
         LocalDate today = LocalDate.now();
         CoCustomerStreak lastStreak = streakRepository.findTopByCustomerIdOrderByCheckInDateDesc(customerId).orElse(null);
-        CoWalletSettings streakSettings = walletSettingsRepository.findByPointsType(COConstants.DAILY_STREAK_POINTS)
-                .orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
+        CoWalletSettings streakSettings = walletSettingsRepository.findByPointsType(COConstants.DAILY_STREAK_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
         Integer streakPoints = streakSettings.getNumOfPoints();
         Integer streakDays = streakSettings.getStreakMinDays();
         CoCustomerStreak streak;
@@ -259,9 +258,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         // STREAK COMPLETED
 
         if (streak.getCurrentStreak() >= streakDays) {
-            CoCustomerWallet wallet
-                    = walletRepository.findByCustomerCustomerId(customerId)
-                    .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+            CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
             Integer existingPoints = wallet.getBalancePoints() != null ? wallet.getBalancePoints() : 0;
 
@@ -322,13 +319,11 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // FETCH SENDER CUSTOMER
 
-        CoCustomer senderCustomer = customerRepository.findById(requestDto.getSenderCustomerId())
-                .orElseThrow(() -> new CoBusinessException(COConstants.CUSTOMER_NOT_FOUND));
+        CoCustomer senderCustomer = customerRepository.findById(requestDto.getSenderCustomerId()).orElseThrow(() -> new CoBusinessException(COConstants.CUSTOMER_NOT_FOUND));
 
         // FETCH RECEIVER CUSTOMER USING PHONE NUMBER
 
-        CoCustomer receiverCustomer = customerRepository.findByPhoneNumber(requestDto.getReceiverPhoneNumber())
-                .orElseThrow(() -> new CoBusinessException(COConstants.RECEIVER_NOT_FOUND));
+        CoCustomer receiverCustomer = customerRepository.findByPhoneNumber(requestDto.getReceiverPhoneNumber()).orElseThrow(() -> new CoBusinessException(COConstants.RECEIVER_NOT_FOUND));
 
         // SAME CUSTOMER VALIDATION
 
@@ -339,13 +334,11 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // FETCH SENDER WALLET
 
-        CoCustomerWallet senderWallet = walletRepository.findByCustomerCustomerId(senderCustomer.getCustomerId())
-                .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+        CoCustomerWallet senderWallet = walletRepository.findByCustomerCustomerId(senderCustomer.getCustomerId()).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
         // FETCH RECEIVER WALLET
 
-        CoCustomerWallet receiverWallet = walletRepository.findByCustomerCustomerId(receiverCustomer.getCustomerId())
-                .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+        CoCustomerWallet receiverWallet = walletRepository.findByCustomerCustomerId(receiverCustomer.getCustomerId()).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
         Integer senderBalance = senderWallet.getBalancePoints() != null ? senderWallet.getBalancePoints() : 0;
 
@@ -438,4 +431,94 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         return response;
     }
+
+    @Override
+    public CoCustomerResponseDto getCustomer(Integer customerId) {
+
+
+        log.info("GET_CUSTOMER_SERVICE_START | customerId={}", customerId);
+
+        log.info("GET_CUSTOMER_DB_FETCH_START | customerId={}", customerId);
+
+        CoCustomer customer = customerRepository.findById(customerId).orElseThrow(() -> {
+
+            log.error("GET_CUSTOMER_FAILED | customerId={} | reason=CUSTOMER_NOT_FOUND", customerId);
+
+            return new CoBadRequestException(COConstants.MSG_CUSTOMER_NOT_FOUND);
+        });
+
+        log.info("GET_CUSTOMER_DB_FETCH_SUCCESS | customerId={} | email={}", customerId, customer.getEmail());
+
+        CoCustomerResponseDto responseDto = customerMapper.mapToResponse(customer);
+
+        log.info("GET_CUSTOMER_SERVICE_SUCCESS | customerId={} | executionTime={}ms", customerId);
+
+        return responseDto;
+    }
+
+    @Override
+    @Transactional
+    public CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto) {
+
+        log.info("UPDATE_CUSTOMER_SERVICE_START | customerId={}", customerId);
+
+        // VALIDATION LOGS
+
+        log.info("UPDATE_CUSTOMER_VALIDATION_START | customerId={}", customerId);
+
+        if (requestDto.getPhoneNumber() == null || requestDto.getPhoneNumber().isBlank()) {
+
+            log.error("UPDATE_CUSTOMER_VALIDATION_FAILED | customerId={} | reason=PHONE_EMPTY", customerId);
+
+            throw new CoBadRequestException("Phone number is required");
+        }
+
+        log.info("UPDATE_CUSTOMER_VALIDATION_SUCCESS | customerId={}", customerId);
+
+        // DB FETCH LOGS
+
+        log.info("UPDATE_CUSTOMER_DB_FETCH_START | customerId={}", customerId);
+
+        CoCustomer customer = customerRepository.findById(customerId).orElseThrow(() -> {
+
+            log.error("UPDATE_CUSTOMER_FAILED | customerId={} | reason=CUSTOMER_NOT_FOUND", customerId);
+
+            return new CoBadRequestException(COConstants.MSG_CUSTOMER_NOT_FOUND);
+        });
+
+        log.info("UPDATE_CUSTOMER_DB_FETCH_SUCCESS | customerId={}", customerId);
+
+        // CONTEXT LOGGING
+
+        log.info("UPDATE_CUSTOMER_CONTEXT | customerId={} | existingEmail={} | newEmail={}", customerId, customer.getEmail(), requestDto.getEmail());
+
+        customer.setFirstName(requestDto.getFirstName());
+        customer.setLastName(requestDto.getLastName());
+        customer.setEmail(requestDto.getEmail());
+        customer.setPhoneNumber(requestDto.getPhoneNumber());
+        customer.setUpdatedAt(LocalDateTime.now());
+        customer.setUpdatedBy(requestDto.getCreatedBy());
+
+        try {
+
+            log.info("UPDATE_CUSTOMER_DB_SAVE_START | customerId={}", customerId);
+
+            customerRepository.save(customer);
+
+            log.info("UPDATE_CUSTOMER_DB_SAVE_SUCCESS | customerId={}", customerId);
+
+        } catch (DataAccessException ex) {
+
+            log.error("UPDATE_CUSTOMER_DB_SAVE_FAILED | customerId={} | error={}", customerId, ex.getMessage(), ex);
+
+            throw new CoBadRequestException(COConstants.MSG_DATABASE_ERROR);
+        }
+
+        CoCustomerResponseDto responseDto = customerMapper.mapToResponse(customer);
+
+        log.info("UPDATE_CUSTOMER_SERVICE_SUCCESS | customerId={} | executionTime={}ms", customerId);
+
+        return responseDto;
+    }
 }
+
