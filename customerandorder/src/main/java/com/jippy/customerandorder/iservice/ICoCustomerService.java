@@ -12,6 +12,10 @@ public interface ICoCustomerService {
     // CoCustomerStreakResponseDto updateDailyStreak(Integer customerId);
     CoCustomerStreakResponseDto updateDailyStreak(Integer customerId);
 
-    CoWalletTransferResponseDto transferWalletPoints(
-            CoWalletTransferRequestDto requestDto);
+    CoWalletTransferResponseDto transferWalletPoints(CoWalletTransferRequestDto requestDto);
+
+    CoCustomerResponseDto getCustomer(Integer customerId);
+
+    CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto
+    );
 }

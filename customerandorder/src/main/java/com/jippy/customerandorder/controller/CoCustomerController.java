@@ -1,10 +1,14 @@
-    package com.jippy.customerandorder.controller;
+package com.jippy.customerandorder.controller;
 
+import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,13 +47,39 @@ public class CoCustomerController {
     }
 
     @PostMapping("/wallet/transfer")
-    public CoWalletTransferResponseDto transferWalletPoints(
-            @RequestBody
-            CoWalletTransferRequestDto requestDto) {
+    public CoWalletTransferResponseDto transferWalletPoints(@RequestBody CoWalletTransferRequestDto requestDto) {
 
         log.info("Wallet transfer request received");
 
-        return customerService
-                .transferWalletPoints(requestDto);
+        return customerService.transferWalletPoints(requestDto);
     }
+
+    // GET CUSTOMER
+
+    @GetMapping("/{customerId}")
+    public ResponseEntity<?> getCustomer(@PathVariable Integer customerId) {
+
+        log.info("GET_CUSTOMER_API_START | customerId={}", customerId);
+
+        CoCustomerResponseDto customer = customerService.getCustomer(customerId);
+
+        log.info("GET_CUSTOMER_API_SUCCESS | customerId={}", customerId);
+
+        return ResponseEntity.ok(customer);
+    }
+
+    // UPDATE CUSTOMER
+    @PutMapping("/{customerId}")
+    public ResponseEntity<CoResponseDto> updateCustomer(@PathVariable Integer customerId, @Valid @RequestBody CoCustomerRequestDto requestDto) {
+
+        log.info("UPDATE_CUSTOMER_API_START | customerId={} | email={} | phone={}", customerId, requestDto.getEmail(), requestDto.getPhoneNumber());
+
+        customerService.updateCustomer(customerId, requestDto);
+
+        log.info("UPDATE_CUSTOMER_API_SUCCESS | customerId={}", customerId);
+
+        return ResponseEntity.ok(new CoResponseDto(COConstants.STATUS_200, COConstants.MSG_SUCCESS));
+    }
+
+
 }
