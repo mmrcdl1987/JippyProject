@@ -57,7 +57,7 @@ public class CoCustomerController {
     // GET CUSTOMER
 
     @GetMapping("/{customerId}")
-    public ResponseEntity<?> getCustomer(@PathVariable Integer customerId) {
+    public ResponseEntity<CoCustomerResponseDto> getCustomer(@PathVariable Integer customerId) {
 
         log.info("GET_CUSTOMER_API_START | customerId={}", customerId);
 

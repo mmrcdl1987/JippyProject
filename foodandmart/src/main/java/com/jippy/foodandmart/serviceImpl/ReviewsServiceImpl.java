@@ -139,6 +139,7 @@ public class ReviewsServiceImpl implements ReviewService {
             throw new IllegalArgumentException("Customer service is currently unavailable. Please try again later.");
 
         } catch (FeignException ex) {
+            ex.printStackTrace();
 
             log.error("CUSTOMER_VALIDATION_FEIGN_ERROR | customerId={} | error={}", customerId, ex.getMessage());
 

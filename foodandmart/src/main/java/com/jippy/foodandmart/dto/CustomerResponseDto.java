@@ -9,4 +9,7 @@ public class CustomerResponseDto {
     private String firstName;
     private String lastName;
     private String phoneNumber;
+    private String email;
+    private Integer customerStatusId;
+    private String referralCode;
 }

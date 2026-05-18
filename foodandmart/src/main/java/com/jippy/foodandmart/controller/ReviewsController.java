@@ -21,7 +21,7 @@ public class ReviewsController {
 
     private final ReviewService reviewService;
 
-    @PostMapping
+    @PostMapping("/createReviews")
     @Operation(summary = "Create or Update Review", description = "Create new review or update existing review based on reviewsId")
     public ResponseEntity<FmApiResponse<ReviewResponseDto>> saveReview(@Valid @RequestBody ReviewRequestDto requestDto) {
 
