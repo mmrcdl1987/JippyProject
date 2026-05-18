@@ -14,8 +14,7 @@ import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users", schema = "jippy_fm")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -24,14 +23,18 @@ public class FmUser implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "users_id")
-    private Integer userId;
+    private Integer usersId;
 
     @Column(name = "username", length = 100, unique = true)
     private String username;
     @Column(name = "password", length = 100)
     private String password;
+
     @Column(name = "user_id", nullable = false)
-    private Integer employeeId;
+    private Integer userId;
+
+//    @Column(name = "user_id", nullable = false)
+//    private Integer employeeId;
     @Column(name = "user_type", length = 50)
     private String userType;
     @Column(name = "is_active", length = 1)

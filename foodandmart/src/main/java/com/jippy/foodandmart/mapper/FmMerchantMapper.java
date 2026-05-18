@@ -203,7 +203,7 @@ public final class FmMerchantMapper {
 		FmUser user = new FmUser();
 		user.setUsername(userName);
 		user.setPassword(password);
-		user.setEmployeeId(merchantId);
+		user.setUserId(merchantId);
 		user.setUserType(FmAppConstants.TYPE_MERCHANT);
 		user.setIsActive(FmAppConstants.FLAG_YES);
 		return user;

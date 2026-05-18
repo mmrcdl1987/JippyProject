@@ -81,8 +81,9 @@ public class CoDriverServiceImpl implements ICoDriverService {
         wallet.setDriverId(savedDriver.getDriverId()); // FROM DRIVER TABLE
 
 //        from CO constants default values
+//        new requirement : set default cod amount and orders lock for new driver
         wallet.setTotalCodAmount(COConstants.DRIVER_DEFAULT_COD_AMOUNT); // default 1000
-        wallet.setOrdersLock(COConstants.DRIVER_ORDERS_LOCK); // default false
+        wallet.setOrdersLock(COConstants.DRIVER_ORDERS_LOCK); // default true
 
         wallet.setCreatedAt(LocalDateTime.now());
         wallet.setCreatedBy(savedDriver.getDriverId());

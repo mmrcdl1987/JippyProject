@@ -48,7 +48,7 @@ public final class FmUserMapper {
         entity.setUsername(username != null ? username.trim() : null);
         entity.setPassword(encodedPassword);
        // entity.setRoleId(roleId);
-        entity.setEmployeeId(employeeId);
+        entity.setUserId(employeeId);
         entity.setUserType(userType);
         // New users are immediately active after onboarding
         entity.setIsActive("Y");

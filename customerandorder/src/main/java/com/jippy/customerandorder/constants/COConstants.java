@@ -18,6 +18,12 @@ public class COConstants {
     public static final String MSG_ORDER_CREATED = "Order created successfully";
     public static final String ORDER_STATUS_PLACED = "PLACED";
     public static final String MSG_ORDER_ITEMS_EMPTY = "Order items cannot be empty";
+    public static final BigDecimal DRIVER_DEFAULT_COD_AMOUNT=BigDecimal.valueOf(1000);
+    public static final boolean DRIVER_ORDERS_LOCK = true;
+//    added
+    public static final String MSG_ORDER_SETTINGS_NOT_FOUND = "Order settings not found";
+    public static final String MSG_ORDER_SETTINGS_UPDATED = "Order settings updated successfully";
+    public static final String MSG_ORDER_SETTINGS_CREATED = "Order settings created successfully";
 
     // ── Cart Messages ──────────────────────────────────────────────────────────
     public static final String MSG_CART_ADDED = "Item added to cart";

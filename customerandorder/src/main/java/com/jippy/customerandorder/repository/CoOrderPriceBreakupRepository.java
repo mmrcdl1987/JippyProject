@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CoOrderPriceBreakupRepository extends JpaRepository<CoOrderPriceBreakup,Long> {
+
+//    Fetch price breakup using orderId
+    CoOrderPriceBreakup findByOrderId(String orderId);
+
 }

@@ -43,6 +43,10 @@ public class CoOrder {
     @Column(name = "distance_kms")
     private Double distanceKms;
 
+//  added column for COD in payment_node table
+    @Column(name = "payment_mode_id")
+    private Integer paymentModeId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
