@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "driver", schema = "jippy_customer_and_order")
@@ -55,7 +56,6 @@ private String nomineeName;
     @Column(name = "is_family_member_verified")
     private Boolean isFamilyMemberVerified; // DB default FALSE
 
-
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -71,4 +71,7 @@ private String nomineeName;
     // One-to-One mapping with KYC
     @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL)
     private CoDriverKyc driverKyc;
+
+    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
+    private List<CoDriverOrder> driverOrders;
 }

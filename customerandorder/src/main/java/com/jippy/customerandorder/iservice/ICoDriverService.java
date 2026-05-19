@@ -2,6 +2,7 @@ package com.jippy.customerandorder.iservice;
 
 
 import com.jippy.customerandorder.dto.*;
+import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,4 +22,7 @@ public interface ICoDriverService {
     List<CoDriverOrderHistoryDto> fetchOrderEarningsHistory(Integer driverId);
 
     CoDriverTotalEarningsDto fetchTotalEarnings(Integer driverId);
+
+    String driverDeliveredOrder(CoDriverOrderDto driverOrderDto);
+
 }

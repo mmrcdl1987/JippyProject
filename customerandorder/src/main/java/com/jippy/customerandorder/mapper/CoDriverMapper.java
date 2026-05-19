@@ -6,6 +6,7 @@ import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
 import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
+import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
@@ -276,19 +277,37 @@ public class CoDriverMapper {
 
         return bonus;
     }
+    public static CoDriverOrder mapToDriverOrderEntity(CoDriverOrderDto driverOrderDto, CoDriver driver) {
 
-    public static CoDriverWalletTransactions mapToTransaction(Integer walletId, String orderId, double amount) {
+        CoDriverOrder driverOrder = new CoDriverOrder();
+        driverOrder.setOrderId(driverOrderDto.getOrderId());
+        driverOrder.setDriver(driver);
+        driverOrder.setDeliverCharges(driverOrderDto.getDeliverCharges());
+        driverOrder.setTips(driverOrderDto.getTips());
+        driverOrder.setDeliveryDistanceInKms(driverOrderDto.getDeliveryDistanceInKms());
+        driverOrder.setPickUpCharges(driverOrderDto.getPickUpCharges());
+        driverOrder.setPickUpDistanceInKms(driverOrderDto.getPickUpDistanceInKms());
+        BigDecimal totalDeliveryFee = driverOrderDto.getDeliverCharges().add(driverOrderDto.getPickUpCharges()).
+                add( driverOrderDto.getTips()).add(driverOrderDto.getSurgeFee());
+        driverOrder.setTotalDeliveryFee(totalDeliveryFee);
+        driverOrder.setSurgeFee(driverOrderDto.getSurgeFee());
+        driverOrder.setCreatedAt(java.time.LocalDateTime.now());
+        driverOrder.setCreatedBy(driverOrderDto.getDriverId());
 
+        return driverOrder;
+    }
+
+    public static CoDriverWalletTransactions mapToTransaction(Integer driverWalletId, String orderId, double orderAmount) {
         CoDriverWalletTransactions txn = new CoDriverWalletTransactions();
 
         // Wallet reference
-        txn.setDriverWalletId(walletId);
+        txn.setDriverWalletId(driverWalletId);
 
         // Order reference
         txn.setOrderId(orderId);
 
         // COD deducted amount
-        txn.setCodAmount(BigDecimal.valueOf(amount));
+        txn.setCodAmount(BigDecimal.valueOf(orderAmount));
 
         // Audit field
         txn.setCreatedAt(LocalDateTime.now());

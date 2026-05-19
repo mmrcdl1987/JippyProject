@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CoDriverOrderRepository extends JpaRepository<CoDriverOrder, Integer> {
 
@@ -103,4 +104,12 @@ public interface CoDriverOrderRepository extends JpaRepository<CoDriverOrder, In
             WHERE driver_id = :driverId
             """, nativeQuery = true)
     CoDriverTotalEarningsProjection fetchTotalEarnings(@Param("driverId") Integer driverId);
+
+    @Query(value = """
+            SELECT *
+            FROM jippy_customer_and_order.driver_orders
+            WHERE driver_id = :driverId
+            AND order_id = :orderId
+            """, nativeQuery = true)
+    Optional<CoDriverOrder> findByDriverIdOrderId(@Param("driverId") Integer driverId, @Param("orderId") String orderId);
 }

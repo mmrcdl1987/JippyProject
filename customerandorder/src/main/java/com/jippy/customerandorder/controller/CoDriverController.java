@@ -4,6 +4,7 @@ package com.jippy.customerandorder.controller;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.iservice.ICoDriverService;
+import com.jippy.customerandorder.serviceImpl.CoDriverLocationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ import java.util.List;
 public class CoDriverController {
 
     private final ICoDriverService driverService;
+    private final CoDriverLocationService driverLocationService;
 
     //    post driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
     @PostMapping("/postDriverDetails")
@@ -111,5 +113,25 @@ public class CoDriverController {
 
         return ResponseEntity.ok(driverService.fetchTotalEarnings(driverId));
     }
+
+    @PostMapping("/updatedDriverDeliveryLocation")
+    @Operation(summary = "Update Driver Location", description = "Call this API to update driver location when driver is on the way to deliver the order for every 5sec from driver Application")
+    public ResponseEntity<CoResponseDto> updatedDriverDeliveryLocation(@Valid @RequestBody CoUpdateDriverLocationDto updateDriverLocationDto) {
+
+        log.info("Update driver location API called for driver id: {}", updateDriverLocationDto.getDriverId());
+       String message = driverLocationService.updateLiveLocation(updateDriverLocationDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_200, message));
+    }
+
+    @PostMapping("/driverDeliveredOrder")
+    @Operation(summary = "Driver Delivered Order", description = "After successful delivery of order driver will call this API to update the order status to delivered and also update the driver earnings details in driver_orders table")
+    public ResponseEntity<CoResponseDto> driverDeliveredOrder(@Valid @RequestBody CoDriverOrderDto driverOrderDto) {
+
+        log.info("Driver delivered order API called for driver id: {}", driverOrderDto.getDriverId());
+        String message = driverService.driverDeliveredOrder(driverOrderDto);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_200, message));
+    }
+
 
 }

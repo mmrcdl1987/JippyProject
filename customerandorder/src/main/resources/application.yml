@@ -31,6 +31,21 @@ spring:
       # Ensures the message is acknowledged by Kafka brokers
       acks: all
 
+    consumer:
+      # Starts reading from the beginning of the topic if no offset is found
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        # CRITICAL: Tell Spring which Java packages are safe to deserialize
+        spring.json.trusted.packages: "com.jippy.customerandorder.dto"
+
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 management:
   endpoints:
     web:
