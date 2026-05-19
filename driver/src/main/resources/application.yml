@@ -1,0 +1,70 @@
+server:
+  port: 8085
+spring:
+  application:
+   name: driver
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      currentSchema: jippy_driver
+      hibernate:
+      ddl-auto: update
+    show-sql: true
+
+    #  Kafka Producer Configuration
+  kafka:
+    bootstrap-servers: 187.127.156.147:9092
+    producer:
+      # Serializes the Message Key (Order ID) as a String
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Serializes the OrderEvent object into a JSON string
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    properties:
+      # Ensures the message is acknowledged by Kafka brokers
+      acks: all
+
+    consumer:
+      # Starts reading from the beginning of the topic if no offset is found
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        # CRITICAL: Tell Spring which Java packages are safe to deserialize
+        spring.json.trusted.packages: "com.jippy.customerandorder.dto"
+
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+

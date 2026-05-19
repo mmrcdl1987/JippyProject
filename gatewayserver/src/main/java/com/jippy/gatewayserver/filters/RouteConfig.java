@@ -32,7 +32,7 @@ public class RouteConfig {
                         })
                         .uri("lb://FOODANDMART"))
 
-                // 23. Protected CustomerAndOrder Route
+                // 3. Protected CustomerAndOrder Route
                 .route("customerandorder-protected", r -> r.path("/api/co/**")
                 .filters(f -> {
                     log.info("Applying AuthenticationFilter to /api/co request...");
@@ -40,6 +40,14 @@ public class RouteConfig {
                     return f.filter(authFilter.apply(new AuthenticationFilter.Config()));
                 })
                 .uri("lb://CUSTOMERANDORDER"))
+
+                .route("driver-protected", r -> r.path("/api/driver/**")
+                        .filters(f -> {
+                            log.info("Applying AuthenticationFilter to /api/driver request...");
+                            // This manually applies your custom filter
+                            return f.filter(authFilter.apply(new AuthenticationFilter.Config()));
+                        })
+                        .uri("lb://DRIVER"))
                 .build();
     }
 }

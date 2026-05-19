@@ -2,7 +2,6 @@ package com.jippy.customerandorder.iservice;
 
 
 import com.jippy.customerandorder.dto.*;
-import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 import java.util.List;

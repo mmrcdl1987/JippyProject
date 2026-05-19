@@ -3,7 +3,6 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.dto.COOrderEvent;
 import com.jippy.customerandorder.dto.CoDriverOrderDto;
 import com.jippy.customerandorder.dto.CoUpdateDriverLocationDto;
-import com.jippy.customerandorder.mapper.COEventMapper;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
