@@ -3,8 +3,10 @@ package com.jippy.customerandorder.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.locationtech.jts.geom.LineString;
 
 import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -19,12 +21,16 @@ public class CoDriverOrder {
     private Integer driverOrderId;
 
     // Driver id mapped from driver table
-    @Column(name = "driver_id", nullable = false)
-    private Integer driverId;
+   /* @Column(name = "driver_id", nullable = false)
+    private Integer driverId;*/
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "driver_id", nullable = false)
+    private CoDriver driver;
 
     // Order id mapped from orders table
     @Column(name = "order_id", nullable = false)
-    private Integer orderId;
+    private String orderId;
 
     // Pick up distance in kilometers
     @Column(name = "pick_up_distance_in_kms", precision = 10, scale = 2)
@@ -69,4 +75,7 @@ public class CoDriverOrder {
     // Updated by user id
     @Column(name = "updated_by")
     private Integer updatedBy;
+
+    @Column(columnDefinition = "geometry(LineStringM, 4326)")
+    private LineString deliveryRoute;
 }

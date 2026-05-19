@@ -3,10 +3,7 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
-import com.jippy.customerandorder.entity.CoDriver;
-import com.jippy.customerandorder.entity.CoDriverIncentiveSettings;
-import com.jippy.customerandorder.entity.CoDriverWallet;
-import com.jippy.customerandorder.entity.CoZone;
+import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoZoneException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICoDriverService;
@@ -16,12 +13,15 @@ import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
 import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
 import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -44,6 +44,7 @@ public class CoDriverServiceImpl implements ICoDriverService {
     private final CoDriverIncentiveSettingsRepository driverIncentivesettingsRepository;
     private final CoDriverWalletRepository driverWalletRepository;
     private final FMFeignClient fmFeignClient;
+    private final CoDriverLocationService driverLocationService;
 
     @Override
     @Transactional
@@ -326,5 +327,54 @@ public class CoDriverServiceImpl implements ICoDriverService {
         return factory.createPolygon(coords);
     }
 
+    @Override
+    public String driverDeliveredOrder(CoDriverOrderDto driverOrderDto) {
+        log.info("Processing driver delivered order for driver id: {} and order id: {}",
+                driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+
+        // Validate driver exists
+        CoDriver driver = driverRepository.findById(driverOrderDto.getDriverId()).orElseThrow(() -> {
+
+            log.error("Driver not found with id: {}", driverOrderDto.getDriverId());
+
+            return new ResourceNotFoundException("Driver not found with id: " + driverOrderDto.getDriverId());
+        });
+
+        // Validate order exists and belongs to the driver
+        CoOrder order = ordersRepository.findById(driverOrderDto.getOrderId()).orElseThrow(() -> {
+
+            log.error("Order not found with id: {}", driverOrderDto.getOrderId());
+
+            return new ResourceNotFoundException("Order not found with id: " + driverOrderDto.getOrderId());
+        });
+
+        if (!order.getDriverId().equals(driverOrderDto.getDriverId())) {
+            log.error("Order with id: {} does not belong to driver with id: {}",
+                    driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
+            throw new ResourceNotFoundException("Order with id: " + driverOrderDto.getOrderId() +
+                    " does not belong to driver with id: " + driverOrderDto.getDriverId());
+        }
+
+        Optional<CoDriverOrder> driverOrder = driverOrderRepository.findByDriverIdOrderId(driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+        if(driverOrder.isPresent()){
+            log.error("Driver order already exists for driver id: {} and order id: {}",
+                    driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+            throw new IllegalArgumentException("Driver order already exists for driver id: " + driverOrderDto.getDriverId() +
+                    " and order id: " + driverOrderDto.getOrderId());
+        }
+
+        // Update order status to delivered
+        order.setOrderStatus(COConstants.STATUS_DELIVERED);
+        ordersRepository.save(order);
+
+        // Update earnings details in driver_orders table
+        CoDriverOrder newDriverOrder = CoDriverMapper.mapToDriverOrderEntity(driverOrderDto, driver);
+        CoDriverOrder savedDriverOrder = driverOrderRepository.save(newDriverOrder);
+
+        driverLocationService.pushCompleteOrderEvent(driverOrderDto);
+
+        log.info("Successfully processed delivered order for order id: {} and updated earnings for driver id: {}", driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
+        return "Order with id: " + driverOrderDto.getOrderId() + " marked as delivered and earnings updated for driver with id: " + driverOrderDto.getDriverId();
+    }
 
 }

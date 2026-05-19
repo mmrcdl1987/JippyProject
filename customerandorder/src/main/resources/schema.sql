@@ -186,9 +186,10 @@ CREATE TABLE IF NOT EXISTS jippy_customer_and_order.orders(
     estimated_delivery_time timestamp without time zone,
     distance_kms NUMERIC (10,2),
     payment_mode_id integer NOT NULL,
-    order_type character varying(30) NOT NULL, --normal,scheduled
-    delivery_date_scheduled timestamp without time zone, -- if order type is scheduled then it will have delivery date and time, if order type is normal then it will be null
+    order_type character varying(30) NOT NULL, --normal,scheduled,group_order,multi_order,home made
+    scheduled_delivery_date_time timestamp without time zone, -- if order type is scheduled then it will have delivery date and time, if order type is normal then it will be null
     meal_subscription_id integer, -- if order is placed through meal subscription then it will have meal subscription id, otherwise it will be null
+    group_orders_id integer,
     created_at timestamp without time zone,
     created_by integer,
     updated_at timestamp without time zone,
@@ -677,6 +678,9 @@ CREATE TABLE IF NOT EXISTS jippy_customer_and_order.order_customizations(
             ON UPDATE NO ACTION
             ON DELETE NO ACTION
 );
+
+ ALTER TABLE "jippy_customer_and_order"."driver_orders"
+ADD COLUMN delivery_route GEOMETRY(LineStringM, 4326);
 
 
 
