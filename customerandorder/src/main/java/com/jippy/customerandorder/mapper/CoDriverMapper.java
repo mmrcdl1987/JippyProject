@@ -6,7 +6,6 @@ import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
 import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
-import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 

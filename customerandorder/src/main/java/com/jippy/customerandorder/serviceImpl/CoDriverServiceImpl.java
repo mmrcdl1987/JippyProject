@@ -13,15 +13,12 @@ import com.jippy.customerandorder.projection.CoDriverOrderHistoryProjection;
 import com.jippy.customerandorder.projection.CoDriverTotalEarningsProjection;
 import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
-import org.hibernate.annotations.processing.Find;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;

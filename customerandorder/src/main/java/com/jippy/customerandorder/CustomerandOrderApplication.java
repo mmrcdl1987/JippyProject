@@ -12,10 +12,10 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 })
 @EnableFeignClients
 @EnableDiscoveryClient
-public class CustomerandorderApplication {
+public class CustomerandOrderApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(CustomerandorderApplication.class, args);
+		SpringApplication.run(CustomerandOrderApplication.class, args);
 	}
 
 }
