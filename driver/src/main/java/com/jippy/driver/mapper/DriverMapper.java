@@ -170,42 +170,96 @@ public class DriverMapper {
 
     //    for api to fetchOrderEarningsHistory mapper
 // Convert projection data to DTO
-    public static DriverOrderHistoryDto mapToDriverOrderHistoryDto(DriverOrderHistoryProjection projection, String outletName) {
+//    public static DriverOrderHistoryDto mapToDriverOrderHistoryDto(DriverOrderHistoryProjection projection, String outletName) {
+//
+//        // Create DTO object
+//        DriverOrderHistoryDto dto = new DriverOrderHistoryDto();
+//
+//        // Set driver id
+//        dto.setDriverId(projection.getDriverId());
+//
+//        // Set order id
+//        dto.setOrderId(projection.getOrderId());
+//
+//        // Set pick up distance
+//        dto.setPickUpDistanceInKms(projection.getPickUpDistanceInKms());
+//
+//        // Set delivery distance
+//        dto.setDeliveryDistanceInKms(projection.getDeliveryDistanceInKms());
+//
+//        // Set pick up charges
+//        dto.setPickUpCharges(projection.getPickUpCharges());
+//
+//        // Set delivery charges
+//        dto.setDeliverCharges(projection.getDeliverCharges());
+//
+//        // Set total delivery fee
+//        dto.setTotalDeliveryFee(projection.getTotalDeliveryFee());
+//
+//        // Set surge fee
+//        dto.setSurgeFee(projection.getSurgeFee());
+//
+//        // Set tips
+//        dto.setTips(projection.getTips());
+//
+//        // Set order status
+//        dto.setOrderStatus(projection.getOrderStatus());
+//
+//        // Set outlet name
+//        dto.setOutletName(outletName);
+//
+//        return dto;
+//    }
 
-        // Create DTO object
-        DriverOrderHistoryDto dto = new DriverOrderHistoryDto();
+    public static DriverOrderHistoryDto mapToDriverOrderHistoryDto(
+            DriverOrderHistoryProjection projection,
+            String orderStatus,
+            String outletName
+    ) {
+
+        DriverOrderHistoryDto dto =
+                new DriverOrderHistoryDto();
 
         // Set driver id
-        dto.setDriverId(projection.getDriverId());
+        dto.setDriverId(
+                projection.getDriverId());
 
         // Set order id
-        dto.setOrderId(projection.getOrderId());
+        dto.setOrderId(
+                projection.getOrderId());
 
         // Set pick up distance
-        dto.setPickUpDistanceInKms(projection.getPickUpDistanceInKms());
+        dto.setPickUpDistanceInKms(
+                projection.getPickUpDistanceInKms());
 
         // Set delivery distance
-        dto.setDeliveryDistanceInKms(projection.getDeliveryDistanceInKms());
+        dto.setDeliveryDistanceInKms(
+                projection.getDeliveryDistanceInKms());
 
         // Set pick up charges
-        dto.setPickUpCharges(projection.getPickUpCharges());
+        dto.setPickUpCharges(
+                projection.getPickUpCharges());
 
         // Set delivery charges
-        dto.setDeliverCharges(projection.getDeliverCharges());
+        dto.setDeliverCharges(
+                projection.getDeliverCharges());
 
         // Set total delivery fee
-        dto.setTotalDeliveryFee(projection.getTotalDeliveryFee());
+        dto.setTotalDeliveryFee(
+                projection.getTotalDeliveryFee());
 
         // Set surge fee
-        dto.setSurgeFee(projection.getSurgeFee());
+        dto.setSurgeFee(
+                projection.getSurgeFee());
 
         // Set tips
-        dto.setTips(projection.getTips());
+        dto.setTips(
+                projection.getTips());
 
-        // Set order status
-        dto.setOrderStatus(projection.getOrderStatus());
+        // from customer ms
+        dto.setOrderStatus(orderStatus);
 
-        // Set outlet name
+        // from fm ms
         dto.setOutletName(outletName);
 
         return dto;

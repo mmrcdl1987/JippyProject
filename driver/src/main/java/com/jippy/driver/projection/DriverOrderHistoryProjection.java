@@ -22,10 +22,10 @@ public interface DriverOrderHistoryProjection {
 
     BigDecimal getTips();
 
-//    from orders table
-    String getOrderStatus();
-
-    // Internal use only for fetching order history for a driver,
-    // not exposed in API response
-    Integer getOutletId();
+////    from orders table
+//    String getOrderStatus();
+//
+//    // Internal use only for fetching order history for a driver,
+//    // not exposed in API response
+//    Integer getOutletId();
 }

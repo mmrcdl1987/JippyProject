@@ -9,7 +9,8 @@ import com.jippy.driver.entity.DriverDeliveryChargeSettings;
 import com.jippy.driver.exception.CoBadRequestException;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.projection.CustomerLocationProjection;
-import com.jippy.driver.repositary.CustomerDeliveryAddressRepository;
+import com.jippy.driver.dto.DriveCustomerLocationDto;
+import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.repositary.DriverDeliveryChargeSettingsRepository;
 import com.jippy.driver.service.DriverChargeService;
 import com.jippy.driver.utils.DistanceUtils;
@@ -26,8 +27,9 @@ import java.math.RoundingMode;
 public class DriverChargeServiceImpl implements DriverChargeService {
 
     private final FMFeignClient foodMartFeignClient;
+    private final COFeignClient coFeignClients;
 
-    private final CustomerDeliveryAddressRepository customerDeliveryAddressRepository;
+   // private final CustomerDeliveryAddressRepository customerDeliveryAddressRepository;
 
     private final DriverDeliveryChargeSettingsRepository chargeSettingsRepository;
 
@@ -47,8 +49,10 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
         log.info("Outlet location fetched successfully | outletId={}", requestDto.getOutletId());
 
-        CustomerLocationProjection customerLocation = customerDeliveryAddressRepository.getCustomerLocation(requestDto.getCustomerAddressId());
-
+        //CustomerLocationProjection customerLocation = customerDeliveryAddressRepository.getCustomerLocation(requestDto.getCustomerAddressId());
+        DriveCustomerLocationDto customerLocation =
+                coFeignClients.getCustomerLocation(
+                        requestDto.getCustomerAddressId());
         if (customerLocation == null) {
 
             log.error("Customer location not found | customerAddressId={}", requestDto.getCustomerAddressId());

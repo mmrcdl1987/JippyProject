@@ -1,46 +1,46 @@
-package com.jippy.driver.entity;
+    package com.jippy.driver.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import org.locationtech.jts.geom.Polygon;
+    import jakarta.persistence.*;
+    import lombok.Data;
+    import org.locationtech.jts.geom.Polygon;
 
-import java.time.LocalDateTime;
+    import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "zones", schema = "jippy_driver")
-@Data
-public class DriverZone {
+    @Entity
+    @Table(name = "zones", schema = "jippy_driver")
+    @Data
+    public class DriverZone {
 
-    // Primary key of zones table
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "zone_id")
-    private Integer zoneId;
+        // Primary key of zones table
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name = "zone_id")
+        private Integer zoneId;
 
-    // Name of the zone
-    @Column(name = "zone_name")
-    private String zoneName;
+        // Name of the zone
+        @Column(name = "zone_name")
+        private String zoneName;
 
-    // Polygon boundary of zone
-    @Column(
-            name = "boundary",
-            columnDefinition = "geometry(Polygon, 4326)"
-    )
-    private Polygon boundary;
+        // Polygon boundary of zone
+        @Column(
+                name = "boundary",
+                columnDefinition = "geometry(Polygon, 4326)"
+        )
+        private Polygon boundary;
 
-    // Record creation timestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+        // Record creation timestamp
+        @Column(name = "created_at")
+        private LocalDateTime createdAt;
 
-    // User who created record
-    @Column(name = "created_by")
-    private Integer createdBy;
+        // User who created record
+        @Column(name = "created_by")
+        private Integer createdBy;
 
-    // Record update timestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+        // Record update timestamp
+        @Column(name = "updated_at")
+        private LocalDateTime updatedAt;
 
-    // User who updated record
-    @Column(name = "updated_by")
-    private Integer updatedBy;
-}
+        // User who updated record
+        @Column(name = "updated_by")
+        private Integer updatedBy;
+    }

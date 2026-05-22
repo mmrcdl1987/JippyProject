@@ -1,19 +1,22 @@
 package com.jippy.driver.serviceImpl;
 
 
+import com.jippy.driver.dto.DriveOrderDto;
+import com.jippy.driver.dto.DriveOrderPriceBreakupDto;
 import com.jippy.driver.dto.DriverCodRequestDto;
 import com.jippy.driver.dto.DriverCodResponseDto;
 import com.jippy.driver.entity.DriverWallet;
 import com.jippy.driver.entity.DriverWalletTransactions;
-import com.jippy.driver.entity.CoOrder;
-import com.jippy.driver.entity.CoOrderPriceBreakup;
+//import com.jippy.driver.entity.CoOrder;
+//import com.jippy.driver.entity.CoOrderPriceBreakup;
 import com.jippy.driver.exception.CoBusinessException;
+import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverMapper;
 import com.jippy.driver.repositary.DriverWalletRepository;
 import com.jippy.driver.repositary.DriverWalletTransactionsRepository;
-import com.jippy.driver.repositary.CoOrderPriceBreakupRepository;
-import com.jippy.driver.repositary.CoOrderRepository;
+//import com.jippy.driver.repositary.CoOrderPriceBreakupRepository;
+//import com.jippy.driver.repositary.CoOrderRepository;
 import com.jippy.driver.service.DriverWalletService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +31,11 @@ public class DriverWalletServiceImpl implements DriverWalletService {
 
     private static final Logger logger = LoggerFactory.getLogger(DriverWalletServiceImpl.class);
 
-    @Autowired
-    private CoOrderRepository ordersRepo;
-
-    @Autowired
-    private CoOrderPriceBreakupRepository priceRepo;
+//    @Autowired
+//    private CoOrderRepository ordersRepo;
+//
+//    @Autowired
+//    private CoOrderPriceBreakupRepository priceRepo;
 
     @Autowired
     private DriverWalletRepository walletRepo;
@@ -43,6 +46,9 @@ public class DriverWalletServiceImpl implements DriverWalletService {
     @Autowired
     private FMFeignClient FmFeignClient;
 
+    @Autowired
+    private COFeignClient coFeignClient;
+
     @Override
     public DriverCodResponseDto processDriverCod(DriverCodRequestDto dto) {
 
@@ -51,10 +57,19 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         // -------------------------------
         // STEP 1: FETCH ORDER from orders table
         // -------------------------------
-        CoOrder order = ordersRepo.findById(dto.getOrderId()).orElseThrow(() -> {
+//        CoOrder order = ordersRepo.findById(dto.getOrderId()).orElseThrow(() -> {
+//            logger.error("Order not found: {}", dto.getOrderId());
+//            return new CoBusinessException("Order not found");
+//        });
+        DriveOrderDto order =
+                coFeignClient.getOrder(dto.getOrderId());
+
+        if (order == null) {
+
             logger.error("Order not found: {}", dto.getOrderId());
-            return new CoBusinessException("Order not found");
-        });
+
+            throw new CoBusinessException("Order not found");
+        }
 
         // -------------------------------
         // STEP 2: VALIDATE STATUS
@@ -85,14 +100,33 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         // -------------------------------
         // STEP 4: FETCH ORDER AMOUNT from price breakup table
         // -------------------------------
-        CoOrderPriceBreakup breakup = priceRepo.findByOrderId(dto.getOrderId());
+//        CoOrderPriceBreakup breakup = priceRepo.findByOrderId(dto.getOrderId());
+//
+//        if (breakup == null) {
+//            logger.error("Price breakup not found: {}", dto.getOrderId());
+//            throw new CoBusinessException("Price breakup not found");
+//        }
+//
+//        double orderAmount = breakup.getOrderTotalAmount().doubleValue();
+
+
+        // STEP 4: FETCH ORDER AMOUNT from customerandorder MS
+
+        DriveOrderPriceBreakupDto breakup =
+                coFeignClient.getOrderPriceBreakup(
+                        dto.getOrderId());
 
         if (breakup == null) {
-            logger.error("Price breakup not found: {}", dto.getOrderId());
-            throw new CoBusinessException("Price breakup not found");
+
+            logger.error("Price breakup not found: {}",
+                    dto.getOrderId());
+
+            throw new CoBusinessException(
+                    "Price breakup not found");
         }
 
-        double orderAmount = breakup.getOrderTotalAmount().doubleValue();
+        double orderAmount =
+                breakup.getOrderTotalAmount().doubleValue();
 
         // ------------------------------------------
         // STEP 5: FETCH DRIVER WALLET from wallet table

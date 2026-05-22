@@ -3,13 +3,17 @@ package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.iservice.ICoDriverService;
+import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
+import com.jippy.customerandorder.repository.CoOrderRepository;
 import com.jippy.customerandorder.serviceImpl.CoDriverLocationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +31,7 @@ public class CoDriverController {
 
     private final ICoDriverService driverService;
     private final CoDriverLocationService driverLocationService;
-
+    private final CoOrderRepository coOrderRepository;
     //    post driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
     @PostMapping("/postDriverDetails")
     @Operation(summary = "Create Driver", description = "Creates driver, KYC, and address")
@@ -131,6 +135,55 @@ public class CoDriverController {
         String message = driverService.driverDeliveredOrder(driverOrderDto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_200, message));
+    }
+    @GetMapping("/driver/earnings")
+    public CoDriverEarningsDto fetchDriverEarnings(
+            @RequestParam Integer driverId,
+            @RequestParam LocalDate date
+    ) {
+
+        log.info("FETCH_DRIVER_EARNINGS_API_START | driverId={} | date={}",
+                driverId,
+                date);
+
+        CoDriverEarningsProjection projection =
+                coOrderRepository.fetchDriverEarnings(driverId, date);
+
+        CoDriverEarningsDto dto = new CoDriverEarningsDto();
+
+        dto.setTotalEarningsToday(projection.getTotalEarnings());
+
+        dto.setOrdersCountToday(projection.getOrdersCount());
+
+        log.info("FETCH_DRIVER_EARNINGS_API_SUCCESS | driverId={}",
+                driverId);
+
+        return dto;
+    }
+    @PutMapping("/orders/{orderId}/deliver")
+    public String deliverOrder(
+            @PathVariable String orderId,
+            @RequestParam Integer driverId
+    ) {
+
+        CoOrder order = coOrderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Order not found with id: " + orderId));
+
+        // Validate order belongs to driver
+        if (!order.getDriverId().equals(driverId)) {
+
+            throw new ResourceNotFoundException(
+                    "Order does not belong to driver");
+        }
+
+        // Update status
+        order.setOrderStatus(COConstants.STATUS_DELIVERED);
+
+        coOrderRepository.save(order);
+
+        return "Order delivered successfully";
     }
 
 
