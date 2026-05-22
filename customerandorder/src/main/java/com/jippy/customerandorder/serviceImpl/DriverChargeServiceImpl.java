@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.projection.CustomerLocationProjection;
@@ -114,4 +115,4 @@ public class DriverChargeServiceImpl implements IDriverChargeService {
 
         return response;
     }
-}
+}*/

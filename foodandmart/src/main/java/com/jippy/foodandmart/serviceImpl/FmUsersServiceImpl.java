@@ -45,7 +45,7 @@ public class FmUsersServiceImpl implements IFmUsersService {
     //  for creating user in FM microservice, we will receive the user details from
     //  CO microservice and then we will save the user details in FM microservice users table
     @Override
-    public FmUser createUser(FmUserDto dto) {
+    public FmUserDto createUser(FmUserDto dto) {
 
         String encodedPassword = passwordEncoder.encode(dto.getPassword());
 
@@ -58,6 +58,14 @@ public class FmUsersServiceImpl implements IFmUsersService {
         user.setCreatedAt(LocalDateTime.now());
         user.setCreatedBy(dto.getUserId()); // userid = driverid by CO MicroService
 
-        return usersRepo.save(user);
+        FmUser savedUser =  usersRepo.save(user);
+
+        FmUserDto userDto = new FmUserDto();
+        userDto.setUserId(savedUser.getUserId());
+        userDto.setUserType(savedUser.getUserType());
+        userDto.setUsername(savedUser.getUsername());
+        userDto.setPassword(savedUser.getPassword());
+
+        return userDto;
     }
 }

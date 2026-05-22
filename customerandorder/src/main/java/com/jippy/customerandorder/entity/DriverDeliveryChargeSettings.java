@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.entity;
 
 import jakarta.persistence.*;
@@ -48,4 +49,4 @@ public class DriverDeliveryChargeSettings {
 
     @Column(name = "updated_by")
     private Integer updatedBy;
-}
+}*/

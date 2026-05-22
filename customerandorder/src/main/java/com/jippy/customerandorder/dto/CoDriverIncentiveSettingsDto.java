@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import jakarta.validation.constraints.DecimalMin;
@@ -21,4 +22,4 @@ public class CoDriverIncentiveSettingsDto {
     private BigDecimal incentiveAmount;
 
 
-}
+}*/

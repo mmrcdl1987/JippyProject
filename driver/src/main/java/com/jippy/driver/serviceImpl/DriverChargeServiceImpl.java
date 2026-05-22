@@ -6,9 +6,8 @@ import com.jippy.driver.dto.DriverChargeCalculationRequestDto;
 import com.jippy.driver.dto.DriverChargeCalculationResponseDto;
 import com.jippy.driver.dto.OutletLocationResponseDto;
 import com.jippy.driver.entity.DriverDeliveryChargeSettings;
-import com.jippy.driver.exception.CoBadRequestException;
+import com.jippy.driver.exception.DriverBadRequestException;
 import com.jippy.driver.feignClients.FMFeignClient;
-import com.jippy.driver.projection.CustomerLocationProjection;
 import com.jippy.driver.dto.DriveCustomerLocationDto;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.repositary.DriverDeliveryChargeSettingsRepository;
@@ -44,7 +43,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
             log.error("Outlet location not found | outletId={}", requestDto.getOutletId());
 
-            throw new CoBadRequestException(DConstants.MSG_OUTLET_LOCATION_NOT_FOUND);
+            throw new DriverBadRequestException(DConstants.MSG_OUTLET_LOCATION_NOT_FOUND);
         }
 
         log.info("Outlet location fetched successfully | outletId={}", requestDto.getOutletId());
@@ -57,7 +56,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
             log.error("Customer location not found | customerAddressId={}", requestDto.getCustomerAddressId());
 
-            throw new CoBadRequestException(DConstants.MSG_CUSTOMER_LOCATION_NOT_FOUND);
+            throw new DriverBadRequestException(DConstants.MSG_CUSTOMER_LOCATION_NOT_FOUND);
         }
 
         log.info("Customer location fetched successfully | customerAddressId={}", requestDto.getCustomerAddressId());
@@ -76,14 +75,14 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
             log.error("Pickup slab not found | pickupDistance={}", pickupDistanceKm);
 
-            return new CoBadRequestException(DConstants.MSG_PICKUP_SLAB_NOT_FOUND);
+            return new DriverBadRequestException(DConstants.MSG_PICKUP_SLAB_NOT_FOUND);
         });
 
         DriverDeliveryChargeSettings deliverySlab = chargeSettingsRepository.findDeliverySlab(deliveryDistanceKm).orElseThrow(() -> {
 
             log.error("Delivery slab not found | deliveryDistance={}", deliveryDistanceKm);
 
-            return new CoBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
+            return new DriverBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
         });
 
         BigDecimal pickupCharge = pickupDistanceKm.multiply(pickupSlab.getUnitPricePerPickKm()).setScale(2, RoundingMode.HALF_UP);

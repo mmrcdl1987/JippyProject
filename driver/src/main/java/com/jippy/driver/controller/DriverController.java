@@ -113,7 +113,7 @@
 
             return ResponseEntity.ok(driverService.fetchTotalEarnings(driverId));
         }
-    // need to check this api wth redis
+
         @PostMapping("/updatedDriverDeliveryLocation")
         @Operation(summary = "Update Driver Location", description = "Call this API to update driver location when driver is on the way to deliver the order for every 5sec from driver Application")
         public ResponseEntity<DriverResponseDto> updatedDriverDeliveryLocation(@Valid @RequestBody UpdateDriverLocationDto updateDriverLocationDto) {
@@ -122,7 +122,7 @@
            String message = driverLocationService.updateLiveLocation(updateDriverLocationDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
         }
-//need to add one column in table delivery_route
+
         @PostMapping("/driverDeliveredOrder")
         @Operation(summary = "Driver Delivered Order", description = "After successful delivery of order driver will call this API to update the order status to delivered and also update the driver earnings details in driver_orders table")
         public ResponseEntity<DriverResponseDto> driverDeliveredOrder(@Valid @RequestBody DriverOrderDto driverOrderDto) {

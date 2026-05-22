@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import jakarta.validation.constraints.NotNull;
@@ -24,4 +25,4 @@ public class DriverChargeCalculationRequestDto {
 
     @NotNull
     private BigDecimal orderAmount;
-}
+}*/

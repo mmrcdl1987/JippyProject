@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.entity;
 
 import jakarta.persistence.*;
@@ -47,4 +48,4 @@ public class CoDriverKyc {
     @OneToOne
     @JoinColumn(name = "driver_id", nullable = false)
     private CoDriver driver;
-}
+}*/

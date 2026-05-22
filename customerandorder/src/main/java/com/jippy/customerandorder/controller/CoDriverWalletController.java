@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.dto.CoDriverCodRequestDto;
@@ -23,9 +24,11 @@ public class CoDriverWalletController {
     @Autowired
     private CoDriverWalletService service;
 
-    /**
+    */
+/**
      * API to deduct COD amount after delivery
-     */
+     *//*
+
     @PostMapping("/insertOrUpdateDriverCodBalance")
     @Operation(summary = "Deduct COD amount from driver wallet after delivery")
     public CoDriverCodResponseDto updateDriverWallet(
@@ -35,4 +38,4 @@ public class CoDriverWalletController {
 
         return service.processDriverCod(requestDto);
     }
-}
+}*/

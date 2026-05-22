@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoDriverIncentiveSettings;
@@ -14,4 +15,4 @@ public interface CoDriverIncentiveSettingsRepository extends JpaRepository<CoDri
         ORDER BY orders_count ASC
         """, nativeQuery = true)
     List<CoDriverIncentiveSettings> findAllSlabs();
-}
+}*/

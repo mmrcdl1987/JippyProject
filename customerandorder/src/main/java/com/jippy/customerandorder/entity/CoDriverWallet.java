@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.entity;
 
 import jakarta.persistence.*;
@@ -29,4 +30,4 @@ public class CoDriverWallet {
 
     private LocalDateTime updatedAt;
     private Integer updatedBy;
-}
+}*/

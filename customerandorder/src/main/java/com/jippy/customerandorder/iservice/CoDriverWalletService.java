@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.iservice;
 
 import com.jippy.customerandorder.dto.CoDriverCodRequestDto;
@@ -7,3 +8,4 @@ public interface CoDriverWalletService {
     CoDriverCodResponseDto processDriverCod(CoDriverCodRequestDto dto);
 
 }
+*/

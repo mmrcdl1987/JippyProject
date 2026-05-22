@@ -83,4 +83,8 @@ private String nomineeName;
 
     @NotNull(message = "Area id is required")
     private Integer areaId;
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters long")
+    private String password;
 }

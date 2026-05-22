@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.Data;
@@ -24,4 +25,4 @@ public class CoDriverTotalEarningsDto {
     private Long rejectedOrders;
 
     private Long totalOrders;
-}
+}*/

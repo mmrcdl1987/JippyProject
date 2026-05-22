@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoDriverWalletTransactions;
@@ -9,3 +10,4 @@ public interface CoDriverWalletTransactionsRepository extends
         JpaRepository<CoDriverWalletTransactions, Integer> {
 
 }
+*/

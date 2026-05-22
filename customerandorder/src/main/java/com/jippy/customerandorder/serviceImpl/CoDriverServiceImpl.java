@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.serviceImpl;
 
 
@@ -395,4 +396,4 @@ public class CoDriverServiceImpl implements ICoDriverService {
         return "Order with id: " + driverOrderDto.getOrderId() + " marked as delivered and earnings updated for driver with id: " + driverOrderDto.getDriverId();
     }
 
-}
+}*/

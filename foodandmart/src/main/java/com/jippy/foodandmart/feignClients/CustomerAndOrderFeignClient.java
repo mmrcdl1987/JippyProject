@@ -21,9 +21,9 @@ public interface CustomerAndOrderFeignClient {
 //    and then calculate the frequency of orders for each outlet. Based on the frequency,
 //    we can return the list of outletIds that are most frequently ordered from by that customer.
 //    from FM microservice
-    @GetMapping("/api/co/orders/frequent")
+    @GetMapping("/api/co/frequent")
     List<Integer> getFrequentOutlets(@RequestParam Integer customerId);
 
-    @GetMapping("/api/co/orders/recent")
+    @GetMapping("/api/co/recent")
     Integer getRecentOutlet(@RequestParam Integer customerId);
 }

@@ -10,5 +10,5 @@ public interface IFmUsersService {
     void deactivateDriver(Integer userId);
 
     // for creating user in FM microservice
-    FmUser createUser(FmUserDto dto);
+    FmUserDto createUser(FmUserDto dto);
 }

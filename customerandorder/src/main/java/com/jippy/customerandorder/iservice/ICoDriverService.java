@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.iservice;
 
 
@@ -24,4 +25,4 @@ public interface ICoDriverService {
 
     String driverDeliveredOrder(CoDriverOrderDto driverOrderDto);
 
-}
+}*/

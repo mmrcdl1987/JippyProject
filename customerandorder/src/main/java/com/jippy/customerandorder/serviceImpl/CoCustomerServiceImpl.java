@@ -3,7 +3,6 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
-import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.CoCustomerMapper;
@@ -13,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.jippy.customerandorder.exception.CoBadRequestException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

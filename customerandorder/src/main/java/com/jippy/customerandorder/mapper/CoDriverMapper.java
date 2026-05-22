@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.mapper;
 
 
@@ -317,3 +318,4 @@ public class CoDriverMapper {
     }
 
 }
+*/

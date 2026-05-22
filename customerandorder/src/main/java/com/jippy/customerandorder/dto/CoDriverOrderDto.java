@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.Data;
@@ -23,3 +24,4 @@ public class CoDriverOrderDto {
     private Integer createdBy;
     private LineString deliveryRoute;
 }
+*/

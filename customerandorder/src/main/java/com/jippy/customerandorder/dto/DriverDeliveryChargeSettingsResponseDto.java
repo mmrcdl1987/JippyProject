@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.*;
@@ -27,4 +28,4 @@ public class DriverDeliveryChargeSettingsResponseDto {
     private LocalDateTime createdAt;
 
     private Integer createdBy;
-}
+}*/

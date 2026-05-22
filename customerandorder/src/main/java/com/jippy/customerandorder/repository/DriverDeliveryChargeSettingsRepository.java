@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.DriverDeliveryChargeSettings;
@@ -31,3 +32,4 @@ public interface DriverDeliveryChargeSettingsRepository extends JpaRepository<Dr
     Optional<DriverDeliveryChargeSettings> findDeliverySlab(@Param("deliveryDistance") BigDecimal deliveryDistance);
 
 }
+*/

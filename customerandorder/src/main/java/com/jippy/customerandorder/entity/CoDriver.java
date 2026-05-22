@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.entity;
 
 import jakarta.persistence.*;
@@ -74,4 +75,4 @@ private String nomineeName;
 
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
     private List<CoDriverOrder> driverOrders;
-}
+}*/

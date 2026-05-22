@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.projection;
 
 import java.math.BigDecimal;
@@ -28,4 +29,4 @@ public interface CoDriverOrderHistoryProjection {
     // Internal use only for fetching order history for a driver,
     // not exposed in API response
     Integer getOutletId();
-}
+}*/

@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.Data;
@@ -14,4 +15,4 @@ public class CoDriverCodResponseDto {
     private BigDecimal deductedAmount;
     private BigDecimal remainingCodAmount;
     private Boolean ordersLock;
-}
+}*/

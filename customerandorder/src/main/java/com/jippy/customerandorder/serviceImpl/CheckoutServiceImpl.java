@@ -2,7 +2,6 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
-import com.jippy.customerandorder.entity.DriverDeliveryChargeSettings;
 import com.jippy.customerandorder.entity.OrderSettings;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
@@ -10,7 +9,6 @@ import com.jippy.customerandorder.iservice.ICartService;
 import com.jippy.customerandorder.iservice.ICheckoutService;
 import com.jippy.customerandorder.projection.CustomerLocationProjection;
 import com.jippy.customerandorder.repository.CustomerDeliveryAddressRepository;
-import com.jippy.customerandorder.repository.DriverDeliveryChargeSettingsRepository;
 import com.jippy.customerandorder.repository.OrderSettingsRepository;
 import com.jippy.customerandorder.utils.DistanceUtils;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +29,11 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
     private final CustomerDeliveryAddressRepository customerDeliveryAddressRepository;
 
-    private final DriverDeliveryChargeSettingsRepository chargeSettingsRepository;
+   // private final DriverDeliveryChargeSettingsRepository chargeSettingsRepository;
 
     private final OrderSettingsRepository orderSettingsRepository;
 
-    @Override
+    /*@Override
     public CoCheckoutResponseDto checkout(CoCheckoutRequestDto requestDto) {
 
         log.info("CHECKOUT SERVICE START");
@@ -174,7 +172,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
         return response;
     }
-
+*/
     private void validateRequest(CoCheckoutRequestDto requestDto) {
 
         if (requestDto == null) {

@@ -4,7 +4,7 @@ package com.jippy.driver.mapper;
 
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
-import com.jippy.driver.exception.CoBadRequestException;
+import com.jippy.driver.exception.DriverBadRequestException;
 import com.jippy.driver.projection.DriverOrderHistoryProjection;
 import com.jippy.driver.projection.DriverTotalEarningsProjection;
 import org.locationtech.jts.geom.Polygon;
@@ -23,7 +23,7 @@ public class DriverMapper {
 
         // Check if input is null
         if (dto == null) {
-            throw new CoBadRequestException("Driver DTO must not be null");
+            throw new DriverBadRequestException("Driver DTO must not be null");
         }
 
         // Create Driver object and set basic details
@@ -61,7 +61,7 @@ public class DriverMapper {
 
         // Safety check
         if (dto == null) {
-            throw new CoBadRequestException("Driver DTO must not be null for KYC mapping");
+            throw new DriverBadRequestException("Driver DTO must not be null for KYC mapping");
         }
 
         // If all KYC fields are empty, skip creation
@@ -91,7 +91,7 @@ public class DriverMapper {
 
         // Check if entity is null
         if (driver == null) {
-            throw new CoBadRequestException("Driver entity must not be null");
+            throw new DriverBadRequestException("Driver entity must not be null");
         }
 
         DriverDto dto = new DriverDto();

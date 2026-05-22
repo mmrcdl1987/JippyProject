@@ -5,7 +5,6 @@ import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
 import com.jippy.customerandorder.iservice.IOrderService;
-import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
 import com.jippy.customerandorder.repository.CoOrderPriceBreakupRepository;
 import com.jippy.customerandorder.repository.CoOrderRepository;
 import jakarta.validation.Valid;
@@ -16,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -59,13 +59,16 @@ public class CoOrderController {
 
         // Update status
         order.setOrderStatus(COConstants.STATUS_DELIVERED);
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setCreatedBy(driverId);
+
 
         coOrderRepository.save(order);
 
         return "Order delivered successfully";
     }
 
-    @GetMapping("/driver/earnings")
+    /*@GetMapping("/driver/earnings")
     public CoDriverEarningsDto fetchDriverEarnings(@RequestParam Integer driverId, @RequestParam LocalDate date) {
 
         CoDriverEarningsProjection projection = coOrderRepository.fetchDriverEarnings(driverId, date);
@@ -81,7 +84,7 @@ public class CoOrderController {
         dto.setTotalEarningsToday(projection.getTotalEarnings());
 
         return dto;
-    }
+    }*/
 
     @GetMapping("/orders/price-breakup")
     public CoOrderPriceBreakupDto getOrderPriceBreakup(@RequestParam String orderId) {

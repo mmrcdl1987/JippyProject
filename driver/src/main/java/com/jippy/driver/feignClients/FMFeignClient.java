@@ -3,6 +3,7 @@ package com.jippy.driver.feignClients;
 
 import com.jippy.driver.config.FeignClientConfig;
 import com.jippy.driver.dto.DriverAddressRequestDto;
+import com.jippy.driver.dto.DriverUserDto;
 import com.jippy.driver.dto.OutletLocationResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -29,5 +30,8 @@ public interface FMFeignClient {
     // --------------------------------------------
     @PostMapping("/api/fm/users/deactivateDriver")
     String deactivateDriver(@RequestParam("userId") Integer userId);
+
+    @PostMapping("/api/fm/users/createUser")
+    ResponseEntity<DriverUserDto> createUser(@RequestBody DriverUserDto dto);
     
 }

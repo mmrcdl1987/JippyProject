@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.dto.CoDriverIncentiveSettingsDto;
@@ -50,3 +51,4 @@ public class DriverSettingsController {
         return ResponseEntity.ok(response);
     }
     }
+*/

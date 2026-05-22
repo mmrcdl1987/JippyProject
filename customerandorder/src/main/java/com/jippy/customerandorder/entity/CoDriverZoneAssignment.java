@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.entity;
 
 import jakarta.persistence.*;
@@ -39,4 +40,4 @@ public class CoDriverZoneAssignment {
 
     @Column(name = "updated_by")
     private Integer updatedBy;
-}
+}*/

@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.Data;
@@ -12,4 +13,4 @@ public class CoDriverZoneAssignmentResponseDto {
     private Integer zoneId;
 
     private String message;
-}
+}*/

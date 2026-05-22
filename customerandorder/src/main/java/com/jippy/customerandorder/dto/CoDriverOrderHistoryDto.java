@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.Data;
@@ -39,4 +40,4 @@ public class CoDriverOrderHistoryDto {
 
     // Outlet name from FM microservice
     private String outletName;
-}
+}*/

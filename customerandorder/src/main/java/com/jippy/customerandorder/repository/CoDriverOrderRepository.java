@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoDriverOrder;
@@ -112,4 +113,4 @@ public interface CoDriverOrderRepository extends JpaRepository<CoDriverOrder, In
             AND order_id = :orderId
             """, nativeQuery = true)
     Optional<CoDriverOrder> findByDriverIdOrderId(@Param("driverId") Integer driverId, @Param("orderId") String orderId);
-}
+}*/

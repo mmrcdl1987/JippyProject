@@ -9,7 +9,7 @@ import com.jippy.driver.entity.DriverWallet;
 import com.jippy.driver.entity.DriverWalletTransactions;
 //import com.jippy.driver.entity.CoOrder;
 //import com.jippy.driver.entity.CoOrderPriceBreakup;
-import com.jippy.driver.exception.CoBusinessException;
+import com.jippy.driver.exception.DriverBusinessException;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverMapper;
@@ -68,7 +68,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
 
             logger.error("Order not found: {}", dto.getOrderId());
 
-            throw new CoBusinessException("Order not found");
+            throw new DriverBusinessException("Order not found");
         }
 
         // -------------------------------
@@ -76,7 +76,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         // -------------------------------
         if (!"DELIVERED".equalsIgnoreCase(order.getOrderStatus())) {
             logger.error("Order not delivered: {}", dto.getOrderId());
-            throw new CoBusinessException("Order is not delivered");
+            throw new DriverBusinessException("Order is not delivered");
         }
 //   ------------------------------------------------------
         // STEP 2.1: VALIDATE DRIVER MATCH mandatory
@@ -85,7 +85,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
             logger.error("Driver mismatch: orderId {} belongs to driverId {} but request has {}",
                     dto.getOrderId(), order.getDriverId(), dto.getDriverId());
 
-            throw new CoBusinessException("Driver does not match order");
+            throw new DriverBusinessException("Driver does not match order");
         }
 
         // -------------------------------
@@ -94,7 +94,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
 //        In payment mod table 2nd row is COD with id 2, so checking with that
         if (order.getPaymentModeId() != 2) {
             logger.error("Order is not COD: {}", dto.getOrderId());
-            throw new CoBusinessException("Order is not COD");
+            throw new DriverBusinessException("Order is not COD");
         }
 
         // -------------------------------
@@ -121,7 +121,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
             logger.error("Price breakup not found: {}",
                     dto.getOrderId());
 
-            throw new CoBusinessException(
+            throw new DriverBusinessException(
                     "Price breakup not found");
         }
 
@@ -134,7 +134,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         DriverWallet wallet = walletRepo.findByDriverId(dto.getDriverId())
                 .orElseThrow(() -> {
                     logger.error("Driver wallet not found for driverId: {}", dto.getDriverId());
-                    return new CoBusinessException("Driver wallet not found");
+                    return new DriverBusinessException("Driver wallet not found");
                 });
 
 //        -----------------------------------------

@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.projection;
 
 import java.math.BigDecimal;
@@ -15,4 +16,4 @@ public interface CoDriverTotalEarningsProjection {
     BigDecimal getTotalEarnings();
 
     Long getCompletedOrders();
-}
+}*/

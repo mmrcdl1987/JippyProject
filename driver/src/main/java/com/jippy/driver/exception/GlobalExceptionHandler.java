@@ -38,9 +38,9 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler(CoBadRequestException.class)
+    @ExceptionHandler(DriverBadRequestException.class)
     public ResponseEntity<DriverErrorResponseDto> handleBadRequest(
-            CoBadRequestException ex,
+            DriverBadRequestException ex,
             HttpServletRequest request) {
 
         return ResponseEntity
@@ -74,8 +74,8 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
-    @ExceptionHandler(CoZoneException.class)
-    public ResponseEntity<Map<String, String>> handleZoneException(CoZoneException ex) {
+    @ExceptionHandler(DriverZoneException.class)
+    public ResponseEntity<Map<String, String>> handleZoneException(DriverZoneException ex) {
 
         Map<String, String> error = new HashMap<>();
         error.put("message", ex.getMessage());
@@ -83,8 +83,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(CoBusinessException.class)
-    public ResponseEntity<?> handleBusinessException(CoBusinessException ex) {
+    @ExceptionHandler(DriverBusinessException.class)
+    public ResponseEntity<?> handleBusinessException(DriverBusinessException ex) {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 

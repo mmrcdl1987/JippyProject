@@ -1,7 +1,6 @@
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoOrder;
-import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,7 +17,7 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
 //    The final result is also wrapped in a COALESCE to return 0 if there are no matching orders.
 // used by projection interface CoDriverEarningsProjection to fetch total earnings
 // and count of orders for a driver on a specific date
-    @Query(value = """
+   /* @Query(value = """
             SELECT
                 COALESCE(
                     SUM(
@@ -37,7 +36,7 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
             AND DATE(o.created_at) = :date
             """, nativeQuery = true)
     CoDriverEarningsProjection fetchDriverEarnings
-    (@Param("driverId") Integer driverId, @Param("date") LocalDate date);
+    (@Param("driverId") Integer driverId, @Param("date") LocalDate date);*/
 
     //
 // to fetch Frequent outlets (>=3)

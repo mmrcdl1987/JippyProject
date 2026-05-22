@@ -50,7 +50,7 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler(CoBadRequestException.class)
+   @ExceptionHandler(CoBadRequestException.class)
     public ResponseEntity<CoErrorResponseDto> handleBadRequest(
             CoBadRequestException ex,
             HttpServletRequest request) {
@@ -86,14 +86,14 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
-    @ExceptionHandler(CoZoneException.class)
+/*    @ExceptionHandler(CoZoneException.class)
     public ResponseEntity<Map<String, String>> handleZoneException(CoZoneException ex) {
 
         Map<String, String> error = new HashMap<>();
         error.put("message", ex.getMessage());
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
-    }
+    }*/
 
     @ExceptionHandler(CoBusinessException.class)
     public ResponseEntity<?> handleBusinessException(CoBusinessException ex) {

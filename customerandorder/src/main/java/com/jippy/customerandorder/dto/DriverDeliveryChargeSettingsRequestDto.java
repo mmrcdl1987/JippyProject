@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import jakarta.validation.constraints.DecimalMin;
@@ -30,4 +31,4 @@ public class DriverDeliveryChargeSettingsRequestDto {
     private BigDecimal unitPricePerDeliverKm;
 
     private Integer createdBy;
-}
+}*/

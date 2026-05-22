@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.Getter;
@@ -26,4 +27,4 @@ public class DriverChargeCalculationResponseDto {
     private BigDecimal totalDriverCharge;
 
     private Boolean codAvailable;
-}
+}*/

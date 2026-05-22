@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
@@ -121,4 +122,4 @@ public class DriverDeliveryChargeSettingsServiceImpl
 
         return responseDto;
     }
-}
+}*/

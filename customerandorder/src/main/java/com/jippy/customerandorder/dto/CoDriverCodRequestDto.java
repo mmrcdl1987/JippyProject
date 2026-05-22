@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import lombok.Data;
@@ -10,3 +11,4 @@ public class CoDriverCodRequestDto {
     private String orderId;
     private String orderStatus;
 }
+*/

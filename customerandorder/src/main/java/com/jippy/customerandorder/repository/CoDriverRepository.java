@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.repository;
 
 
@@ -7,4 +8,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CoDriverRepository extends JpaRepository<CoDriver, Integer> {
-}
+}*/

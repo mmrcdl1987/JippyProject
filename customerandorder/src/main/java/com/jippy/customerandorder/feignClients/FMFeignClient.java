@@ -11,11 +11,11 @@ import org.springframework.web.bind.annotation.*;
 @FeignClient(name = "foodandmart",configuration = FeignClientConfig.class)
 public interface FMFeignClient {
 
-    @PostMapping("/api/fm/outlets/saveAddressDetails")
+    /*@PostMapping("/api/fm/outlets/saveAddressDetails")
     ResponseEntity<CoAddressRequestDto> saveAddressDetails(@RequestBody CoAddressRequestDto fmAddressRequestDto);
 
     @GetMapping("/api/fm/outlets/getAddressDetails")
-    ResponseEntity<CoAddressRequestDto> getAddressDetails(@RequestParam Integer driverId);
+    ResponseEntity<CoAddressRequestDto> getAddressDetails(@RequestParam Integer driverId);*/
 
     @GetMapping("/api/fm/pricing/{productId}")
     FmProductDetailResponseDto getProductById(@PathVariable("productId") Integer productId);
@@ -36,7 +36,7 @@ public interface FMFeignClient {
     @PostMapping("/api/fm/users/deactivateDriver")
     String deactivateDriver(@RequestParam("userId") Integer userId);
 
-    @PostMapping("/api/fm/users/createUser")
-    ResponseEntity<FmUser> createUser(@RequestBody CoUserDto dto);
+   /* @PostMapping("/api/fm/users/createUser")
+    ResponseEntity<FmUser> createUser(@RequestBody CoUserDto dto);*/
     
 }

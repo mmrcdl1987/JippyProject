@@ -1,3 +1,4 @@
+
 package com.jippy.customerandorder.exception;
 
 public class CoBadRequestException extends RuntimeException {
@@ -6,3 +7,4 @@ public class CoBadRequestException extends RuntimeException {
         super(message);
     }
 }
+

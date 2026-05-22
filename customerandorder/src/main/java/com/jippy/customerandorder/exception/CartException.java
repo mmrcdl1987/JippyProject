@@ -1,3 +1,4 @@
+
 package com.jippy.customerandorder.exception;
 
 public class CartException extends OrderException {
@@ -5,3 +6,4 @@ public class CartException extends OrderException {
         super(message);
     }
 }
+

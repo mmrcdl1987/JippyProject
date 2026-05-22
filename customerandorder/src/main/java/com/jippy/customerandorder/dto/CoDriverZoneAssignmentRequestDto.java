@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import jakarta.validation.constraints.DecimalMax;
@@ -29,4 +30,4 @@ public class CoDriverZoneAssignmentRequestDto {
     private Double longitude;
 
     private Integer zoneId;
-}
+}*/

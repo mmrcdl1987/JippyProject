@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.dto.COOrderEvent;
@@ -71,3 +72,4 @@ public class CoDriverLocationRouteService {
         }
     }
 }
+*/

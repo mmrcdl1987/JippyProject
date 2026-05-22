@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.exception;
 
 public class CoZoneException extends RuntimeException{
@@ -5,3 +6,4 @@ public class CoZoneException extends RuntimeException{
         super(message);
     }
 }
+*/

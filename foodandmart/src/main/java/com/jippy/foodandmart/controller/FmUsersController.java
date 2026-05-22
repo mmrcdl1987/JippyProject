@@ -30,7 +30,7 @@ public class FmUsersController {
 //    for creating user in FM microservice, we will receive the user details from CO microservice
 //    and then we will save the user details in FM microservice users table
     @PostMapping("/createUser")
-    public ResponseEntity<FmUser> createUser(@RequestBody FmUserDto dto) {
+    public ResponseEntity<FmUserDto> createUser(@RequestBody FmUserDto dto) {
         return ResponseEntity.ok(usersService.createUser(dto));
     }
 }

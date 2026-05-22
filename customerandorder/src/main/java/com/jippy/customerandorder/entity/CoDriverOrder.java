@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.entity;
 
 
@@ -21,8 +22,10 @@ public class CoDriverOrder {
     private Integer driverOrderId;
 
     // Driver id mapped from driver table
-   /* @Column(name = "driver_id", nullable = false)
-    private Integer driverId;*/
+   */
+/* @Column(name = "driver_id", nullable = false)
+    private Integer driverId;*//*
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id", nullable = false)
@@ -78,4 +81,4 @@ public class CoDriverOrder {
 
     @Column(columnDefinition = "geometry(LineStringM, 4326)")
     private LineString deliveryRoute;
-}
+}*/

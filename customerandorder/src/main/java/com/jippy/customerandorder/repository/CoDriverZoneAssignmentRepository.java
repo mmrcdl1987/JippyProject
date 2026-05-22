@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoDriverZoneAssignment;
@@ -8,4 +9,4 @@ public interface CoDriverZoneAssignmentRepository extends JpaRepository<CoDriver
     // Check duplicate assignment of driver and zone and return true if exists
 //    this prevents assigning the same zone to the same driver multiple times
     boolean existsByDriverDriverIdAndZoneZoneId(Integer driverId, Integer zoneId);
-}
+}*/

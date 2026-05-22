@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.iservice;
 
 import com.jippy.customerandorder.dto.CoDriverZoneAssignmentRequestDto;
@@ -7,4 +8,4 @@ public interface CoDriverZoneAssignmentService {
 
     // Assign zone to driver
     CoDriverZoneAssignmentResponseDto assignZoneToDriver(CoDriverZoneAssignmentRequestDto requestDto);
-}
+}*/

@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.dto.CoDriverIncentiveSettingsDto;
@@ -70,4 +71,4 @@ public class CoDriverIncentiveSettingsServiceImpl implements CoDriverIncentiveSe
             return CoDriverIncentiveSettingsMapper.incentiveEntityToDto(updated);
         }
     }
-}
+}*/

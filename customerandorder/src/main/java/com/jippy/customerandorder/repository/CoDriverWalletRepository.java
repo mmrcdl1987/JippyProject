@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoDriverWallet;
@@ -8,4 +9,4 @@ import java.util.Optional;
 public interface CoDriverWalletRepository extends JpaRepository<CoDriverWallet, Integer> {
 
     Optional<CoDriverWallet> findByDriverId(Integer driverId);
-}
+}*/

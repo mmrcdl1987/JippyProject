@@ -1,3 +1,4 @@
+/*
 package com.jippy.customerandorder.dto;
 
 import jakarta.validation.constraints.*;
@@ -87,4 +88,4 @@ public class CoDriverDto {
 
     @NotNull(message = "Area id is required")
     private Integer areaId;
-}
+}*/
