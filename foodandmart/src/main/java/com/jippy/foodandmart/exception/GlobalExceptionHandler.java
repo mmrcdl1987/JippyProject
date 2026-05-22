@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.exception;
 
 import com.jippy.foodandmart.dto.FmApiResponse;
+import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +12,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -97,6 +100,14 @@ public class GlobalExceptionHandler {
         log.error("Outlet unavailability scheduler exception occurred | error={}", ex.getMessage(), ex);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(FmApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<Object> handleFeignException(FeignException ex) {
+
+        String message = (ex.status() == 404) ? "No orders found for given customerId" : "Customer & Order service is unavailable";
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", message, "timestamp", LocalDateTime.now()));
     }
 
 }

@@ -1,11 +1,13 @@
 package com.jippy.foodandmart.controller;
 
+
+import com.jippy.foodandmart.dto.FmUserDto;
+import com.jippy.foodandmart.entity.FmUser;
+import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.service.IFmUsersService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/fm/users")
@@ -15,7 +17,7 @@ public class FmUsersController {
     private IFmUsersService usersService;
 
     // -------------------------------
-    // API: DEACTIVATE DRIVER
+    // API For: DEACTIVATE DRIVER
     // -------------------------------
     @PostMapping("/deactivateDriver")
     public String deactivateDriver(@RequestParam Integer userId) {
@@ -23,5 +25,12 @@ public class FmUsersController {
         usersService.deactivateDriver(userId);
 
         return "Driver deactivated successfully in FM microservice Users table .";
+    }
+
+//    for creating user in FM microservice, we will receive the user details from CO microservice
+//    and then we will save the user details in FM microservice users table
+    @PostMapping("/createUser")
+    public ResponseEntity<FmUser> createUser(@RequestBody FmUserDto dto) {
+        return ResponseEntity.ok(usersService.createUser(dto));
     }
 }

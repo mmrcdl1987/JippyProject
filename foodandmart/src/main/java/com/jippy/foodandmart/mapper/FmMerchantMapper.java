@@ -199,12 +199,12 @@ public final class FmMerchantMapper {
 		return employee;
 	}
 
-	public static FmUser toUserEntity(String userName, String password, Integer merchantId) {
+	public static FmUser toUserEntity(String userName, String password, Integer merchantId,String userType) {
 		FmUser user = new FmUser();
 		user.setUsername(userName);
 		user.setPassword(password);
 		user.setUserId(merchantId);
-		user.setUserType(FmAppConstants.TYPE_MERCHANT);
+		user.setUserType(userType);
 		user.setIsActive(FmAppConstants.FLAG_YES);
 		return user;
 	}

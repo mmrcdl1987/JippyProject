@@ -292,7 +292,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
 
         String encodedPassword = passwordEncoder.encode(password);
-        FmUser users = FmMerchantMapper.toUserEntity(username, encodedPassword, outletId);
+        FmUser users = FmMerchantMapper.toUserEntity(username, encodedPassword, outletId, FmAppConstants.TYPE_MERCHANT);
         users = userRepository.save(users);
         log.info("[OUTLET] User saved: username={}, outletId={}", username, outletId);
 

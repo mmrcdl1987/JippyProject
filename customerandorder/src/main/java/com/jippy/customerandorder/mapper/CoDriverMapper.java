@@ -101,6 +101,8 @@ public class CoDriverMapper {
         dto.setLastName(driver.getLastName());
         dto.setPhoneNumber(driver.getPhoneNumber());
         dto.setEmail(driver.getEmail());
+//        new feild // encrypted
+        dto.setPassword("************");
 //        newly added feilds after changing requirement
         dto.setNomineeName(driver.getNomineeName());
         dto.setNomineePhoneNumber(driver.getNomineePhoneNumber());
