@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -37,8 +39,7 @@ public class COOrderService implements IOrderService {
     @Transactional
     public CoPlaceOrderResponseDto placeOrder(CoPlaceOrderRequestDto dto) {
 
-        log.info("Start placeOrder | customerId={}, outletId={}",
-                dto.getCustomerId(), dto.getOutletId());
+        log.info("Start placeOrder | customerId={}, outletId={}", dto.getCustomerId(), dto.getOutletId());
 
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new OrderException(COConstants.MSG_ORDER_ITEMS_EMPTY);
@@ -54,13 +55,10 @@ public class COOrderService implements IOrderService {
         order.setOrderId(orderId);
         orderRepository.save(order);
 
-        log.info("Order saved | orderId={}, customerId={}, outletId={}",
-                orderId, dto.getCustomerId(), dto.getOutletId());
+        log.info("Order saved | orderId={}, customerId={}, outletId={}", orderId, dto.getCustomerId(), dto.getOutletId());
 
         // 3. Save Items
-        dto.getItems().forEach(i ->
-                orderItemRepository.save(orderMapper.mapToItem(i, orderId))
-        );
+        dto.getItems().forEach(i -> orderItemRepository.save(orderMapper.mapToItem(i, orderId)));
 
         log.info("Order items saved | orderId={}, itemCount={}", orderId, dto.getItems().size());
 
@@ -80,8 +78,7 @@ public class COOrderService implements IOrderService {
         response.setOrderId(orderId);
         response.setMessage(COConstants.MSG_ORDER_CREATED);
 
-        log.info("Order placed successfully | orderId={}, customerId={}, outletId={}",
-                orderId, dto.getCustomerId(), dto.getOutletId());
+        log.info("Order placed successfully | orderId={}, customerId={}, outletId={}", orderId, dto.getCustomerId(), dto.getOutletId());
 
         return response;
     }
@@ -117,5 +114,31 @@ public class COOrderService implements IOrderService {
         log.info("Order ID generated | orderId={}", orderId);
 
         return orderId;
+    }
+
+    @Override
+    public List<Integer> getFrequentOutlets(Integer customerId) {
+
+        List<Integer> result = orderRepository.findFrequentOutlets(customerId);
+
+        //  If no ≥3 outlets → return empty list []
+        if (result == null) {
+            return new ArrayList<>();
+        }
+        return result;
+    }
+
+    @Override
+    public Integer getRecentOutlet(Integer customerId) {
+        Integer outlet = orderRepository.findRecentOutlet(customerId);
+
+        // Throw exception if NO orders at all for the customer,
+        // since we cannot return null in response
+        if (outlet == null) {
+            throw new OrderException("No orders found for customerId: " + customerId);
+        }
+
+        return outlet;
+
     }
 }

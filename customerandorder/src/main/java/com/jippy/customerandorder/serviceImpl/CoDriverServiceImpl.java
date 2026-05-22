@@ -55,8 +55,29 @@ public class CoDriverServiceImpl implements ICoDriverService {
         // Save driver
         CoDriver savedDriver = driverRepository.save(driver);
 
+// for creating user in FM microservice, we will receive the user details from CO microservice and
+// then we will save the user details in FM microservice users table
+//  --------------------------------------------------------------------------------
+        try {
+            CoUserDto userDto = new CoUserDto();
+
+            userDto.setUsername(savedDriver.getEmail());
+            userDto.setPassword(dto.getPassword());
+            userDto.setUserId(savedDriver.getDriverId());
+            userDto.setUserType("DRIVER");
+            log.info("Creating user in FM for driverId: {}, username: {}", savedDriver.getDriverId(), userDto.getUsername());
+            fmFeignClient.createUser(userDto);
+
+            log.info("User created in FM for driverId: {}", savedDriver.getDriverId());
+
+        } catch (Exception e) {
+            log.error("User creation failed in FM", e);
+        }
+//---------------------------------------------------------------------------------------------
         log.info("Driver saved with id: {}", savedDriver.getDriverId());
 
+//        for address details, call FM microservice API to save address details for the driver,
+//        and get the saved address details in response to set in driver DTO response
         CoAddressRequestDto coAddressRequestDto = new CoAddressRequestDto();
         coAddressRequestDto.setJippyAddressId(savedDriver.getDriverId());
         coAddressRequestDto.setBuildingNumber(dto.getBuildingNumber());

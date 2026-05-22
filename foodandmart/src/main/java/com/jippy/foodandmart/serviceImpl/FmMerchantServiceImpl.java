@@ -230,9 +230,11 @@
 		        String username = dto.getFirstName().trim().toLowerCase().replaceAll("\\s+", "") + phoneLast4;
 		        String password = emailFirst4 + phoneLast4;
 
+//				for encoding the password before saving to database, we will use the password encoder bean that we have defined in the security configuration class. we will autowire the password encoder bean in the service class and then we will use it to encode the password before saving to database. this is a one way encoding and we cannot decode the password back to original form. when user tries to login with username and password, we will encode the password entered by user and then we will compare it with the encoded password stored in database.
+//				if both are same then login is successful otherwise login will fail.
                  String encodedPassword = passwordEncoder.encode(password);
 				//  Save user
-				FmUser user = FmMerchantMapper.toUserEntity(username, encodedPassword, merchantId);
+				FmUser user = FmMerchantMapper.toUserEntity(username, encodedPassword, merchantId ,FmAppConstants.TYPE_MERCHANT);
 				user = userRepository.save(user);
 
 				// Fetch role

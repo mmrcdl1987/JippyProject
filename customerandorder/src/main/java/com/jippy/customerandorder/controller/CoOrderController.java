@@ -1,4 +1,5 @@
 package com.jippy.customerandorder.controller;
+
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoOrder;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/co")
@@ -27,16 +29,13 @@ public class CoOrderController {
     private final CoOrderPriceBreakupRepository coOrderPriceBreakupRepository;
 
     @PostMapping("/placeOrder")
-    public ResponseEntity<CoPlaceOrderResponseDto> placeOrder(
-            @Valid @RequestBody CoPlaceOrderRequestDto placeOrderRequestDto) {
+    public ResponseEntity<CoPlaceOrderResponseDto> placeOrder(@Valid @RequestBody CoPlaceOrderRequestDto placeOrderRequestDto) {
 
-        log.info("API hit: place order | customerId={}, outletId={}",
-                placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId());
+        log.info("API hit: place order | customerId={}, outletId={}", placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId());
 
         CoPlaceOrderResponseDto response = orderService.placeOrder(placeOrderRequestDto);
 
-        log.info("Order placed successfully | customerId={}, outletId={}, orderId={}",
-                placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId(), response.getOrderId());
+        log.info("Order placed successfully | customerId={}, outletId={}, orderId={}", placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId(), response.getOrderId());
 
         return ResponseEntity.ok(response);
     }
@@ -47,27 +46,15 @@ public class CoOrderController {
 
     }
 
-
-
-
-
-
     @PutMapping("/orders/{orderId}/deliver")
-    public String deliverOrder(
-            @PathVariable String orderId,
-            @RequestParam Integer driverId
-    ) {
+    public String deliverOrder(@PathVariable String orderId, @RequestParam Integer driverId) {
 
-        CoOrder order = coOrderRepository.findById(orderId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order not found with id: " + orderId));
+        CoOrder order = coOrderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
         // Validate order belongs to driver
         if (!order.getDriverId().equals(driverId)) {
 
-            throw new ResourceNotFoundException(
-                    "Order does not belong to driver");
+            throw new ResourceNotFoundException("Order does not belong to driver");
         }
 
         // Update status
@@ -77,14 +64,11 @@ public class CoOrderController {
 
         return "Order delivered successfully";
     }
-    @GetMapping("/driver/earnings")
-    public CoDriverEarningsDto fetchDriverEarnings(
-            @RequestParam Integer driverId,
-            @RequestParam LocalDate date
-    ) {
 
-        CoDriverEarningsProjection projection =
-                coOrderRepository.fetchDriverEarnings(driverId, date);
+    @GetMapping("/driver/earnings")
+    public CoDriverEarningsDto fetchDriverEarnings(@RequestParam Integer driverId, @RequestParam LocalDate date) {
+
+        CoDriverEarningsProjection projection = coOrderRepository.fetchDriverEarnings(driverId, date);
 
         CoDriverEarningsDto dto = new CoDriverEarningsDto();
 
@@ -100,15 +84,11 @@ public class CoOrderController {
     }
 
     @GetMapping("/orders/price-breakup")
-    public CoOrderPriceBreakupDto getOrderPriceBreakup(
-            @RequestParam String orderId
-    ) {
+    public CoOrderPriceBreakupDto getOrderPriceBreakup(@RequestParam String orderId) {
 
-        CoOrderPriceBreakup breakup =
-                coOrderPriceBreakupRepository.findByOrderId(orderId);
+        CoOrderPriceBreakup breakup = coOrderPriceBreakupRepository.findByOrderId(orderId);
 
-        CoOrderPriceBreakupDto dto =
-                new CoOrderPriceBreakupDto();
+        CoOrderPriceBreakupDto dto = new CoOrderPriceBreakupDto();
 
         dto.setOrderId(breakup.getOrderId());
 
@@ -130,15 +110,11 @@ public class CoOrderController {
 
         return dto;
     }
-    @GetMapping("/orders")
-    public CoOrderDto getOrder(
-            @RequestParam String orderId
-    ) {
 
-        CoOrder order = coOrderRepository.findById(orderId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order not found"));
+    @GetMapping("/orders")
+    public CoOrderDto getOrder(@RequestParam String orderId) {
+
+        CoOrder order = coOrderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         CoOrderDto dto = new CoOrderDto();
 
@@ -151,6 +127,24 @@ public class CoOrderController {
         dto.setPaymentModeId(order.getPaymentModeId());
 
         return dto;
+    }
+
+    //    to get frequent orders >=3 times
+    @GetMapping("/frequent")
+    public List<Integer> getFrequentOutlets(@RequestParam Integer customerId) {
+
+        log.info("Fetching frequent outlets for customerId={}", customerId);
+
+        return orderService.getFrequentOutlets(customerId);
+    }
+
+    //    to get recent order based on the date that customer ordered
+    @GetMapping("/recent")
+    public Integer getRecentOutlet(@RequestParam Integer customerId) {
+
+        log.info("Fetching recent outlet for customerId={}", customerId);
+
+        return orderService.getRecentOutlet(customerId);
     }
 
 }

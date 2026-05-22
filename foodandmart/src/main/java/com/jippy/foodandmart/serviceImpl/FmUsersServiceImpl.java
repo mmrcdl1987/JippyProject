@@ -1,19 +1,25 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.dto.FmUserDto;
 import com.jippy.foodandmart.entity.FmUser;
+import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.repository.FmUserRepository;
 import com.jippy.foodandmart.service.IFmUsersService;
-import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
 @Service
-public class UsersServiceImpl implements IFmUsersService {
+public class FmUsersServiceImpl implements IFmUsersService {
 
     @Autowired
     private FmUserRepository usersRepo;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+
 
     // -------------------------------
     // LOGIC: UPDATE is_active = 'N'
@@ -34,5 +40,24 @@ public class UsersServiceImpl implements IFmUsersService {
         user.setUpdatedAt(LocalDateTime.now());
 
         usersRepo.save(user);
+    }
+
+    //  for creating user in FM microservice, we will receive the user details from
+    //  CO microservice and then we will save the user details in FM microservice users table
+    @Override
+    public FmUser createUser(FmUserDto dto) {
+
+        String encodedPassword = passwordEncoder.encode(dto.getPassword());
+
+        FmUser user = FmMerchantMapper.toUserEntity(
+                dto.getUsername(),
+                encodedPassword,
+                dto.getUserId(),
+                dto.getUserType()
+        );
+        user.setCreatedAt(LocalDateTime.now());
+        user.setCreatedBy(dto.getUserId()); // userid = driverid by CO MicroService
+
+        return usersRepo.save(user);
     }
 }

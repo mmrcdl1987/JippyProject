@@ -24,10 +24,14 @@ public class CoDriverDto {
     @Email(message = "Invalid email format")
     private String email;
 
-//    extra added feilds to driver
-@NotBlank(message = "Nominee name is required")
-@Size(max = 50, message = "Nominee name must be less than 50 characters")
-private String nomineeName;
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters long")
+    private String password;
+
+    //    extra added feilds to driver
+    @NotBlank(message = "Nominee name is required")
+    @Size(max = 50, message = "Nominee name must be less than 50 characters")
+    private String nomineeName;
     @NotBlank(message = "Nominee phone number is required")
     @Size(max = 15, message = "Nominee phone number must be less than 15 characters")
     @Pattern(regexp = "^[0-9]{10}$", message = "Nominee phone number must be 10 digits")

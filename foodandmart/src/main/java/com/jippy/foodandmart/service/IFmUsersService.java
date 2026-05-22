@@ -1,8 +1,14 @@
 package com.jippy.foodandmart.service;
 
-public interface IFmUsersService  {
+import com.jippy.foodandmart.dto.FmUserDto;
+import com.jippy.foodandmart.entity.FmUser;
+
+public interface IFmUsersService {
     // -------------------------------
     // DEACTIVATE DRIVER
     // -------------------------------
     void deactivateDriver(Integer userId);
+
+    // for creating user in FM microservice
+    FmUser createUser(FmUserDto dto);
 }
