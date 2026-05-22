@@ -4,6 +4,8 @@ import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
+import com.jippy.customerandorder.projection.CustomerLocationProjection;
+import com.jippy.customerandorder.repository.CoCustomerDeliveryAddressRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class CoCustomerController {
 
     private final ICoCustomerService customerService;
+    private final CoCustomerDeliveryAddressRepository repository;
 
     // CREATE CUSTOMER
     @PostMapping
@@ -78,6 +81,28 @@ public class CoCustomerController {
         log.info("UPDATE_CUSTOMER_API_SUCCESS | customerId={}", customerId);
 
         return ResponseEntity.ok(new CoResponseDto(COConstants.STATUS_200, COConstants.MSG_SUCCESS));
+    }
+    // GET CUSTOMER LOCATION
+    @GetMapping("/address/location")
+    public CoCustomerLocationDto getCustomerLocation(
+            @RequestParam Integer customerAddressId
+    ) {
+
+        log.info("GET_CUSTOMER_LOCATION_API_START | customerAddressId={}",
+                customerAddressId);
+
+        CustomerLocationProjection projection =
+                repository.getCustomerLocation(customerAddressId);
+
+        CoCustomerLocationDto dto = new CoCustomerLocationDto();
+
+        dto.setLatitude(projection.getLatitude());
+        dto.setLongitude(projection.getLongitude());
+
+        log.info("GET_CUSTOMER_LOCATION_API_SUCCESS | customerAddressId={}",
+                customerAddressId);
+
+        return dto;
     }
 
 

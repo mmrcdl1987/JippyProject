@@ -25,7 +25,7 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
                         + COALESCE(o.surge_fee, 0)
                         + COALESCE(o.tips, 0)
                     ),
-                    0
+                    0   
                 ) AS totalEarnings,
             
                 COUNT(o.driver_order_id) AS ordersCount

@@ -1,11 +1,11 @@
 package com.jippy.driver.serviceImpl;
 
 
-
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
 import com.jippy.driver.exception.CoZoneException;
+import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverMapper;
 import com.jippy.driver.projection.DriverEarningsProjection;
@@ -36,9 +36,10 @@ public class DriverServiceImpl implements DriverService {
 
     private final DriverRepository driverRepository;
     private final DriverZoneRepository zoneRepository;
-    private final CoOrderRepository ordersRepository;
+    //    private final CoOrderRepository ordersRepository;
+    private final COFeignClient coFeignClients;
     private final DriverOrderRepository driverOrderRepository;
-    private final CoOrderRejectionRepository orderRejectionRepository;
+    //private final CoOrderRejectionRepository orderRejectionRepository;
     private final DriverIncentiveSettingsRepository driverIncentivesettingsRepository;
     private final DriverWalletRepository driverWalletRepository;
     private final FMFeignClient fmFeignClient;
@@ -69,8 +70,7 @@ public class DriverServiceImpl implements DriverService {
         coAddressRequestDto.setAddressType(DConstants.TYPE_DRIVER);
         DriverAddressRequestDto coAddressRequestDtoFeign = null;
         try {
-            coAddressRequestDtoFeign =
-                    fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+            coAddressRequestDtoFeign = fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
         } catch (Exception e) {
             log.error("Address service failed, but continuing driver creation", e);
         }
@@ -184,15 +184,19 @@ public class DriverServiceImpl implements DriverService {
         // Fetch total earnings for the driver on the given date
         // Fetch earnings + count together to avoid multiple DB calls
 
-        DriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders = ordersRepository.fetchDriverEarnings(driverId, date);
-
+        //DriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders = ordersRepository.fetchDriverEarnings(driverId, date);
+        DriverEarningsDto projectionOfTotalEarningsAndCountOfOrders = coFeignClients.fetchDriverEarnings(driverId, date);
         // Prepare response DTO
         DriverEarningsDto driverEarningsDto = new DriverEarningsDto();
 
         driverEarningsDto.setDriverId(driverId);
         driverEarningsDto.setCurrentDate(date);
-        driverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCount());
-        driverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarnings());
+
+
+//        driverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCount());
+//        driverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarnings());
+        driverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday());
+        driverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarningsToday());
 
         //
         // new requirement : Calculate Incentive Bonus (Range-Based Logic)
@@ -202,9 +206,11 @@ public class DriverServiceImpl implements DriverService {
         // Fetch all slabs sorted by orders_count ascending
         List<DriverIncentiveSettings> slabs = driverIncentivesettingsRepository.findAllSlabs();
 
-        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCount() != null
-                ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCount().intValue()
-                : 0;
+//        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCount() != null
+//                ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCount().intValue()
+//                : 0;
+
+        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday() != null ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday().intValue() : 0;
         log.info("Total orders completed by driver {}: {}", driverId, orders);
 
         //Instead of loop → use mapper
@@ -225,42 +231,97 @@ public class DriverServiceImpl implements DriverService {
 
     // for a given driver, fetch order earnings history with details like order id, pick up and delivery distance,
     // charges, total fee, surge fee, tips, order status, and outlet name for each order
+//    @Override
+//    public List<DriverOrderHistoryDto> fetchOrderEarningsHistory(Integer driverId) {
+//
+//        log.info("Fetching order earnings history for driver id: {}", driverId);
+//
+//        // Check driver exists or not
+//        driverRepository.findById(driverId).orElseThrow(() -> {
+//
+//            log.error("Driver not found with id: {}", driverId);
+//
+//            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+//        });
+//
+//        // Fetch records from database
+//        List<DriverOrderHistoryProjection> projections = driverOrderRepository.fetchOrderEarningsHistory(driverId);
+//
+//        // Create response list to hold order history details
+//        List<DriverOrderHistoryDto> ProjectionResponse = new ArrayList<>();
+//
+//        // Loop through all records and set values in response DTO,
+//        // also fetch outlet name from FM microservice for each record
+//        for (DriverOrderHistoryProjection projection : projections) {
+//
+//            // Fetch outlet name from FM microservice
+//            String FmOutletName = fmFeignClient.fetchOutletName(projection.getOutletId());
+//
+//            // Convert projection → DTO using mapper
+//            DriverOrderHistoryDto dto = DriverMapper.mapToDriverOrderHistoryDto(projection, FmOutletName);
+//
+//            // Add DTO to response list
+//            ProjectionResponse.add(dto);
+//        }
+//
+//        log.info("Successfully fetched order earnings history for driver id: {}", driverId);
+//
+//        return ProjectionResponse;
+//    }
     @Override
-    public List<DriverOrderHistoryDto> fetchOrderEarningsHistory(Integer driverId) {
+    public List<DriverOrderHistoryDto> fetchOrderEarningsHistory(
+            Integer driverId
+    ) {
 
-        log.info("Fetching order earnings history for driver id: {}", driverId);
+        log.info(
+                "Fetching order earnings history for driver id: {}",
+                driverId);
 
-        // Check driver exists or not
-        driverRepository.findById(driverId).orElseThrow(() -> {
+        driverRepository.findById(driverId)
+                .orElseThrow(() -> {
 
-            log.error("Driver not found with id: {}", driverId);
+                    log.error(
+                            "Driver not found with id: {}",
+                            driverId);
 
-            return new ResourceNotFoundException("Driver not found with id: " + driverId);
-        });
+                    return new ResourceNotFoundException(
+                            "Driver not found with id: " + driverId);
+                });
 
-        // Fetch records from database
-        List<DriverOrderHistoryProjection> projections = driverOrderRepository.fetchOrderEarningsHistory(driverId);
+        List<DriverOrderHistoryProjection> projections =
+                driverOrderRepository
+                        .fetchOrderEarningsHistory(driverId);
 
-        // Create response list to hold order history details
-        List<DriverOrderHistoryDto> ProjectionResponse = new ArrayList<>();
+        List<DriverOrderHistoryDto> response =
+                new ArrayList<>();
 
-        // Loop through all records and set values in response DTO,
-        // also fetch outlet name from FM microservice for each record
         for (DriverOrderHistoryProjection projection : projections) {
 
-            // Fetch outlet name from FM microservice
-            String FmOutletName = fmFeignClient.fetchOutletName(projection.getOutletId());
+            // call customer ms
+            DriveOrderDto order =
+                    coFeignClients.getOrder(
+                            String.valueOf(
+                                    projection.getOrderId()));
 
-            // Convert projection → DTO using mapper
-            DriverOrderHistoryDto dto = DriverMapper.mapToDriverOrderHistoryDto(projection, FmOutletName);
+            // call fm ms
+            String outletName =
+                    fmFeignClient.fetchOutletName(
+                            order.getOutletId());
 
-            // Add DTO to response list
-            ProjectionResponse.add(dto);
+            DriverOrderHistoryDto dto =
+                    DriverMapper.mapToDriverOrderHistoryDto(
+                            projection,
+                            order.getOrderStatus(),
+                            outletName);
+
+            response.add(dto);
         }
 
-        log.info("Successfully fetched order earnings history for driver id: {}", driverId);
+        log.info(
+                "Successfully fetched order earnings history for driver id: {}",
+                driverId);
 
-        return ProjectionResponse;
+        return response;
     }
 
     @Override
@@ -280,8 +341,10 @@ public class DriverServiceImpl implements DriverService {
         DriverTotalEarningsProjection projection = driverOrderRepository.fetchTotalEarnings(driverId);
 
         // Fetch rejected orders count
-        Long rejectedOrders = orderRejectionRepository.fetchRejectedOrdersCount(driverId);
-
+       // Long rejectedOrders = orderRejectionRepository.fetchRejectedOrdersCount(driverId);
+        Long rejectedOrders =
+                coFeignClients
+                        .fetchRejectedOrdersCount(driverId);
         // Convert to DTO using mapper
         DriverTotalEarningsDto response = DriverMapper.mapToTotalEarningsDto(driverId, projection, rejectedOrders);
 
@@ -325,10 +388,60 @@ public class DriverServiceImpl implements DriverService {
         return factory.createPolygon(coords);
     }
 
+//    @Override
+//    public String driverDeliveredOrder(DriverOrderDto driverOrderDto) {
+//        log.info("Processing driver delivered order for driver id: {} and order id: {}",
+//                driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+//
+//        // Validate driver exists
+//        Driver driver = driverRepository.findById(driverOrderDto.getDriverId()).orElseThrow(() -> {
+//
+//            log.error("Driver not found with id: {}", driverOrderDto.getDriverId());
+//
+//            return new ResourceNotFoundException("Driver not found with id: " + driverOrderDto.getDriverId());
+//        });
+//
+//        // Validate order exists and belongs to the driver
+//        CoOrder order = ordersRepository.findById(driverOrderDto.getOrderId()).orElseThrow(() -> {
+//
+//            log.error("Order not found with id: {}", driverOrderDto.getOrderId());
+//
+//            return new ResourceNotFoundException("Order not found with id: " + driverOrderDto.getOrderId());
+//        });
+//
+//        if (!order.getDriverId().equals(driverOrderDto.getDriverId())) {
+//            log.error("Order with id: {} does not belong to driver with id: {}",
+//                    driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
+//            throw new ResourceNotFoundException("Order with id: " + driverOrderDto.getOrderId() +
+//                    " does not belong to driver with id: " + driverOrderDto.getDriverId());
+//        }
+//
+//        Optional<DriverOrder> driverOrder = driverOrderRepository.findByDriverIdOrderId(driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+//        if(driverOrder.isPresent()){
+//            log.error("Driver order already exists for driver id: {} and order id: {}",
+//                    driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+//            throw new IllegalArgumentException("Driver order already exists for driver id: " + driverOrderDto.getDriverId() +
+//                    " and order id: " + driverOrderDto.getOrderId());
+//        }
+//
+//        // Update order status to delivered
+//        order.setOrderStatus(DConstants.STATUS_DELIVERED);
+//        ordersRepository.save(order);
+//
+//        // Update earnings details in driver_orders table
+//        DriverOrder newDriverOrder = DriverMapper.mapToDriverOrderEntity(driverOrderDto, driver);
+//        DriverOrder savedDriverOrder = driverOrderRepository.save(newDriverOrder);
+//
+//        driverLocationService.pushCompleteOrderEvent(driverOrderDto);
+//
+//        log.info("Successfully processed delivered order for order id: {} and updated earnings for driver id: {}", driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
+//        return "Order with id: " + driverOrderDto.getOrderId() + " marked as delivered and earnings updated for driver with id: " + driverOrderDto.getDriverId();
+//    }
+
     @Override
     public String driverDeliveredOrder(DriverOrderDto driverOrderDto) {
-        log.info("Processing driver delivered order for driver id: {} and order id: {}",
-                driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+
+        log.info("Processing driver delivered order for driver id: {} and order id: {}", driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
 
         // Validate driver exists
         Driver driver = driverRepository.findById(driverOrderDto.getDriverId()).orElseThrow(() -> {
@@ -338,41 +451,31 @@ public class DriverServiceImpl implements DriverService {
             return new ResourceNotFoundException("Driver not found with id: " + driverOrderDto.getDriverId());
         });
 
-        // Validate order exists and belongs to the driver
-        CoOrder order = ordersRepository.findById(driverOrderDto.getOrderId()).orElseThrow(() -> {
-
-            log.error("Order not found with id: {}", driverOrderDto.getOrderId());
-
-            return new ResourceNotFoundException("Order not found with id: " + driverOrderDto.getOrderId());
-        });
-
-        if (!order.getDriverId().equals(driverOrderDto.getDriverId())) {
-            log.error("Order with id: {} does not belong to driver with id: {}",
-                    driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
-            throw new ResourceNotFoundException("Order with id: " + driverOrderDto.getOrderId() +
-                    " does not belong to driver with id: " + driverOrderDto.getDriverId());
-        }
-
+        // Check already processed or not
         Optional<DriverOrder> driverOrder = driverOrderRepository.findByDriverIdOrderId(driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
-        if(driverOrder.isPresent()){
-            log.error("Driver order already exists for driver id: {} and order id: {}",
-                    driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
-            throw new IllegalArgumentException("Driver order already exists for driver id: " + driverOrderDto.getDriverId() +
-                    " and order id: " + driverOrderDto.getOrderId());
+
+        if (driverOrder.isPresent()) {
+
+            log.error("Driver order already exists for driver id: {} and order id: {}", driverOrderDto.getDriverId(), driverOrderDto.getOrderId());
+
+            throw new IllegalArgumentException("Driver order already exists for driver id: " + driverOrderDto.getDriverId() + " and order id: " + driverOrderDto.getOrderId());
         }
 
-        // Update order status to delivered
-        order.setOrderStatus(DConstants.STATUS_DELIVERED);
-        ordersRepository.save(order);
+        // Call customerandorder microservice
+        String response = coFeignClients.deliverOrder(driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
 
-        // Update earnings details in driver_orders table
+        log.info("CustomerAndOrder response: {}", response);
+
+        // Save earnings details in driver_orders table
         DriverOrder newDriverOrder = DriverMapper.mapToDriverOrderEntity(driverOrderDto, driver);
-        DriverOrder savedDriverOrder = driverOrderRepository.save(newDriverOrder);
 
+        driverOrderRepository.save(newDriverOrder);
+
+        // Push kafka event
         driverLocationService.pushCompleteOrderEvent(driverOrderDto);
 
         log.info("Successfully processed delivered order for order id: {} and updated earnings for driver id: {}", driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
+
         return "Order with id: " + driverOrderDto.getOrderId() + " marked as delivered and earnings updated for driver with id: " + driverOrderDto.getDriverId();
     }
-
 }
