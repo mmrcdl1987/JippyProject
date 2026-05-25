@@ -16,16 +16,6 @@ public class SecurityConfig {
     @Bean
     @Primary
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
-        /*return http
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                // This is the most important part: disable the default login prompts
-                .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
-                .authorizeExchange(exchanges -> exchanges
-                        .anyExchange().permitAll()
-                )
-                .build();*/
-
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges

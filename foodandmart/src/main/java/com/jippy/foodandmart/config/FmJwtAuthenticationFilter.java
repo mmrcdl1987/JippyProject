@@ -21,6 +21,16 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FmJwtAuthenticationFilter extends OncePerRequestFilter {
 
+    // Overriding this method stops the filter from executing for documentation paths
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        log.info("Checking bypass in filter for path: {}", path);
+
+        // Returns true if it's a documentation path, completely skipping this filter
+        return path != null && (path.contains("v3/api-docs") || path.contains("swagger-ui") || path.contains("/auth/login"));
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {

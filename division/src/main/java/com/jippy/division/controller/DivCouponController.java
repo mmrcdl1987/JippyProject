@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(path="/api/coupons")
+@RequestMapping(path="/api/div/coupons")
 @Tag(
         name = "Coupons API",
         description = "Rest API to create and perform operations on coupons")

@@ -27,11 +27,6 @@ public class FmSecurityConfig {
     @Autowired
     FmCustomAccessDeniedHandler customAccessDeniedHandler;
 
-   /* @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // Essential for hashing Jippy user passwords
-    }*/
-
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -45,7 +40,12 @@ public class FmSecurityConfig {
                 // 1. Make it stateless - Jippy doesn't need sessions with JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll() // Public login/register
+
+                        // Use broad wildcards to ensure the documentation endpoints are universally bypassed
+                        .requestMatchers("/v3/api-docs/**",  "/api/fm/v3/api-docs").permitAll()
+
+                        .requestMatchers("/api/fm/auth/**", "/auth/**").permitAll() // Public login/register
+
                         //.requestMatchers("/api/fm/**").authenticated() // Protected routes
                         // 2. READ-ONLY ROLE (Can only perform GET requests)
                         .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN")
