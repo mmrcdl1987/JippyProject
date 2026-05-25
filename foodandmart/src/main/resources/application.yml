@@ -34,7 +34,7 @@ eureka:
     registerWithEureka: true
 
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: http://eureka-admin:eureka-admin123@localhost:8070/eureka/
 
 management:
   endpoints:
@@ -57,3 +57,8 @@ management:
 google:
   maps:
     api-key: nZCbR3no1OICYxQMqhoN0DWl-go=
+
+springdoc:
+  api-docs:
+    # Forces the microservice to expose its docs at /api/fm/v3/api-docs
+    path: /api/fm/v3/api-docs

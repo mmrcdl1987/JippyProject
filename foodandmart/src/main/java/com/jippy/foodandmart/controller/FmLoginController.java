@@ -3,8 +3,10 @@ package com.jippy.foodandmart.controller;
 import com.jippy.foodandmart.dto.AuthResponseDto;
 import com.jippy.foodandmart.dto.LoginRequestDto;
 import com.jippy.foodandmart.security.JwtUtils;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/fm/auth")
 public class FmLoginController {
 
     @Autowired
@@ -25,7 +27,8 @@ public class FmLoginController {
     @Autowired
     private JwtUtils jwtUtils;
 
-    @PostMapping("/login")
+    @PostMapping(path = "/login")
+    @SecurityRequirements
     public ResponseEntity<?> login(@RequestBody LoginRequestDto loginRequest) {
         try {
             // 1. Validate username/password against DB (via UserDetailsService + BCrypt)

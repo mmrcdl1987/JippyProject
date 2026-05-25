@@ -21,6 +21,13 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     @Autowired
     private JwtUtils jwtUtils;
 
+    private static final List<String> EXCLUDED_URLS = List.of(
+            "/v3/api-docs",
+            "/swagger-ui",
+            "/webjars",
+            "/swagger-ui.html"
+    );
+
     public AuthenticationFilter() {
         super(Config.class);
     }
@@ -35,6 +42,13 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         return (exchange, chain) -> {
             log.info("AuthenticationFilter triggered for: {}", exchange.getRequest().getPath());
             ServerHttpRequest request = exchange.getRequest();
+
+            String path = exchange.getRequest().getURI().getPath();
+            boolean isExcluded = EXCLUDED_URLS.stream().anyMatch(path::contains);
+
+            if (isExcluded) {
+                return chain.filter(exchange); // This passes the request directly to Swagger UI without hitting the token check!
+            }
 
             if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Token");

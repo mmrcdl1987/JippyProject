@@ -7,6 +7,7 @@ jwt:
 spring:
   application:
     name: customerandorder
+
   datasource:
     url: jdbc:postgresql://187.127.156.147:5433/co_db
     username: co_user
@@ -70,4 +71,9 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: http://eureka-admin:eureka-admin123@localhost:8070/eureka/
+
+springdoc:
+  api-docs:
+    # Forces the microservice to expose its docs at /api/fm/v3/api-docs
+    path: /api/co/v3/api-docs

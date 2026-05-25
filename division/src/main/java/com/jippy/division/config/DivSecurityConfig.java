@@ -1,4 +1,5 @@
-package com.jippy.driver.config;
+package com.jippy.division.config;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -13,10 +14,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig {
+public class DivSecurityConfig {
 
     @Autowired
-    private DriverJwtAuthenticationFilter jwtAuthenticationFilter;
+    private DivJwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -26,13 +27,13 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/v3/api-docs/**",  "/api/driver/v3/api-docs").permitAll()
-                        .requestMatchers("/api/driver/**").authenticated()
+                        .requestMatchers("/v3/api-docs/**",  "/api/div/v3/api-docs").permitAll()
+                        .requestMatchers("/api/div/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();                                
+        return http.build();
     }
 
     @Bean

@@ -1,4 +1,4 @@
-package com.jippy.customerandorder.config;
+package com.jippy.notification.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Component
 @Slf4j
-public class CoJwtAuthenticationFilter extends OncePerRequestFilter {
+public class NJwtAuthenticationFilter extends OncePerRequestFilter {
 
     // Overriding this method stops the filter from executing for documentation paths
     @Override

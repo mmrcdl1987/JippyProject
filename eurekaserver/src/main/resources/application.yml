@@ -1,6 +1,10 @@
 spring:
   application:
     name: eurekaserver
+  security:
+    user:
+      name: eureka-admin
+      password: eureka-admin123 # Use environment variables in production
 server:
   port: 8070
 

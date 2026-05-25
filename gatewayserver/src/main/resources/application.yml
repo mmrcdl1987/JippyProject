@@ -6,6 +6,36 @@ jwt:
 spring:
   application:
    name: gatewayserver
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+springdoc:
+ enable-native-support: true
+ webflux:
+      # This ensures WebFlux handles the static UI paths cleanly
+      all-disabled: false
+ swagger-ui:
+   path: /swagger-ui.html
+     # Keeps the UI active
+   enabled: true
+   # This enables the "Select a definition" dropdown
+   urls:
+     - name: Notification Service
+       url: /api/notification/v3/api-docs
+     - name: Food And Mart Service
+       url: /api/fm/v3/api-docs
+     - name: division Service
+       url: /api/div/v3/api-docs
+     - name: customer and order Service
+       url: /api/co/v3/api-docs
+     - name: driver Service
+       url: /api/driver/v3/api-docs
+ # This helps the gateway discover routes from Eureka
+ api-docs:
+   enabled: true
 
 eureka:
   instance:
@@ -14,4 +44,4 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: http://eureka-admin:eureka-admin123@localhost:8070/eureka/
