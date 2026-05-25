@@ -82,12 +82,6 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
 
             log.info("Customer cancellation saved orderId={}", order.getOrderId());
 
-            /*
-             * IMPORTANT
-             * NO KAFKA
-             * NO SPECIALIZED OUTLETS
-             * NO NOTIFICATIONS
-             */
             return rejection;
         }
 

@@ -5,6 +5,7 @@ import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
 import com.jippy.customerandorder.iservice.IOrderService;
+import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
 import com.jippy.customerandorder.repository.CoOrderPriceBreakupRepository;
 import com.jippy.customerandorder.repository.CoOrderRepository;
 import jakarta.validation.Valid;
@@ -85,6 +86,30 @@ public class CoOrderController {
 
         return dto;
     }*/
+    @GetMapping("/fetchEarnings")
+    public CoDriverEarningsDto fetchDriverEarnings(
+            @RequestParam Integer driverId,
+            @RequestParam LocalDate date
+    ) {
+
+        log.info("FETCH_DRIVER_EARNINGS_API_START | driverId={} | date={}",
+                driverId,
+                date);
+
+        CoDriverEarningsProjection projection =
+                coOrderRepository.fetchDriverEarnings(driverId, date);
+
+        CoDriverEarningsDto dto = new CoDriverEarningsDto();
+
+        dto.setTotalEarningsToday(projection.getTotalEarnings());
+
+        dto.setOrdersCountToday(projection.getOrdersCount());
+
+        log.info("FETCH_DRIVER_EARNINGS_API_SUCCESS | driverId={}",
+                driverId);
+
+        return dto;
+    }
 
     @GetMapping("/orders/price-breakup")
     public CoOrderPriceBreakupDto getOrderPriceBreakup(@RequestParam String orderId) {

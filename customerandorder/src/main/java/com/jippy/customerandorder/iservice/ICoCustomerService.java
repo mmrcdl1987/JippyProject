@@ -3,6 +3,8 @@ package com.jippy.customerandorder.iservice;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
 
+import java.time.LocalDate;
+
 public interface ICoCustomerService {
 
     CoCustomer createCustomer(CoCustomerRequestDto dto);
@@ -10,12 +12,12 @@ public interface ICoCustomerService {
     CoWalletResponseDto convertPoints(Integer customerId);
 
     // CoCustomerStreakResponseDto updateDailyStreak(Integer customerId);
-    CoCustomerStreakResponseDto updateDailyStreak(Integer customerId);
+//    CoCustomerStreakResponseDto updateDailyStreak(Integer customerId);
+    CoCustomerStreakResponseDto updateDailyStreak(Integer customerId, LocalDate date);
 
     CoWalletTransferResponseDto transferWalletPoints(CoWalletTransferRequestDto requestDto);
 
     CoCustomerResponseDto getCustomer(Integer customerId);
 
-    CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto
-    );
+    CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto);
 }

@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 @RestController
 @RequestMapping("/api/co/customers")
 @RequiredArgsConstructor
@@ -39,13 +41,30 @@ public class CoCustomerController {
         return customerService.convertPoints(customerId);
     }
 
-    // DAILY STREAK
+//    // DAILY STREAK
+//    @PostMapping("/daily-streak/{customerId}")
+//    public CoCustomerStreakResponseDto updateDailyStreak(@PathVariable Integer customerId) {
+//
+//        log.info("Daily streak request received");
+//
+//        return customerService.updateDailyStreak(customerId);
+//    }
+
     @PostMapping("/daily-streak/{customerId}")
-    public CoCustomerStreakResponseDto updateDailyStreak(@PathVariable Integer customerId) {
+    public CoCustomerStreakResponseDto updateDailyStreak(
+
+            @PathVariable Integer customerId,
+
+            @RequestParam(required = false)
+            LocalDate date
+    ) {
 
         log.info("Daily streak request received");
 
-        return customerService.updateDailyStreak(customerId);
+        return customerService.updateDailyStreak(
+                customerId,
+                date
+        );
     }
 
     @PostMapping("/wallet/transfer")
@@ -82,6 +101,7 @@ public class CoCustomerController {
 
         return ResponseEntity.ok(new CoResponseDto(COConstants.STATUS_200, COConstants.MSG_SUCCESS));
     }
+
     // GET CUSTOMER LOCATION
     @GetMapping("/address/location")
     public CoCustomerLocationDto getCustomerLocation(

@@ -23,7 +23,7 @@ public interface COFeignClient {
             @RequestParam Integer customerAddressId
     );
 
-    @GetMapping("/api/co/driver/earnings")
+    @GetMapping("/api/co/fetchEarnings")
     DriverEarningsDto fetchDriverEarnings(
             @RequestParam Integer driverId,
 
@@ -47,12 +47,12 @@ public interface COFeignClient {
     DriveOrderDto getOrder(
             @RequestParam String orderId
     );
-//    @GetMapping("/api/co/driver/rejected-orders/count")
+    //    @GetMapping("/api/co/driver/rejected-orders/count")
 //    Long fetchRejectedOrdersCount(
 //            @RequestParam Integer driverId
 //    );
-@GetMapping("/api/co/order-rejections/driver/rejected-orders/count")
-Long fetchRejectedOrdersCount(
-        @RequestParam Integer driverId
-);
+    @GetMapping("/api/co/order-rejections/driver/rejected-orders/count")
+    Long fetchRejectedOrdersCount(
+            @RequestParam Integer driverId
+    );
 }
