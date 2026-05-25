@@ -584,13 +584,12 @@ public class FmOutletController {
         return ResponseEntity.ok(getAddress);
     }
 
-//    for Feign  in the CO_Microservice to just fetch
+    //    for Feign  in the CO_Microservice to just fetch
     @GetMapping("/fetchOutletName")
     public ResponseEntity<String> fetchOutletName(@RequestParam Integer outletId) {
 
         return ResponseEntity.ok(outletService.fetchOutletName(outletId));
     }
-
 
 
     @RequestMapping("/location/{outletId}")
@@ -601,6 +600,18 @@ public class FmOutletController {
 
 
         log.debug("Returning location response for outletId: {}", outletId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/specialized-outlets/area")
+    public ResponseEntity<FmNearbyOutletResponseDto> fetchSpecializedOutletsByAreaId(@RequestParam Integer areaId) {
+
+        log.info("Fetching specialized outlets for areaId={}", areaId);
+
+        FmNearbyOutletResponseDto response = service.fetchSpecializedOutletsByAreaId(areaId);
+
+        log.info("Successfully fetched {} outlets for areaId={}", response.getTotalOutlets(), areaId);
 
         return ResponseEntity.ok(response);
     }

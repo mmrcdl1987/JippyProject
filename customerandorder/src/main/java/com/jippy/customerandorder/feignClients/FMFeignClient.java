@@ -2,7 +2,7 @@ package com.jippy.customerandorder.feignClients;
 
 import com.jippy.customerandorder.config.FeignClientConfig;
 import com.jippy.customerandorder.dto.*;
-import com.jippy.foodandmart.entity.FmUser;
+//import com.jippy.foodandmart.entity.FmUser;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,5 +38,5 @@ public interface FMFeignClient {
 
    /* @PostMapping("/api/fm/users/createUser")
     ResponseEntity<FmUser> createUser(@RequestBody CoUserDto dto);*/
-    
+
 }

@@ -1,4 +1,3 @@
-/*
 package com.jippy.customerandorder.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -22,4 +21,4 @@ public class CoDriverEarningsDto {
 //    to show the total incentive bonus for the day in driver earnings api response
 @JsonInclude(JsonInclude.Include.ALWAYS)
     private BigDecimal driverIncentiveBonus;
-}*/
+}
