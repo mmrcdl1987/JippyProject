@@ -25,8 +25,8 @@ public class CoCustomerStreak {
     @Column(name = "current_streak")
     private Integer currentStreak;
 
-    @Column(name = "max_streak")
-    private Integer maxStreak;
+//    @Column(name = "max_streak")
+//    private Integer maxStreak;
 
     @Column(name = "points")
     private Integer points;

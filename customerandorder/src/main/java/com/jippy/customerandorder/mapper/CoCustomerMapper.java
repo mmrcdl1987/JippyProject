@@ -2,11 +2,24 @@ package com.jippy.customerandorder.mapper;
 
 import com.jippy.customerandorder.dto.CoCustomerRequestDto;
 import com.jippy.customerandorder.dto.CoCustomerResponseDto;
-import com.jippy.customerandorder.entity.CoCustomer;
-import com.jippy.customerandorder.entity.CoCustomerWallet;
+import com.jippy.customerandorder.dto.CoCustomerStreakResponseDto;
+import com.jippy.customerandorder.dto.CoWalletTransferResponseDto;
+import com.jippy.customerandorder.entity.*;
 import org.springframework.stereotype.Component;
+import com.jippy.customerandorder.entity.CoCustomerWallet;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import com.jippy.customerandorder.dto.CoCustomerStreakResponseDto;
+import com.jippy.customerandorder.dto.CoWalletResponseDto;
+import com.jippy.customerandorder.dto.CoWalletTransferResponseDto;
+
+import com.jippy.customerandorder.entity.CoCustomerStreak;
+import com.jippy.customerandorder.entity.CoCustomerWallet;
+import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Component
@@ -84,8 +97,7 @@ public class CoCustomerMapper {
 
     public CoCustomerResponseDto mapToResponse(CoCustomer customer) {
 
-        CoCustomerResponseDto dto =
-                new CoCustomerResponseDto();
+        CoCustomerResponseDto dto = new CoCustomerResponseDto();
 
         dto.setCustomerId(customer.getCustomerId());
         dto.setFirstName(customer.getFirstName());
@@ -96,5 +108,101 @@ public class CoCustomerMapper {
         dto.setCustomerStatusId(customer.getCustomerStatusId());
 
         return dto;
+    }
+    // STREAK ENTITY
+
+    public static CoCustomerStreak mapToCustomerStreak(Integer customerId, LocalDate checkInDate, Integer currentStreak, Integer points, Integer createdBy) {
+
+        CoCustomerStreak streak = new CoCustomerStreak();
+
+        streak.setCustomerId(customerId);
+
+        streak.setCheckInDate(checkInDate);
+
+        streak.setCurrentStreak(currentStreak);
+
+        streak.setPoints(points);
+
+        streak.setCreatedBy(createdBy);
+
+        return streak;
+    }
+
+    // WALLET TRANSACTION
+
+    public static CoCustomerWalletTransactions mapToWalletTransaction(Integer walletId, String pointsType, Integer points, Integer createdBy) {
+
+        CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
+
+        transaction.setWalletId(walletId);
+
+        transaction.setPointsType(pointsType);
+
+        transaction.setPoints(points);
+
+        transaction.setCreatedAt(LocalDateTime.now());
+
+        transaction.setCreatedBy(createdBy);
+
+        return transaction;
+    }
+
+    // STREAK RESPONSE
+
+    public static CoCustomerStreakResponseDto mapToStreakResponse(Integer currentStreak, Integer points, String message) {
+
+        CoCustomerStreakResponseDto response = new CoCustomerStreakResponseDto();
+
+        response.setSuccess(true);
+
+        response.setMessage(message);
+
+        response.setCurrentStreak(currentStreak);
+
+        response.setPoints(points);
+
+        return response;
+    }
+
+    // WALLET RESPONSE
+
+    public static CoWalletResponseDto mapToWalletResponse(CoCustomerWallet wallet, String message) {
+
+        CoWalletResponseDto response = new CoWalletResponseDto();
+
+        response.setSuccess(true);
+
+        response.setMessage(message);
+
+        response.setWalletId(wallet.getWalletId());
+
+        response.setCustomerId(wallet.getCustomer().getCustomerId());
+
+        response.setBalancePoints(wallet.getBalancePoints());
+
+        response.setBalanceAmount(wallet.getBalanceAmount());
+
+        return response;
+    }
+
+    // TRANSFER RESPONSE
+
+    public static CoWalletTransferResponseDto mapToTransferResponse(Integer senderCustomerId, Integer receiverCustomerId, Integer transferredPoints, Integer senderRemainingPoints, String message) {
+
+        CoWalletTransferResponseDto response = new CoWalletTransferResponseDto();
+
+        response.setSuccess(true);
+
+        response.setMessage(message);
+
+        response.setSenderCustomerId(senderCustomerId);
+
+        response.setReceiverCustomerId(receiverCustomerId);
+
+        response.setTransferredPoints(transferredPoints);
+
+        response.setSenderRemainingPoints(senderRemainingPoints);
+
+        return response;
     }
 }

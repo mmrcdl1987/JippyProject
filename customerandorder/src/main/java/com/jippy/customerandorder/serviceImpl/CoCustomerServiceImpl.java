@@ -171,327 +171,116 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         return response;
     }
 
-
-//    // DAILY STREAK
-//
-//    @Override
-//    public CoCustomerStreakResponseDto updateDailyStreak(Integer customerId) {
-//        log.info("Daily streak started");
-//        LocalDate today = LocalDate.now();
-//        CoCustomerStreak lastStreak = streakRepository.findTopByCustomerIdOrderByCheckInDateDesc(customerId).orElse(null);
-//        CoWalletSettings streakSettings = walletSettingsRepository.findByPointsType(COConstants.DAILY_STREAK_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
-//        Integer streakPoints = streakSettings.getNumOfPoints();
-//        Integer streakDays = streakSettings.getStreakMinDays();
-//        CoCustomerStreak streak;
-//
-//        // FIRST TIME CHECK-IN
-//
-//        if (lastStreak == null) {
-//            streak = new CoCustomerStreak();
-//            streak.setCustomerId(customerId);
-//            streak.setCheckInDate(today);
-//            streak.setCurrentStreak(1);
-//            streak.setMaxStreak(1);
-//            streak.setPoints(streakPoints);
-//            streak.setCreatedBy(1);
-//            streak = streakRepository.save(streak);
-//
-//            log.info("First streak created");
-//
-//        } else {
-//
-//            // ALREADY CHECKED TODAY
-//
-//            if (lastStreak.getCheckInDate().equals(today)) {
-//                throw new CoBusinessException(COConstants.ALREADY_CHECKED_IN);
-//            }
-//
-//            Integer currentStreak;
-//            Integer totalPoints;
-//            Integer maxStreak;
-//
-//            // CONTINUE STREAK
-//
-//            if (lastStreak.getCheckInDate().plusDays(1).equals(today)) {
-//
-//                // START NEW CYCLE AFTER 15TH DAY
-//
-//                if (lastStreak.getCurrentStreak() >= streakDays) {
-//                    currentStreak = 1;
-//                    totalPoints = streakPoints;
-//                    maxStreak = lastStreak.getMaxStreak();
-//                    log.info("New streak cycle started");
-//
-//                } else {
-//
-//                    currentStreak = lastStreak.getCurrentStreak() + 1;
-//                    totalPoints = lastStreak.getPoints() + streakPoints;
-//                    maxStreak = Math.max(currentStreak, lastStreak.getMaxStreak());
-//                    log.info("Streak continued");
-//                }
-//
-//            } else {
-//
-//                // STREAK BROKEN -> RESTART
-//
-//                currentStreak = 1;
-//                totalPoints = streakPoints;
-//                maxStreak = lastStreak.getMaxStreak();
-//
-//                log.info("Streak restarted");
-//            }
-//
-//            // CREATE NEW DAILY ROW
-//            streak = new CoCustomerStreak();
-//            streak.setCustomerId(customerId);
-//            streak.setCheckInDate(today);
-//            streak.setCurrentStreak(currentStreak);
-//            //streak.setMaxStreak(maxStreak);
-//
-//            streak.setPoints(totalPoints);
-//            streak.setCreatedBy(1);
-//            streak = streakRepository.save(streak);
-//
-//            log.info("New daily streak row inserted");
-//        }
-//
-//        // STREAK COMPLETED
-//
-//        if (streak.getCurrentStreak() >= streakDays) {
-//            CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
-//
-//            Integer existingPoints = wallet.getBalancePoints() != null ? wallet.getBalancePoints() : 0;
-//
-//            // ADD STREAK POINTS TO WALLET
-//
-//            wallet.setBalancePoints(existingPoints + streak.getPoints());
-//
-//            wallet.setUpdatedAt(LocalDateTime.now());
-//
-//            wallet.setUpdatedBy(1);
-//
-//            walletRepository.save(wallet);
-//
-//            log.info("Wallet updated with streak reward");
-//
-//            // SAVE TRANSACTION
-//
-//            CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
-//
-//            transaction.setWalletId(wallet.getWalletId());
-//
-//            transaction.setPointsType(COConstants.STREAK_REWARD);
-//
-//            transaction.setPoints(streak.getPoints());
-//
-//            transaction.setCreatedAt(LocalDateTime.now());
-//
-//            transaction.setCreatedBy(1);
-//
-//            transactionsRepository.save(transaction);
-//
-//            log.info("Streak reward transaction saved");
-//        }
-//
-//        // RESPONSE
-//
-//        CoCustomerStreakResponseDto response = new CoCustomerStreakResponseDto();
-//
-//        response.setSuccess(true);
-//
-//        response.setMessage(COConstants.STREAK_UPDATED);
-//
-//        response.setCurrentStreak(streak.getCurrentStreak());
-//
-//        //response.setMaxStreak(streak.getMaxStreak());
-//
-//        response.setPoints(streak.getPoints());
-//
-//        return response;
-//    }
-    // DAILY STREAK
-
     @Override
-    public CoCustomerStreakResponseDto updateDailyStreak(
-            Integer customerId,
-            LocalDate date
-    ) {
+    public CoCustomerStreakResponseDto updateDailyStreak(Integer customerId, LocalDate date) {
 
         log.info("Daily streak started");
 
-        LocalDate today =
-                date != null
-                        ? date
-                        : LocalDate.now();
+        LocalDate today = date != null ? date : LocalDate.now();
 
-        CoCustomerStreak lastStreak =
-                streakRepository
-                        .findTopByCustomerIdOrderByCheckInDateDesc(customerId)
-                        .orElse(null);
+        // PREVENT SAME DAY DUPLICATE ENTRY
+
+        boolean alreadyCheckedIn = streakRepository.existsByCustomerIdAndCheckInDate(customerId, today);
+
+        if (alreadyCheckedIn) {
+
+            throw new CoBusinessException("Today's streak already added");
+        }
+
+        // FETCH LAST STREAK
+
+        CoCustomerStreak lastStreak = streakRepository.findTopByCustomerIdOrderByCheckInDateDesc(customerId).orElse(null);
 
         // FETCH SETTINGS
 
-        CoWalletSettings streakSettings =
-                walletSettingsRepository
-                        .findByPointsType(COConstants.DAILY_STREAK_POINTS)
-                        .orElseThrow(() ->
-                                new CoBusinessException(
-                                        COConstants.STREAK_SETTINGS_NOT_FOUND
-                                ));
+        CoWalletSettings streakSettings = walletSettingsRepository.findByPointsType(COConstants.DAILY_STREAK_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
 
-        // POINTS PER DAY
-        Integer streakPoints =
-                streakSettings.getNumOfPoints();
+        // DAILY POINTS
 
-        // MAX STREAK DAYS FROM SETTINGS TABLE
-        Integer streakDays =
-                streakSettings.getStreakMinDays();
+        Integer streakPoints = streakSettings.getNumOfPoints();
 
-        CoCustomerStreak streak;
+        // MINIMUM STREAK DAYS
 
-        // FIRST TIME CHECK-IN
+        Integer streakDays = streakSettings.getStreakMinDays();
+
+        Integer currentStreak;
+
+        Integer totalPoints;
+
+        // FIRST LOGIN
 
         if (lastStreak == null) {
 
-            streak = new CoCustomerStreak();
+            currentStreak = 1;
 
-            streak.setCustomerId(customerId);
-
-            streak.setCheckInDate(today);
-
-            // CURRENT STREAK
-            streak.setCurrentStreak(1);
-
-            // MAX STREAK FROM SETTINGS TABLE
-            streak.setMaxStreak(streakDays);
-
-            // DAY 1 = 25
-            streak.setPoints(streakPoints);
-
-            streak.setCreatedBy(1);
-
-            streak = streakRepository.save(streak);
+            totalPoints = streakPoints;
 
             log.info("First streak created");
 
         } else {
 
-            // ALREADY CHECKED TODAY
+            // CONTINUOUS LOGIN
 
-            if (lastStreak.getCheckInDate().equals(today)) {
+            if (lastStreak.getCheckInDate().plusDays(1).equals(today)) {
 
-                throw new CoBusinessException(
-                        COConstants.ALREADY_CHECKED_IN
-                );
-            }
+                // RESTART AFTER REACHING STREAK LIMIT
 
-            Integer currentStreak;
-
-            Integer totalPoints;
-
-            Integer maxStreak;
-
-            // CONTINUE STREAK
-
-            if (lastStreak.getCheckInDate()
-                    .plusDays(1)
-                    .equals(today)) {
-
-                // RESET AFTER MAX DAYS
-
-                if (lastStreak.getCurrentStreak()
-                        >= streakDays) {
+                if (lastStreak.getCurrentStreak() >= streakDays) {
 
                     currentStreak = 1;
 
                     totalPoints = streakPoints;
 
-                    // ALWAYS FROM SETTINGS TABLE
-                    maxStreak = streakDays;
-
                     log.info("New streak cycle started");
 
                 } else {
 
-                    currentStreak =
-                            lastStreak.getCurrentStreak() + 1;
+                    // CONTINUE STREAK
+
+                    currentStreak = lastStreak.getCurrentStreak() + 1;
 
                     /*
                      * DAY 1 = 25
                      * DAY 2 = 50
                      * DAY 3 = 75
-                     * DAY 4 = 100
                      */
 
-                    totalPoints =
-                            currentStreak * streakPoints;
-
-                    // ALWAYS FROM SETTINGS TABLE
-                    maxStreak = streakDays;
+                    totalPoints = currentStreak * streakPoints;
 
                     log.info("Streak continued");
                 }
 
             } else {
 
-                // STREAK BROKEN -> RESTART
+                // MISSED LOGIN -> RESTART
 
                 currentStreak = 1;
 
                 totalPoints = streakPoints;
 
-                // ALWAYS FROM SETTINGS TABLE
-                maxStreak = streakDays;
-
                 log.info("Streak restarted");
             }
-
-            // CREATE NEW DAILY ROW
-
-            streak = new CoCustomerStreak();
-
-            streak.setCustomerId(customerId);
-
-            streak.setCheckInDate(today);
-
-            // SAVE CURRENT STREAK
-            streak.setCurrentStreak(currentStreak);
-
-            // SAVE MAX STREAK FROM SETTINGS TABLE
-            streak.setMaxStreak(maxStreak);
-
-            // SAVE POINTS
-            streak.setPoints(totalPoints);
-
-            streak.setCreatedBy(1);
-
-            streak = streakRepository.save(streak);
-
-            log.info("New daily streak row inserted");
         }
 
-        // ADD TO WALLET WHEN STREAK COMPLETES
+        // SAVE DAILY STREAK
 
-        if (streak.getCurrentStreak() >= streakDays) {
+        CoCustomerStreak streak = CoCustomerMapper.mapToCustomerStreak(customerId, today, currentStreak, totalPoints, 1);
 
-            CoCustomerWallet wallet =
-                    walletRepository
-                            .findByCustomerCustomerId(customerId)
-                            .orElseThrow(() ->
-                                    new CoBusinessException(
-                                            COConstants.WALLET_NOT_FOUND
-                                    ));
+        streak = streakRepository.save(streak);
 
-            Integer existingPoints =
-                    wallet.getBalancePoints() != null
-                            ? wallet.getBalancePoints()
-                            : 0;
+        log.info("Daily streak saved");
 
-            // ADD STREAK REWARD
+        // STREAK COMPLETED
 
-            wallet.setBalancePoints(
-                    existingPoints + streak.getPoints()
-            );
+        if (currentStreak == streakDays) {
+
+            CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+
+            Integer existingPoints = wallet.getBalancePoints() != null ? wallet.getBalancePoints() : 0;
+
+            // ADD REWARD TO WALLET
+
+            wallet.setBalancePoints(existingPoints + totalPoints);
 
             wallet.setUpdatedAt(LocalDateTime.now());
 
@@ -503,20 +292,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
             // SAVE TRANSACTION
 
-            CoCustomerWalletTransactions transaction =
-                    new CoCustomerWalletTransactions();
-
-            transaction.setWalletId(wallet.getWalletId());
-
-            transaction.setPointsType(
-                    COConstants.STREAK_REWARD
-            );
-
-            transaction.setPoints(streak.getPoints());
-
-            transaction.setCreatedAt(LocalDateTime.now());
-
-            transaction.setCreatedBy(1);
+            CoCustomerWalletTransactions transaction = CoCustomerMapper.mapToWalletTransaction(wallet.getWalletId(), COConstants.STREAK_REWARD, totalPoints, 1);
 
             transactionsRepository.save(transaction);
 
@@ -525,26 +301,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // RESPONSE
 
-        CoCustomerStreakResponseDto response =
-                new CoCustomerStreakResponseDto();
-
-        response.setSuccess(true);
-
-        response.setMessage(COConstants.STREAK_UPDATED);
-
-        response.setCurrentStreak(
-                streak.getCurrentStreak()
-        );
-
-        response.setMaxStreak(
-                streak.getMaxStreak()
-        );
-
-        response.setPoints(
-                streak.getPoints()
-        );
-
-        return response;
+        return CoCustomerMapper.mapToStreakResponse(currentStreak, totalPoints, COConstants.STREAK_UPDATED);
     }
     // WALLET POINTS TRANSFER
 

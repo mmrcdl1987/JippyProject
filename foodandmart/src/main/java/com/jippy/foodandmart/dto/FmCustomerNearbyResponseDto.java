@@ -25,6 +25,9 @@ public class FmCustomerNearbyResponseDto {
     @Schema(description = "Total number of outlets found within the radius")
     private Integer totalOutlets;
 
+    @Schema(description = "Message when no outlets are available", example = "Service is not available in this area")
+    private String message;
+
     @Schema(description = "Outlets sorted nearest-first")
     private List<com.jippy.division.dto.FmNearbyOutletDto> outlets;
 }
