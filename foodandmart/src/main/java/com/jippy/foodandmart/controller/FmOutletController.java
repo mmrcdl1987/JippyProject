@@ -592,7 +592,7 @@ public class FmOutletController {
     }
 
 
-    @RequestMapping("/location/{outletId}")
+    @GetMapping("/location/{outletId}")
     public ResponseEntity<OutletLocationResponseDto> getOutletLocation(@PathVariable Integer outletId) {
         log.info("REST request to get location for outletId: {}", outletId);
 

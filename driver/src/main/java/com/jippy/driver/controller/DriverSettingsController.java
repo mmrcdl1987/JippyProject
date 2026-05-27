@@ -43,14 +43,12 @@ public class DriverSettingsController {
 
     @Operation(summary = "Create or Update Incentive", description = "If ID is null → create, else update existing incentive")
     @PostMapping("/CreateOrUpdateIncentives")
-    public ResponseEntity<DriverIncentiveSettingsDto> saveOrUpdate(
-            @Valid @RequestBody DriverIncentiveSettingsDto dto) {
+    public ResponseEntity<DriverIncentiveSettingsDto> saveOrUpdate(@Valid @RequestBody DriverIncentiveSettingsDto dto) {
 
         log.info("Save/Update Incentives request: {}", dto);
 
-        DriverIncentiveSettingsDto response =
-                incentiveSettingsService.saveOrUpdateIncentives(dto);
+        DriverIncentiveSettingsDto response = incentiveSettingsService.saveOrUpdateIncentives(dto);
 
         return ResponseEntity.ok(response);
     }
-    }
+}

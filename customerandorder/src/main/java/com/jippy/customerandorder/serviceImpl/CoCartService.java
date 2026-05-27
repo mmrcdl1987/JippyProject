@@ -13,6 +13,7 @@ import com.jippy.customerandorder.repository.CoCustomerCartRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,221 +23,257 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class CoCartService implements ICartService {
 
     private final CoCustomerCartRepository cartRepository;
+
     private final FMFeignClient fmFeignClient;
 
+    @Override
+    public String saveOrUpdateCart(CoCartUpdateRequestDto dto) {
 
-    public String updateCart(CoCartUpdateRequestDto dto) {
+        log.info("SERVICE_START | SAVE_OR_UPDATE_CART | customerId={} | productId={} | quantity={}", dto.getCustomerId(), dto.getProductId(), dto.getQuantity());
 
-        log.info("Cart Update START | customerId={}, productId={}, qty={}, unitPrice={}",
-                dto.getCustomerId(), dto.getProductId(), dto.getQuantity(), dto.getUnitPrice());
+        validateSaveOrUpdateCartRequest(dto);
 
-        // VALIDATE INPUT
-        if (dto.getCustomerId() == null || dto.getCustomerId() <= 0) {
-            log.warn("Invalid customer ID | customerId={}", dto.getCustomerId());
-            throw new CartException("Invalid customer ID");
+        try {
+
+            CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductId(dto.getCustomerId(), dto.getProductId()).orElse(null);
+
+            // REMOVE CART ITEM
+            if (dto.getQuantity() == 0) {
+
+                return removeCartItem(existingCart, dto);
+            }
+
+            BigDecimal totalPrice = dto.getUnitPrice().multiply(BigDecimal.valueOf(dto.getQuantity()));
+
+            // UPDATE CART
+            if (existingCart != null) {
+
+                existingCart.setQuantity(dto.getQuantity());
+
+                existingCart.setTotalPrice(totalPrice);
+
+                existingCart.setUpdatedAt(LocalDateTime.now());
+
+                existingCart.setUpdatedBy(1);
+
+                cartRepository.save(existingCart);
+
+                log.info("CART_UPDATED | cartId={} | customerId={} | productId={} | quantity={}", existingCart.getCartId(), dto.getCustomerId(), dto.getProductId(), dto.getQuantity());
+
+                log.info("SERVICE_END | SAVE_OR_UPDATE_CART_SUCCESS | operation=UPDATE | customerId={}", dto.getCustomerId());
+
+                return COConstants.MSG_CART_UPDATED;
+            }
+
+            // CREATE CART ITEM
+            CoCustomerCart newCart = new CoCustomerCart();
+
+            newCart.setCustomerId(dto.getCustomerId());
+
+            newCart.setProductId(dto.getProductId());
+
+            newCart.setQuantity(dto.getQuantity());
+
+            newCart.setTotalPrice(totalPrice);
+
+            newCart.setCreatedAt(LocalDateTime.now());
+
+            newCart.setCreatedBy(1);
+
+            cartRepository.save(newCart);
+
+            log.info("CART_CREATED | customerId={} | productId={} | quantity={}", dto.getCustomerId(), dto.getProductId(), dto.getQuantity());
+
+            log.info("SERVICE_END | SAVE_OR_UPDATE_CART_SUCCESS | operation=CREATE | customerId={}", dto.getCustomerId());
+
+            return COConstants.MSG_CART_ADDED;
+
+        } catch (CartException ex) {
+
+            log.error("BUSINESS_EXCEPTION | SAVE_OR_UPDATE_CART_FAILED | error={}", ex.getMessage(), ex);
+
+            throw ex;
+
+        } catch (Exception ex) {
+
+            log.error("EXCEPTION | SAVE_OR_UPDATE_CART_FAILED | customerId={} | productId={} | error={}", dto.getCustomerId(), dto.getProductId(), ex.getMessage(), ex);
+
+            throw new CartException("Unable to save or update cart");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CoCartResponseDto getCart(Integer customerId) {
+
+        log.info("SERVICE_START | GET_CART | customerId={}", customerId);
+
+        validateCustomerId(customerId);
+
+        try {
+
+            List<CoCustomerCart> cartList = cartRepository.findByCustomerId(customerId);
+
+            if (cartList.isEmpty()) {
+
+                log.error("CART_EMPTY | customerId={}", customerId);
+
+                throw new CartException(COConstants.MSG_CART_EMPTY);
+            }
+
+            List<CoCartItemResponseDto> items = new ArrayList<>();
+
+            BigDecimal grandTotal = BigDecimal.ZERO;
+
+            for (CoCustomerCart cart : cartList) {
+
+                FmProductDetailResponseDto product = getProduct(cart.getProductId());
+
+                CoCartItemResponseDto item = new CoCartItemResponseDto();
+
+                item.setProductId(cart.getProductId());
+
+                item.setProductName(product.getProductName());
+
+                item.setProductImage(product.getProductImage());
+
+                item.setQuantity(cart.getQuantity());
+
+                item.setTotalPrice(cart.getTotalPrice());
+
+                items.add(item);
+
+                grandTotal = grandTotal.add(defaultValue(cart.getTotalPrice()));
+            }
+
+            CoCartResponseDto response = new CoCartResponseDto();
+
+            response.setCustomerId(customerId);
+
+            response.setItems(items);
+
+            response.setGrandTotal(grandTotal);
+
+            log.info("SERVICE_END | GET_CART_SUCCESS | customerId={} | itemCount={} | grandTotal={}", customerId, items.size(), grandTotal);
+
+            return response;
+
+        } catch (CartException ex) {
+
+            log.error("BUSINESS_EXCEPTION | GET_CART_FAILED | error={}", ex.getMessage(), ex);
+
+            throw ex;
+
+        } catch (Exception ex) {
+
+            log.error("EXCEPTION | GET_CART_FAILED | customerId={} | error={}", customerId, ex.getMessage(), ex);
+
+            throw new CartException("Unable to fetch cart");
+        }
+    }
+
+    // ================= REMOVE CART =================
+
+    private String removeCartItem(CoCustomerCart existingCart, CoCartUpdateRequestDto dto) {
+
+        if (existingCart == null) {
+
+            log.error("CART_ITEM_NOT_FOUND | customerId={} | productId={}", dto.getCustomerId(), dto.getProductId());
+
+            throw new CartException("Cart item not found");
         }
 
+        cartRepository.delete(existingCart);
+
+        log.info("CART_REMOVED | cartId={} | customerId={} | productId={}", existingCart.getCartId(), dto.getCustomerId(), dto.getProductId());
+
+        log.info("SERVICE_END | SAVE_OR_UPDATE_CART_SUCCESS | operation=REMOVE | customerId={}", dto.getCustomerId());
+
+        return COConstants.MSG_CART_REMOVED;
+    }
+
+    // ================= VALIDATIONS =================
+
+    private void validateSaveOrUpdateCartRequest(CoCartUpdateRequestDto dto) {
+
+        if (dto == null) {
+
+            log.error("VALIDATION_FAILED | REQUEST_BODY_NULL");
+
+            throw new CartException("Request body cannot be null");
+        }
+
+        validateCustomerId(dto.getCustomerId());
+
         if (dto.getProductId() == null || dto.getProductId() <= 0) {
-            log.warn("Invalid product ID | productId={}", dto.getProductId());
+
+            log.error("VALIDATION_FAILED | INVALID_PRODUCT_ID | productId={}", dto.getProductId());
+
             throw new CartException("Invalid product ID");
         }
 
-        if (dto.getUnitPrice() == null || dto.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
-            log.warn("Invalid unit price | unitPrice={}", dto.getUnitPrice());
-            throw new CartException("Unit price cannot be negative");
-        }
-
-        // VALIDATION - QUANTITY
         if (dto.getQuantity() < 0) {
-            log.warn("Invalid quantity provided | quantity={}", dto.getQuantity());
+
+            log.error("VALIDATION_FAILED | INVALID_QUANTITY | quantity={}", dto.getQuantity());
+
             throw new CartException(COConstants.MSG_INVALID_QUANTITY);
         }
 
-        // CHECK EXISTING CART
-        CoCustomerCart cart;
+        if (dto.getUnitPrice() == null || dto.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
 
-        try {
-            cart = cartRepository
-                    .findByCustomerIdAndProductId(dto.getCustomerId(), dto.getProductId())
-                    .orElse(null);
-            log.debug("Existing cart item lookup | exists={}, customerId={}, productId={}", 
-                    cart != null, dto.getCustomerId(), dto.getProductId());
-        } catch (Exception ex) {
-            log.error("Database error while checking existing cart | customerId={}, productId={}", 
-                    dto.getCustomerId(), dto.getProductId(), ex);
-            throw new CartException("Unable to check cart");
+            log.error("VALIDATION_FAILED | INVALID_UNIT_PRICE | unitPrice={}", dto.getUnitPrice());
+
+            throw new CartException("Unit price cannot be negative");
         }
-
-        //  REMOVE ITEM (quantity = 0)
-        if (dto.getQuantity() == 0) {
-
-            if (cart != null) {
-                try {
-                    cartRepository.delete(cart);
-                    log.info("Cart item removed successfully | cartId={}, customerId={}, productId={}", 
-                            cart.getCartId(), dto.getCustomerId(), dto.getProductId());
-                } catch (Exception ex) {
-                    log.error("Database error while deleting cart item | cartId={}", cart.getCartId(), ex);
-                    throw new CartException("Unable to remove cart item");
-                }
-            } else {
-                log.warn("Attempted to remove non-existent cart item | customerId={}, productId={}",
-                        dto.getCustomerId(), dto.getProductId());
-            }
-
-            log.debug("Cart item removal process completed | customerId={}", dto.getCustomerId());
-            return COConstants.MSG_CART_REMOVED;
-        }
-
-        //  CALCULATE TOTAL PRICE
-        BigDecimal totalPrice = dto.getUnitPrice()
-                .multiply(BigDecimal.valueOf(dto.getQuantity()));
-
-        log.debug("Calculated total price | unitPrice={}, quantity={}, totalPrice={}",
-                dto.getUnitPrice(), dto.getQuantity(), totalPrice);
-
-        //  UPDATE EXISTING CART
-        if (cart != null) {
-
-            int previousQty = cart.getQuantity();
-            BigDecimal previousTotal = cart.getTotalPrice();
-
-            cart.setQuantity(dto.getQuantity());
-            cart.setTotalPrice(totalPrice);
-            cart.setUpdatedAt(LocalDateTime.now());
-            cart.setUpdatedBy(1);
-
-            try {
-                cartRepository.save(cart);
-                log.info("Cart UPDATED successfully | cartId={}, customerId={}, productId={}, " +
-                                "qty: {} -> {}, totalPrice: {} -> {}",
-                        cart.getCartId(), dto.getCustomerId(), dto.getProductId(),
-                        previousQty, dto.getQuantity(), previousTotal, totalPrice);
-            } catch (Exception ex) {
-                log.error("Database error while updating cart | cartId={}", cart.getCartId(), ex);
-                throw new CartException("Unable to update cart");
-            }
-
-            return COConstants.MSG_CART_UPDATED;
-        }
-
-        //  CREATE NEW CART ITEM
-        CoCustomerCart newCart = new CoCustomerCart();
-        newCart.setCustomerId(dto.getCustomerId());
-        newCart.setProductId(dto.getProductId());
-        newCart.setQuantity(dto.getQuantity());
-        newCart.setTotalPrice(totalPrice);
-        newCart.setCreatedAt(LocalDateTime.now());
-        newCart.setCreatedBy(1);
-
-        try {
-            cartRepository.save(newCart);
-            log.info("Cart CREATED successfully | customerId={}, productId={}, qty={}, totalPrice={}",
-                    dto.getCustomerId(), dto.getProductId(), dto.getQuantity(), totalPrice);
-        } catch (Exception ex) {
-            log.error("Database error while creating new cart | customerId={}, productId={}", 
-                    dto.getCustomerId(), dto.getProductId(), ex);
-            throw new CartException("Unable to add item to cart");
-        }
-
-        return COConstants.MSG_CART_ADDED;
     }
 
-    public CoCartResponseDto getCart(Integer customerId) {
+    private void validateCustomerId(Integer customerId) {
 
-        log.info("GET CART START | customerId={}", customerId);
-
-        // VALIDATE INPUT
         if (customerId == null || customerId <= 0) {
-            log.warn("Invalid customer ID provided | customerId={}", customerId);
+
+            log.error("VALIDATION_FAILED | INVALID_CUSTOMER_ID | customerId={}", customerId);
+
             throw new CartException("Invalid customer ID");
         }
+    }
 
-        log.debug("Customer ID validation passed | customerId={}", customerId);
+    // ================= PRODUCT HELPERS =================
 
-        // FETCH CART ITEMS FROM DATABASE
-        log.debug("Querying database for cart items | customerId={}", customerId);
+    private FmProductDetailResponseDto getProduct(Integer productId) {
 
-        List<CoCustomerCart> cartList =
-                cartRepository.findByCustomerId(customerId);
+        try {
 
-        log.debug("Cart items fetched from database | count={}, customerId={}",
-                cartList.size(), customerId);
-
-        if (cartList.isEmpty()) {
-            log.warn("Cart is empty for customer | customerId={}", customerId);
-            throw new CartException("Cart is empty");
-        }
-
-        log.debug("Cart has items | customerId={}, itemCount={}", customerId, cartList.size());
-
-        List<CoCartItemResponseDto> items = new ArrayList<>();
-        BigDecimal grandTotal = BigDecimal.ZERO;
-
-        log.debug("Starting to process cart items | totalItems={}, customerId={}",
-                cartList.size(), customerId);
-
-        // PROCESS EACH CART ITEM
-        for (CoCustomerCart cart : cartList) {
-
-            log.debug("Processing cart item | cartId={}, productId={}, quantity={}, customerId={}",
-                    cart.getCartId(), cart.getProductId(), cart.getQuantity(), customerId);
-
-            FmProductDetailResponseDto product;
-
-            try {
-                log.debug("Fetching product details from food service | productId={}, customerId={}",
-                        cart.getProductId(), customerId);
-                product = fmFeignClient.getProductById(cart.getProductId());
-                log.debug("Product fetched successfully | productId={}, customerId={}",
-                        cart.getProductId(), customerId);
-            } catch (Exception ex) {
-                log.error("Feign call failed while fetching product | productId={}, customerId={}, error={}",
-                        cart.getProductId(), customerId, ex.getMessage(), ex);
-                throw new CartException("Unable to fetch product details");
-            }
+            FmProductDetailResponseDto product = fmFeignClient.getProductById(productId);
 
             if (product == null) {
-                log.error("Product response is null from food service | productId={}, customerId={}",
-                        cart.getProductId(), customerId);
+
+                log.error("PRODUCT_NOT_FOUND | productId={}", productId);
+
                 throw new CartException("Product not found");
             }
 
-            log.debug("Product validation passed | productId={}, productName={}, customerId={}",
-                    product.getProductId(), product.getProductName(), customerId);
+            return product;
 
-            // MAP TO RESPONSE DTO
-            CoCartItemResponseDto item = new CoCartItemResponseDto();
+        } catch (CartException ex) {
 
-            item.setProductId(cart.getProductId());
-            item.setProductName(product.getProductName());
-            item.setProductImage(product.getProductImage());
-            item.setQuantity(cart.getQuantity());
-            item.setTotalPrice(cart.getTotalPrice());
+            throw ex;
 
-            items.add(item);
+        } catch (Exception ex) {
 
-            grandTotal = grandTotal.add(cart.getTotalPrice());
+            log.error("FEIGN_EXCEPTION | PRODUCT_FETCH_FAILED | productId={} | error={}", productId, ex.getMessage(), ex);
 
-            log.debug("Cart item processed successfully | productId={}, quantity={}, itemTotal={}, customerId={}",
-                    cart.getProductId(), cart.getQuantity(), cart.getTotalPrice(), customerId);
+            throw new CartException(COConstants.MSG_PRODUCT_FETCH_FAILED);
         }
+    }
 
-        log.debug("All cart items processed successfully | itemCount={}, customerId={}",
-                items.size(), customerId);
+    // ================= COMMON METHODS =================
 
-        // BUILD RESPONSE
-        CoCartResponseDto response = new CoCartResponseDto();
-        response.setCustomerId(customerId);
-        response.setItems(items);
-        response.setGrandTotal(grandTotal);
+    private BigDecimal defaultValue(BigDecimal value) {
 
-        log.info("GET CART SUCCESS | customerId={}, itemCount={}, grandTotal={}",
-                customerId, items.size(), grandTotal);
-
-        return response;
+        return value == null ? BigDecimal.ZERO : value;
     }
 }

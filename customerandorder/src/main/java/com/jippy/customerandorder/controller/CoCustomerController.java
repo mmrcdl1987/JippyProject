@@ -55,16 +55,11 @@ public class CoCustomerController {
 
             @PathVariable Integer customerId,
 
-            @RequestParam(required = false)
-            LocalDate date
-    ) {
+            @RequestParam(required = false) LocalDate date) {
 
         log.info("Daily streak request received");
 
-        return customerService.updateDailyStreak(
-                customerId,
-                date
-        );
+        return customerService.updateDailyStreak(customerId, date);
     }
 
     @PostMapping("/wallet/transfer")
@@ -104,23 +99,18 @@ public class CoCustomerController {
 
     // GET CUSTOMER LOCATION
     @GetMapping("/address/location")
-    public CoCustomerLocationDto getCustomerLocation(
-            @RequestParam Integer customerAddressId
-    ) {
+    public CoCustomerLocationDto getCustomerLocation(@RequestParam Integer customerAddressId) {
 
-        log.info("GET_CUSTOMER_LOCATION_API_START | customerAddressId={}",
-                customerAddressId);
+        log.info("GET_CUSTOMER_LOCATION_API_START | customerAddressId={}", customerAddressId);
 
-        CustomerLocationProjection projection =
-                repository.getCustomerLocation(customerAddressId);
+        CustomerLocationProjection projection = repository.getCustomerLocation(customerAddressId);
 
         CoCustomerLocationDto dto = new CoCustomerLocationDto();
 
         dto.setLatitude(projection.getLatitude());
         dto.setLongitude(projection.getLongitude());
 
-        log.info("GET_CUSTOMER_LOCATION_API_SUCCESS | customerAddressId={}",
-                customerAddressId);
+        log.info("GET_CUSTOMER_LOCATION_API_SUCCESS | customerAddressId={}", customerAddressId);
 
         return dto;
     }

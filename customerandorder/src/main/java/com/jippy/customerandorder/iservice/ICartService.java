@@ -4,7 +4,7 @@ import com.jippy.customerandorder.dto.CoCartUpdateRequestDto;
 
 public interface ICartService {
 
-    String updateCart(CoCartUpdateRequestDto dto);
+    String saveOrUpdateCart(CoCartUpdateRequestDto dto);
 
     CoCartResponseDto getCart(Integer customerId);
 }

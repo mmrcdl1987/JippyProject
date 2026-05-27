@@ -15,19 +15,16 @@ public interface DriverDeliveryChargeSettingsRepository extends JpaRepository<Dr
     @Query("""
             SELECT d
             FROM DriverDeliveryChargeSettings d
-            WHERE :pickupDistance
-            BETWEEN d.pickUpKmsRangeFrom
-            AND d.pickUpKmsRangeTo
+            WHERE :pickupDistance >= d.pickUpKmsRangeFrom
+            AND :pickupDistance < d.pickUpKmsRangeTo
             """)
     Optional<DriverDeliveryChargeSettings> findPickupSlab(@Param("pickupDistance") BigDecimal pickupDistance);
 
     @Query("""
             SELECT d
             FROM DriverDeliveryChargeSettings d
-            WHERE :deliveryDistance
-            BETWEEN d.deliveryKmsRangeFrom
-            AND d.deliveryKmsRangeTo
+            WHERE :deliveryDistance >= d.deliveryKmsRangeFrom
+            AND :deliveryDistance < d.deliveryKmsRangeTo
             """)
     Optional<DriverDeliveryChargeSettings> findDeliverySlab(@Param("deliveryDistance") BigDecimal deliveryDistance);
-
 }

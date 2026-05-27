@@ -4,16 +4,15 @@ import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.OrderSettings;
 import com.jippy.customerandorder.exception.CoBadRequestException;
-import com.jippy.customerandorder.feignClients.FMFeignClient;
+import com.jippy.customerandorder.feignClients.DriverFeignClient;
 import com.jippy.customerandorder.iservice.ICartService;
 import com.jippy.customerandorder.iservice.ICheckoutService;
-import com.jippy.customerandorder.projection.CustomerLocationProjection;
-import com.jippy.customerandorder.repository.CustomerDeliveryAddressRepository;
 import com.jippy.customerandorder.repository.OrderSettingsRepository;
-import com.jippy.customerandorder.utils.DistanceUtils;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,122 +20,193 @@ import java.math.RoundingMode;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class CheckoutServiceImpl implements ICheckoutService {
 
     private final ICartService cartService;
 
-    private final FMFeignClient foodMartFeignClient;
-
-    private final CustomerDeliveryAddressRepository customerDeliveryAddressRepository;
-
-   // private final DriverDeliveryChargeSettingsRepository chargeSettingsRepository;
+    private final DriverFeignClient driverFeignClient;
 
     private final OrderSettingsRepository orderSettingsRepository;
 
-    /*@Override
+    @Override
     public CoCheckoutResponseDto checkout(CoCheckoutRequestDto requestDto) {
 
-        log.info("CHECKOUT SERVICE START");
+        log.info("SERVICE_START | CHECKOUT | customerId={} | outletId={}", requestDto.getCustomerId(), requestDto.getOutletId());
 
         validateRequest(requestDto);
 
-        CoCartResponseDto cartResponse = cartService.getCart(requestDto.getCustomerId());
+        try {
+
+            CoCartResponseDto cartResponse = cartService.getCart(requestDto.getCustomerId());
+
+            validateCart(cartResponse, requestDto.getCustomerId());
+
+            OrderSettings orderSettings = getOrderSettings();
+
+            BigDecimal itemTotal = calculateItemTotal(cartResponse);
+
+            log.info("ITEM_TOTAL_CALCULATED | customerId={} | itemTotal={}", requestDto.getCustomerId(), itemTotal);
+
+            DeliveryChargeCalculationResponseDto deliveryResponse = getDeliveryCharge(requestDto, itemTotal);
+
+            BigDecimal finalDeliveryCharge = defaultValue(deliveryResponse.getTotalDeliveryCharge());
+
+            BigDecimal deliveryTax = defaultValue(deliveryResponse.getTaxAmount());
+
+            BigDecimal foodTax = calculatePercentage(itemTotal, defaultValue(orderSettings.getFoodTotalAmountTax()));
+
+            BigDecimal taxesAndCharges = foodTax.add(deliveryTax);
+
+            BigDecimal platformFee = defaultValue(orderSettings.getPlatformFee());
+
+            BigDecimal surgeFee = defaultValue(orderSettings.getSurgeFee());
+
+            BigDecimal packagingFee = defaultValue(orderSettings.getPackagingFee());
+
+            BigDecimal couponDiscount = defaultValue(requestDto.getCouponDiscount());
+
+            BigDecimal deliveryTip = defaultValue(requestDto.getDeliveryTip());
+
+            BigDecimal toPay = calculateFinalAmount(itemTotal, finalDeliveryCharge, platformFee, surgeFee, packagingFee, foodTax, deliveryTip, couponDiscount);
+
+            CoCheckoutResponseDto response = buildCheckoutResponse(cartResponse, itemTotal, finalDeliveryCharge, platformFee, surgeFee, packagingFee, foodTax, deliveryTax, taxesAndCharges, couponDiscount, deliveryTip, toPay, deliveryResponse.getCodAvailable());
+
+            log.info("SERVICE_END | CHECKOUT_SUCCESS | customerId={} | toPay={}", requestDto.getCustomerId(), toPay);
+
+            return response;
+
+        } catch (CoBadRequestException ex) {
+
+            log.error("BUSINESS_EXCEPTION | CHECKOUT_FAILED | error={}", ex.getMessage(), ex);
+
+            throw ex;
+
+        } catch (Exception ex) {
+
+            log.error("EXCEPTION | CHECKOUT_FAILED | error={}", ex.getMessage(), ex);
+
+            throw new CoBadRequestException("Unable to process checkout");
+        }
+    }
+
+    // ================= VALIDATIONS =================
+
+    private void validateRequest(CoCheckoutRequestDto requestDto) {
+
+        if (requestDto == null) {
+
+            log.error("VALIDATION_FAILED | REQUEST_BODY_NULL");
+
+            throw new CoBadRequestException("Request body cannot be null");
+        }
+
+        if (requestDto.getCustomerId() == null) {
+
+            log.error("VALIDATION_FAILED | CUSTOMER_ID_REQUIRED");
+
+            throw new CoBadRequestException("Customer id is required");
+        }
+
+        if (requestDto.getCustomerAddressId() == null) {
+
+            log.error("VALIDATION_FAILED | CUSTOMER_ADDRESS_REQUIRED");
+
+            throw new CoBadRequestException("Customer address id is required");
+        }
+
+        if (requestDto.getOutletId() == null) {
+
+            log.error("VALIDATION_FAILED | OUTLET_ID_REQUIRED");
+
+            throw new CoBadRequestException("Outlet id is required");
+        }
+    }
+
+    private void validateCart(CoCartResponseDto cartResponse, Integer customerId) {
 
         if (cartResponse == null || cartResponse.getItems() == null || cartResponse.getItems().isEmpty()) {
 
-            log.error("CART EMPTY | customerId={}", requestDto.getCustomerId());
+            log.error("CART_EMPTY | customerId={}", customerId);
 
             throw new CoBadRequestException(COConstants.MSG_CART_EMPTY);
         }
+    }
 
-        log.info("CART FETCHED SUCCESSFULLY");
+    // ================= ORDER SETTINGS =================
 
-        OrderSettings orderSettings = orderSettingsRepository.findAll().stream().findFirst().orElseThrow(() -> {
+    private OrderSettings getOrderSettings() {
 
-            log.error("ORDER SETTINGS NOT FOUND");
+        return orderSettingsRepository.findAll().stream().findFirst().orElseThrow(() -> {
+
+            log.error("ORDER_SETTINGS_NOT_FOUND");
 
             return new CoBadRequestException(COConstants.MSG_ORDER_SETTINGS_NOT_FOUND);
         });
+    }
 
-        log.info("ORDER SETTINGS FETCHED SUCCESSFULLY");
+    // ================= DELIVERY CHARGE =================
 
-        OutletLocationResponseDto outletLocation = foodMartFeignClient.getOutletLocation(requestDto.getOutletId());
+    private DeliveryChargeCalculationResponseDto getDeliveryCharge(CoCheckoutRequestDto requestDto, BigDecimal itemTotal) {
 
-        if (outletLocation == null) {
+        DeliveryChargeCalculationRequestDto deliveryRequest = new DeliveryChargeCalculationRequestDto();
 
-            log.error("OUTLET LOCATION NOT FOUND");
+        deliveryRequest.setOutletId(requestDto.getOutletId());
 
-            throw new CoBadRequestException(COConstants.MSG_OUTLET_LOCATION_NOT_FOUND);
+        deliveryRequest.setCustomerAddressId(requestDto.getCustomerAddressId());
+
+        deliveryRequest.setOrderAmount(itemTotal);
+
+        try {
+
+            DeliveryChargeCalculationResponseDto response = driverFeignClient.calculateDeliveryCharge(deliveryRequest);
+
+            if (response == null) {
+
+                log.error("DELIVERY_CHARGE_RESPONSE_NULL");
+
+                throw new CoBadRequestException("Unable to calculate delivery charge");
+            }
+
+            return response;
+
+        } catch (FeignException ex) {
+
+            log.error("DRIVER_SERVICE_CALL_FAILED | error={}", ex.getMessage(), ex);
+
+            throw new CoBadRequestException("Driver service unavailable");
         }
+    }
 
-        log.info("OUTLET LOCATION FETCHED SUCCESSFULLY");
+    // ================= CALCULATIONS =================
 
-        CustomerLocationProjection customerLocation = customerDeliveryAddressRepository.getCustomerLocation(requestDto.getCustomerAddressId());
-
-        if (customerLocation == null) {
-
-            log.error("CUSTOMER LOCATION NOT FOUND");
-
-            throw new CoBadRequestException(COConstants.MSG_CUSTOMER_LOCATION_NOT_FOUND);
-        }
-
-        log.info("CUSTOMER LOCATION FETCHED SUCCESSFULLY");
-
-        double distance = DistanceUtils.calculateDistance(outletLocation.getLatitude(), outletLocation.getLongitude(), customerLocation.getLatitude(), customerLocation.getLongitude());
-
-        log.info("DISTANCE CALCULATED | distance={}", distance);
-
-        BigDecimal deliveryDistance = BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP);
-
-        DriverDeliveryChargeSettings deliverySlab = chargeSettingsRepository.findDeliverySlab(deliveryDistance).orElseThrow(() -> {
-
-            log.error("DELIVERY SLAB NOT FOUND");
-
-            return new CoBadRequestException(COConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
-        });
-
-        BigDecimal baseDeliveryCharge = deliveryDistance.multiply(deliverySlab.getUnitPricePerDeliverKm()).setScale(2, RoundingMode.HALF_UP);
-
-        log.info("BASE DELIVERY CHARGE CALCULATED | charge={}", baseDeliveryCharge);
-
-        BigDecimal deliveryTax = calculatePercentage(baseDeliveryCharge, orderSettings.getDeliveryFeeTax());
-
-        log.info("DELIVERY TAX CALCULATED | deliveryTax={}", deliveryTax);
-
-        BigDecimal finalDeliveryCharge = baseDeliveryCharge.add(deliveryTax);
-
-        log.info("FINAL DELIVERY CHARGE CALCULATED | finalDeliveryCharge={}", finalDeliveryCharge);
+    private BigDecimal calculateItemTotal(CoCartResponseDto cartResponse) {
 
         BigDecimal itemTotal = BigDecimal.ZERO;
 
         for (CoCartItemResponseDto item : cartResponse.getItems()) {
 
-            itemTotal = itemTotal.add(item.getTotalPrice());
+            itemTotal = itemTotal.add(defaultValue(item.getTotalPrice()));
         }
 
-        log.info("ITEM TOTAL CALCULATED | itemTotal={}", itemTotal);
+        return itemTotal.setScale(2, RoundingMode.HALF_UP);
+    }
 
-        BigDecimal foodTax = calculatePercentage(itemTotal, orderSettings.getFoodTotalAmountTax());
+    private BigDecimal calculateFinalAmount(BigDecimal itemTotal, BigDecimal deliveryCharge, BigDecimal platformFee, BigDecimal surgeFee, BigDecimal packagingFee, BigDecimal foodTax, BigDecimal deliveryTip, BigDecimal couponDiscount) {
 
-        log.info("FOOD TAX CALCULATED | foodTax={}", foodTax);
+        BigDecimal totalAmount = itemTotal.add(deliveryCharge).add(platformFee).add(surgeFee).add(packagingFee).add(foodTax).add(deliveryTip).subtract(couponDiscount).setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal taxesAndCharges = foodTax.add(deliveryTax);
+        return totalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalAmount;
+    }
 
-        log.info("TAXES AND CHARGES CALCULATED | taxesAndCharges={}", taxesAndCharges);
+    private BigDecimal calculatePercentage(BigDecimal amount, BigDecimal percentage) {
 
-        BigDecimal platformFee = defaultValue(orderSettings.getPlatformFee());
+        return amount.multiply(percentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
 
-        BigDecimal surgeFee = defaultValue(orderSettings.getSurgeFee());
+    //================ RESPONSE =================
 
-        BigDecimal packagingFee = defaultValue(orderSettings.getPackagingFee());
-
-        BigDecimal couponDiscount = defaultValue(requestDto.getCouponDiscount());
-
-        BigDecimal deliveryTip = defaultValue(requestDto.getDeliveryTip());
-
-        BigDecimal toPay = itemTotal.add(finalDeliveryCharge).add(platformFee).add(surgeFee).add(packagingFee).add(foodTax).add(deliveryTip).subtract(couponDiscount);
-
-        log.info("FINAL PAYABLE AMOUNT CALCULATED | toPay={}", toPay);
+    private CoCheckoutResponseDto buildCheckoutResponse(CoCartResponseDto cartResponse, BigDecimal itemTotal, BigDecimal deliveryCharge, BigDecimal platformFee, BigDecimal surgeFee, BigDecimal packagingFee, BigDecimal foodTax, BigDecimal deliveryTax, BigDecimal taxesAndCharges, BigDecimal couponDiscount, BigDecimal deliveryTip, BigDecimal toPay, Boolean codAvailable) {
 
         CoCheckoutResponseDto response = new CoCheckoutResponseDto();
 
@@ -144,7 +214,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
         response.setItemTotal(itemTotal);
 
-        response.setDeliveryCharge(finalDeliveryCharge);
+        response.setDeliveryCharge(deliveryCharge);
 
         response.setPlatformFee(platformFee);
 
@@ -164,50 +234,12 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
         response.setToPay(toPay);
 
-        response.setCodAvailable(true);
-
-//        response.setMessage(COConstants.MSG_CHECKOUT_SUCCESS);
-
-        log.info("CHECKOUT SERVICE SUCCESS");
+        response.setCodAvailable(codAvailable);
 
         return response;
     }
-*/
-    private void validateRequest(CoCheckoutRequestDto requestDto) {
 
-        if (requestDto == null) {
-
-            log.error("REQUEST DTO IS NULL");
-
-            throw new CoBadRequestException("Request body cannot be null");
-        }
-
-        if (requestDto.getCustomerId() == null) {
-
-            log.error("CUSTOMER ID IS NULL");
-
-            throw new CoBadRequestException("Customer id is required");
-        }
-
-        if (requestDto.getCustomerAddressId() == null) {
-
-            log.error("CUSTOMER ADDRESS ID IS NULL");
-
-            throw new CoBadRequestException("Customer address id is required");
-        }
-
-        if (requestDto.getOutletId() == null) {
-
-            log.error("OUTLET ID IS NULL");
-
-            throw new CoBadRequestException("Outlet id is required");
-        }
-    }
-
-    private BigDecimal calculatePercentage(BigDecimal amount, BigDecimal percentage) {
-
-        return amount.multiply(percentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-    }
+    // ================= COMMON METHODS =================
 
     private BigDecimal defaultValue(BigDecimal value) {
 

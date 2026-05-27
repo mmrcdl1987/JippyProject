@@ -1,20 +1,12 @@
 package com.jippy.driver.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
-public class DriverChargeCalculationRequestDto {
-
-    @NotNull(message = "Driver latitude is required")
-    private BigDecimal driverLatitude;
-
-    @NotNull(message = "Driver longitude is required")
-    private BigDecimal driverLongitude;
+@Data
+public class DeliveryChargeCalculationRequestDto {
 
     @NotNull(message = "Outlet id is required")
     private Integer outletId;
