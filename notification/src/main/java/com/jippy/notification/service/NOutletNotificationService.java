@@ -106,6 +106,8 @@ public class NOutletNotificationService {
             throw new NotificationException("Firebase topic configuration missing");
         }
 
+        //Firebase has strict rules for topic names: they can only contain letters, numbers, and dashes/underscores ([a-zA-Z0-9-_~]+).
+
         String topic = NConstants.TOPIC_PREFIX + event.getOutletId();
 
         log.info("Sending FCM notification | orderId={}, topic={}", event.getOrderId(), topic);

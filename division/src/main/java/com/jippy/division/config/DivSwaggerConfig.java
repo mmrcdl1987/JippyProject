@@ -14,10 +14,6 @@ import java.util.List;
 @Configuration
 public class DivSwaggerConfig {
 
-    // Reads GATEWAY_SWAGGER_URL from system/docker environment. Falls back to localhost:8060 if missing.
-    @Value("${gateway.swagger.url:http://localhost:8084}")
-    private String gatewaySwaggerUrl;
-
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "Authorization";
@@ -25,7 +21,7 @@ public class DivSwaggerConfig {
         return new OpenAPI()
                 // FORCE SWAGGER UI TO CALL THE GATEWAY AND INCLUDE THE /api/fm ROUTING PREFIX
                 .servers(List.of(
-                        new Server().url(gatewaySwaggerUrl).description("API Gateway Server")
+                        new Server().url("/").description("API Gateway Server")
                 ))
                 // 1. Link the requirement globally so every endpoint shows a lock icon
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))

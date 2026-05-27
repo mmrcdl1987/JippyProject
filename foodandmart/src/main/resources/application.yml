@@ -1,5 +1,6 @@
 server:
   port: 8080
+  #forward-headers-strategy: framework
 
 jwt:
   secret: ks93w6IjKBc8TckMt9xjYSj2rE8YHJvduMBJiXBytHk=

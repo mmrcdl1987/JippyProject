@@ -14,6 +14,12 @@ spring:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
 springdoc:
  enable-native-support: true
+  # This helps the gateway discover routes from Eureka
+ api-docs:
+   enabled: true
+   #gateway:
+    # use-management-port: false
+     #infer-routing-from-path: true
  webflux:
       # This ensures WebFlux handles the static UI paths cleanly
       all-disabled: false
@@ -21,6 +27,8 @@ springdoc:
    path: /swagger-ui.html
      # Keeps the UI active
    enabled: true
+     # ADD THIS LINE TO HIDE THE SCHEMAS SECTION:
+   default-models-expand-depth: -1
    # This enables the "Select a definition" dropdown
    urls:
      - name: Notification Service
@@ -33,9 +41,8 @@ springdoc:
        url: /api/co/v3/api-docs
      - name: driver Service
        url: /api/driver/v3/api-docs
- # This helps the gateway discover routes from Eureka
- api-docs:
-   enabled: true
+
+
 
 eureka:
   instance:

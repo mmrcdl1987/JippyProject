@@ -1,8 +1,9 @@
 server:
-  port: 8085
+  port: 8086
+
 spring:
   application:
-   name: driver
+    name: driver
 
   datasource:
     url: jdbc:postgresql://187.127.156.147:5435/driver_db
@@ -12,14 +13,13 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     properties:
-      currentSchema: jippy_driver
       hibernate:
       ddl-auto: update
     show-sql: true
 
     #  Kafka Producer Configuration
   kafka:
-    bootstrap-servers: 187.127.156.147:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:187.127.156.147:9092}
     producer:
       # Serializes the Message Key (Order ID) as a String
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -39,10 +39,14 @@ spring:
         spring.json.trusted.packages: "com.jippy.driver.dto"
 
 
+  #data:
+   # redis:
+    #  host: localhost
+     # port: 6379
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 management:
   endpoints:
@@ -66,5 +70,11 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: http://eureka-admin:eureka-admin123@localhost:8070/eureka/
 
+springdoc:
+  api-docs:
+    # Forces the microservice to expose its docs at /api/fm/v3/api-docs
+    path: /api/driver/v3/api-docs
+  swagger-ui:
+    path: /api/driver/swagger-ui.html
