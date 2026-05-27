@@ -1,5 +1,7 @@
 package com.jippy.driver.controller;
 
+import com.jippy.driver.dto.DeliveryChargeCalculationRequestDto;
+import com.jippy.driver.dto.DeliveryChargeCalculationResponseDto;
 import com.jippy.driver.dto.DriverChargeCalculationRequestDto;
 import com.jippy.driver.dto.DriverChargeCalculationResponseDto;
 import com.jippy.driver.service.DriverChargeService;
@@ -8,25 +10,41 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/driver/driver-charge")
+@RequestMapping("/api/driver")
 @RequiredArgsConstructor
 @Slf4j
 public class DriverChargeController {
 
     private final DriverChargeService driverChargeService;
 
-    @PostMapping("/calculate")
-    @Operation(summary = "Calculate Driver Charge", description = "Calculate pickup and delivery charges based on distance")
+    // DRIVER PAYOUT CALCULATION
+    @PostMapping("/driver-charge/calculate")
+    @Operation(summary = "Calculate Driver Charge", description = "Calculate pickup and delivery charge for driver payout")
     public ResponseEntity<DriverChargeCalculationResponseDto> calculateDriverCharge(@Valid @RequestBody DriverChargeCalculationRequestDto requestDto) {
 
-        log.info("POST API called to calculate driver charge | outletId={}, customerAddressId={}", requestDto.getOutletId(), requestDto.getCustomerAddressId());
+        log.info("API_START | CALCULATE_DRIVER_CHARGE");
 
-        return ResponseEntity.ok(driverChargeService.calculateDriverCharge(requestDto));
+        DriverChargeCalculationResponseDto response = driverChargeService.calculateDriverCharge(requestDto);
+
+        log.info("API_SUCCESS | DRIVER_CHARGE_CALCULATED");
+
+        return ResponseEntity.ok(response);
+    }
+
+    // CHECKOUT DELIVERY CHARGE
+    @PostMapping("/delivery-charge/calculate")
+    @Operation(summary = "Calculate Delivery Charge", description = "Calculate delivery charge during customer checkout")
+    public ResponseEntity<DeliveryChargeCalculationResponseDto> calculateDeliveryCharge(@Valid @RequestBody DeliveryChargeCalculationRequestDto requestDto) {
+
+        log.info("API_START | CALCULATE_DELIVERY_CHARGE");
+
+        DeliveryChargeCalculationResponseDto response = driverChargeService.calculateDeliveryCharge(requestDto);
+
+        log.info("API_SUCCESS | DELIVERY_CHARGE_CALCULATED");
+
+        return ResponseEntity.ok(response);
     }
 }

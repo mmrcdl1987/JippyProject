@@ -19,30 +19,25 @@ public class COCartController {
     private final ICartService cartService;
 
     @PostMapping("/update")
-    public ResponseEntity<String> updateCart(
-            @Valid @RequestBody CoCartUpdateRequestDto request) {
+    public ResponseEntity<String> saveOrUpdateCart(@Valid @RequestBody CoCartUpdateRequestDto request) {
 
-        log.info("Cart update request received | customerId={}, productId={}, quantity={}",
-                request.getCustomerId(), request.getProductId(), request.getQuantity());
+        log.info("Cart update request received | customerId={}, productId={}, quantity={}", request.getCustomerId(), request.getProductId(), request.getQuantity());
 
-        String response = cartService.updateCart(request);
+        String response = cartService.saveOrUpdateCart(request);
 
-        log.info("Cart update completed successfully | customerId={}, response={}", 
-                request.getCustomerId(), response);
+        log.info("Cart update completed successfully | customerId={}, response={}", request.getCustomerId(), response);
 
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{customerId}")
-    public ResponseEntity<CoCartResponseDto> getCart(
-            @PathVariable Integer customerId) {
+    public ResponseEntity<CoCartResponseDto> getCart(@PathVariable Integer customerId) {
 
         log.info("API hit: get cart | customerId={}", customerId);
 
         CoCartResponseDto response = cartService.getCart(customerId);
 
-        log.info("Cart fetched successfully | customerId={}, items={}, grandTotal={}", 
-                customerId, response.getItems().size(), response.getGrandTotal());
+        log.info("Cart fetched successfully | customerId={}, items={}, grandTotal={}", customerId, response.getItems().size(), response.getGrandTotal());
 
         return ResponseEntity.ok(response);
     }

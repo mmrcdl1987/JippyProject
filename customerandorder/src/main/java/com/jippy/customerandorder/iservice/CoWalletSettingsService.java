@@ -5,6 +5,5 @@ import com.jippy.customerandorder.dto.CoWalletSettingsResponseDto;
 
 public interface CoWalletSettingsService {
 
-    CoWalletSettingsResponseDto saveWalletSettings(
-            CoWalletSettingsRequestDto requestDto);
+    CoWalletSettingsResponseDto saveWalletSettings(CoWalletSettingsRequestDto requestDto);
 }

@@ -4,5 +4,5 @@ import com.jippy.customerandorder.dto.CoCheckoutRequestDto;
 import com.jippy.customerandorder.dto.CoCheckoutResponseDto;
 
 public interface ICheckoutService {
-    //CoCheckoutResponseDto checkout(CoCheckoutRequestDto requestDto);
+    CoCheckoutResponseDto checkout(CoCheckoutRequestDto requestDto);
 }

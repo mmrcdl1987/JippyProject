@@ -18,7 +18,6 @@ public class CoOrderRejectionMapper {
         entity.setRejectedById(dto.getRejectedById());
         entity.setType(dto.getType().toUpperCase());
         entity.setReason(dto.getReason());
-
         entity.setIsActive(true);
         entity.setCreatedAt(LocalDateTime.now());
         entity.setCreatedBy(dto.getRejectedById());

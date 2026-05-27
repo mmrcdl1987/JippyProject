@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 @Setter
 public class DriverChargeCalculationResponseDto {
 
-    private Double pickupDistanceKm;
+    private BigDecimal pickupDistanceKm;
 
-    private Double deliveryDistanceKm;
+    private BigDecimal deliveryDistanceKm;
 
     private BigDecimal pickupUnitPrice;
 
