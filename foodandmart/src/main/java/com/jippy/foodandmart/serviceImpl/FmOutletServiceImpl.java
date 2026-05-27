@@ -52,7 +52,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmOutletDayRepository dayRepository;
     private final FmMerchantRepository merchantRepository;
     private final FmUserRepository userRepository;
-    private final FmEmployeeRepository employeeRepository;
     private final FmStateRepository stateRepository;
     private final FmAreaRepository areaRepository;
     private final FmRoleRepository roleRepository;
@@ -101,8 +100,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     @Override
     public FmOutlet getOutletById(Integer id) {
-        return outletRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Outlet ID " + id + " does not exist"));
+        return outletRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Outlet ID " + id + " does not exist"));
     }
 
     // ── Single Create ─────────────────────────────────────────────────────────
@@ -603,250 +601,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return outletRepository.fetchOutletName(outletId);
     }
 
-//    @Override
-//    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat,
-//                                                                  double customerLng) {
-//        double radiusKm     = FmAppConstants.DEFAULT_RADIUS_KM;
-//        double radiusMetres = radiusKm * 1000.0;
-//
-//        log.info("[OutletServiceImpl] fetchCustomerNearbyOutlets lat={} lng={} radius={} km",
-//                customerLat, customerLng, radiusKm);
-//
-//        List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(
-//                customerLat, customerLng, radiusMetres);
-//
-//        if (rows.isEmpty()) {
-//            log.info("[OutletServiceImpl] No nearby outlets found — verify outlet_location is populated");
-//            return new FmCustomerNearbyResponseDto(customerLat, customerLng, radiusKm, 0, List.of());
-//        }
-//
-//        // 1. Collect outlet IDs
-//        List<Integer> outletIds = rows.stream()
-//                .map(r -> ((Number) r[0]).intValue())
-//                .collect(Collectors.toList());
-//
-//        // 2. Bulk-fetch outlet_days (1 query for all outlets)
-//        List<FmOutletDay> allDays = dayRepository.findByOutletIdIn(outletIds);
-//
-//        Map<Integer, List<FmOutletDay>> daysByOutlet = allDays.stream()
-//                .collect(Collectors.groupingBy(FmOutletDay::getOutletId));
-//
-//        // 3. Build DTOs
-//        List<FmNearbyOutletDto> outlets = new ArrayList<>();
-//
-//        for (Object[] row : rows) {
-//            FmNearbyOutletDto dto    = FmOutletMapper.NearbyOutletMapper.map(row);
-//            Integer         outletId = dto.getOutletId();
-//
-//            // 3a. Opening hours + openNow
-//            List<FmOutletDay> daysForOutlet = daysByOutlet.getOrDefault(outletId, List.of());
-//            HoursResult hours = evaluateHours(daysForOutlet);
-//            dto.setOpeningTime(hours.openingTime());
-//            dto.setClosingTime(hours.closingTime());
-//            dto.setOpenNow(hours.openNow());
-//
-//            // 3b. Road distance + delivery time
-//            Double outletLat = FmNearbyOutletMapper.extractOutletLat(row);
-//            Double outletLng = FmOutletMapper.NearbyOutletMapper.extractOutletLng(row);
-//
-//            if (outletLat != null && outletLng != null) {
-//                FmGoogleMapsService.DistanceResult maps = googleMapsService
-//                        .getDistanceAndDuration(customerLat, customerLng, outletLat, outletLng);
-//                dto.setRoadDistance(maps.roadDistance());
-//                if (maps.deliveryTime() != null) {
-//                    dto.setDeliveryTime(maps.deliveryTime());
-//                } else {
-//                    dto.setDeliveryTime(estimateDeliveryTime(dto.getDistanceKm()));
-//                    log.debug("[OutletServiceImpl] Google Maps unavailable for outletId={} — using estimate", outletId);
-//                }
-//            } else {
-//                dto.setDeliveryTime(estimateDeliveryTime(dto.getDistanceKm()));
-//                log.warn("[OutletServiceImpl] outletId={} missing lat/lng — using estimated delivery time", outletId);
-//            }
-//
-//            outlets.add(dto);
-//        }
-//
-//        log.info("[OutletServiceImpl] Returning {} outlets", outlets.size());
-//        return new FmCustomerNearbyResponseDto(customerLat, customerLng, radiusKm, outlets.size(), outlets);
-//    }
-
-
-    //    // CUSTOMER NEARBY OUTLETS
-//
-//        @Override
-//        public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat,
-//                                                                      double customerLng) {
-//
-//            double radiusKm = FmAppConstants.DEFAULT_RADIUS_KM;
-//            // double radiusMetres = radiusKm * 1000.0;
-//
-//            log.info("[OutletService] fetchCustomerNearbyOutlets lat={} lng={} radius={} km",
-//                    customerLat, customerLng, radiusKm);
-//
-//            List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(customerLat, customerLng);
-//
-//            List<FmNearbyOutletDto> outlets = rows.stream().map(row -> {
-//
-//                FmNearbyOutletDto dto = new FmNearbyOutletDto();
-//
-//                dto.setOutletId(row[0] != null ? ((Number) row[0]).intValue() : null);
-//                dto.setOutletName((String) row[1]);
-//                dto.setCuisineType((String) row[2]);
-//                dto.setOutletPhone((String) row[3]);
-//                dto.setRadius(row[4] != null ? ((Number) row[4]).doubleValue() : null);
-//                dto.setReview(row[5] != null ? ((Number) row[5]).doubleValue() : null);
-//                dto.setSubscriptionStatus((String) row[6]);
-//                dto.setPromotionStatus((String) row[7]);
-//
-//                dto.setDistanceKm(row[8] != null ? ((Number) row[8]).doubleValue() : null);
-//
-//                dto.setRoadDistance((String) row[9]);
-//                dto.setDeliveryTime((String) row[10]);
-//
-//                dto.setOpeningTime(row[11] != null ? row[11].toString() : null);
-//                dto.setClosingTime(row[12] != null ? row[12].toString() : null);
-//
-//                dto.setOpenNow(row[13] != null ? (Boolean) row[13] : null);
-//
-//                return dto;
-//
-//            }).toList();
-//
-//
-//
-//            if (rows.isEmpty()) {
-//                return new FmCustomerNearbyResponseDto(customerLat, customerLng, radiusKm, 0, List.of());
-//            }
-//
-//    //        // 1. Collect outlet IDs
-//    //        List<Integer> outletIds = rows.stream()
-//    //                .map(r -> ((Number) r[0]).intValue())
-//    //                .toList();
-//    //
-//    //        // 2. Fetch all days in single query
-//    //        List<FmOutletDay> allDays = dayRepository.findByOutletIdIn(outletIds);
-//    //
-//    //        Map<Integer, List<FmOutletDay>> daysByOutlet = allDays.stream()
-//    //                .collect(Collectors.groupingBy(FmOutletDay::getOutletId));
-//    //
-//    //        // 3. Build DTO
-//            List<FmNearbyOutletDto> outlet = new ArrayList<>();
-//    //
-//            for (Object[] row : rows) {
-//    //
-//                FmNearbyOutletDto dto = FmNearbyOutletMapper.map(row);
-//                Integer outletId = dto.getOutletId();
-//    //
-//    //            // ================= HOURS =================
-//    //            List<FmOutletDay> daysForOutlet =
-//    //                    daysByOutlet.getOrDefault(outletId, List.of());
-//    //
-//    //            HoursResult hours = evaluateHours(daysForOutlet);
-//    //
-//    //            dto.setOpeningTime(hours.openingTime());
-//    //            dto.setClosingTime(hours.closingTime());
-//    //            dto.setOpenNow(hours.openNow());
-//
-//                // ================= DISTANCE =================
-//                Double outletLat = FmNearbyOutletMapper.extractOutletLat(row);
-//                Double outletLng = FmNearbyOutletMapper.extractOutletLng(row);
-//
-//                if (outletLat != null && outletLng != null) {
-//
-//                    FmGoogleMapsService.DistanceResult maps =
-//                            googleMapsService.getDistanceAndDuration(
-//                                    customerLat, customerLng, outletLat, outletLng);
-//
-//                    dto.setRoadDistance(maps.roadDistance());
-//
-//                    if (maps.deliveryTime() != null) {
-//                        dto.setDeliveryTime(maps.deliveryTime());
-//                    } else {
-//                        dto.setDeliveryTime(estimateDeliveryTime(dto.getDistanceKm()));
-//                    }
-//
-//                } else {
-//                    dto.setDeliveryTime(estimateDeliveryTime(dto.getDistanceKm()));
-//                }
-//
-//                outlets.add(dto);
-//            }
-//
-//            return new FmCustomerNearbyResponseDto(
-//                    customerLat,
-//                    customerLng,
-//                    radiusKm,
-//                    outlets.size(),
-//                    outlets
-//            );
-//        }
-//
-//
-//    //    // HOURS LOGIC
-//    //
-//    //    private record HoursResult(String openingTime, String closingTime, Boolean openNow) {}
-//    //
-//    //    private HoursResult evaluateHours(List<FmOutletDay> days) {
-//    //
-//    //        if (days == null || days.isEmpty()) {
-//    //            return new HoursResult(null, null, false);
-//    //        }
-//    //
-//    //        ZonedDateTime now = ZonedDateTime.now(ZONE);
-//    //        int today = now.getDayOfWeek().getValue();
-//    //        LocalTime current = now.toLocalTime();
-//    //
-//    //        java.util.Optional<FmOutletDay> todayData = days.stream()
-//    //                .filter(d -> d.getDayOfWeekId() != null && d.getDayOfWeekId() == today)
-//    //                .findFirst();
-//    //
-//    //        if (todayData.isEmpty()) {
-//    //            return new HoursResult(null, null, false);
-//    //        }
-//    //
-//    //        FmOutletDay d = todayData.get();
-//    //
-//    //        if (Boolean.FALSE.equals(d.getIsOpen())) {
-//    //            return new HoursResult(null, null, false);
-//    //        }
-//    //
-//    //        LocalTime open = d.getOpeningTime();
-//    //        LocalTime close = d.getClosingTime();
-//    //
-//    //        if (open == null || close == null) {
-//    //            return new HoursResult(null, null, false);
-//    //        }
-//    //
-//    //        boolean isOpen;
-//    //
-//    //        if (close.isAfter(open)) {
-//    //            isOpen = !current.isBefore(open) && current.isBefore(close);
-//    //        } else {
-//    //            // overnight case
-//    //            isOpen = !current.isBefore(open) || current.isBefore(close);
-//    //        }
-//    //
-//    //        return new HoursResult(
-//    //                open.format(HH_MM),
-//    //                close.format(HH_MM),
-//    //                isOpen
-//    //        );
-//    //    }
-//
-//
-//        // DELIVERY TIME
-//
-//        private String estimateDeliveryTime(Double distanceKm) {
-//            if (distanceKm == null || distanceKm <= 0) {
-//                return "10 mins";
-//            }
-//
-//            int travelMins = (int) Math.ceil((distanceKm / 20.0) * 60);
-//            return (5 + travelMins) + " mins";
-//        }
-//}
-//
     @Override
     public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng) {
 
@@ -856,9 +610,27 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(customerLat, customerLng);
 
+        /*
+         * NO OUTLETS FOUND
+         */
+
         if (rows.isEmpty()) {
 
-            return new FmCustomerNearbyResponseDto(customerLat, customerLng, radiusKm, 0, List.of());
+            FmCustomerNearbyResponseDto response = new FmCustomerNearbyResponseDto();
+
+            response.setCustomerLat(customerLat);
+
+            response.setCustomerLng(customerLng);
+
+            response.setRadiusKm(radiusKm);
+
+            response.setTotalOutlets(0);
+
+            response.setMessage("Service is not available in this area");
+
+            response.setOutlets(List.of());
+
+            return response;
         }
 
         List<FmNearbyOutletDto> outlets = new ArrayList<>();
@@ -866,30 +638,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
         for (Object[] row : rows) {
 
             FmNearbyOutletDto dto = new FmNearbyOutletDto();
-
-            /*
-             * QUERY COLUMN INDEXES
-             *
-             * 0  -> outlet_id
-             * 1  -> outlet_name
-             * 2  -> merchant_id
-             * 3  -> cuisine_type
-             * 4  -> outlet_phone
-             * 5  -> radius
-             * 6  -> review
-             * 7  -> subscription_status
-             * 8  -> promotion_status
-             * 9  -> is_active
-             * 10 -> is_approved
-             * 11 -> employee_id
-             * 12 -> opening_time
-             * 13 -> closing_time
-             * 14 -> outlet_day_id
-             * 15 -> day_of_week_id
-             * 16 -> distance_km
-             * 17 -> latitude
-             * 18 -> longitude
-             */
 
             dto.setOutletId(row[0] != null ? ((Number) row[0]).intValue() : null);
 
@@ -914,7 +662,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
             dto.setDistanceKm(row[16] != null ? ((Number) row[16]).doubleValue() : null);
 
             /*
-             * OPEN NOW
+             * OPEN NOW LOGIC
              */
 
             Boolean openNow = false;
@@ -944,17 +692,20 @@ public class FmOutletServiceImpl implements IFmOutletService {
             dto.setOpenNow(openNow);
 
             /*
-             * GOOGLE MAPS LOGIC
+             * GOOGLE MAPS DISTANCE + DELIVERY TIME
              */
 
             Double outletLat = null;
+
             Double outletLng = null;
 
             if (row[17] != null) {
+
                 outletLat = ((Number) row[17]).doubleValue();
             }
 
             if (row[18] != null) {
+
                 outletLng = ((Number) row[18]).doubleValue();
             }
 
@@ -989,7 +740,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
             } else {
 
                 /*
-                 * IF LAT LNG NOT AVAILABLE
+                 * LAT LNG NOT AVAILABLE
                  */
 
                 dto.setRoadDistance(null);
@@ -1009,6 +760,24 @@ public class FmOutletServiceImpl implements IFmOutletService {
             outlets.add(dto);
         }
 
-        return new FmCustomerNearbyResponseDto(customerLat, customerLng, radiusKm, outlets.size(), outlets);
+        /*
+         * SUCCESS RESPONSE
+         */
+
+        FmCustomerNearbyResponseDto response = new FmCustomerNearbyResponseDto();
+
+        response.setCustomerLat(customerLat);
+
+        response.setCustomerLng(customerLng);
+
+        response.setRadiusKm(radiusKm);
+
+        response.setTotalOutlets(outlets.size());
+
+        response.setMessage("Nearby outlets fetched successfully");
+
+        response.setOutlets(outlets);
+
+        return response;
     }
 }

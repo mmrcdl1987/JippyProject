@@ -40,16 +40,6 @@ public class CoCustomerController {
 
         return customerService.convertPoints(customerId);
     }
-
-//    // DAILY STREAK
-//    @PostMapping("/daily-streak/{customerId}")
-//    public CoCustomerStreakResponseDto updateDailyStreak(@PathVariable Integer customerId) {
-//
-//        log.info("Daily streak request received");
-//
-//        return customerService.updateDailyStreak(customerId);
-//    }
-
     @PostMapping("/daily-streak/{customerId}")
     public CoCustomerStreakResponseDto updateDailyStreak(
 

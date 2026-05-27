@@ -57,7 +57,7 @@ management:
 
 google:
   maps:
-    api-key: nZCbR3no1OICYxQMqhoN0DWl-go=
+    api-key: AIzaSyB6p_DgqwikOUxdpM3l6wbOxzFWRj5lkmg
 
 springdoc:
   api-docs:
