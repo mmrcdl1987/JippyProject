@@ -4,6 +4,7 @@ import com.jippy.foodandmart.dto.OutletLocationProjection;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
+import com.jippy.foodandmart.projections.FmOutletSettlementProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -337,16 +338,12 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
 
     @Modifying
     @Query("""
-           UPDATE FmOutlet o
-           SET o.isActive = :status,
-               o.isToggle = false
-           WHERE o.outletId = :outletId
-           """)
-    void permanentlyCloseOutlet(
-            @Param("outletId")
-            Integer outletId,
-            @Param("status")
-            String status);
+            UPDATE FmOutlet o
+            SET o.isActive = :status,
+                o.isToggle = false
+            WHERE o.outletId = :outletId
+            """)
+    void permanentlyCloseOutlet(@Param("outletId") Integer outletId, @Param("status") String status);
 
 
     //    for fetching outlet name by outlet id to show in order details page and driver app
@@ -356,4 +353,22 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             WHERE outlet_id = :outletId
             """, nativeQuery = true)
     String fetchOutletName(@Param("outletId") Integer outletId);
+
+
+    @Query(value = """
+            SELECT
+                o.outlet_id   AS outletId,
+                o.outlet_name AS outletName,
+                o.outlet_phone AS outletPhone,
+                a.area_id     AS areaId,
+                ar.area_name  AS areaName
+            FROM jippy_fm.outlets o
+            JOIN jippy_fm.address a
+                ON o.outlet_id = a.jippy_address_id
+            JOIN jippy_fm.area ar
+                ON a.area_id = ar.area_id
+            WHERE a.address_type = 'OUTLET'
+            AND o.outlet_id = :outletId
+            """, nativeQuery = true)
+    FmOutletSettlementProjection getOutletDetailsAndAreaAddressForSettlement(@Param("outletId") Integer outletId);
 }

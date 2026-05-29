@@ -2,6 +2,7 @@ package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
+import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,8 +37,7 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
             WHERE o.driver_id = :driverId
             AND DATE(o.created_at) = :date
             """, nativeQuery = true)
-    CoDriverEarningsProjection fetchDriverEarnings
-    (@Param("driverId") Integer driverId, @Param("date") LocalDate date);
+    CoDriverEarningsProjection fetchDriverEarnings(@Param("driverId") Integer driverId, @Param("date") LocalDate date);
 
     //
 // to fetch Frequent outlets (>=3)
@@ -67,4 +67,36 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
                 LIMIT 1
             """, nativeQuery = true)
     Integer findRecentOutlet(Integer customerId);
+
+
+
+// Fetch delivered orders between dates and calculate total merchant settlement amount
+//this fetches all orders with status 'DELIVERED' that were created between the specified start and end dates. It joins the orders table with the order_items table to calculate the total price for each order by summing up the merchant_price_total from the order_items. The results are grouped by order_id, outlet_id, order_status, and created_at, and ordered by created_at in descending order. The query returns a list of CoOrderSettlementProjection, which includes the order ID, outlet ID, order status, creation timestamp,
+// and total price for each delivered order within the specified date range.
+// ex: if there are 3 orders with status 'DELIVERED' created between the given dates,
+// The query will return a list of 3 CoOrderSettlementProjection objects,
+// each containing the order ID, outlet ID,
+//    order status, creation timestamp, and total price for those orders.
+    @Query(value = """
+            SELECT
+                o.order_id AS orderId,
+                o.outlet_id AS outletId,
+                o.order_status AS orderStatus,
+                o.created_at AS createdAt,
+                SUM(oi.merchant_price_total) AS totalPrice
+            FROM jippy_customer_and_order.orders o
+            JOIN jippy_customer_and_order.order_items oi
+            ON o.order_id = oi.order_id
+            WHERE o.order_status = 'DELIVERED'
+            AND DATE(o.created_at)
+            BETWEEN :startDate AND :endDate
+            GROUP BY
+                o.order_id,
+                o.outlet_id,
+                o.order_status,
+                o.created_at
+            ORDER BY o.created_at DESC
+            """, nativeQuery = true)
+    List<CoOrderSettlementProjection> getProductDetailsForMerchantSettlement
+    (@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

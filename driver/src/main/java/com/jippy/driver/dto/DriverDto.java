@@ -62,7 +62,7 @@ private String nomineeName;
     @Size(max = 100)
     private String rcCopy;
 
-    // Address fields
+    // Address fields in FM
     @NotBlank(message = "Building number is required")
     @Size(max = 50)
     private String buildingNumber;
