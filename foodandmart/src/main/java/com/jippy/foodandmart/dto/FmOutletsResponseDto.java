@@ -27,4 +27,16 @@ public class FmOutletsResponseDto {
 
     @Schema(description = "List of nearby outlets")
     private List<com.jippy.foodandmart.dto.FmOutletDto> outlets;
+
+// these feilds ar used in Co Merchant Settlement API response,
+// contains outlet details along with areaId which is used to fetch area details from Area microservice
+    private Integer outletId;
+
+    private String outletName;
+
+    private String outletPhone;
+
+    private Integer areaId;
+
+    private String areaName;
 }

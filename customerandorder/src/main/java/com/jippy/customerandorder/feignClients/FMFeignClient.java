@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 
-@FeignClient(name = "foodandmart",configuration = FeignClientConfig.class)
+@FeignClient(name = "foodandmart", configuration = FeignClientConfig.class)
 public interface FMFeignClient {
 
     /*@PostMapping("/api/fm/outlets/saveAddressDetails")
@@ -38,5 +38,22 @@ public interface FMFeignClient {
 
    /* @PostMapping("/api/fm/users/createUser")
     ResponseEntity<FmUser> createUser(@RequestBody CoUserDto dto);*/
+
+//---------------------------------------------------------------------------------------------------
+    //    this is from "Fm Merchant Settlement Controller" From Fm microservice to fetch product details,
+    //    outlet details and area name using their respective id's
+    /*
+     Fetch product details using product id
+     */
+    @GetMapping("/api/fm/product")
+    CoFmProductDto getSettlementProductById(@RequestParam Integer productId);
+
+    /*
+     Fetch outlet details using outlet id
+     */
+    @GetMapping("/api/fm/outlet")
+    CoFmOutletDto getOutletById(@RequestParam Integer outletId);
+
+
 
 }

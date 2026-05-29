@@ -288,57 +288,35 @@ public class DriverServiceImpl implements DriverService {
 //        return ProjectionResponse;
 //    }
     @Override
-    public List<DriverOrderHistoryDto> fetchOrderEarningsHistory(
-            Integer driverId
-    ) {
+    public List<DriverOrderHistoryDto> fetchOrderEarningsHistory(Integer driverId) {
 
-        log.info(
-                "Fetching order earnings history for driver id: {}",
-                driverId);
+        log.info("Fetching order earnings history for driver id: {}", driverId);
 
-        driverRepository.findById(driverId)
-                .orElseThrow(() -> {
+        driverRepository.findById(driverId).orElseThrow(() -> {
 
-                    log.error(
-                            "Driver not found with id: {}",
-                            driverId);
+            log.error("Driver not found with id: {}", driverId);
 
-                    return new ResourceNotFoundException(
-                            "Driver not found with id: " + driverId);
-                });
+            return new ResourceNotFoundException("Driver not found with id: " + driverId);
+        });
 
-        List<DriverOrderHistoryProjection> projections =
-                driverOrderRepository
-                        .fetchOrderEarningsHistory(driverId);
+        List<DriverOrderHistoryProjection> projections = driverOrderRepository.fetchOrderEarningsHistory(driverId);
 
-        List<DriverOrderHistoryDto> response =
-                new ArrayList<>();
+        List<DriverOrderHistoryDto> response = new ArrayList<>();
 
         for (DriverOrderHistoryProjection projection : projections) {
 
             // call customer ms
-            DriveOrderDto order =
-                    coFeignClients.getOrder(
-                            String.valueOf(
-                                    projection.getOrderId()));
+            DriveOrderDto order = coFeignClients.getOrder(String.valueOf(projection.getOrderId()));
 
             // call fm ms
-            String outletName =
-                    fmFeignClient.fetchOutletName(
-                            order.getOutletId());
+            String outletName = fmFeignClient.fetchOutletName(order.getOutletId());
 
-            DriverOrderHistoryDto dto =
-                    DriverMapper.mapToDriverOrderHistoryDto(
-                            projection,
-                            order.getOrderStatus(),
-                            outletName);
+            DriverOrderHistoryDto dto = DriverMapper.mapToDriverOrderHistoryDto(projection, order.getOrderStatus(), outletName);
 
             response.add(dto);
         }
 
-        log.info(
-                "Successfully fetched order earnings history for driver id: {}",
-                driverId);
+        log.info("Successfully fetched order earnings history for driver id: {}", driverId);
 
         return response;
     }
@@ -360,10 +338,8 @@ public class DriverServiceImpl implements DriverService {
         DriverTotalEarningsProjection projection = driverOrderRepository.fetchTotalEarnings(driverId);
 
         // Fetch rejected orders count
-       // Long rejectedOrders = orderRejectionRepository.fetchRejectedOrdersCount(driverId);
-        Long rejectedOrders =
-                coFeignClients
-                        .fetchRejectedOrdersCount(driverId);
+        // Long rejectedOrders = orderRejectionRepository.fetchRejectedOrdersCount(driverId);
+        Long rejectedOrders = coFeignClients.fetchRejectedOrdersCount(driverId);
         // Convert to DTO using mapper
         DriverTotalEarningsDto response = DriverMapper.mapToTotalEarningsDto(driverId, projection, rejectedOrders);
 

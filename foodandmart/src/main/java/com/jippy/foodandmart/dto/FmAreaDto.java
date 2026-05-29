@@ -17,14 +17,15 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FmAreaDto {
 
+//    areaID and AreaName are  using in Co Merchant Settlement API response,
+//    contains area details along with cityId (if available)
     private Integer areaId;
 
     @NotBlank(message = "Area name cannot be empty or only spaces")
     @Size(max = 50, message = "Area name must be less than 50 characters")
     @Pattern(
             regexp = "^[A-Za-z]+( [A-Za-z]+)*$",
-            message = "Area name must contain only letters and single spaces between words"
-    )
+            message = "Area name must contain only letters and single spaces between words")
     private String areaName;
 
     private Integer cityId;
