@@ -1,6 +1,7 @@
     package com.jippy.foodandmart.repository;
 
     import com.jippy.foodandmart.entity.FmSpecializedOutlet;
+    import com.jippy.foodandmart.projections.FmNearbyOutletProjection;
     import com.jippy.foodandmart.projections.FmOutletProjection;
 
     import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,4 +29,52 @@ AND o.is_active = 'Y'
         fetchSpecializedOutletsByAreaId(
                 @Param("areaId") Integer areaId
         );
+        @Query(value = """
+SELECT
+    o.outlet_id AS outletId,
+    o.outlet_name AS outletName,
+
+    ST_Distance(
+        o.outlet_location,
+        ST_SetSRID(
+            ST_MakePoint(
+                :longitude,
+                :latitude
+            ),
+            4326
+        )::geography
+    ) / 1000 AS distanceInKm
+
+FROM jippy_fm.specialized_outlets so
+
+JOIN jippy_fm.outlets o
+ON so.outlet_id = o.outlet_id
+
+WHERE o.is_active = 'Y'
+AND o.is_approved = true
+AND o.outlet_location IS NOT NULL
+
+AND ST_Distance(
+        o.outlet_location,
+        ST_SetSRID(
+            ST_MakePoint(
+                :longitude,
+                :latitude
+            ),
+            4326
+        )::geography
+    ) <= :radius
+
+GROUP BY
+    o.outlet_id,
+    o.outlet_name,
+    o.outlet_location
+
+ORDER BY distanceInKm
+""", nativeQuery = true)
+        List<FmNearbyOutletProjection>
+        fetchNearbySpecializedOutlets(
+                @Param("latitude") Double latitude,
+                @Param("longitude") Double longitude,
+                @Param("radius") Double radius);
     }

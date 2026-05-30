@@ -4,8 +4,7 @@ import com.jippy.foodandmart.dto.FmNearbyOutletResponseDto;
 
 public interface FmSpecializedOutletService {
 
-    FmNearbyOutletResponseDto
-    fetchSpecializedOutletsByAreaId(
-            Integer areaId
-    );
+    FmNearbyOutletResponseDto fetchSpecializedOutletsByAreaId(Integer areaId);
+
+    FmNearbyOutletResponseDto fetchNearbySpecializedOutlets(Double latitude, Double longitude);
 }

@@ -128,5 +128,6 @@ public final class FmAppConstants {
 
     public static final String MSG_CUSTOMER_NOT_FOUND =
             "Customer not found";
+    public static final Double NEARBY_OUTLET_RADIUS_METERS = 5000.0;
 
 }
