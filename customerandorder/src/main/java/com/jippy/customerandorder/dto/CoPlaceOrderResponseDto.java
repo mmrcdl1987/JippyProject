@@ -2,9 +2,43 @@ package com.jippy.customerandorder.dto;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Data
 public class CoPlaceOrderResponseDto {
 
-    private String orderId;   // jippy1
-    private String message;   // Order created successfully
+    /*
+     * SUCCESS MESSAGE
+     */
+    private String message;
+
+    /*
+     * ONLY FOR
+     * SCHEDULED_RECURRING
+     * SCHEDULED_CUSTOM_PLAN
+     */
+    private Integer mealSubscriptionId;
+
+    /*
+     * ALL CREATED ORDER IDS
+     */
+    private List<String> orderIds;
+
+    /*
+     * NORMAL
+     * SCHEDULED_RECURRING
+     * SCHEDULED_CUSTOM_PLAN
+     */
+    private String orderType;
+
+    /*
+     * TOTAL ORDERS CREATED
+     */
+    private Integer totalOrdersCreated;
+
+    /*
+     * RESPONSE CREATED TIME
+     */
+    private LocalDateTime createdAt;
 }

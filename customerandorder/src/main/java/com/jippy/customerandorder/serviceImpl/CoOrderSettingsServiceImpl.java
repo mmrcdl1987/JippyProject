@@ -4,11 +4,11 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoOrderSettingsRequestDto;
 import com.jippy.customerandorder.dto.CoOrderSettingsResponseDto;
-import com.jippy.customerandorder.entity.OrderSettings;
+import com.jippy.customerandorder.entity.CoOrderSettings;
 import com.jippy.customerandorder.exception.CoOrderSettingsException;
 import com.jippy.customerandorder.iservice.IOrderSettingsService;
 import com.jippy.customerandorder.mapper.CoOrderSettingsMapper;
-import com.jippy.customerandorder.repository.OrderSettingsRepository;
+import com.jippy.customerandorder.repository.CoOrderSettingsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Slf4j
 public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
 
-    private final OrderSettingsRepository orderSettingsRepository;
+    private final CoOrderSettingsRepository coOrderSettingsRepository;
 
     private final CoOrderSettingsMapper orderSettingsMapper;
 
@@ -40,13 +40,13 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
 
         log.info("REQUEST TYPE : {}", isUpdate ? "UPDATE" : "CREATE");
 
-        OrderSettings orderSettings;
+        CoOrderSettings coOrderSettings;
 
         if (isUpdate) {
 
             log.info("FETCHING ORDER SETTINGS | id={}", requestDto.getOrderSettingsId());
 
-            orderSettings = orderSettingsRepository.findById(requestDto.getOrderSettingsId()).orElseThrow(() -> {
+            coOrderSettings = coOrderSettingsRepository.findById(requestDto.getOrderSettingsId()).orElseThrow(() -> {
 
                 log.error("ORDER SETTINGS NOT FOUND | id={}", requestDto.getOrderSettingsId());
 
@@ -60,9 +60,9 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
                 throw new CoOrderSettingsException("UpdatedBy is required");
             }
 
-            orderSettings.setUpdatedBy(requestDto.getUpdatedBy());
+            coOrderSettings.setUpdatedBy(requestDto.getUpdatedBy());
 
-            orderSettings.setUpdatedAt(LocalDateTime.now());
+            coOrderSettings.setUpdatedAt(LocalDateTime.now());
 
             log.info("ORDER SETTINGS UPDATE STARTED | id={}", requestDto.getOrderSettingsId());
 
@@ -112,11 +112,11 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
                 throw new CoOrderSettingsException("CreatedBy is required");
             }
 
-            orderSettings = new OrderSettings();
+            coOrderSettings = new CoOrderSettings();
 
-            orderSettings.setCreatedBy(requestDto.getCreatedBy());
+            coOrderSettings.setCreatedBy(requestDto.getCreatedBy());
 
-            orderSettings.setCreatedAt(LocalDateTime.now());
+            coOrderSettings.setCreatedAt(LocalDateTime.now());
 
             log.info("CREATE ORDER SETTINGS OBJECT INITIALIZED");
         }
@@ -130,7 +130,7 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
                 throw new CoOrderSettingsException("Platform fee cannot be negative");
             }
 
-            orderSettings.setPlatformFee(requestDto.getPlatformFee());
+            coOrderSettings.setPlatformFee(requestDto.getPlatformFee());
 
             log.info("PLATFORM FEE UPDATED");
         }
@@ -144,7 +144,7 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
                 throw new CoOrderSettingsException("Surge fee cannot be negative");
             }
 
-            orderSettings.setSurgeFee(requestDto.getSurgeFee());
+            coOrderSettings.setSurgeFee(requestDto.getSurgeFee());
 
             log.info("SURGE FEE UPDATED");
         }
@@ -158,7 +158,7 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
                 throw new CoOrderSettingsException("Packaging fee cannot be negative");
             }
 
-            orderSettings.setPackagingFee(requestDto.getPackagingFee());
+            coOrderSettings.setPackagingFee(requestDto.getPackagingFee());
 
             log.info("PACKAGING FEE UPDATED");
         }
@@ -175,7 +175,7 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
                         "Delivery fee tax percentage must be between 0 and 100");
             }
 
-            orderSettings.setDeliveryFeeTax(requestDto.getDeliveryFeeTax());
+            coOrderSettings.setDeliveryFeeTax(requestDto.getDeliveryFeeTax());
 
             log.info("DELIVERY FEE TAX UPDATED");
         }
@@ -192,14 +192,14 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
                         "Food total amount tax percentage must be between 0 and 100");
             }
 
-            orderSettings.setFoodTotalAmountTax(requestDto.getFoodTotalAmountTax());
+            coOrderSettings.setFoodTotalAmountTax(requestDto.getFoodTotalAmountTax());
 
             log.info("FOOD TOTAL AMOUNT TAX UPDATED");
         }
 
         log.info("SAVING ORDER SETTINGS INTO DATABASE");
 
-        OrderSettings savedData = orderSettingsRepository.save(orderSettings);
+        CoOrderSettings savedData = coOrderSettingsRepository.save(coOrderSettings);
 
         log.info("ORDER SETTINGS SAVED SUCCESSFULLY | id={}", savedData.getOrderSettingsId());
 

@@ -30,14 +30,17 @@ public class CoOrderController {
     private final CoOrderRepository coOrderRepository;
     private final CoOrderPriceBreakupRepository coOrderPriceBreakupRepository;
 
+    /*
+     * PLACE ORDER
+     */
     @PostMapping("/placeOrder")
-    public ResponseEntity<CoPlaceOrderResponseDto> placeOrder(@Valid @RequestBody CoPlaceOrderRequestDto placeOrderRequestDto) {
+    public ResponseEntity<CoPlaceOrderResponseDto> placeOrder(@Valid @RequestBody CoPlaceOrderRequestDto requestDto) {
 
-        log.info("API hit: place order | customerId={}, outletId={}", placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId());
+        log.info("API_START | PLACE_ORDER | customerId={} | orderType={}", requestDto.getCustomerId(), requestDto.getOrderType());
 
-        CoPlaceOrderResponseDto response = orderService.placeOrder(placeOrderRequestDto);
+        CoPlaceOrderResponseDto response = orderService.placeOrder(requestDto);
 
-        log.info("Order placed successfully | customerId={}, outletId={}, orderId={}", placeOrderRequestDto.getCustomerId(), placeOrderRequestDto.getOutletId(), response.getOrderId());
+        log.info("API_END | PLACE_ORDER_SUCCESS | totalOrdersCreated={}", response.getTotalOrdersCreated());
 
         return ResponseEntity.ok(response);
     }

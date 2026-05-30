@@ -54,4 +54,6 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
             @Param("updatedBy") Integer updatedBy,
             @Param("approvedBy") Integer approvedBy
     );
+
+    Optional<FmProductOnlinePricing> findTopByProductIdAndIsApprovedOrderByCreatedAtDesc(Integer productId, Boolean isApproved);
 }

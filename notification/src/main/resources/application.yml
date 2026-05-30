@@ -12,24 +12,29 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
     properties:
       hibernate:
+        time_zone: Asia/Calcutta
         default_schema: jippy_notification
-      ddl-auto: update
     show-sql: true
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:187.127.156.147:9092}
     consumer:
+      group-id: notification-group
       # Starts reading from the beginning of the topic if no offset is found
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      properties:
-        # CRITICAL: Tell Spring which Java packages are safe to deserialize
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties: # CRITICAL: Tell Spring which Java packages are safe to deserialize
         spring.json.trusted.packages: "com.jippy.notification.dto"
         # Maps the incoming JSON back to your OrderEvent class
-        spring.json.value.default.type: "com.jippy.notification.dto.OrderEvent"
+        spring.json.value.default.type: "com.jippy.notification.dto.NOrderEvent"
+        spring.json.use.type.headers: false
+    listener:
+      ack-mode: record
 
     # Custom Firebase Path
     # app:
@@ -46,6 +51,5 @@ eureka:
       defaultZone: http://eureka-admin:eureka-admin123@localhost:8070/eureka/
 
 springdoc:
-  api-docs:
-    # Forces the microservice to expose its docs at /api/fm/v3/api-docs
+  api-docs: # Forces the microservice to expose its docs at /api/fm/v3/api-docs
     path: /api/notification/v3/api-docs

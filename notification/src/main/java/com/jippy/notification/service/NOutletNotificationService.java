@@ -27,52 +27,44 @@ public class NOutletNotificationService {
     @Transactional
     public void consume(NOrderEvent event) {
 
-        /*
-         * NULL VALIDATION
-         */
-        if (event == null) {
-
-            log.error("Order event is null");
-
-            return;
-        }
-
-        /*
-         * FIELD VALIDATION
-         */
-        if (event.getOrderId() == null || event.getOutletId() == null) {
-
-            log.error("Invalid event data | orderId={}, outletId={}", event.getOrderId(), event.getOutletId());
-
-            return;
-        }
-
-        log.info("Start processing order event | orderId={}, outletId={}", event.getOrderId(), event.getOutletId());
+        log.info("KAFKA_START | PROCESS_NOTIFICATION | orderId={} | notificationType={}", event != null ? event.getOrderId() : null, event != null ? event.getNotificationType() : null);
 
         try {
 
+        /*
+             * VALIDATION
+         */
+        if (event == null) {
+
+                log.error("VALIDATION_FAILED | EVENT_NULL");
+
+            return;
+        }
+
+            if (event.getOutletId() <= 0) {
+
+                log.error("VALIDATION_FAILED | INVALID_OUTLET_ID | outletId={}", event.getOutletId());
+
+            return;
+        }
+
+            if (event.getNotificationType() == null && event.getStatus() == null) {
+
+                log.error("VALIDATION_FAILED | NOTIFICATION_TYPE_AND_STATUS_MISSING");
+
+                return;
+            }
+
             /*
-             * SAVE NOTIFICATION
+             * SAVE STATUS
              */
             OrderNotificationStatus status = notificationService.processNotification(event);
 
             /*
-             * SUBJECT
+             * TEMPLATE
              */
-            String subject;
+            String subject = resolveSubject(event);
 
-            if ("REJECTED".equalsIgnoreCase(event.getStatus())) {
-
-                subject = NConstants.SUBJECT_REJECTED_ORDER;
-
-            } else {
-
-                subject = NConstants.SUBJECT_NEW_ORDER;
-            }
-
-            /*
-             * FETCH TEMPLATE
-             */
             Notification notification = notificationService.getNotificationTemplate(subject);
 
             /*
@@ -81,40 +73,56 @@ public class NOutletNotificationService {
             sendFCM(event, notification);
 
             /*
-             * UPDATE STATUS
+             * MARK SENT
              */
             notificationService.markAsSent(event.getOrderId(), status.getNotificationRecipientId());
 
-            log.info("Order event processed successfully | orderId={}", event.getOrderId());
+            log.info("KAFKA_END | NOTIFICATION_SENT | orderId={} | notificationType={}", event.getOrderId(), event.getNotificationType());
 
-        } catch (NotificationException e) {
+        } catch (NotificationException ex) {
 
-            log.error("Notification processing failed | orderId={}, outletId={}, error={}", event.getOrderId(), event.getOutletId(), e.getMessage(), e);
+            log.error("KAFKA_ERROR | NOTIFICATION_FAILED | orderId={} | error={}", event != null ? event.getOrderId() : null, ex.getMessage(), ex);
 
-        } catch (Exception e) {
+            throw ex;
+        } catch (Exception ex) {
 
-            log.error("Unexpected error processing order event | orderId={}, outletId={}, error={}", event.getOrderId(), event.getOutletId(), e.getMessage(), e);
+            log.error("KAFKA_ERROR | UNEXPECTED_ERROR | orderId={} | error={}", event != null ? event.getOrderId() : null, ex.getMessage(), ex);
+
+            throw new NotificationException("Notification processing failed");
         }
+    }
+
+    private String resolveSubject(NOrderEvent event) {
+
+        if (event.getNotificationType() != null && !event.getNotificationType().isBlank()) {
+
+            return event.getNotificationType();
+        }
+
+        if ("REJECTED".equalsIgnoreCase(event.getStatus())) {
+
+            return "REJECTED_ORDER";
+        }
+
+        return "ORDER_CREATED";
     }
 
     private void sendFCM(NOrderEvent event, Notification notification) {
 
-        if (NConstants.TOPIC_PREFIX == null) {
+        if (NConstants.TOPIC_PREFIX == null || NConstants.TOPIC_PREFIX.isBlank()) {
 
-            log.error("Topic prefix configuration is missing");
+            log.error("VALIDATION_FAILED | TOPIC_PREFIX_MISSING");
 
             throw new NotificationException("Firebase topic configuration missing");
         }
 
-        //Firebase has strict rules for topic names: they can only contain letters, numbers, and dashes/underscores ([a-zA-Z0-9-_~]+).
-
         String topic = NConstants.TOPIC_PREFIX + event.getOutletId();
 
-        log.info("Sending FCM notification | orderId={}, topic={}", event.getOrderId(), topic);
+        log.info("FCM_START | SEND_NOTIFICATION | orderId={} | topic={}", event.getOrderId(), topic);
 
         try {
 
-            Message message = Message.builder()
+            Message.Builder builder = Message.builder()
 
                     .setTopic(topic)
 
@@ -124,15 +132,28 @@ public class NOutletNotificationService {
 
                     .putData("status", String.valueOf(event.getStatus()))
 
-                    .build();
+                    .putData("notificationType", String.valueOf(event.getNotificationType()))
 
-            FirebaseMessaging.getInstance().send(message);
+                    .putData("orderType", String.valueOf(event.getOrderType()));
 
-            log.info("FCM sent successfully | orderId={}, topic={}", event.getOrderId(), topic);
 
-        } catch (FirebaseMessagingException e) {
+            if (event.getScheduledDeliveryDateTime() != null) {
 
-            log.error("FCM failed | orderId={}, topic={}, error={}", event.getOrderId(), topic, e.getMessage(), e);
+                builder.putData("scheduledDeliveryDateTime", event.getScheduledDeliveryDateTime().toString());
+            }
+
+            if (event.getMealSubscriptionId() != null) {
+
+                builder.putData("mealSubscriptionId", String.valueOf(event.getMealSubscriptionId()));
+            }
+
+            FirebaseMessaging.getInstance().send(builder.build());
+
+            log.info("FCM_END | NOTIFICATION_SENT | orderId={} | topic={}", event.getOrderId(), topic);
+
+        } catch (FirebaseMessagingException ex) {
+
+            log.error("FCM_ERROR | SEND_FAILED | orderId={} | topic={} | error={}", event.getOrderId(), topic, ex.getMessage(), ex);
 
             throw new NotificationException("Failed to send FCM notification");
         }

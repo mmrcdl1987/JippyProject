@@ -40,8 +40,10 @@ public class NFireBaseConfig {
     @PostConstruct
     public void initialize() {
 
+        log.info("CONFIG_START | FIREBASE_INITIALIZATION");
+        try {
         if (!FirebaseApp.getApps().isEmpty()) {
-            log.info("Firebase already initialized");
+                log.info("CONFIG_SKIP | FIREBASE_ALREADY_INITIALIZED");
             return;
         }
 
@@ -54,10 +56,12 @@ public class NFireBaseConfig {
 
             FirebaseApp.initializeApp(options);
 
-            log.info("Firebase initialized successfully");
-
+                log.info("CONFIG_END | FIREBASE_INITIALIZED_SUCCESSFULLY");
+            }
         } catch (Exception ex) {
-            log.error("Firebase initialization failed", ex);
+
+            log.error("CONFIG_ERROR | FIREBASE_INITIALIZATION_FAILED | error={}", ex.getMessage(), ex);
+
             throw new NotificationException("Firebase initialization failed");
         }
     }

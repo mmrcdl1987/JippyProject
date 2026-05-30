@@ -3,44 +3,65 @@ package com.jippy.customerandorder.mapper;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoOrderItemDto;
 import com.jippy.customerandorder.dto.CoPlaceOrderRequestDto;
+import com.jippy.customerandorder.entity.CoMealSubscription;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderItem;
 import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
 import com.jippy.customerandorder.exception.OrderException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Component
+@Slf4j
 public class CoOrderMapper {
 
-    // ================= ORDER =================
-    public CoOrder mapToOrder(CoPlaceOrderRequestDto placeOrderRequest) {
+    /*
+     * MAP ORDER
+     */
+    public CoOrder mapToOrder(CoPlaceOrderRequestDto requestDto) {
+
+        log.info("MAPPER_START | MAP_ORDER | customerId={} | outletId={}", requestDto.getCustomerId(), requestDto.getOutletId());
 
         CoOrder order = new CoOrder();
 
-        order.setCustomerId(placeOrderRequest.getCustomerId());
+        order.setCustomerId(requestDto.getCustomerId());
 
-        order.setOutletId(placeOrderRequest.getOutletId());
+        order.setOutletId(requestDto.getOutletId());
 
-        order.setPaymentModeId(placeOrderRequest.getPaymentModeId());
+        order.setPaymentModeId(requestDto.getPaymentModeId());
 
         order.setOrderStatus(COConstants.ORDER_STATUS_PLACED);
 
-        order.setCustomerDeliveryAddressId(placeOrderRequest.getCustomerDeliveryAddressId());
+        order.setCustomerDeliveryAddressId(requestDto.getCustomerDeliveryAddressId());
 
-        order.setCustomerPhoneNumber(placeOrderRequest.getCustomerPhone());
+        order.setCustomerPhoneNumber(requestDto.getCustomerPhone());
+
+        order.setOrderType(requestDto.getOrderType());
+
+        order.setScheduledDeliveryDateTime(requestDto.getScheduledDeliveryDateTime());
+
+        order.setDistanceKms(requestDto.getDistanceKms() == null ? null : requestDto.getDistanceKms().doubleValue());
 
         order.setCreatedAt(LocalDateTime.now());
 
+        order.setCreatedBy(requestDto.getCustomerId());
+
+        log.info("MAPPER_END | MAP_ORDER_SUCCESS | customerId={}", requestDto.getCustomerId());
+
         return order;
     }
-    // ================= ORDER ITEMS =================
 
+    /*
+     * MAP ORDER ITEM
+     */
     public CoOrderItem mapToItem(CoOrderItemDto orderItemDto, String orderId) {
 
         validateOrderItem(orderItemDto);
+
+        log.info("MAPPER_START | MAP_ORDER_ITEM | orderId={} | productId={}", orderId, orderItemDto.getProductId());
 
         CoOrderItem orderItem = new CoOrderItem();
 
@@ -50,86 +71,124 @@ public class CoOrderMapper {
 
         orderItem.setQuantity(orderItemDto.getQuantity());
 
-        orderItem.setOnlineUnitPrice(orderItemDto.getOnlineUnitPrice());
+        orderItem.setOnlineUnitPrice(defaultValue(orderItemDto.getOnlineUnitPrice()));
 
-        orderItem.setMerchantUnitPrice(orderItemDto.getMerchantUnitPrice());
+        orderItem.setMerchantUnitPrice(defaultValue(orderItemDto.getMerchantUnitPrice()));
 
-        // ONLINE TOTAL
+        /*
+         * ONLINE TOTAL
+         */
         orderItem.setOnlinePriceTotal(calculateTotalPrice(orderItemDto.getOnlineUnitPrice(), orderItemDto.getQuantity()));
 
-        // MERCHANT TOTAL
+        /*
+         * MERCHANT TOTAL
+         */
         orderItem.setMerchantPriceTotal(calculateTotalPrice(orderItemDto.getMerchantUnitPrice(), orderItemDto.getQuantity()));
 
         orderItem.setCreatedAt(LocalDateTime.now());
 
+        log.info("MAPPER_END | MAP_ORDER_ITEM_SUCCESS | orderId={} | productId={}", orderId, orderItemDto.getProductId());
+
         return orderItem;
     }
 
-    // ================= PRICE BREAKUP =================
+    /*
+     * MAP PRICE BREAKUP
+     */
+    public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto requestDto, String orderId) {
 
-    public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto placeOrderRequestDto, String orderId) {
+        log.info("MAPPER_START | MAP_PRICE_BREAKUP | orderId={}", orderId);
 
-        CoOrderPriceBreakup priceBreakup = new CoOrderPriceBreakup();
+        CoOrderPriceBreakup breakup = new CoOrderPriceBreakup();
 
-        priceBreakup.setOrderId(orderId);
+        breakup.setOrderId(orderId);
 
-        priceBreakup.setCouponId(placeOrderRequestDto.getCouponId());
+        breakup.setCouponId(requestDto.getCouponId());
 
-        priceBreakup.setOrderAmount(placeOrderRequestDto.getOrderAmount());
+        breakup.setOrderAmount(defaultValue(requestDto.getOrderAmount()));
 
-        priceBreakup.setPlatformFee(defaultValue(placeOrderRequestDto.getPlatformFee()));
+        breakup.setPlatformFee(defaultValue(requestDto.getPlatformFee()));
 
-        priceBreakup.setDeliveryFee(defaultValue(placeOrderRequestDto.getDeliveryFee()));
+        breakup.setDeliveryFee(defaultValue(requestDto.getDeliveryFee()));
 
-        priceBreakup.setSurgeFee(defaultValue(placeOrderRequestDto.getSurgeFee()));
+        breakup.setSurgeFee(defaultValue(requestDto.getSurgeFee()));
 
-        priceBreakup.setPackagingFee(defaultValue(placeOrderRequestDto.getPackagingFee()));
+        breakup.setPackagingFee(defaultValue(requestDto.getPackagingFee()));
 
-        priceBreakup.setGst(defaultValue(placeOrderRequestDto.getGst()));
+        breakup.setGst(defaultValue(requestDto.getGst()));
 
-        priceBreakup.setOrderTotalAmount(placeOrderRequestDto.getOrderTotalAmount());
+        breakup.setOrderTotalAmount(defaultValue(requestDto.getOrderTotalAmount()));
 
-        priceBreakup.setCouponDiscount(defaultValue(placeOrderRequestDto.getCouponDiscount()));
+        breakup.setCouponDiscount(defaultValue(requestDto.getCouponDiscount()));
 
-        priceBreakup.setCreatedAt(LocalDateTime.now());
+        breakup.setCreatedAt(LocalDateTime.now());
 
-        return priceBreakup;
+        log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", orderId);
+
+        return breakup;
     }
 
-    // ================= VALIDATIONS =================
+    /*
+     * MAP SUBSCRIPTION
+     */
+    public CoMealSubscription mapToSubscription(CoPlaceOrderRequestDto requestDto) {
 
+        log.info("MAPPER_START | MAP_SUBSCRIPTION | customerId={}", requestDto.getCustomerId());
+
+        CoMealSubscription subscription = new CoMealSubscription();
+
+        subscription.setCustomerId(requestDto.getCustomerId());
+
+        subscription.setOutletId(requestDto.getOutletId());
+
+        subscription.setMealPreference(requestDto.getMealPreference());
+
+        subscription.setSubscriptionStartDate(requestDto.getSubscriptionStartDate());
+
+        subscription.setSubscriptionEndDate(requestDto.getSubscriptionEndDate());
+
+        subscription.setSubscriptionStatus(COConstants.SUBSCRIPTION_STATUS_ACTIVE);
+
+        subscription.setCreatedAt(LocalDateTime.now());
+
+        subscription.setCreatedBy(requestDto.getCustomerId());
+
+        log.info("MAPPER_END | MAP_SUBSCRIPTION_SUCCESS | customerId={}", requestDto.getCustomerId());
+
+        return subscription;
+    }
+
+    /*
+     * VALIDATE ORDER ITEM
+     */
     private void validateOrderItem(CoOrderItemDto orderItemDto) {
 
         if (orderItemDto == null) {
 
+            log.error("VALIDATION_FAILED | ORDER_ITEM_NULL");
+
             throw new OrderException("Order item cannot be null");
         }
 
-        if (orderItemDto.getOnlineUnitPrice() == null) {
-
-            throw new OrderException("Online unit price cannot be null");
-        }
-
-        if (orderItemDto.getMerchantUnitPrice() == null) {
-
-            throw new OrderException("Merchant unit price cannot be null");
-        }
-
         if (orderItemDto.getQuantity() == null || orderItemDto.getQuantity() <= 0) {
+
+            log.error("VALIDATION_FAILED | INVALID_QUANTITY | productId={}", orderItemDto.getProductId());
 
             throw new OrderException("Quantity must be greater than zero");
         }
     }
 
-    // ================= CALCULATIONS =================
-
+    /*
+     * CALCULATE TOTAL
+     */
     private BigDecimal calculateTotalPrice(BigDecimal unitPrice, Integer quantity) {
 
-        return unitPrice.multiply(BigDecimal.valueOf(quantity));
+        return defaultValue(unitPrice).multiply(BigDecimal.valueOf(quantity));
     }
 
-    // ================= COMMON METHODS =================
-
+    /*
+     * DEFAULT VALUE
+     */
     private BigDecimal defaultValue(BigDecimal value) {
 
         return value == null ? BigDecimal.ZERO : value;

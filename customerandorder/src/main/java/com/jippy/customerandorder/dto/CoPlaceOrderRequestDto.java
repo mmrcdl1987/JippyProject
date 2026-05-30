@@ -1,10 +1,10 @@
 package com.jippy.customerandorder.dto;
 
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -45,6 +45,48 @@ public class CoPlaceOrderRequestDto {
 
     private BigDecimal couponDiscount;
 
-    @NotEmpty(message = "Order items cannot be empty")
+    /*
+     * DELIVERY DISTANCE
+     */
+    private BigDecimal distanceKms;
+
+    /*
+     * NORMAL
+     * SCHEDULED_RECURRING
+     * SCHEDULED_CUSTOM_PLAN
+     */
+    @NotNull(message = "Order type is required")
+    private String orderType;
+
+    /*
+     * RECURRING ONLY
+     */
+    private LocalDateTime scheduledDeliveryDateTime;
+
+    /*
+     * RECURRING ONLY
+     */
+    private LocalDateTime subscriptionStartDate;
+
+    /*
+     * RECURRING ONLY
+     */
+    private LocalDateTime subscriptionEndDate;
+
+    /*
+     * BREAKFAST
+     * LUNCH
+     * DINNER
+     */
+    private String mealPreference;
+
+    /*
+     * RECURRING
+     */
     private List<CoOrderItemDto> items;
+
+    /*
+     * CUSTOM PLAN
+     */
+    private List<CoScheduledOrderDto> scheduledOrders;
 }

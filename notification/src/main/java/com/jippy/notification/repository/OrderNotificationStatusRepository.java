@@ -20,10 +20,24 @@ public interface OrderNotificationStatusRepository
     );
 
     /*
-     * CHECK DUPLICATE
+     * OLD DUPLICATE CHECK
+     * KEEP IF USED ELSEWHERE
      */
     boolean existsByOrderIdAndNotificationRecipientId(
             String orderId,
             Integer notificationRecipientId
+    );
+
+    /*
+     * NEW DUPLICATE CHECK
+     * SAME ORDER CAN HAVE:
+     * CREATED
+     * TODAY REMINDER
+     * ONE HOUR REMINDER
+     */
+    boolean existsByOrderIdAndNotificationRecipientIdAndNotificationId(
+            String orderId,
+            Integer notificationRecipientId,
+            Integer notificationId
     );
 }
