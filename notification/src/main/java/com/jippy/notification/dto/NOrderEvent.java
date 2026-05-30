@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,10 +21,24 @@ public class NOrderEvent {
 
     private String status;
 
-    /*
-     * SPECIALIZED OUTLET FLOW
-     */
     private Integer areaId;
 
     private Integer rejectedOutletId;
+
+    /*
+     * NEW FIELDS
+     */
+    private String orderType;
+
+    private LocalDateTime scheduledDeliveryDateTime;
+
+    private Integer mealSubscriptionId;
+
+    private Boolean scheduledOrder;
+
+    private Boolean morningReminder;
+
+    private Boolean oneHourReminder;
+
+    private String notificationType;
 }

@@ -11,8 +11,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration.class,
         org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration.class
 })
-@EnableScheduling
 @EnableFeignClients
+@EnableScheduling
 @EnableDiscoveryClient
 public class CustomerandOrderApplication {
 

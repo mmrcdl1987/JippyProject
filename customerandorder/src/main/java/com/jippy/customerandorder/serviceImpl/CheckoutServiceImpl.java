@@ -2,12 +2,12 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
-import com.jippy.customerandorder.entity.OrderSettings;
+import com.jippy.customerandorder.entity.CoOrderSettings;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.feignClients.DriverFeignClient;
 import com.jippy.customerandorder.iservice.ICartService;
 import com.jippy.customerandorder.iservice.ICheckoutService;
-import com.jippy.customerandorder.repository.OrderSettingsRepository;
+import com.jippy.customerandorder.repository.CoOrderSettingsRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
     private final DriverFeignClient driverFeignClient;
 
-    private final OrderSettingsRepository orderSettingsRepository;
+    private final CoOrderSettingsRepository coOrderSettingsRepository;
 
     @Override
     public CoCheckoutResponseDto checkout(CoCheckoutRequestDto requestDto) {
@@ -42,7 +42,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             validateCart(cartResponse, requestDto.getCustomerId());
 
-            OrderSettings orderSettings = getOrderSettings();
+            CoOrderSettings coOrderSettings = getOrderSettings();
 
             BigDecimal itemTotal = calculateItemTotal(cartResponse);
 
@@ -54,15 +54,15 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             BigDecimal deliveryTax = defaultValue(deliveryResponse.getTaxAmount());
 
-            BigDecimal foodTax = calculatePercentage(itemTotal, defaultValue(orderSettings.getFoodTotalAmountTax()));
+            BigDecimal foodTax = calculatePercentage(itemTotal, defaultValue(coOrderSettings.getFoodTotalAmountTax()));
 
             BigDecimal taxesAndCharges = foodTax.add(deliveryTax);
 
-            BigDecimal platformFee = defaultValue(orderSettings.getPlatformFee());
+            BigDecimal platformFee = defaultValue(coOrderSettings.getPlatformFee());
 
-            BigDecimal surgeFee = defaultValue(orderSettings.getSurgeFee());
+            BigDecimal surgeFee = defaultValue(coOrderSettings.getSurgeFee());
 
-            BigDecimal packagingFee = defaultValue(orderSettings.getPackagingFee());
+            BigDecimal packagingFee = defaultValue(coOrderSettings.getPackagingFee());
 
             BigDecimal couponDiscount = defaultValue(requestDto.getCouponDiscount());
 
@@ -135,9 +135,9 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
     // ================= ORDER SETTINGS =================
 
-    private OrderSettings getOrderSettings() {
+    private CoOrderSettings getOrderSettings() {
 
-        return orderSettingsRepository.findAll().stream().findFirst().orElseThrow(() -> {
+        return coOrderSettingsRepository.findAll().stream().findFirst().orElseThrow(() -> {
 
             log.error("ORDER_SETTINGS_NOT_FOUND");
 
