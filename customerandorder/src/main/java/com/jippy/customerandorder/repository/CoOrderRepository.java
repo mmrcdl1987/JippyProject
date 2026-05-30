@@ -3,6 +3,7 @@ package com.jippy.customerandorder.repository;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
 import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
+import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
@@ -70,7 +72,8 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
 
 
 
-// Fetch delivered orders between dates and calculate total merchant settlement amount
+
+    // Fetch delivered orders between dates and calculate total merchant settlement amount
 //this fetches all orders with status 'DELIVERED' that were created between the specified start and end dates. It joins the orders table with the order_items table to calculate the total price for each order by summing up the merchant_price_total from the order_items. The results are grouped by order_id, outlet_id, order_status, and created_at, and ordered by created_at in descending order. The query returns a list of CoOrderSettlementProjection, which includes the order ID, outlet ID, order status, creation timestamp,
 // and total price for each delivered order within the specified date range.
 // ex: if there are 3 orders with status 'DELIVERED' created between the given dates,
@@ -99,4 +102,14 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
             """, nativeQuery = true)
     List<CoOrderSettlementProjection> getProductDetailsForMerchantSettlement
     (@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
-}
+    Optional<CoOrder> findByOrderIdAndDriverId(
+            String orderId,
+            Long driverId);}
+
+
+
+
+
+
+
+

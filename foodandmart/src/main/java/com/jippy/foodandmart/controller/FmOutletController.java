@@ -615,4 +615,12 @@ public class FmOutletController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/specialized-outlets/nearby")
+    public ResponseEntity<FmNearbyOutletResponseDto> fetchNearbySpecializedOutlets(@RequestParam Double latitude, @RequestParam Double longitude) {
+
+        log.info("Fetching nearby specialized outlets for latitude={} longitude={}", latitude, longitude);
+
+        return ResponseEntity.ok(service.fetchNearbySpecializedOutlets(latitude, longitude));
+    }
 }

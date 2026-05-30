@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 
 @Repository
 public interface CoOrderRejectionRepository extends JpaRepository<CoOrderRejection, Integer> {
@@ -24,4 +26,11 @@ public interface CoOrderRejectionRepository extends JpaRepository<CoOrderRejecti
             AND type = 'DRIVER'
             """, nativeQuery = true)
     Long fetchRejectedOrdersCount(@Param("driverId") Integer driverId);
+    // CHECK CUSTOMER REJECTION ALREADY EXISTS
+
+    boolean existsByOrderIdAndType(
+            String orderId,
+            String type);
+    Optional<CoOrderRejection>
+    findByOrderId(String orderId);
 }
