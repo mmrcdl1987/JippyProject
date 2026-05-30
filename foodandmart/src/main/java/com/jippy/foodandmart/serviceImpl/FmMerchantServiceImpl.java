@@ -2,10 +2,7 @@
 
         import com.jippy.foodandmart.config.FmPasswordConfig;
         import com.jippy.foodandmart.constants.FmAppConstants;
-        import com.jippy.foodandmart.dto.FmBulkUploadResultDTO;
-        import com.jippy.foodandmart.dto.FmMerchantDto;
-        import com.jippy.foodandmart.dto.FmMerchantWithBankDto;
-        import com.jippy.foodandmart.dto.FmMerchantRequestDTO;
+        import com.jippy.foodandmart.dto.*;
         import com.jippy.foodandmart.entity.*;
         import com.jippy.foodandmart.exception.DuplicateResourceException;
         import com.jippy.foodandmart.exception.MerchantAlreadyExistsException;
@@ -86,12 +83,15 @@
 		    public List<FmMerchant> getAllMerchants() {
 		        return merchantRepository.findAll();
 		    }
-		
-		    @Override
-		    public FmMerchant getMerchantById(Integer id) {
-		        return merchantRepository.findById(id)
-		                .orElseThrow(() -> new IllegalArgumentException("Merchant ID " + id + " does not exist"));
-		    }
+
+            @Override
+            public FmMerchantDto getMerchantById(Integer id) {
+                FmMerchant merchant = merchantRepository.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Merchant ID " + id + " does not exist"));
+                FmMerchantDto dto = FmMerchantMapper.mapToMerchantDto(merchant);
+                log.info("[MERCHANT] Fetched by ID: merchantId={}, name={}", id, merchant.getMerchantName());
+                return dto;
+            }
 		
 		    @Override
 		    public long countMerchants() {
@@ -348,4 +348,21 @@
 
 				return response;
 			}
+
+            @Override
+            public FmResponseDto updateMerchantProfilePic(FmMerchantDto merchantDto) {
+                log.info("Updating merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
+                FmMerchant merchant = merchantRepository.findById(merchantDto.getMerchantId())
+                        .orElseThrow(() -> {
+                            log.error("Merchant not found with ID: {}", merchantDto.getMerchantId());
+                            return new ResourceNotFoundException("Merchant not found with ID :" + merchantDto.getMerchantId());
+                        });
+
+                merchant.setProfilePicUrl(merchantDto.getProfilePicUrl());
+                merchantRepository.save(merchant);
+                log.info("Merchant profile picture updated successfully for merchantId: {}", merchantDto.getMerchantId());
+
+                return new FmResponseDto("200", "Profile picture url: "+merchantDto.getProfilePicUrl());
+            }
+
 		}

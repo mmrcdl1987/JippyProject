@@ -20,4 +20,6 @@ public interface ICoCustomerService {
     CoCustomerResponseDto getCustomer(Integer customerId);
 
     CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto);
+
+    String updateCustomerProfilePic(CoCustomerRequestDto requestDto);
 }

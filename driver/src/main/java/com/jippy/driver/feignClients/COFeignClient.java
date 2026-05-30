@@ -1,12 +1,10 @@
 package com.jippy.driver.feignClients;
 
 import com.jippy.driver.config.FeignClientConfig;
-import com.jippy.driver.dto.DriveCustomerLocationDto;
-import com.jippy.driver.dto.DriveOrderDto;
-import com.jippy.driver.dto.DriveOrderPriceBreakupDto;
-import com.jippy.driver.dto.DriverEarningsDto;
+import com.jippy.driver.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -31,10 +29,14 @@ public interface COFeignClient {
     @GetMapping("/api/co/orders")
     DriveOrderDto getOrder(@RequestParam String orderId);
 
-    //    @GetMapping("/api/co/driver/rejected-orders/count")
-//    Long fetchRejectedOrdersCount(
-//            @RequestParam Integer driverId
-//    );
+
     @GetMapping("/api/co/order-rejections/driver/rejected-orders/count")
     Long fetchRejectedOrdersCount(@RequestParam Integer driverId);
+
+    @GetMapping("/api/co/customers/{customerId}")
+    ResponseEntity<DriverCustomerResponseDto> getCustomer(@PathVariable Integer customerId);
+
+    @PutMapping("/api/co/customers/updateCustomerProfilePic")
+    ResponseEntity<DriverResponseDto> updateCustomerProfilePic(DriverCustomerResponseDto driverCustomerResponseDto);
+
 }
