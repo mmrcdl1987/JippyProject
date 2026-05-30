@@ -49,6 +49,9 @@ public class FmMerchant {
     @Column(name = "updated_by")
     private Integer updatedBy;
 
+    @Column(name = "profile_pic_url", length = 100)
+    private String profilePicUrl;
+
     @JsonIgnore
     @OneToOne(mappedBy = "merchant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private FmMerchantKyc kyc;
@@ -73,6 +76,7 @@ public class FmMerchant {
     private String dob;
     @Transient
     private String uploadedBy;
+
 
     @PrePersist
     public void prePersist() {

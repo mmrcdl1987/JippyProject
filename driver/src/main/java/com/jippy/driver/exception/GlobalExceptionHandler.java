@@ -88,6 +88,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
+    @ExceptionHandler(ImageValidationException.class)
+    public ResponseEntity<DriverErrorResponseDto> handleImageValidationException(
+            ImageValidationException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new DriverErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()
+                ));
+    }
+
 
 
 }

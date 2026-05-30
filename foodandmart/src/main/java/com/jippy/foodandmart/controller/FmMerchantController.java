@@ -1,9 +1,6 @@
 package com.jippy.foodandmart.controller;
 
-import com.jippy.foodandmart.dto.FmApiResponse;
-import com.jippy.foodandmart.dto.FmBulkUploadResultDTO;
-import com.jippy.foodandmart.dto.FmMerchantWithBankDto;
-import com.jippy.foodandmart.dto.FmMerchantRequestDTO;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmMerchant;
 import com.jippy.foodandmart.service.IFmMerchantService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +19,7 @@ import java.util.List;
 @RequestMapping("/api/fm/merchants")
 @RequiredArgsConstructor
 @Slf4j
-public class FmMerchantController {
+public class  FmMerchantController {
 
     private final IFmMerchantService merchantService;
 
@@ -47,7 +44,7 @@ public class FmMerchantController {
 
     /** GET /api/merchants/{id} */
     @GetMapping("/{id}")
-    public ResponseEntity<FmApiResponse<FmMerchant>> getMerchantById(@PathVariable Integer id) {
+    public ResponseEntity<FmApiResponse<FmMerchantDto>> getMerchantById(@PathVariable Integer id) {
         log.info("[MERCHANT] GET /api/merchants/{}", id);
         return ResponseEntity.ok(FmApiResponse.success("Merchant fetched", merchantService.getMerchantById(id)));
     }
@@ -113,5 +110,21 @@ public class FmMerchantController {
                 merchantService.getMerchantWithBank(merchantId);
         log.info("Successfully fetched merchant profile for merchantId: {}", merchantId);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/updateMerchantProfilePic")
+    ResponseEntity<FmResponseDto> updateMerchantProfilePic(@RequestBody  FmMerchantDto merchantDto){
+
+        log.info("Updating merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
+        FmResponseDto response = merchantService.updateMerchantProfilePic(merchantDto);
+        log.info("Successfully updated merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/fetchByMerchantId")
+    public ResponseEntity<FmMerchantDto> fetchByMerchantId(@RequestParam Integer merchantId) {
+        log.info("Fetch by MerchantId API called for merchantId: {}", merchantId);
+        FmMerchantDto fmMerchantDto = merchantService.getMerchantById(merchantId);
+        return ResponseEntity.ok(fmMerchantDto);
     }
 }

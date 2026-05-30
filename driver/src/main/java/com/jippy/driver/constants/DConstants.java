@@ -10,10 +10,10 @@ public class DConstants {
     public static final String STATUS_500 = "500";
     public static final String MSG_SUCCESS = "Success";
 
-    // ── Cart Messages ──────────────────────────────────────────────────────────
+    public static final String AWS_PROFILE_PIC_STATIC_URL ="https://jippys3bucket.s3.ap-south-2.amazonaws.com/";
     public static final String TYPE_DRIVER="DRIVER";
-    public static final String CUSTOMER = "CUSTOMER";
-    public static final String OUTLET = "OUTLET";
+    public static final String TYPE_CUSTOMER = "CUSTOMER";
+    public static final String TYPE_MERCHANT = "MERCHANT";
     public static final String STATUS_201="201";
 
     // ── Delivery Charge Settings Messages ──────────────────────────────────────

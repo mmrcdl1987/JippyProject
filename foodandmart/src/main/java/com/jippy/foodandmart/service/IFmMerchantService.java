@@ -1,8 +1,6 @@
 package com.jippy.foodandmart.service;
 
-import com.jippy.foodandmart.dto.FmBulkUploadResultDTO;
-import com.jippy.foodandmart.dto.FmMerchantWithBankDto;
-import com.jippy.foodandmart.dto.FmMerchantRequestDTO;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmMerchant;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,7 +10,7 @@ public interface IFmMerchantService {
 
     List<FmMerchant> getAllMerchants();
 
-    FmMerchant getMerchantById(Integer id);
+    FmMerchantDto getMerchantById(Integer id);
 
     long countMerchants();
 
@@ -24,4 +22,6 @@ public interface IFmMerchantService {
 
     // Update--> merchant + bank
     FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto);
+
+    FmResponseDto updateMerchantProfilePic(FmMerchantDto merchantDto);
 }

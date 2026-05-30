@@ -74,4 +74,7 @@ private String nomineeName;
 
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
     private List<DriverOrder> driverOrders;
+
+    @Column(name = "profile_pic_url", length = 100)
+    private String profilePicUrl;
 }

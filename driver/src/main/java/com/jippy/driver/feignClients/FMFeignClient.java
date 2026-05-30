@@ -2,11 +2,11 @@ package com.jippy.driver.feignClients;
 
 
 import com.jippy.driver.config.FeignClientConfig;
-import com.jippy.driver.dto.DriverAddressRequestDto;
-import com.jippy.driver.dto.DriverUserDto;
-import com.jippy.driver.dto.OutletLocationResponseDto;
+import com.jippy.driver.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 
 @FeignClient(name = "foodandmart",configuration = FeignClientConfig.class)
@@ -33,5 +33,12 @@ public interface FMFeignClient {
 
     @PostMapping("/api/fm/users/createUser")
     ResponseEntity<DriverUserDto> createUser(@RequestBody DriverUserDto dto);
-    
+
+    @GetMapping("/api/fm/merchants/fetchByMerchantId")
+    ResponseEntity<DriverMerchantDto> getMerchantById(@RequestParam Integer merchantId);
+
+    @PutMapping("/api/fm/merchants/updateMerchantProfilePic")
+    ResponseEntity<DriverResponseDto> updateMerchantProfilePic(DriverMerchantDto driverMerchantDto);
+
+
 }
