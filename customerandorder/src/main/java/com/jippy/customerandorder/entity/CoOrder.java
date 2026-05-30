@@ -24,7 +24,7 @@ public class CoOrder {
 
     @Column(name = "driver_id")
     private Integer driverId;
-
+    /* * PLACED * DELIVERED * CANCELLED */
     @Column(name = "order_status", nullable = false)
     private String orderStatus;
 
@@ -46,6 +46,20 @@ public class CoOrder {
 //  added column for COD in payment_node table
     @Column(name = "payment_mode_id")
     private Integer paymentModeId;
+
+    /* * NORMAL * SCHEDULED */
+    @Column(name = "order_type")
+    private String orderType;
+
+    /* * Delivery date & time */
+    @Column(name = "scheduled_delivery_date_time")
+    private LocalDateTime scheduledDeliveryDateTime;
+
+    /*
+     * Linked subscription id
+     */
+    @Column(name = "meal_subscription_id")
+    private Integer mealSubscriptionId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

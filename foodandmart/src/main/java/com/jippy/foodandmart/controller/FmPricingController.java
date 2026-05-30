@@ -2,6 +2,7 @@ package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
+import com.jippy.foodandmart.exception.PricingException;
 import com.jippy.foodandmart.service.IPricingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -99,20 +100,24 @@ public class FmPricingController {
     }
 
     @GetMapping("/{productId}")
-    public ResponseEntity<FmProductDetailResponseDto> getProductById(
-            @PathVariable Integer productId) {
+    public ResponseEntity<FmProductDetailResponseDto> getProductById(@PathVariable Integer productId) {
 
-        log.info("GET PRODUCT START | productId={}", productId);
+        log.info("API_START | GET_PRODUCT | productId={}", productId);
 
-        FmProductDetailResponseDto data = pricingService.getProductById(productId);
+        // VALIDATE INPUT
 
-        if (data == null) {
-            log.error("Product not found | productId={}", productId);
-            throw new RuntimeException("Product not found");
+        if (productId == null || productId <= 0) {
+
+            log.error("VALIDATION_FAILED | INVALID_PRODUCT_ID | productId={}", productId);
+
+            throw new PricingException("Invalid product id");
         }
 
-        log.info("GET PRODUCT SUCCESS | productId={}", productId);
+        //FETCH PRODUCT
+        FmProductDetailResponseDto response = pricingService.getProductById(productId);
 
-        return ResponseEntity.ok(data);
+        log.info("API_END | GET_PRODUCT_SUCCESS | productId={}", productId);
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -154,6 +154,11 @@ public  class FmProductMapper {
             dto.setPhotos(product.getPhotos());
             dto.setThumbnail(product.getThumbnail());
 
+        /*
+         * PRODUCT ACTIVE STATUS
+         */
+        dto.setAvailable("Y".equalsIgnoreCase(product.getIsActive()));
+
             return dto;
         }
 }

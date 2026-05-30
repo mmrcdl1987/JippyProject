@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "order_settings", schema = "jippy_customer_and_order")
 @Data
-public class OrderSettings {
+public class CoOrderSettings {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

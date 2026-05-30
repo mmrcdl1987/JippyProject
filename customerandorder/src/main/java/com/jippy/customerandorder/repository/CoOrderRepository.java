@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,16 +72,26 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
     Integer findRecentOutlet(Integer customerId);
 
 
+    /*
+     * REMINDER ORDERS
+     */
+    List<CoOrder> findByOrderTypeInAndScheduledDeliveryDateTimeBetween(
+            List<String> orderTypes,
+            LocalDateTime start,
+            LocalDateTime end);
 
 
-    // Fetch delivered orders between dates and calculate total merchant settlement amount
+
+
+
+// Fetch delivered orders between dates and calculate total merchant settlement amount
 //this fetches all orders with status 'DELIVERED' that were created between the specified start and end dates. It joins the orders table with the order_items table to calculate the total price for each order by summing up the merchant_price_total from the order_items. The results are grouped by order_id, outlet_id, order_status, and created_at, and ordered by created_at in descending order. The query returns a list of CoOrderSettlementProjection, which includes the order ID, outlet ID, order status, creation timestamp,
 // and total price for each delivered order within the specified date range.
 // ex: if there are 3 orders with status 'DELIVERED' created between the given dates,
 // The query will return a list of 3 CoOrderSettlementProjection objects,
 // each containing the order ID, outlet ID,
 //    order status, creation timestamp, and total price for those orders.
-    @Query(value = """
+@Query(value = """
             SELECT
                 o.order_id AS orderId,
                 o.outlet_id AS outletId,
@@ -100,16 +111,9 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
                 o.created_at
             ORDER BY o.created_at DESC
             """, nativeQuery = true)
-    List<CoOrderSettlementProjection> getProductDetailsForMerchantSettlement
-    (@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
-    Optional<CoOrder> findByOrderIdAndDriverId(
-            String orderId,
-            Long driverId);}
-
-
-
-
-
-
-
-
+List<CoOrderSettlementProjection> getProductDetailsForMerchantSettlement
+(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+Optional<CoOrder> findByOrderIdAndDriverId(
+        String orderId,
+        Long driverId);
+}

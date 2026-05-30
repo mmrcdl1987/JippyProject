@@ -3,6 +3,7 @@ import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmProduct;
+import com.jippy.foodandmart.entity.FmProductOnlinePricing;
 import com.jippy.foodandmart.exception.PricingException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
@@ -304,35 +305,60 @@ public class FmPricingServiceImpl implements IPricingService {
     @Override
     public FmProductDetailResponseDto getProductById(Integer productId) {
 
-        log.info("SERVICE START: Fetch product details | productId={}", productId);
+        log.info("SERVICE_START | GET_PRODUCT | productId={}", productId);
 
-        // VALIDATE INPUT
+        /*
+         * VALIDATE INPUT
+         */
         if (productId == null || productId <= 0) {
-            log.warn("Invalid product ID provided | productId={}", productId);
+
+            log.error("VALIDATION_FAILED | INVALID_PRODUCT_ID | productId={}", productId);
+
             throw new PricingException("Invalid product ID");
         }
 
-        // FETCH PRODUCT FROM DATABASE
-        log.debug("Querying product repository | productId={}", productId);
+        /*
+         * FETCH PRODUCT
+         */
+        FmProduct product = productRepo.findById(productId).orElseThrow(() -> {
 
-        FmProduct product = productRepo.findById(productId)
-                .orElseThrow(() -> {
-                    log.error("Product not found in database | productId={}", productId);
+            log.error("PRODUCT_NOT_FOUND | productId={}", productId);
+
                     return new ResourceNotFoundException("Product not found with id: " + productId);
                 });
 
-        log.debug("Product found in DB | productId={}, name={}", 
-                product.getProductId(), product.getProductName());
+        log.info("PRODUCT_FETCHED | productId={} | productName={}", product.getProductId(), product.getProductName());
 
-        // MAP ENTITY TO DTO
-        log.debug("Mapping product entity to response DTO | productId={}", productId);
-
+        /*
+         * MAP PRODUCT TO DTO
+         */
         FmProductDetailResponseDto response = productMapper.toDto(product);
 
-        log.debug("DTO mapping completed successfully | productId={}", productId);
+        /*
+         * FETCH LATEST APPROVED ONLINE PRICE
+         */
+        FmProductOnlinePricing pricing = pricingRepo.findTopByProductIdAndIsApprovedOrderByCreatedAtDesc(productId, true).orElse(null);
 
-        log.info("SERVICE END: Product details fetched successfully | productId={}, productName={}",
-                productId, response.getProductName());
+        /*
+         * SET ONLINE PRICE
+         */
+        if (pricing != null) {
+
+            response.setOnlinePrice(pricing.getOnlinePrice());
+
+            log.info("ONLINE_PRICE_FETCHED | productId={} | onlinePrice={}", productId, pricing.getOnlinePrice());
+
+        } else {
+
+            /*
+             * FALLBACK TO MERCHANT PRICE
+             */
+            response.setOnlinePrice(product.getMerchantPrice());
+
+            log.warn("ONLINE_PRICE_NOT_FOUND | productId={} | fallbackMerchantPrice={}", productId, product.getMerchantPrice());
+        }
+
+        log.info("SERVICE_END | GET_PRODUCT_SUCCESS | productId={}", productId);
 
         return response;
     }
