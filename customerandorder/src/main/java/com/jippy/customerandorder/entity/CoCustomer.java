@@ -56,4 +56,6 @@ public class CoCustomer {
             fetch = FetchType.LAZY
     )
     private List<CoCustomerWallet> wallets;
+
+    private String profilePicUrl;
 }

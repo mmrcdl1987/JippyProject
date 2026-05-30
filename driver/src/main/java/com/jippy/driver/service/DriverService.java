@@ -2,6 +2,7 @@ package com.jippy.driver.service;
 
 
 import com.jippy.driver.dto.*;
+import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,5 +24,7 @@ public interface DriverService {
     DriverTotalEarningsDto fetchTotalEarnings(Integer driverId);
 
     String driverDeliveredOrder(DriverOrderDto driverOrderDto);
+
+    String saveOrUpdateProfilePic(@Valid UploadProfilePicDto uploadProfilePicDto);
 
 }

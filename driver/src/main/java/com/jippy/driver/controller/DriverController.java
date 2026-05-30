@@ -12,6 +12,7 @@
     import lombok.extern.slf4j.Slf4j;
     import org.springframework.format.annotation.DateTimeFormat;
     import org.springframework.http.HttpStatus;
+    import org.springframework.http.MediaType;
     import org.springframework.http.ResponseEntity;
     import org.springframework.web.bind.annotation.*;
 
@@ -129,6 +130,16 @@
 
             log.info("Driver delivered order API called for driver id: {}", driverOrderDto.getDriverId());
             String message = driverService.driverDeliveredOrder(driverOrderDto);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
+        }
+
+        @PostMapping(path = "/saveOrUpdateProfilePic",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @Operation(summary = "Upload Profile Pic", description = "Merchant,Driver,Customer can upload their profile pic using this API and the file will be stored in AWS S3 bucket and the URL of the file will be stored in database and also return the URL of the file in response")
+        public ResponseEntity<DriverResponseDto> saveOrUpdateProfilePic(@ModelAttribute UploadProfilePicDto uploadProfilePicDto) {
+
+            log.info("Upload Profile Pic API called for user id: {}", uploadProfilePicDto.getUserId());
+            String message = driverService.saveOrUpdateProfilePic(uploadProfilePicDto);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
         }

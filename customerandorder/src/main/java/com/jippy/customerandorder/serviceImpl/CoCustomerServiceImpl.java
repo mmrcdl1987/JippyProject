@@ -514,5 +514,34 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         return responseDto;
     }
+
+    @Override
+    public String updateCustomerProfilePic(CoCustomerRequestDto requestDto) {
+        log.info("UPDATE_PROFILE_PIC_STARTED | customerId={}", requestDto.getCustomerId());
+
+        CoCustomer customer = customerRepository.findById(requestDto.getCustomerId()).orElseThrow(() -> {
+
+            log.error("UPDATE_PROFILE_PIC_FAILED | customerId={} | reason=CUSTOMER_NOT_FOUND", requestDto.getCustomerId());
+
+            return new CoBadRequestException(COConstants.MSG_CUSTOMER_NOT_FOUND);
+        });
+
+        customer.setProfilePicUrl(requestDto.getProfilePicUrl());
+        customer.setUpdatedAt(LocalDateTime.now());
+        customer.setUpdatedBy(requestDto.getCreatedBy());
+
+        try {
+            customerRepository.save(customer);
+
+            log.info("UPDATE_PROFILE_PIC_DB_SAVE_SUCCESS | customerId={}", requestDto.getCustomerId());
+            return "Customer Profile pic Url: " + customer.getProfilePicUrl();
+        } catch (DataAccessException ex) {
+
+            log.error("UPDATE_PROFILE_PIC_DB_SAVE_FAILED | customerId={} | error={}", requestDto.getCustomerId(), ex.getMessage(), ex);
+
+            throw new CoBadRequestException(COConstants.MSG_DATABASE_ERROR);
+        }
+    }
+
 }
 

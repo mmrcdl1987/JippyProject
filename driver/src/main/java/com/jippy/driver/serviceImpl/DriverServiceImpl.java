@@ -5,6 +5,7 @@ import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
 import com.jippy.driver.exception.DriverZoneException;
+import com.jippy.driver.exception.ImageValidationException;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverMapper;
@@ -19,8 +20,13 @@ import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,6 +49,7 @@ public class DriverServiceImpl implements DriverService {
     private final DriverWalletRepository driverWalletRepository;
     private final FMFeignClient fmFeignClient;
     private final DriverLocationService driverLocationService;
+    private final S3ImageService s3ImageService;
 
     @Override
     @Transactional
@@ -472,5 +479,105 @@ public class DriverServiceImpl implements DriverService {
         log.info("Successfully processed delivered order for order id: {} and updated earnings for driver id: {}", driverOrderDto.getOrderId(), driverOrderDto.getDriverId());
 
         return "Order with id: " + driverOrderDto.getOrderId() + " marked as delivered and earnings updated for driver with id: " + driverOrderDto.getDriverId();
+    }
+
+    @Override
+    public String saveOrUpdateProfilePic(UploadProfilePicDto uploadProfilePicDto) {
+        try{
+            validateImage(uploadProfilePicDto.getProfilePicFile());
+            String s3BucketFilePath = s3ImageService.uploadFile(uploadProfilePicDto.getProfilePicFile(), uploadProfilePicDto.getUserId(), uploadProfilePicDto.getUserType());
+            log.info("File uploaded to S3 successfully. Bucket path: {}", s3BucketFilePath);
+
+            if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_DRIVER)){
+
+                Driver driver = driverRepository.findById(uploadProfilePicDto.getUserId()).orElseThrow(() -> {
+                    log.error("Driver not found with id: {}", uploadProfilePicDto.getUserId());
+                    return new ResourceNotFoundException("Driver not found with id: " + uploadProfilePicDto.getUserId());
+                });
+
+                driver.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath);
+                driverRepository.save(driver);
+                log.info("Driver profile picture URL updated in database for driver id: {}", uploadProfilePicDto.getUserId());
+
+                return  "Driver profile pic Url: " + DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath;
+            }
+            else if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_CUSTOMER)){
+                DriverCustomerResponseDto driverCustomerResponseDto =coFeignClients.getCustomer(uploadProfilePicDto.getUserId()).getBody();
+
+                if(driverCustomerResponseDto.getCustomerId() != null){
+
+                    driverCustomerResponseDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath);
+
+                    ResponseEntity<DriverResponseDto> dtoResponseEntity = coFeignClients
+                            .updateCustomerProfilePic(driverCustomerResponseDto);
+                    log.info("Customer profile picture URL updated in database for customer id: {}", uploadProfilePicDto.getUserId());
+
+                    return dtoResponseEntity.getBody().getStatusMsg();
+                } else {
+                    log.error("Customer not found with id: {}", uploadProfilePicDto.getUserId());
+                    throw new ResourceNotFoundException("Customer not found with id: " + uploadProfilePicDto.getUserId());
+                }
+            }else if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_MERCHANT)){
+
+                DriverMerchantDto driverMerchantDto = fmFeignClient.
+                        getMerchantById(uploadProfilePicDto.getUserId()).getBody();
+
+                if(driverMerchantDto.getMerchantId()!= null){
+                    driverMerchantDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath);
+                    ResponseEntity<DriverResponseDto> driverResponseDto =fmFeignClient.
+                            updateMerchantProfilePic(driverMerchantDto);
+                    log.info("Merchant profile picture URL updated in database for merchant id: {}", uploadProfilePicDto.getUserId());
+
+                    return driverResponseDto.getBody().getStatusMsg();
+                } else {
+                    log.error("Customer not found with id: {}", uploadProfilePicDto.getUserId());
+                    throw new ResourceNotFoundException("Merchant not found with id: " + uploadProfilePicDto.getUserId());
+                }
+            }
+        }catch (IOException e){
+            log.error("Error validating image file", e);
+            throw new ImageValidationException("Error validating image file: " + e.getMessage());
+        }
+        return "";
+    }
+
+    public void validateImage(MultipartFile file) throws IOException {
+        // 1. Check if file is empty
+        if (file.isEmpty()) {
+            throw new ImageValidationException("File cannot be empty");
+        }
+
+        // 2. Validate File Type (MIME Type)
+        String contentType = file.getContentType();
+        if (!isValidType(contentType)) {
+            throw new ImageValidationException("Only PNG, JPEG, and JPG are allowed");
+        }
+
+        // 3. Validate File Size (e.g., Max 5MB)
+        long maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.getSize() > maxSize) {
+            throw new ImageValidationException("File size exceeds the 5MB limit");
+        }
+
+        //4. Validate Image Dimensions (e.g., Min 200x200 pixels)
+        BufferedImage image = ImageIO.read(file.getInputStream());
+        if (image == null) {
+            throw new ImageValidationException("Invalid image file");
+        }
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        if (width < 200 || height < 200) {
+            throw new ImageValidationException("Image must be at least 200x200 pixels");
+        }
+    }
+
+    private boolean isValidType(String contentType) {
+        return contentType != null && (
+                contentType.equals("image/jpeg") ||
+                        contentType.equals("image/png") ||
+                        contentType.equals("image/webp")
+        );
     }
 }
