@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/wallet-settings")
+@RequestMapping("/api/co/wallet-settings")
 @Slf4j
 public class CoWalletSettingsController {
 
