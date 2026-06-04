@@ -26,4 +26,5 @@ public interface DriverService {
     String driverDeliveredOrder(DriverOrderDto driverOrderDto);
 
     String saveOrUpdateProfilePic(@Valid UploadProfilePicDto uploadProfilePicDto);
+
 }

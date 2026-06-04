@@ -1,7 +1,6 @@
 package com.jippy.driver.serviceImpl;
 
 
-import com.jippy.driver.config.S3ImageConfig;
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
@@ -24,8 +23,6 @@ import org.locationtech.jts.geom.Polygon;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import  com.jippy.driver.dto.DriverResponseDto;
-
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -504,7 +501,7 @@ public class DriverServiceImpl implements DriverService {
 
                 return  "Driver profile pic Url: " + DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath;
             }
-             else if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_CUSTOMER)){
+            else if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_CUSTOMER)){
                 DriverCustomerResponseDto driverCustomerResponseDto =coFeignClients.getCustomer(uploadProfilePicDto.getUserId()).getBody();
 
                 if(driverCustomerResponseDto.getCustomerId() != null){
@@ -583,6 +580,4 @@ public class DriverServiceImpl implements DriverService {
                         contentType.equals("image/webp")
         );
     }
-
-
 }

@@ -83,15 +83,15 @@
 		    public List<FmMerchant> getAllMerchants() {
 		        return merchantRepository.findAll();
 		    }
-		
-		    @Override
-		    public FmMerchantDto getMerchantById(Integer id) {
-		        FmMerchant merchant = merchantRepository.findById(id)
-		                .orElseThrow(() -> new IllegalArgumentException("Merchant ID " + id + " does not exist"));
+
+            @Override
+            public FmMerchantDto getMerchantById(Integer id) {
+                FmMerchant merchant = merchantRepository.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Merchant ID " + id + " does not exist"));
                 FmMerchantDto dto = FmMerchantMapper.mapToMerchantDto(merchant);
                 log.info("[MERCHANT] Fetched by ID: merchantId={}, name={}", id, merchant.getMerchantName());
                 return dto;
-		    }
+            }
 		
 		    @Override
 		    public long countMerchants() {
@@ -364,6 +364,5 @@
 
                 return new FmResponseDto("200", "Profile picture url: "+merchantDto.getProfilePicUrl());
             }
-        }
 
-
+		}

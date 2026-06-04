@@ -19,7 +19,7 @@ import java.util.List;
 @RequestMapping("/api/fm/merchants")
 @RequiredArgsConstructor
 @Slf4j
-public class  FmMerchantController {
+public class FmMerchantController {
 
     private final IFmMerchantService merchantService;
 
@@ -112,6 +112,13 @@ public class  FmMerchantController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/fetchByMerchantId")
+    public ResponseEntity<FmMerchantDto> fetchByMerchantId(@RequestParam Integer merchantId) {
+        log.info("Fetch by MerchantId API called for merchantId: {}", merchantId);
+        FmMerchantDto fmMerchantDto = merchantService.getMerchantById(merchantId);
+        return ResponseEntity.ok(fmMerchantDto);
+    }
+
     @PutMapping("/updateMerchantProfilePic")
     ResponseEntity<FmResponseDto> updateMerchantProfilePic(@RequestBody  FmMerchantDto merchantDto){
 
@@ -119,12 +126,5 @@ public class  FmMerchantController {
         FmResponseDto response = merchantService.updateMerchantProfilePic(merchantDto);
         log.info("Successfully updated merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/fetchByMerchantId")
-    public ResponseEntity<FmMerchantDto> fetchByMerchantId(@RequestParam Integer merchantId) {
-        log.info("Fetch by MerchantId API called for merchantId: {}", merchantId);
-        FmMerchantDto fmMerchantDto = merchantService.getMerchantById(merchantId);
-        return ResponseEntity.ok(fmMerchantDto);
     }
 }
