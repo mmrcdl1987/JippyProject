@@ -7,6 +7,8 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 
 @FeignClient(name = "foodandmart",configuration = FeignClientConfig.class)
 public interface FMFeignClient {
@@ -53,7 +55,14 @@ public interface FMFeignClient {
     /*
      Fetch outlet details using outlet id
      */
-    @GetMapping("/api/fm/outlet")
-    CoFmOutletDto getOutletById(@RequestParam Integer outletId);
+    @GetMapping("/api/fm/outlets/{id}")
+    CoFmOutletDto getOutletById(@PathVariable("id") Integer outletId);
+
+    /**
+     *
+     * Get all outlets for merchant
+     */
+    @GetMapping("/api/fm/outlets/merchant/{merchantId}")
+    CoFmApiResponse<List<CoFmOutletDto>> getOutletsByMerchantId(@PathVariable Integer merchantId);
 
 }

@@ -10,6 +10,8 @@ public class CoFmOutletDto {
 //    We can use these details in order creation and settlement process.
     private Integer outletId;
 
+    private Integer merchantId;
+
     private String outletName;
 
     private String outletPhone;
