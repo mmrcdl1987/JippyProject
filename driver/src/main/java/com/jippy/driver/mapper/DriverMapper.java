@@ -2,6 +2,7 @@ package com.jippy.driver.mapper;
 
 
 
+import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
 import com.jippy.driver.exception.DriverBadRequestException;
@@ -12,6 +13,7 @@ import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -367,7 +369,45 @@ public class DriverMapper {
         // Audit field
         txn.setCreatedAt(LocalDateTime.now());
 
+//
+        txn.setTransactionType(DConstants.TransactionType_debit);
+
         return txn;
+    }
+
+    public static DriverIncentiveHistory mapToDriverIncentiveHistory(
+            DriverIncentiveHistory existingHistory,
+            Integer driverId,
+            LocalDate date,
+            Integer orders,
+            BigDecimal bonus) {
+
+        DriverIncentiveHistory history;
+
+        if (existingHistory != null) {
+
+            history = existingHistory;
+
+            history.setIncentiveAmount(bonus);
+            history.setCompletedOrdersCount(orders);
+
+            history.setUpdatedAt(LocalDateTime.now());
+            history.setUpdatedBy(driverId);
+
+        } else {
+
+            history = new DriverIncentiveHistory();
+
+            history.setDriverId(driverId);
+            history.setCurrDate(date);
+            history.setIncentiveAmount(bonus);
+            history.setCompletedOrdersCount(orders);
+
+            history.setCreatedAt(LocalDateTime.now());
+            history.setCreatedBy(driverId);
+        }
+
+        return history;
     }
 
 }

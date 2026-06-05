@@ -32,4 +32,13 @@ public class DriverWalletTransactions {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "transaction_type")
+    private String transactionType;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "updated_by")
+    private Integer updatedBy;
 }

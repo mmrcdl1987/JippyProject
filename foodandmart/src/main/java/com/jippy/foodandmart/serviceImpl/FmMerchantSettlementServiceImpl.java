@@ -6,6 +6,7 @@ import com.jippy.foodandmart.dto.FmProductResponseDto;
 import com.jippy.foodandmart.entity.FmArea;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmProduct;
+import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantSettlementMapper;
 import com.jippy.foodandmart.projections.FmOutletSettlementProjection;
 import com.jippy.foodandmart.repository.FmAreaRepository;
@@ -55,8 +56,12 @@ public class FmMerchantSettlementServiceImpl implements FmMerchantSettlementServ
         FmOutletSettlementProjection outlet =
                 fmOutletsRepository.getOutletDetailsAndAreaAddressForSettlement(outletId);
 
-        return FmMerchantSettlementMapper.toOutletAndAddressAreaResponseDto(outlet);
+        if (outlet == null) {
+            throw new ResourceNotFoundException(
+                    "Outlet details not found for outlet id : " + outletId);
+        }
 
+        return FmMerchantSettlementMapper.toOutletAndAddressAreaResponseDto(outlet);
     }
 
 //     Fetch area details using area id, this area id

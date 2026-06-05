@@ -22,4 +22,7 @@ public class DriverOrderDto {
     private LocalDateTime createdAt;
     private Integer createdBy;
     private LineString deliveryRoute;
+    private String orderStatus;
+    private Integer paymentModeId;
+    private Integer outletId;
 }

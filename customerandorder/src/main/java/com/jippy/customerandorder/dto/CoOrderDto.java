@@ -12,4 +12,6 @@ public class CoOrderDto {
     private String orderStatus;
 
     private Integer paymentModeId;
+
+    private Integer outletId;
 }

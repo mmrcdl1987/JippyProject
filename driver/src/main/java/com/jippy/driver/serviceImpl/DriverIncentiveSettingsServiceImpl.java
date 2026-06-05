@@ -1,17 +1,24 @@
 package com.jippy.driver.serviceImpl;
 
 
+import com.jippy.driver.dto.DriverIncentiveHistoryResponseDto;
 import com.jippy.driver.dto.DriverIncentiveSettingsDto;
+import com.jippy.driver.entity.DriverIncentiveHistory;
 import com.jippy.driver.entity.DriverIncentiveSettings;
 import com.jippy.driver.mapper.DriverIncentiveSettingsMapper;
+import com.jippy.driver.repositary.DriverIncentiveHistoryRepository;
 import com.jippy.driver.repositary.DriverIncentiveSettingsRepository;
 import com.jippy.driver.service.DriverIncentiveSettingsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +26,8 @@ import java.time.LocalDateTime;
 public class DriverIncentiveSettingsServiceImpl implements DriverIncentiveSettingsService {
 
     private final DriverIncentiveSettingsRepository incentiveSettingsRepository;
+
+    private final DriverIncentiveHistoryRepository repository;
 
     @Override
     public DriverIncentiveSettingsDto saveOrUpdateIncentives(DriverIncentiveSettingsDto dto) {
@@ -50,11 +59,10 @@ public class DriverIncentiveSettingsServiceImpl implements DriverIncentiveSettin
             Integer id = dto.getDriverIncentiveSettingsId();
             log.info("Updating incentive with ID: {}", id);
 
-            DriverIncentiveSettings existing = incentiveSettingsRepository.findById(id)
-                    .orElseThrow(() -> {
-                        log.error("Record not found for ID: {}", id);
-                        return new ResourceNotFoundException("Record not found with ID: " + id);
-                    });
+            DriverIncentiveSettings existing = incentiveSettingsRepository.findById(id).orElseThrow(() -> {
+                log.error("Record not found for ID: {}", id);
+                return new ResourceNotFoundException("Record not found with ID: " + id);
+            });
 
 //            to update existing record, we will use the mapper method that
 //            updates the entity with new values from DTO, without changing the ID
@@ -70,5 +78,65 @@ public class DriverIncentiveSettingsServiceImpl implements DriverIncentiveSettin
             // for mapper response entity to DTO
             return DriverIncentiveSettingsMapper.incentiveEntityToDto(updated);
         }
+    }
+
+    @Override
+    public Page<DriverIncentiveHistoryResponseDto> getDriverIncentiveHistory
+            (Integer driverId, String filter,Integer page,
+             Integer size) {
+
+        log.info("Fetching incentive history for driverId : {}, filter : {}", driverId, filter);
+
+        Page<DriverIncentiveHistory> incentiveHistoryList;
+// pagination can be applied here if needed, for now we are fetching all records for the month
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size);
+
+        if ("currentMonth".equalsIgnoreCase(filter)) {
+//            Monthly filter - get records for the current month, we will calculate
+//            the start and end date of the current month and fetch records between those dates
+            LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+
+            LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+
+            log.info("Fetching current month records between {} and {}", startDate, endDate);
+
+
+            incentiveHistoryList = repository.findByDriverIdAndCurrDateBetween
+                    (driverId, startDate, endDate,pageable);
+
+        } else {
+
+            log.info("Fetching all incentive history records");
+
+            incentiveHistoryList = repository.findByDriverId(driverId,pageable);
+        }
+
+        if (incentiveHistoryList.isEmpty()) {
+
+            throw new ResourceNotFoundException("No incentive history found for driverId : " + driverId);
+        }
+
+//       converting list of entities to list of DTOs for response
+        List<DriverIncentiveHistoryResponseDto> responseList = new ArrayList<>();
+
+        for (DriverIncentiveHistory history : incentiveHistoryList.getContent()) {
+
+            responseList.add(DriverIncentiveSettingsMapper.toResponseDto(history));
+        }
+
+        log.info("Total records fetched : {}", responseList.size());
+        Page<DriverIncentiveHistoryResponseDto> responsePage =
+                new PageImpl<>(
+                        responseList,
+                        pageable,
+                        incentiveHistoryList.getTotalElements());
+
+        log.info("Returning paginated response with {} records",
+                responsePage.getNumberOfElements());
+
+        return responsePage;
     }
 }

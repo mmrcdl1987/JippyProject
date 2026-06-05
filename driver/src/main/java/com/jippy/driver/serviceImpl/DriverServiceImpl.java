@@ -44,6 +44,7 @@ public class DriverServiceImpl implements DriverService {
     private final DriverOrderRepository driverOrderRepository;
     //private final CoOrderRejectionRepository orderRejectionRepository;
     private final DriverIncentiveSettingsRepository driverIncentivesettingsRepository;
+    private final DriverIncentiveHistoryRepository driverIncentiveHistoryRepository;
     private final DriverWalletRepository driverWalletRepository;
     private final FMFeignClient fmFeignClient;
     private final DriverLocationService driverLocationService;
@@ -198,58 +199,143 @@ public class DriverServiceImpl implements DriverService {
     @Transactional
     public DriverEarningsDto fetchEarnings(Integer driverId, LocalDate date) {
 
-        log.info("Fetching earnings for driver id: {} and date: {}", driverId, date);
+        log.info("FETCH_EARNINGS_API_START | driverId={} | date={}",
+                driverId,
+                date);
 
+        // ------------------------------------------------------------------
         // Validate driver exists
-        driverRepository.findById(driverId).orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + driverId));
+        // ------------------------------------------------------------------
+        driverRepository.findById(driverId)
+                .orElseThrow(() -> {
+                    log.error("DRIVER_NOT_FOUND | driverId={}", driverId);
+                    return new ResourceNotFoundException(
+                            "Driver not found with id: " + driverId);
+                });
 
-        // Fetch orders count for the driver on the given date
-//        Long ordersCount = ordersRepository.countOrdersByDriverAndDate(driverId, date);
+        // ------------------------------------------------------------------
+        // Fetch total earnings and completed orders count from CO microservice
+        // ------------------------------------------------------------------
+        DriverEarningsDto projectionOfTotalEarningsAndCountOfOrders =
+                coFeignClients.fetchDriverEarnings(driverId, date);
 
-        // Fetch total earnings for the driver on the given date
-        // Fetch earnings + count together to avoid multiple DB calls
+        log.info("EARNINGS_FETCHED_FROM_CO | driverId={} | totalEarnings={} | ordersCount={}",
+                driverId,
+                projectionOfTotalEarningsAndCountOfOrders.getTotalEarningsToday(),
+                projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday());
 
-        //DriverEarningsProjection projectionOfTotalEarningsAndCountOfOrders = ordersRepository.fetchDriverEarnings(driverId, date);
-        DriverEarningsDto projectionOfTotalEarningsAndCountOfOrders = coFeignClients.fetchDriverEarnings(driverId, date);
+        // ------------------------------------------------------------------
         // Prepare response DTO
+        // ------------------------------------------------------------------
         DriverEarningsDto driverEarningsDto = new DriverEarningsDto();
 
         driverEarningsDto.setDriverId(driverId);
         driverEarningsDto.setCurrentDate(date);
 
+        driverEarningsDto.setOrdersCountToday(
+                projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday());
 
-//        driverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCount());
-//        driverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarnings());
-        driverEarningsDto.setOrdersCountToday(projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday());
-        driverEarningsDto.setTotalEarningsToday(projectionOfTotalEarningsAndCountOfOrders.getTotalEarningsToday());
+        driverEarningsDto.setTotalEarningsToday(
+                projectionOfTotalEarningsAndCountOfOrders.getTotalEarningsToday());
 
-        //
-        // new requirement : Calculate Incentive Bonus (Range-Based Logic)
+        // ------------------------------------------------------------------
+        // Fetch incentive slabs and calculate incentive bonus
+        // ------------------------------------------------------------------
+        List<DriverIncentiveSettings> slabs =
+                driverIncentivesettingsRepository.findAllSlabs();
 
-        BigDecimal bonus = BigDecimal.ZERO;
+        Integer orders =
+                projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday() != null
+                        ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday().intValue()
+                        : 0;
 
-        // Fetch all slabs sorted by orders_count ascending
-        List<DriverIncentiveSettings> slabs = driverIncentivesettingsRepository.findAllSlabs();
+        log.info("TOTAL_COMPLETED_ORDERS | driverId={} | orders={}",
+                driverId,
+                orders);
 
-//        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCount() != null
-//                ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCount().intValue()
-//                : 0;
+        // ------------------------------------------------------------------
+// Check minimum eligible orders for incentive
+// If orders are less than minimum slab,
+// return response and do not save incentive history
+// ------------------------------------------------------------------
+//        check if slabs are configured or not in table, if not configured
+//        then return response with 0 incentive bonus without saving incentive history
+        if (slabs.isEmpty()) {
+            log.warn("No incentive slabs configured");
 
-        Integer orders = projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday() != null ? projectionOfTotalEarningsAndCountOfOrders.getOrdersCountToday().intValue() : 0;
-        log.info("Total orders completed by driver {}: {}", driverId, orders);
+            driverEarningsDto.setDriverIncentiveBonus(BigDecimal.ZERO);
+            return driverEarningsDto;
+        }
+        Integer minimumEligibleOrders = slabs.get(0).getOrdersCount();
 
-        //Instead of loop → use mapper
-        // Find correct slab → assign its final value (no addition of values)
-        bonus = DriverMapper.calculateIncentiveBonus(slabs, orders);
+        log.info("MINIMUM_ELIGIBLE_ORDERS | {}", minimumEligibleOrders);
 
-        log.info("Calculated bonus from mapper: {}", bonus);
+        if (orders < minimumEligibleOrders) {
 
-        // Step 5: Set bonus into DTO
-        driverEarningsDto.setDriverIncentiveBonus(bonus);
+            log.info(
+                    "DRIVER_NOT_ELIGIBLE_FOR_INCENTIVE | driverId={} | orders={} | minimumRequired={}",
+                    driverId,
+                    orders,
+                    minimumEligibleOrders);
 
-        log.info("Final incentive bonus for driver {}: {}", driverId, bonus);
+            driverEarningsDto.setDriverIncentiveBonus(BigDecimal.ZERO);
 
-        log.info("Successfully fetched earnings for driverId: {}", driverId);
+            log.info(
+                    "FETCH_EARNINGS_API_SUCCESS | driverId={} | orders={} | totalEarnings={} | incentiveBonus=0",
+                    driverId,
+                    driverEarningsDto.getOrdersCountToday(),
+                    driverEarningsDto.getTotalEarningsToday());
+
+            return driverEarningsDto;
+        }
+
+        // ------------------------------------------------------------------
+        // Calculate applicable incentive slab using mapper
+        // ------------------------------------------------------------------
+        BigDecimal bonus =
+                DriverMapper.calculateIncentiveBonus(slabs, orders);
+
+        log.info("INCENTIVE_BONUS_CALCULATED | driverId={} | bonus={}",
+                driverId,
+                bonus);
+
+        // ------------------------------------------------------------------
+        // Check whether incentive history exists for driver and date
+        // ------------------------------------------------------------------
+        Optional<DriverIncentiveHistory> existingHistory =
+                driverIncentiveHistoryRepository
+                        .findByDriverIdAndCurrDate(driverId, date);
+
+
+        DriverIncentiveHistory history =
+                DriverMapper.mapToDriverIncentiveHistory(
+                        existingHistory.orElse(null),
+                        driverId,
+                        date,
+                        orders,
+                        bonus);
+        // ------------------------------------------------------------------
+        // Save incentive history
+        // ------------------------------------------------------------------
+        history = driverIncentiveHistoryRepository.save(history);
+
+        log.info("INCENTIVE_HISTORY_SAVED | historyId={} | driverId={} | incentiveAmount={}",
+                history.getDriverIncentiveHistoryId(),
+                driverId,
+                history.getIncentiveAmount());
+
+        // ------------------------------------------------------------------
+        // Set incentive amount from history table into response DTO
+        // ------------------------------------------------------------------
+        driverEarningsDto.setDriverIncentiveBonus(
+                history.getIncentiveAmount()
+        );
+
+        log.info("FETCH_EARNINGS_API_SUCCESS | driverId={} | orders={} | totalEarnings={} | incentiveBonus={}",
+                driverId,
+                driverEarningsDto.getOrdersCountToday(),
+                driverEarningsDto.getTotalEarningsToday(),
+                driverEarningsDto.getDriverIncentiveBonus());
 
         return driverEarningsDto;
     }
@@ -314,8 +400,13 @@ public class DriverServiceImpl implements DriverService {
             // call customer ms
             DriveOrderDto order = coFeignClients.getOrder(String.valueOf(projection.getOrderId()));
 
+            log.info("Order Response = {}", order);
             // call fm ms
+            log.info("Calling FM with outletId={}", order.getOutletId());
+
             String outletName = fmFeignClient.fetchOutletName(order.getOutletId());
+
+            log.info("Outlet Name={}", outletName);
 
             DriverOrderHistoryDto dto = DriverMapper.mapToDriverOrderHistoryDto(projection, order.getOrderStatus(), outletName);
 
@@ -508,33 +599,31 @@ public class DriverServiceImpl implements DriverService {
 
     @Override
     public String saveOrUpdateProfilePic(UploadProfilePicDto uploadProfilePicDto) {
-        try{
+        try {
             validateImage(uploadProfilePicDto.getProfilePicFile());
             String s3BucketFilePath = s3ImageService.uploadFile(uploadProfilePicDto.getProfilePicFile(), uploadProfilePicDto.getUserId(), uploadProfilePicDto.getUserType());
             log.info("File uploaded to S3 successfully. Bucket path: {}", s3BucketFilePath);
 
-            if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_DRIVER)){
+            if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_DRIVER)) {
 
                 Driver driver = driverRepository.findById(uploadProfilePicDto.getUserId()).orElseThrow(() -> {
                     log.error("Driver not found with id: {}", uploadProfilePicDto.getUserId());
                     return new ResourceNotFoundException("Driver not found with id: " + uploadProfilePicDto.getUserId());
                 });
 
-                driver.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath);
+                driver.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
                 driverRepository.save(driver);
                 log.info("Driver profile picture URL updated in database for driver id: {}", uploadProfilePicDto.getUserId());
 
-                return  "Driver profile pic Url: " + DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath;
-            }
-            else if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_CUSTOMER)){
-                DriverCustomerResponseDto driverCustomerResponseDto =coFeignClients.getCustomer(uploadProfilePicDto.getUserId()).getBody();
+                return "Driver profile pic Url: " + DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath;
+            } else if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_CUSTOMER)) {
+                DriverCustomerResponseDto driverCustomerResponseDto = coFeignClients.getCustomer(uploadProfilePicDto.getUserId()).getBody();
 
-                if(driverCustomerResponseDto.getCustomerId() != null){
+                if (driverCustomerResponseDto.getCustomerId() != null) {
 
-                    driverCustomerResponseDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath);
+                    driverCustomerResponseDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
 
-                    ResponseEntity<DriverResponseDto> dtoResponseEntity = coFeignClients
-                            .updateCustomerProfilePic(driverCustomerResponseDto);
+                    ResponseEntity<DriverResponseDto> dtoResponseEntity = coFeignClients.updateCustomerProfilePic(driverCustomerResponseDto);
                     log.info("Customer profile picture URL updated in database for customer id: {}", uploadProfilePicDto.getUserId());
 
                     return dtoResponseEntity.getBody().getStatusMsg();
@@ -542,15 +631,13 @@ public class DriverServiceImpl implements DriverService {
                     log.error("Customer not found with id: {}", uploadProfilePicDto.getUserId());
                     throw new ResourceNotFoundException("Customer not found with id: " + uploadProfilePicDto.getUserId());
                 }
-            }else if(uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_MERCHANT)){
+            } else if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_MERCHANT)) {
 
-                DriverMerchantDto driverMerchantDto = fmFeignClient.
-                        getMerchantById(uploadProfilePicDto.getUserId()).getBody();
+                DriverMerchantDto driverMerchantDto = fmFeignClient.getMerchantById(uploadProfilePicDto.getUserId()).getBody();
 
-                if(driverMerchantDto.getMerchantId()!= null){
-                    driverMerchantDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL+s3BucketFilePath);
-                    ResponseEntity<DriverResponseDto> driverResponseDto =fmFeignClient.
-                            updateMerchantProfilePic(driverMerchantDto);
+                if (driverMerchantDto.getMerchantId() != null) {
+                    driverMerchantDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
+                    ResponseEntity<DriverResponseDto> driverResponseDto = fmFeignClient.updateMerchantProfilePic(driverMerchantDto);
                     log.info("Merchant profile picture URL updated in database for merchant id: {}", uploadProfilePicDto.getUserId());
 
                     return driverResponseDto.getBody().getStatusMsg();
@@ -559,7 +646,7 @@ public class DriverServiceImpl implements DriverService {
                     throw new ResourceNotFoundException("Merchant not found with id: " + uploadProfilePicDto.getUserId());
                 }
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             log.error("Error validating image file", e);
             throw new ImageValidationException("Error validating image file: " + e.getMessage());
         }
@@ -599,10 +686,6 @@ public class DriverServiceImpl implements DriverService {
     }
 
     private boolean isValidType(String contentType) {
-        return contentType != null && (
-                contentType.equals("image/jpeg") ||
-                        contentType.equals("image/png") ||
-                        contentType.equals("image/webp")
-        );
+        return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png") || contentType.equals("image/webp"));
     }
 }
