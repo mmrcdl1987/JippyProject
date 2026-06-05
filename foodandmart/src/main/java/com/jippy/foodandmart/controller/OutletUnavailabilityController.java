@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/outlet-unavailability")
+@RequestMapping("/api/fm/outlet-unavailability")
 @RequiredArgsConstructor
 public class OutletUnavailabilityController {
 

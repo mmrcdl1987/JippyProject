@@ -32,4 +32,25 @@ public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct
             ORDER BY p.masterProductId ASC
             """)
     List<FmMasterProduct> filterByType(@Param("type") String type);
+
+    @Query("""
+        SELECT p
+        FROM FmMasterProduct p
+        WHERE p.categoryId = :categoryId
+        AND p.publish = 1
+        AND (
+             :keyword IS NULL
+             OR :keyword = ''
+             OR LOWER(p.masterProductName)
+                LIKE LOWER(CONCAT('%', :keyword, '%'))
+        )
+        ORDER BY p.masterProductName
+    """)
+    List<FmMasterProduct> findProductsByCategoryAndKeyword(
+            @Param("categoryId") Integer categoryId,
+            @Param("keyword") String keyword
+    );
+
+    boolean existsByCategoryId(Integer categoryId);
 }
+

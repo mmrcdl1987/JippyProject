@@ -4,6 +4,7 @@ import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
 import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
 import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
+import com.jippy.customerandorder.projection.CoSalesReportProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -44,7 +45,7 @@ public interface CoOrderRepository extends JpaRepository<CoOrder, String> {
 
     //
 // to fetch Frequent outlets (>=3)
-//    for ex: if a customer has ordered from outlet A 5 times, outlet B 2 times,
+//    for ex: if a customer has ordered from outlet  5 times, outlet B 2 times,
 //    and outlet C 3 times, the query will return outlet A and  outlet C as frequent outlets
 //    for that customer, since they have been ordered from at least 3 times.
     @Query(value = """
@@ -116,4 +117,188 @@ List<CoOrderSettlementProjection> getProductDetailsForMerchantSettlement
 Optional<CoOrder> findByOrderIdAndDriverId(
         String orderId,
         Long driverId);
+
+//    @Query(value = """
+//        SELECT
+//            order_summary.sales_date AS salesDate,
+//            COUNT(order_summary.order_id) AS totalOrders,
+//            COALESCE(SUM(order_summary.order_earning), 0) AS totalEarnings
+//        FROM
+//        (
+//            SELECT
+//                o.order_id,
+//                CAST(o.created_at AS DATE) AS sales_date,
+//                SUM(oi.merchant_price_total) AS order_earning
+//            FROM jippy_customer_and_order.orders o
+//            INNER JOIN jippy_customer_and_order.order_items oi
+//                    ON oi.order_id = o.order_id
+//            WHERE o.outlet_id IN (:outletIds)
+//              AND o.order_status = 'DELIVERED'
+//              AND (
+//                    :fromDate IS NULL
+//                    OR CAST(o.created_at AS DATE)
+//                       BETWEEN :fromDate AND :toDate
+//                  )
+//            GROUP BY
+//                o.order_id,
+//                CAST(o.created_at AS DATE)
+//        ) order_summary
+//        GROUP BY order_summary.sales_date
+//        ORDER BY order_summary.sales_date DESC
+//        """,
+//            nativeQuery = true)
+//    List<CoSalesReportProjection> getSalesReport(
+//            @Param("outletIds") List<Integer> outletIds,
+//            @Param("fromDate") LocalDate fromDate,
+//            @Param("toDate") LocalDate toDate);
+//
+//    @Query(value = """
+//        SELECT
+//            order_summary.sales_date AS salesDate,
+//            COUNT(order_summary.order_id) AS totalOrders,
+//            COALESCE(SUM(order_summary.order_earning), 0) AS totalEarnings
+//        FROM
+//        (
+//            SELECT
+//                o.order_id,
+//                CAST(o.created_at AS DATE) AS sales_date,
+//                SUM(oi.merchant_price_total) AS order_earning
+//            FROM jippy_customer_and_order.orders o
+//            INNER JOIN jippy_customer_and_order.order_items oi
+//                    ON oi.order_id = o.order_id
+//            WHERE o.outlet_id = :outletId
+//              AND o.order_status = 'DELIVERED'
+//              AND (
+//                    :fromDate IS NULL
+//                    OR CAST(o.created_at AS DATE)
+//                       BETWEEN :fromDate AND :toDate
+//                  )
+//            GROUP BY
+//                o.order_id,
+//                CAST(o.created_at AS DATE)
+//        ) order_summary
+//        GROUP BY order_summary.sales_date
+//        ORDER BY order_summary.sales_date DESC
+//        """,
+//            nativeQuery = true)
+//    List<CoSalesReportProjection> getSalesReportByOutlet(
+//            @Param("outletId") Integer outletId,
+//            @Param("fromDate") LocalDate fromDate,
+//            @Param("toDate") LocalDate toDate);
+
+    @Query(value = """
+        SELECT
+            order_summary.sales_date AS salesDate,
+            COUNT(order_summary.order_id) AS totalOrders,
+            COALESCE(SUM(order_summary.order_earning),0) AS totalEarnings
+        FROM
+        (
+            SELECT
+                o.order_id,
+                CAST(o.created_at AS DATE) AS sales_date,
+                SUM(oi.merchant_price_total) AS order_earning
+            FROM jippy_customer_and_order.orders o
+            INNER JOIN jippy_customer_and_order.order_items oi
+                    ON oi.order_id = o.order_id
+            WHERE o.outlet_id IN (:outletIds)
+              AND o.order_status = 'DELIVERED'
+            GROUP BY
+                o.order_id,
+                CAST(o.created_at AS DATE)
+        ) order_summary
+        GROUP BY order_summary.sales_date
+        ORDER BY order_summary.sales_date DESC
+        """,
+            nativeQuery = true)
+    List<CoSalesReportProjection> getSalesReport(
+            @Param("outletIds") List<Integer> outletIds);
+
+    @Query(value = """
+        SELECT
+            order_summary.sales_date AS salesDate,
+            COUNT(order_summary.order_id) AS totalOrders,
+            COALESCE(SUM(order_summary.order_earning),0) AS totalEarnings
+        FROM
+        (
+            SELECT
+                o.order_id,
+                CAST(o.created_at AS DATE) AS sales_date,
+                SUM(oi.merchant_price_total) AS order_earning
+            FROM jippy_customer_and_order.orders o
+            INNER JOIN jippy_customer_and_order.order_items oi
+                    ON oi.order_id = o.order_id
+            WHERE o.outlet_id IN (:outletIds)
+              AND o.order_status = 'DELIVERED'
+              AND CAST(o.created_at AS DATE)
+                  BETWEEN :fromDate AND :toDate
+            GROUP BY
+                o.order_id,
+                CAST(o.created_at AS DATE)
+        ) order_summary
+        GROUP BY order_summary.sales_date
+        ORDER BY order_summary.sales_date DESC
+        """,
+            nativeQuery = true)
+    List<CoSalesReportProjection> getSalesReportByDateRange(
+            @Param("outletIds") List<Integer> outletIds,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
+
+    @Query(value = """
+        SELECT
+            order_summary.sales_date AS salesDate,
+            COUNT(order_summary.order_id) AS totalOrders,
+            COALESCE(SUM(order_summary.order_earning),0) AS totalEarnings
+        FROM
+        (
+            SELECT
+                o.order_id,
+                CAST(o.created_at AS DATE) AS sales_date,
+                SUM(oi.merchant_price_total) AS order_earning
+            FROM jippy_customer_and_order.orders o
+            INNER JOIN jippy_customer_and_order.order_items oi
+                    ON oi.order_id = o.order_id
+            WHERE o.outlet_id = :outletId
+              AND o.order_status = 'DELIVERED'
+            GROUP BY
+                o.order_id,
+                CAST(o.created_at AS DATE)
+        ) order_summary
+        GROUP BY order_summary.sales_date
+        ORDER BY order_summary.sales_date DESC
+        """,
+            nativeQuery = true)
+    List<CoSalesReportProjection> getSalesReportByOutlet(
+            @Param("outletId") Integer outletId);
+
+    @Query(value = """
+        SELECT
+            order_summary.sales_date AS salesDate,
+            COUNT(order_summary.order_id) AS totalOrders,
+            COALESCE(SUM(order_summary.order_earning),0) AS totalEarnings
+        FROM
+        (
+            SELECT
+                o.order_id,
+                CAST(o.created_at AS DATE) AS sales_date,
+                SUM(oi.merchant_price_total) AS order_earning
+            FROM jippy_customer_and_order.orders o
+            INNER JOIN jippy_customer_and_order.order_items oi
+                    ON oi.order_id = o.order_id
+            WHERE o.outlet_id = :outletId
+              AND o.order_status = 'DELIVERED'
+              AND CAST(o.created_at AS DATE)
+                  BETWEEN :fromDate AND :toDate
+            GROUP BY
+                o.order_id,
+                CAST(o.created_at AS DATE)
+        ) order_summary
+        GROUP BY order_summary.sales_date
+        ORDER BY order_summary.sales_date DESC
+        """,
+            nativeQuery = true)
+    List<CoSalesReportProjection> getSalesReportByOutletAndDateRange(
+            @Param("outletId") Integer outletId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
 }

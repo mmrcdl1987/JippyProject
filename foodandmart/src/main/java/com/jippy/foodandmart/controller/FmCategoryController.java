@@ -1,19 +1,18 @@
 package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.FmApiResponse;
+import com.jippy.foodandmart.dto.FmMasterProductResponseDto;
 import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.entity.FmOutletCategory;
 import com.jippy.foodandmart.repository.FmCategoryRepository;
 import com.jippy.foodandmart.repository.FmOutletCategoryRepository;
 import com.jippy.foodandmart.repository.FmOutletRepository;
+import com.jippy.foodandmart.serviceImpl.FmMasterProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -27,12 +26,14 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
+@RequestMapping("/api/fm")
 @RequiredArgsConstructor
 public class FmCategoryController {
 
     private final FmCategoryRepository categoryRepository;
     private final FmOutletCategoryRepository outletCategoryRepository;
     private final FmOutletRepository outletRepository;
+    private final FmMasterProductService service;
 
     /**
      * Returns all global categories from the jippy_fm.categories table.
@@ -44,11 +45,22 @@ public class FmCategoryController {
      *
      * @return 200 with the full list of {@link FmCategory} entities
      */
-    @GetMapping("/api/categories")
+    @GetMapping("/categories")
     public ResponseEntity<FmApiResponse<List<FmCategory>>> getAllCategories() {
         log.info("[CATEGORY] GET /api/categories");
         List<FmCategory> cats = categoryRepository.findAll();
         return ResponseEntity.ok(FmApiResponse.success("Categories fetched", cats));
+    }
+
+    //fetching the products based on category id from master products
+    @GetMapping("/{categoryId}")
+    public ResponseEntity<FmApiResponse<List<FmMasterProductResponseDto>>> getProductsByCategory(@PathVariable Integer categoryId, @RequestParam(required = false) String keyword) {
+
+        log.info("GET_PRODUCTS_BY_CATEGORY_STARTED | categoryId={} | keyword={}", categoryId, keyword);
+
+        List<FmMasterProductResponseDto> products = service.getProductsByCategory(categoryId, keyword);
+
+        return ResponseEntity.ok(FmApiResponse.success("Products fetched successfully", products));
     }
 
     /**

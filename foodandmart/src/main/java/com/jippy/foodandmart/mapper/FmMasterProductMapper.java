@@ -1,10 +1,11 @@
 package com.jippy.foodandmart.mapper;
-
 import com.jippy.foodandmart.dto.FmMasterProductRequest;
+import com.jippy.foodandmart.dto.FmMasterProductResponseDto;
 import com.jippy.foodandmart.entity.FmMasterProduct;
-
+import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
+@Component
 public final class FmMasterProductMapper {
 
     private FmMasterProductMapper() {
@@ -99,5 +100,21 @@ public final class FmMasterProductMapper {
         if (dto.getPublish() != null) entity.setPublish(dto.getPublish());
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setUpdatedBy(dto.getUpdatedBy());
+    }
+
+    public FmMasterProductResponseDto toResponseDto(FmMasterProduct product) {
+        FmMasterProductResponseDto dto = new FmMasterProductResponseDto();
+
+        dto.setMasterProductId(product.getMasterProductId());
+        dto.setMasterProductName(product.getMasterProductName());
+        dto.setCategoryId(product.getCategoryId());
+        dto.setCategoryName(product.getCategoryName());
+        dto.setPhoto(product.getPhoto());
+        dto.setThumbnail(product.getThumbnail());
+        dto.setVeg(product.getVeg());
+        dto.setNonVeg(product.getNonVeg());
+        dto.setPublish(product.getPublish());
+
+        return dto;
     }
 }

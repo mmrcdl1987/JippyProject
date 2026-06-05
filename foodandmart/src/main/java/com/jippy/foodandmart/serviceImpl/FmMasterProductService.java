@@ -2,10 +2,12 @@ package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.FmCompareFileResponse;
 import com.jippy.foodandmart.dto.FmMasterProductRequest;
+import com.jippy.foodandmart.dto.FmMasterProductResponseDto;
 import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.entity.FmMasterProduct;
 import com.jippy.foodandmart.exception.FileProcessingException;
 import com.jippy.foodandmart.exception.MasterProductNotFoundException;
+import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMasterProductMapper;
 import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.repository.FmCategoryRepository;
@@ -31,6 +33,7 @@ public class FmMasterProductService {
     private final FmMasterProductRepository masterProductRepository;
     private final FileConverterService fileConverterService;
     private final FmCategoryRepository categoryRepository;
+    private final FmMasterProductMapper masterProductMapper;
 
     // ── CREATE ────────────────────────────────────────────────────────────────
 
@@ -418,4 +421,25 @@ public class FmMasterProductService {
         return v.replace("\"", "").replace("\r", "").replace("\n", "")
                 .trim().toLowerCase().replaceAll("\\s+", " ");
     }
+
+
+    public List<FmMasterProductResponseDto> getProductsByCategory(Integer categoryId, String keyword) {
+
+        log.info("GET_PRODUCTS_BY_CATEGORY_STARTED | categoryId={} | keyword={}", categoryId, keyword);
+
+        if (!categoryRepository.existsById(categoryId)) {
+
+            log.warn("CATEGORY_NOT_FOUND | categoryId={}", categoryId);
+
+            throw new ResourceNotFoundException("Category not found with id : " + categoryId);
+        }
+
+        List<FmMasterProduct> products = masterProductRepository.findProductsByCategoryAndKeyword(categoryId, keyword);
+
+        log.info("GET_PRODUCTS_BY_CATEGORY_COMPLETED | categoryId={} | productCount={}", categoryId, products.size());
+
+        return products.stream().map(masterProductMapper::toResponseDto).toList();
+    }
+
+
 }
