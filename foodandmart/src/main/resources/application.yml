@@ -54,6 +54,17 @@ management:
     health:
       probes:
         enabled: true
+  tracing:
+    sampling:
+      probability: 1.0 # Capture 100% of traces for development. Reduce in production (e.g., 0.1).
+    otlp:
+      tracing:
+        endpoint: http://localhost:4317 # The OTLP gRPC endpoint exposed by Grafana Tempo
+
+  logging:
+    # Forces Spring Boot to append [Service-Name, TraceId, SpanId] into standard logs out-of-the-box
+    include-application-name: true
+
 
 google:
   maps:

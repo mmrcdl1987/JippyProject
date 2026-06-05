@@ -1,11 +1,10 @@
-package com.jippy.gatewayserver.filters;
+package com.jippy.gatewayserver.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.stereotype.Component;
 
 @Configuration
 @Slf4j

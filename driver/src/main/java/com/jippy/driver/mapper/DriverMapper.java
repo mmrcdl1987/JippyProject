@@ -7,6 +7,7 @@ import com.jippy.driver.entity.*;
 import com.jippy.driver.exception.DriverBadRequestException;
 import com.jippy.driver.projection.DriverOrderHistoryProjection;
 import com.jippy.driver.projection.DriverTotalEarningsProjection;
+import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
@@ -135,10 +136,10 @@ public class DriverMapper {
 
     }
 
-    public static DriverZone mapToZoneEntity(DriverZoneDto zoneDto, Polygon polygon) {
+    public static DriverZone mapToZoneEntity(DriverZoneDto zoneDto, MultiPolygon multiPolygon) {
         DriverZone zone = new DriverZone();
         zone.setZoneName(zoneDto.getZoneName());
-        zone.setBoundary(polygon);
+        zone.setBoundary(multiPolygon);
         zone.setCreatedAt(LocalDateTime.now());
         zone.setCreatedBy(zoneDto.getCreatedBy());
         return zone;

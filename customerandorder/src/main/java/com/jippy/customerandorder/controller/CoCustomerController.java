@@ -105,7 +105,6 @@ public class CoCustomerController {
         return dto;
     }
 
-
     // Update Customer Profile Pic
     @PutMapping("/updateCustomerProfilePic")
     public ResponseEntity<CoResponseDto> updateCustomerProfilePic(@RequestBody CoCustomerRequestDto requestDto) {

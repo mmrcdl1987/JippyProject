@@ -2,6 +2,7 @@ package com.jippy.foodandmart.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FmMerchantDto {
 
+    @JsonProperty("merchantId")
     private Integer merchantId;
 
     @NotEmpty(message = "Merchant name should not be empty")

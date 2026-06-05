@@ -1,5 +1,5 @@
 
-package com.jippy.gatewayserver.filters;
+package com.jippy.gatewayserver.config;
 
 
 import io.swagger.v3.oas.models.Components;
