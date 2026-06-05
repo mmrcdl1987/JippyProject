@@ -32,7 +32,10 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/outlets/fetchOutletName")
     String fetchOutletName(@RequestParam Integer outletId);
 
+    // --------------------------------------------------------------------------------
     // CALL FM SERVICE for DEACTIVATING DRIVER i.e is_active = Y to N in fm_users table
+    // --------------------------------------------------------------------------------
+
     @PostMapping("/api/fm/users/deactivateDriver")
     String deactivateDriver(@RequestParam("userId") Integer userId);
 

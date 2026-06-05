@@ -9,4 +9,5 @@ public class DriverCodRequestDto {
     private Integer driverId;
     private String orderId;
     private String orderStatus;
+
 }

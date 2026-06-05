@@ -3,16 +3,18 @@ package com.jippy.driver.controller;
 
 import com.jippy.driver.dto.DriverCodRequestDto;
 import com.jippy.driver.dto.DriverCodResponseDto;
+import com.jippy.driver.dto.DriverIncentiveHistoryResponseDto;
+import com.jippy.driver.dto.DriverWalletUpdateResponseDto;
 import com.jippy.driver.service.DriverWalletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/driver")
@@ -24,7 +26,7 @@ public class DriverWalletController {
     @Autowired
     private DriverWalletService service;
 
-    /**
+    /**F
      * API to deduct COD amount after delivery
      */
     @PostMapping("/insertOrUpdateDriverCodBalance")
@@ -36,4 +38,19 @@ public class DriverWalletController {
 
         return service.processDriverCod(requestDto);
     }
-}
+
+//     * API for fleet manager to update incentive amount for a driver
+//     and activate the driver if the updated COD amount is greater than 0
+
+    @PutMapping("/updateCODAmountByFleetManager")
+    public ResponseEntity<DriverWalletUpdateResponseDto>
+    updateCODAmountByFleetManager(
+            @RequestParam Integer driverId ,
+            @RequestParam Integer fleetManagerId) {
+
+        DriverWalletUpdateResponseDto response = service.updateCODAmountByFleetManager(driverId,fleetManagerId);
+
+        return ResponseEntity.ok(response);
+    }
+
+}   

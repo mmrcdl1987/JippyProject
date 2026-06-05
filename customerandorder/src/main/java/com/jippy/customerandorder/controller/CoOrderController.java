@@ -158,6 +158,8 @@ public class CoOrderController {
 
         dto.setPaymentModeId(order.getPaymentModeId());
 
+        dto.setOutletId(order.getOutletId());
+
         return dto;
     }
 

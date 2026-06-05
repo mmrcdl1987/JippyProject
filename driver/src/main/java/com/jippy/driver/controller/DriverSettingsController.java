@@ -1,6 +1,7 @@
 package com.jippy.driver.controller;
 
 
+import com.jippy.driver.dto.DriverIncentiveHistoryResponseDto;
 import com.jippy.driver.dto.DriverIncentiveSettingsDto;
 import com.jippy.driver.dto.DriverDeliveryChargeSettingsRequestDto;
 import com.jippy.driver.dto.DriverDeliveryChargeSettingsResponseDto;
@@ -10,12 +11,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/api/driver")
@@ -50,5 +52,21 @@ public class DriverSettingsController {
         DriverIncentiveSettingsDto response = incentiveSettingsService.saveOrUpdateIncentives(dto);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/getDriverIncentiveHistory")
+    @Operation(summary = "Get Driver Incentive History"
+            ,description = "Get incentive history for a driver based on filter" +
+            " (daily, weekly, monthly, ALL) filter value can be daily, weekly, monthly or " +
+            "ALL ex:filter=all/currentMonth")
+    public Page<DriverIncentiveHistoryResponseDto >getDriverIncentiveHistory
+            (@RequestParam Integer driverId, @RequestParam String filter,
+             @RequestParam(defaultValue = "0") int page,
+             @RequestParam(defaultValue = "2") int size) {
+        log.info("Get Driver Incentive History request | driverId={}, filter={}", driverId, filter);
+
+        log.info("to get incentive details filter value can be daily, weekly, monthly or ALL");
+        return incentiveSettingsService.getDriverIncentiveHistory(driverId, filter,page,
+                size);
     }
 }

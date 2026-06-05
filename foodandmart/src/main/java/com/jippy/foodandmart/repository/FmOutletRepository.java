@@ -369,6 +369,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 ON a.area_id = ar.area_id
             WHERE a.address_type = 'OUTLET'
             AND o.outlet_id = :outletId
+            ORDER BY a.address_id DESC
+                    LIMIT 1
             """, nativeQuery = true)
     FmOutletSettlementProjection getOutletDetailsAndAreaAddressForSettlement(@Param("outletId") Integer outletId);
 }

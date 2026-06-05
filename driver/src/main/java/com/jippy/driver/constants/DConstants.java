@@ -15,6 +15,8 @@ public class DConstants {
     public static final String TYPE_CUSTOMER = "CUSTOMER";
     public static final String TYPE_MERCHANT = "MERCHANT";
     public static final String STATUS_201="201";
+    public static final String TransactionType_debit="debit";
+    public static final String TransactionType_credit="credit";
 
     // ── Delivery Charge Settings Messages ──────────────────────────────────────
     public static final String MSG_DELIVERY_CHARGE_CREATED = "Delivery charge setting created successfully";
