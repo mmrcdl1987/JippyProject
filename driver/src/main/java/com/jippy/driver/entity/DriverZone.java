@@ -2,7 +2,7 @@
 
     import jakarta.persistence.*;
     import lombok.Data;
-    import org.locationtech.jts.geom.Polygon;
+    import org.locationtech.jts.geom.MultiPolygon;
 
     import java.time.LocalDateTime;
 
@@ -24,9 +24,9 @@
         // Polygon boundary of zone
         @Column(
                 name = "boundary",
-                columnDefinition = "geometry(Polygon, 4326)"
+                columnDefinition = "geography(MultiPolygon, 4326)"
         )
-        private Polygon boundary;
+        private MultiPolygon boundary;
 
         // Record creation timestamp
         @Column(name = "created_at")

@@ -1,15 +1,11 @@
-package com.jippy.gatewayserver.filters;
+package com.jippy.gatewayserver.config;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Encoders;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-
-import javax.crypto.SecretKey;
 
 @Component
 @Order(-2) // Use -2 to run even before your AuthenticationFilter

@@ -9,7 +9,9 @@ public class DriverZoneDto {
 
     private Integer zoneId;
     private String zoneName;
-    private List<CoordinateDTO> boundary;
+    //private List<CoordinateDTO> boundary;
+    // List 1: MultiPolygon -> List 2: Individual Polygons -> List 3: Rings -> CoordinateDTO
+    private List<List<List<CoordinateDTO>>> boundary;
     private Integer createdBy;
 
     @Data

@@ -67,9 +67,6 @@ public class FmMerchant {
     @Builder.Default
     private List<FmOutlet> outlets = new ArrayList<>();
 
-    @Column(name = "profile_pic_url", length = 100)
-    private String profilePicUrl;
-
     // Transient fields — carried in-memory during CSV/Excel import only
     @Transient
     private String firstName;

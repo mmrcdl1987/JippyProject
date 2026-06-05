@@ -17,9 +17,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,6 +48,7 @@ public class DriverServiceImpl implements DriverService {
     private final FMFeignClient fmFeignClient;
     private final DriverLocationService driverLocationService;
     private final S3ImageService s3ImageService;
+    private final GeometryFactory geometryFactory = new GeometryFactory();
 
     @Override
     @Transactional
@@ -360,34 +359,60 @@ public class DriverServiceImpl implements DriverService {
     public String createZones(DriverZoneDto zoneDto) {
 
         Optional<DriverZone> existingZone = zoneRepository.findByZoneName(zoneDto.getZoneName());
-        Polygon polygon = convertToJtsPolygon(zoneDto.getBoundary());
+        MultiPolygon multiPolygon = convertToJtsPolygon(zoneDto.getBoundary());
+        //Polygon polygon = convertToJtsPolygon(zoneDto.getBoundary());
         if (existingZone.isPresent()) {
-            if (zoneRepository.existsBySpatialBoundary(polygon)) {
+            if (zoneRepository.existsBySpatialBoundary(multiPolygon)) {
                 throw new DriverZoneException("A boundary with this exact shape already exists!");
             } else {
                 log.info("Updating existing zone with id: {}", existingZone.get().getZoneId());
                 DriverZone zoneToUpdate = existingZone.get();
-                zoneToUpdate.setBoundary(polygon);
+                zoneToUpdate.setBoundary(multiPolygon);
                 zoneToUpdate.setUpdatedAt(LocalDateTime.now());
                 zoneToUpdate.setUpdatedBy(zoneDto.getCreatedBy());
                 zoneRepository.save(zoneToUpdate);
                 return "Zone:" + zoneToUpdate.getZoneName() + " updated successfully!";
             }
         }
-        DriverZone zone = DriverMapper.mapToZoneEntity(zoneDto, polygon);
+        DriverZone zone = DriverMapper.mapToZoneEntity(zoneDto, multiPolygon);
         DriverZone savedZone = zoneRepository.save(zone);
         log.info("New zone is created with id: {}", savedZone.getZoneId());
 
         return "Zone:" + zone.getZoneName() + " created successfully!";
     }
 
-    private Polygon convertToJtsPolygon(List<DriverZoneDto.CoordinateDTO> boundary) {
-        GeometryFactory factory = new GeometryFactory();
+    private MultiPolygon convertToJtsPolygon(List<List<List<DriverZoneDto.CoordinateDTO>>> boundary) {
+        List<Polygon> polygonsList = new ArrayList<>();
 
-        Coordinate[] coords = boundary.stream().map(p -> new Coordinate(p.getLongitude(), p.getLatitude())).toArray(Coordinate[]::new);
+        // Loop 1: Iterate through each independent Polygon shape
+        for (List<List<DriverZoneDto.CoordinateDTO>> rawPolygon : boundary) {
 
-        // JTS requires the linear ring to be closed (first == last)
-        return factory.createPolygon(coords);
+            // In a standard geometry, index 0 is always the outer boundary ring
+            List<DriverZoneDto.CoordinateDTO> exteriorRingCoords = rawPolygon.get(0);
+
+            // Map CoordinateDTO to JTS Coordinate objects
+            Coordinate[] coordinates = exteriorRingCoords.stream()
+                    .map(c -> new Coordinate(c.getLongitude(), c.getLatitude()))
+                    .toArray(Coordinate[]::new);
+
+            // Create the closed linear ring for this polygon
+            LinearRing exteriorRing = geometryFactory.createLinearRing(coordinates);
+
+            // Create a polygon from the ring (passing null since we aren't handling internal holes right now)
+            Polygon polygon = geometryFactory.createPolygon(exteriorRing, null);
+            polygonsList.add(polygon);
+        }
+
+        // Convert our list of individual polygons into a native array
+        Polygon[] polygonArray = polygonsList.toArray(Polygon[]::new);
+
+        // Combine everything into a single MultiPolygon object
+        MultiPolygon multiPolygon = geometryFactory.createMultiPolygon(polygonArray);
+
+        // Match your database spatial SRID coordinate system reference alignment
+        multiPolygon.setSRID(4326);
+
+        return  multiPolygon;
     }
 
 //    @Override

@@ -1,5 +1,5 @@
 
-package com.jippy.gatewayserver.filters;
+package com.jippy.gatewayserver.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
