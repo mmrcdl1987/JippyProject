@@ -115,7 +115,9 @@ public class DriverIncentiveSettingsServiceImpl implements DriverIncentiveSettin
         }
 
         if (incentiveHistoryList.isEmpty()) {
-
+            log.info("Total Elements: {}", incentiveHistoryList.getTotalElements());
+            log.info("Current Page: {}", incentiveHistoryList.getNumber());
+            log.info("Content Size: {}", incentiveHistoryList.getContent().size());
             throw new ResourceNotFoundException("No incentive history found for driverId : " + driverId);
         }
 

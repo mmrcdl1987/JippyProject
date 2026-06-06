@@ -24,13 +24,19 @@ public class FmFleetManagerServiceImpl implements FmFleetManagerService {
     private final FmUserRepository fmUsersRepository;
 
     @Override
-    public FmUpdateCODResponseDto updateCODAmountByFleetManager(Integer driverId) {
+    public FmUpdateCODResponseDto updateCODAmountByFleetManager(Integer driverId, Integer fleetManagerId) {
 
         log.info("Updating COD amount for driverId : {}", driverId);
 
 //        data came from Driver DTO
-        DriverWalletUpdateResponseDto walletResponse =
-                driverFeignClient.updateCODAmountByFleetManager(driverId);
+        DriverWalletUpdateResponseDto walletResponse;
+        try {
+            walletResponse = driverFeignClient.updateCODAmountByFleetManager(driverId, fleetManagerId);
+        }
+        catch (Exception e) {
+            log.error("Failed to call Driver service", e);
+            throw new ResourceNotFoundException("Driver service is unavailable");
+        }
 
         log.info("Amount received from Driver Service = {}", walletResponse.getUpdatedCodAmount());
 

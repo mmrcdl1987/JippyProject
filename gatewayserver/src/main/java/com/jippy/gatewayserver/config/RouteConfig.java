@@ -5,10 +5,9 @@ import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 @Configuration
 @Slf4j
-public class RouteConfig {
+public class RouteConfig     {
 
     /*@Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder, AuthenticationFilter authFilter) {
@@ -164,5 +163,6 @@ public class RouteConfig {
                 .build();
     }
 }
+
 
 
