@@ -9,5 +9,6 @@ public interface DriverFeignClient {
 
     @PutMapping("/api/driver/updateCODAmountByFleetManager")
     DriverWalletUpdateResponseDto updateCODAmountByFleetManager(
-            @RequestParam Integer driverId);
+            @RequestParam Integer driverId,
+            @RequestParam Integer fleetManagerId);
 }

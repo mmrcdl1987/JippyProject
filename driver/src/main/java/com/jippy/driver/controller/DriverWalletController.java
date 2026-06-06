@@ -43,6 +43,9 @@ public class DriverWalletController {
 //     and activate the driver if the updated COD amount is greater than 0
 
     @PutMapping("/updateCODAmountByFleetManager")
+    @Operation(summary = "Fleet manager updates COD amount for a driver and activates the driver if COD amount > 0",
+            description = "Fleet manager can update COD amount for a driver. If the updated COD amount is greater than 0, the driver will be activated. ," +
+            " [API Path ->/api/driver/updateCODAmountByFleetManager?driverId=Integer&fleetManagerId=Integer]")
     public ResponseEntity<DriverWalletUpdateResponseDto>
     updateCODAmountByFleetManager(
             @RequestParam Integer driverId ,
