@@ -56,6 +56,7 @@ public class FmSecurityConfig {
                         // 3. CREATE/UPDATE ROLE (Can perform POST/PUT/PATCH)
                         .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
 
                         // 4. FULL ADMIN (Can also DELETE)
                         .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
