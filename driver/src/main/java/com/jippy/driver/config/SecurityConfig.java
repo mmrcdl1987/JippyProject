@@ -27,6 +27,10 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/v3/api-docs/**",  "/api/driver/v3/api-docs").permitAll()
+
+                        // 2. ADD THIS: Allow Health Checks
+                        .requestMatchers("/actuator/**").permitAll()
+
                         .requestMatchers("/api/driver/**").authenticated()
                         .anyRequest().authenticated()
                 )

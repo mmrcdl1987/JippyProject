@@ -25,7 +25,12 @@ public class DriverJwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        log.info("Header: {}", request.getHeader("X-Auth-User"));
+        String path = request.getServletPath();
+
+        // Only log if it's NOT a health check or documentation request
+        if (!path.startsWith("/actuator") && !path.contains("api-docs")) {
+            log.info("path: {}",path);
+        }
         // 1. Get the headers injected by the Gateway
         String username = request.getHeader("X-Auth-User");
         String rolesHeader = request.getHeader("X-Auth-Roles");

@@ -28,6 +28,10 @@ public class DivSecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/v3/api-docs/**",  "/api/div/v3/api-docs").permitAll()
+
+                        // 2. ADD THIS: Allow Health Checks
+                        .requestMatchers("/actuator/**").permitAll()
+
                         .requestMatchers("/api/div/**").authenticated()
                         .anyRequest().authenticated()
                 )

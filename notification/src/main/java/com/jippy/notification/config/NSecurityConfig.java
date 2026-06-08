@@ -28,6 +28,10 @@ public class NSecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/v3/api-docs/**",  "/api/notification/v3/api-docs").permitAll()
+
+                        // 2. ADD THIS: Allow Health Checks
+                        .requestMatchers("/actuator/**").permitAll()
+
                         .requestMatchers("/api/notification/**").authenticated()
                         .anyRequest().authenticated()
                 )

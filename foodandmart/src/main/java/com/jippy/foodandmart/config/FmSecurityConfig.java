@@ -44,6 +44,9 @@ public class FmSecurityConfig {
                         // Use broad wildcards to ensure the documentation endpoints are universally bypassed
                         .requestMatchers("/v3/api-docs/**",  "/api/fm/v3/api-docs").permitAll()
 
+                        // 2. ADD THIS: Allow Health Checks
+                        .requestMatchers("/actuator/**").permitAll()
+
                         .requestMatchers("/api/fm/auth/**", "/auth/**").permitAll() // Public login/register
 
                         //.requestMatchers("/api/fm/**").authenticated() // Protected routes

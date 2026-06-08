@@ -36,6 +36,7 @@ public class NFireBaseConfig {
 //    }
 
     private static final String FIREBASE_FILE = "jippy-firebase-key.json";
+    String firebasePath = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
 
     @PostConstruct
     public void initialize() {
@@ -47,6 +48,8 @@ public class NFireBaseConfig {
             return;
         }
 
+            /*try (InputStream serviceAccount =
+                         new FileInputStream(firebasePath)) {*/
         try (InputStream serviceAccount =
                      new ClassPathResource(FIREBASE_FILE).getInputStream()) {
 

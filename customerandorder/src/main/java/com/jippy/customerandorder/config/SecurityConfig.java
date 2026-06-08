@@ -27,6 +27,10 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/v3/api-docs/**",  "/api/co/v3/api-docs").permitAll()
+
+                        // 2. ADD THIS: Allow Health Checks
+                        .requestMatchers("/actuator/**").permitAll()
+
                         .requestMatchers("/api/co/**").authenticated()
                         .anyRequest().authenticated()
                 )
