@@ -68,4 +68,10 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/outlets/merchant/{merchantId}")
     CoFmApiResponse<List<CoFmOutletDto>> getOutletsByMerchantId(@PathVariable Integer merchantId);
 
+
+    @GetMapping("/api/fm/pricing/{productId}/outlet/{outletId}")
+    FmProductDetailResponseDto getProductByIdAndOutletId(
+            @PathVariable("productId") Integer productId,
+            @PathVariable("outletId") Integer outletId);
+
 }

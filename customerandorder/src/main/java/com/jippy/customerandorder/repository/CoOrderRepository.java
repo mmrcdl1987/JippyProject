@@ -301,4 +301,7 @@ Optional<CoOrder> findByOrderIdAndDriverId(
             @Param("outletId") Integer outletId,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
+
+
+    Optional<CoOrder> findByOrderIdAndCustomerId(String orderId, Integer customerId);
 }

@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoCustomerCart;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,4 +15,6 @@ public interface CoCustomerCartRepository extends JpaRepository<CoCustomerCart, 
 
     List<CoCustomerCart> findByCustomerId(Integer customerId);
 
+    @Transactional
+    void deleteByCustomerId(Integer customerId);
 }

@@ -19,5 +19,9 @@ public interface IPricingService {
 
     FmProductDetailResponseDto getProductById(Integer productId);
 
+    FmProductDetailResponseDto getProductByIdAndOutletId(
+            Integer productId,
+            Integer outletId);
+
 }
 
