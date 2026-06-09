@@ -77,7 +77,7 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
                 }
                 default -> {
 
-                    log.error("INVALID_FILTER | filter={}", filter);
+                    log.warn("VALIDATION_FAILED | INVALID_FILTER | filter={}", filter);
 
                     throw new CoBadRequestException("Invalid sales report filter");
                 }
@@ -88,8 +88,7 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
 
                 validateOutletBelongsToMerchant(merchantId, outletId, merchantOutlets);
 
-                log.info("OUTLET_LEVEL_REPORT | merchantId={} | outletId={}", merchantId, outletId);
-
+                log.info("DB_OPERATION | FETCH_OUTLET_SALES_REPORT | merchantId={} | outletId={}", merchantId, outletId);
                 if (filter == CoSalesReportFilter.ALL) {
 
                     report = coOrderRepository.getSalesReportByOutlet(outletId);
@@ -103,8 +102,7 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
 
                 List<Integer> outletIds = merchantOutlets.stream().map(CoFmOutletDto::getOutletId).toList();
 
-                log.info("MERCHANT_LEVEL_REPORT | merchantId={} | outletCount={}", merchantId, outletIds.size());
-
+                log.info("DB_OPERATION | FETCH_MERCHANT_SALES_REPORT | merchantId={} | outletCount={}", merchantId, outletIds.size());
                 if (filter == CoSalesReportFilter.ALL) {
 
                     report = coOrderRepository.getSalesReport(outletIds);
@@ -114,6 +112,7 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
                     report = coOrderRepository.getSalesReportByDateRange(outletIds, fromDate, toDate);
                 }
             }
+            log.info("DB_SUCCESS | SALES_REPORT_FETCHED | recordCount={}", report == null ? 0 : report.size());
 
 
             if (report == null || report.isEmpty()) {
@@ -126,6 +125,8 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
                 response.setTotalEarnings(BigDecimal.ZERO);
                 response.setDailyBreakdown(List.of());
 
+                log.info("SERVICE_SUCCESS | EMPTY_SALES_REPORT | merchantId={} | outletId={}", merchantId, outletId);
+
                 return response;
             }
 
@@ -134,8 +135,7 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
             BigDecimal totalEarnings = report.stream().map(CoSalesReportProjection::getTotalEarnings).reduce(BigDecimal.ZERO, BigDecimal::add);
 
             List<CoDailySalesReportDto> dailyBreakdown = report.stream().map(coSalesReportMapper::mapToDailySalesDto).toList();
-            log.info("SALES_REPORT_SUCCESS | merchantId={} | outletId={} | totalOrders={} | totalEarnings={}", merchantId, outletId, totalOrders, totalEarnings);
-
+            log.debug("REPORT_SUMMARY | totalOrders={} | totalEarnings={} | breakdownCount={}", totalOrders, totalEarnings, dailyBreakdown.size());
             CoSalesReportResponseDto response = new CoSalesReportResponseDto();
 
             response.setTotalOrders(totalOrders);
@@ -143,18 +143,19 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
             response.setTotalEarnings(totalEarnings);
 
             response.setDailyBreakdown(dailyBreakdown);
+            log.info("SERVICE_SUCCESS | SALES_REPORT_GENERATED | merchantId={} | outletId={} | totalOrders={} | totalEarnings={}", merchantId, outletId, totalOrders, totalEarnings);
 
             return response;
 
         } catch (CoBadRequestException ex) {
 
-            log.error("SALES_REPORT_BUSINESS_EXCEPTION | merchantId={} | outletId={} | message={}", merchantId, outletId, ex.getMessage());
+            log.warn("SERVICE_ERROR | BUSINESS_VALIDATION_FAILED | merchantId={} | outletId={} | message={}", merchantId, outletId, ex.getMessage());
 
             throw ex;
 
         } catch (Exception ex) {
 
-            log.error("SALES_REPORT_EXCEPTION | merchantId={} | outletId={} | error={}", merchantId, outletId, ex.getMessage(), ex);
+            log.error("SERVICE_ERROR | SALES_REPORT_GENERATION_FAILED | merchantId={} | outletId={}", merchantId, outletId, ex);
 
             throw ex;
         }
@@ -162,31 +163,35 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
 
     private void validateRequest(Integer merchantId, Integer outletId, CoSalesReportFilter filter) {
 
+        log.debug("VALIDATION_START | merchantId={} | outletId={} | filter={}", merchantId, outletId, filter);
+
         if (merchantId == null || merchantId <= 0) {
 
-            log.error("INVALID_MERCHANT_ID | merchantId={}", merchantId);
+            log.warn("VALIDATION_FAILED | INVALID_MERCHANT_ID | merchantId={}", merchantId);
 
             throw new CoBadRequestException("Merchant id is required");
         }
 
         if (outletId != null && outletId <= 0) {
 
-            log.error("INVALID_OUTLET_ID | outletId={}", outletId);
+            log.warn("VALIDATION_FAILED | INVALID_OUTLET_ID | outletId={}", outletId);
 
             throw new CoBadRequestException("Invalid outlet id");
         }
 
         if (filter == null) {
 
-            log.error("FILTER_REQUIRED");
+            log.warn("VALIDATION_FAILED | FILTER_REQUIRED");
 
             throw new CoBadRequestException("Filter is required");
         }
+
+        log.debug("VALIDATION_SUCCESS | merchantId={} | outletId={} | filter={}", merchantId, outletId, filter);
     }
 
     private List<CoFmOutletDto> validateMerchantAndGetOutlets(Integer merchantId) {
 
-        log.info("VALIDATING_MERCHANT | merchantId={}", merchantId);
+        log.info("VALIDATION_START | MERCHANT_VALIDATION | merchantId={}", merchantId);
 
         CoFmApiResponse<List<CoFmOutletDto>> response = coFmFeignClient.getOutletsByMerchantId(merchantId);
 
@@ -199,7 +204,7 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
 
         if (Boolean.FALSE.equals(response.getSuccess())) {
 
-            log.error("FM_RESPONSE_FAILED | merchantId={} | message={}", merchantId, response.getMessage());
+            log.warn("MERCHANT_VALIDATION_FAILED | merchantId={} | message={}", merchantId, response.getMessage());
 
             throw new CoBadRequestException(response.getMessage());
         }
@@ -208,27 +213,29 @@ public class CoSalesReportServiceImpl implements CoSalesReportService {
 
         if (outlets == null || outlets.isEmpty()) {
 
-            log.error("MERCHANT_NOT_FOUND | merchantId={}", merchantId);
+            log.warn("MERCHANT_NOT_FOUND | merchantId={}", merchantId);
 
             throw new CoBadRequestException("Invalid merchant id");
         }
 
-        log.info("MERCHANT_VALIDATED | merchantId={} | outletCount={}", merchantId, outlets.size());
+        log.info("VALIDATION_SUCCESS | merchantId={} | outletCount={}", merchantId, outlets.size());
 
         return outlets;
     }
 
     private void validateOutletBelongsToMerchant(Integer merchantId, Integer outletId, List<CoFmOutletDto> merchantOutlets) {
 
+        log.debug("VALIDATING_OUTLET_MERCHANT_MAPPING | merchantId={} | outletId={}", merchantId, outletId);
+
         boolean validOutlet = merchantOutlets.stream().anyMatch(outlet -> outlet.getOutletId().equals(outletId));
 
         if (!validOutlet) {
 
-            log.error("OUTLET_MERCHANT_MISMATCH | merchantId={} | outletId={}", merchantId, outletId);
+            log.warn("OUTLET_MERCHANT_MISMATCH | merchantId={} | outletId={}", merchantId, outletId);
 
             throw new CoBadRequestException("Outlet does not belong to merchant");
         }
 
-        log.info("OUTLET_VALIDATED | merchantId={} | outletId={}", merchantId, outletId);
+        log.info("VALIDATION_SUCCESS | outletId={} belongsTo merchantId={}", outletId, merchantId);
     }
 }

@@ -120,4 +120,35 @@ public class FmPricingController {
 
         return ResponseEntity.ok(response);
     }
+
+
+    @GetMapping("/{productId}/outlet/{outletId}")
+    public ResponseEntity<FmProductDetailResponseDto> getProductByIdAndOutletId(@PathVariable Integer productId, @PathVariable Integer outletId) {
+
+        log.info("API_START | GET_PRODUCT_BY_OUTLET | productId={} | outletId={}", productId, outletId);
+
+        // VALIDATE INPUT
+
+        if (productId == null || productId <= 0) {
+
+            log.error("VALIDATION_FAILED | INVALID_PRODUCT_ID | productId={}", productId);
+
+            throw new PricingException("Invalid product id");
+        }
+
+        if (outletId == null || outletId <= 0) {
+
+            log.error("VALIDATION_FAILED | INVALID_OUTLET_ID | outletId={}", outletId);
+
+            throw new PricingException("Invalid outlet id");
+        }
+
+        // FETCH PRODUCT
+
+        FmProductDetailResponseDto response = pricingService.getProductByIdAndOutletId(productId, outletId);
+
+        log.info("API_END | GET_PRODUCT_BY_OUTLET_SUCCESS | productId={} | outletId={}", productId, outletId);
+
+        return ResponseEntity.ok(response);
+    }
 }

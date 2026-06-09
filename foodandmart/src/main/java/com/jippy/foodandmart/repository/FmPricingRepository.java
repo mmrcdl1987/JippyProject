@@ -56,4 +56,18 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
     );
 
     Optional<FmProductOnlinePricing> findTopByProductIdAndIsApprovedOrderByCreatedAtDesc(Integer productId, Boolean isApproved);
+
+
+    @Query("""
+        SELECT pop
+        FROM FmProductOnlinePricing pop
+        JOIN FmOutletCategory oc
+            ON oc.outletCategoryId = pop.outletCategoryId
+        WHERE pop.productId = :productId
+          AND oc.outletId = :outletId
+          AND oc.isActive = 'Y'
+        """)
+    Optional<FmProductOnlinePricing> findByProductIdAndOutletId(
+            @Param("productId") Integer productId,
+            @Param("outletId") Integer outletId);
 }

@@ -96,5 +96,26 @@ public class GlobalExceptionHandler {
         return error;
     }
 
+    @ExceptionHandler(CoReorderException.class)
+    public ResponseEntity<CoErrorResponseDto> handleReorderException(
+            CoReorderException ex,
+            HttpServletRequest request) {
+
+        log.error(
+                "CoReorderException | path={} | message={}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(
+                        new CoErrorResponseDto(
+                                request.getRequestURI(),
+                                HttpStatus.BAD_REQUEST,
+                                ex.getMessage(),
+                                LocalDateTime.now()
+                        )
+                );
+    }
 
 }
