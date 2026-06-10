@@ -259,10 +259,15 @@ public class DriverMapper {
         dto.setTips(
                 projection.getTips());
 
-        // from customer ms
+//        set created at timestamp
+        dto.setCreatedAt(
+                projection.getCreatedAt());
+
+//--------------------------------------------------------------------
+        // from Customer Ms
         dto.setOrderStatus(orderStatus);
 
-        // from fm ms
+        // from Fm Ms
         dto.setOutletName(outletName);
 
         return dto;
@@ -354,7 +359,7 @@ public class DriverMapper {
         return driverOrder;
     }
 
-    public static DriverWalletTransactions mapToTransaction(Integer driverWalletId, String orderId, double orderAmount) {
+    public static DriverWalletTransactions mapToTransaction(Integer driverWalletId, String orderId, double orderAmount,Integer driverId) {
         DriverWalletTransactions txn = new DriverWalletTransactions();
 
         // Wallet reference
@@ -368,6 +373,7 @@ public class DriverMapper {
 
         // Audit field
         txn.setCreatedAt(LocalDateTime.now());
+        txn.setCreatedBy(driverId);
 
 //
         txn.setTransactionType(DConstants.TransactionType_debit);

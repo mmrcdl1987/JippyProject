@@ -33,6 +33,9 @@ public class DriverWalletTransactions {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "created_by")
+    private Integer createdBy;
+
     @Column(name = "transaction_type")
     private String transactionType;
 

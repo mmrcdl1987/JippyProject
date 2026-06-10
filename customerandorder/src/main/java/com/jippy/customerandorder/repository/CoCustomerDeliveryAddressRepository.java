@@ -7,10 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-@Repository
-public interface CoCustomerDeliveryAddressRepository
-        extends JpaRepository<CoCustomerDeliveryAddress, Integer> {
+import java.util.List;
 
+@Repository
+public interface CoCustomerDeliveryAddressRepository extends JpaRepository<CoCustomerDeliveryAddress, Integer> {
+
+    //     to get the customer location based on the customer address id
     @Query(value = """
             SELECT
                 ST_Y(location::geometry) AS latitude,
@@ -18,7 +20,10 @@ public interface CoCustomerDeliveryAddressRepository
             FROM jippy_customer_and_order.customer_delivery_addresses
             WHERE customer_address_id = :customerAddressId
             """, nativeQuery = true)
-    CustomerLocationProjection getCustomerLocation(
-            @Param("customerAddressId")
-            Integer customerAddressId);
+    CustomerLocationProjection getCustomerLocation(@Param("customerAddressId") Integer customerAddressId);
+
+    //    to get all the delivery addresses of a customer based on the customer id
+    List<CoCustomerDeliveryAddress> findByCustomerId(Integer customerId);
+
+
 }
