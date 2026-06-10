@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.entity.CoCustomerDeliveryAddress;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderRejection;
 import com.jippy.customerandorder.entity.CoOrderWaitingPeriod;
@@ -8,21 +9,21 @@ import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.CoCustomerDeliveryService;
 import com.jippy.customerandorder.mapper.CoCustomerDeliveryMapper;
-import com.jippy.customerandorder.repository.CoLocationValidationRepository;
-import com.jippy.customerandorder.repository.CoOrderRejectionRepository;
-import com.jippy.customerandorder.repository.CoOrderRepository;
-import com.jippy.customerandorder.repository.CoOrderWaitingPeriodRepository;
+import com.jippy.customerandorder.repository.*;
 import com.jippy.customerandorder.constants.COConstants;
 
 import java.time.Duration;
 
 
+import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,12 +34,16 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
 
     private final FMFeignClient fmFeignClient;
 
+    private final CoCustomerRepository customerRepository;
 
     private final CoOrderRejectionRepository coOrderRejectionRepository;
 
     private final CoLocationValidationRepository locationValidationRepository;
 
     private final CoOrderWaitingPeriodRepository coOrderWaitingPeriodRepository;
+
+    private final CoCustomerDeliveryAddressRepository customerDeliveryAddressRepository;
+
 
     @Override
     public CoCustomerUnreachableResponseDto customerUnreachable(CoCustomerUnreachableRequestDto requestDto) {
@@ -193,4 +198,84 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
 
         return CoFinalRejectResponseDto.builder().success(true).message("Order final rejected successfully").orderStatus(order.getOrderStatus()).totalOutlets(outletResponse.getTotalOutlets()).outlets(outletResponse.getOutlets()).build();
     }
+
+    @Override
+    public CoCustomerDeliveryAddressResponseDto createCustomerDeliveryAddress(CoCustomerDeliveryAddressRequestDto requestDto) {
+
+        log.info("CREATE_CUSTOMER_ADDRESS_SERVICE_START | customerId={}", requestDto.getCustomerId());
+
+        customerRepository.findById(requestDto.getCustomerId()).orElseThrow(() -> new ResourceNotFoundException("Customer not found with customerId : " + requestDto.getCustomerId()));
+
+//        mapping the request DTO to the entity class CoCustomerDeliveryAddress
+//        using the CoCustomerDeliveryMapper
+        CoCustomerDeliveryAddress customerDeliveryAddress = CoCustomerDeliveryMapper.mapToEntity(requestDto);
+
+//        saving the customer delivery address details to the database
+        CoCustomerDeliveryAddress savedCustomerDeliveryAddress = customerDeliveryAddressRepository.save(customerDeliveryAddress);
+
+        log.info("CREATE_CUSTOMER_ADDRESS_SERVICE_SUCCESS | customerAddressId={}", savedCustomerDeliveryAddress.getCustomerAddressId());
+
+//        getting the saved customer delivery address details
+//        and mapping it to the response DTO
+        return CoCustomerDeliveryMapper.mapToResponseDto(savedCustomerDeliveryAddress);
+
+    }
+
+    @Override
+    public List<CoCustomerDeliveryAddressResponseDto> getCustomerDeliveryAddresses(Integer customerId) {
+
+        log.info("GET_CUSTOMER_DELIVERY_ADDRESSES_SERVICE_START | customerId={}", customerId);
+        log.info("Validating customer existence for customerId={}", customerId);
+
+
+        customerRepository.findById(customerId).orElseThrow(() -> new ResourceNotFoundException("Customer not found with customerId : " + customerId));
+
+        List<CoCustomerDeliveryAddress> customerDeliveryAddresses = customerDeliveryAddressRepository.findByCustomerId(customerId);
+
+        if (customerDeliveryAddresses.isEmpty()) {
+
+            throw new ResourceNotFoundException("No delivery addresses found for customerId : " + customerId);
+        }
+
+        List<CoCustomerDeliveryAddressResponseDto> addressResponseDtoList = new ArrayList<>();
+
+//        looping through the list of customer delivery addresses and mapping each address to the response DTO
+        for (CoCustomerDeliveryAddress customerDeliveryAddress : customerDeliveryAddresses) {
+
+            CoCustomerDeliveryAddressResponseDto coCustomerDeliveryAddressResponseDto = CoCustomerDeliveryMapper.mapToResponseDto(customerDeliveryAddress);
+            addressResponseDtoList.add(coCustomerDeliveryAddressResponseDto);
+        }
+
+        log.info("GET_CUSTOMER_DELIVERY_ADDRESSES_SERVICE_SUCCESS | customerId={} | addressCount={}", customerId, addressResponseDtoList.size());
+
+        return addressResponseDtoList;
+
+    }
+
+//     to delete a delivery address based on the customer_address_id
+    @Override
+    public void deleteCustomerDeliveryAddress(Integer customerAddressId) {
+
+        log.info("DELETE_CUSTOMER_DELIVERY_ADDRESS_SERVICE_START | customerAddressId={}", customerAddressId);
+        log.info("Validating existence of customer delivery address for customerAddressId={}", customerAddressId);
+
+        CoCustomerDeliveryAddress customerDeliveryAddress =
+                customerDeliveryAddressRepository.findById(customerAddressId).orElseThrow(
+                        () -> new ResourceNotFoundException("Customer delivery address not found with customerAddressId : " + customerAddressId));
+
+//        if you use deleteById method of the repository, it will directly delete the record
+//        without checking if it exists or not.
+//        So we first fetch the record using findById and
+//        if it does not exist, we throw a ResourceNotFoundException. If it exists, then we proceed to delete
+//        it using the delete method of the repository which takes the entity as a parameter.
+//        if you use deleteById ,if ID doesn't exist, depending on JPA implementation,
+//        it may not give you the custom error you want: so use delete() method.
+
+        customerDeliveryAddressRepository.delete(customerDeliveryAddress);
+
+        log.info("DELETE_CUSTOMER_DELIVERY_ADDRESS_SERVICE_SUCCESS | customerAddressId={}", customerAddressId);
+
+    }
+
+
 }

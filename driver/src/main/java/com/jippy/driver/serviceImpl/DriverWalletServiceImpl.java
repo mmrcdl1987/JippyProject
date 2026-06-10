@@ -191,7 +191,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         // -------------------------------
         // STEP 8: INSERT TRANSACTION
         // -------------------------------
-        DriverWalletTransactions txn = DriverMapper.mapToTransaction(wallet.getDriverWalletId(), dto.getOrderId(), orderAmount);
+        DriverWalletTransactions txn = DriverMapper.mapToTransaction(wallet.getDriverWalletId(), dto.getOrderId(), orderAmount,dto.getDriverId());
 
         DriverWalletTransactions savetxn = txnRepo.save(txn);
 

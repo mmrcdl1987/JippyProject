@@ -1,6 +1,7 @@
 package com.jippy.driver.projection;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public interface DriverOrderHistoryProjection {
 
@@ -21,6 +22,8 @@ public interface DriverOrderHistoryProjection {
     BigDecimal getSurgeFee();
 
     BigDecimal getTips();
+
+    LocalDateTime getCreatedAt();
 
 ////    from orders table
 //    String getOrderStatus();

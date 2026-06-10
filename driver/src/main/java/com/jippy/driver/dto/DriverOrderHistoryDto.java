@@ -3,6 +3,7 @@ package com.jippy.driver.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class DriverOrderHistoryDto {
@@ -34,9 +35,14 @@ public class DriverOrderHistoryDto {
     // Tips
     private BigDecimal tips;
 
+//    Created at timestamp
+    private LocalDateTime createdAt;
+
     // Order status from orders table
     private String orderStatus;
 
     // Outlet name from FM microservice
     private String outletName;
+
+
 }

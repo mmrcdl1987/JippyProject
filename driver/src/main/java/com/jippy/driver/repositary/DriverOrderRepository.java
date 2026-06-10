@@ -57,7 +57,8 @@ SELECT
     d.deliver_charges AS deliverCharges,
     d.total_delivery_fee AS totalDeliveryFee,
     d.surge_fee AS surgeFee,
-    d.tips AS tips
+    d.tips AS tips,
+    d.created_at AS createdAt
 
 FROM jippy_driver.driver_orders d
 

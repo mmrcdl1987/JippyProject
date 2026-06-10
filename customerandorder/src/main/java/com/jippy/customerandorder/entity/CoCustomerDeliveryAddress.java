@@ -27,11 +27,19 @@ public class CoCustomerDeliveryAddress {
     )
     private Point location;
 
+    @Column(name = "door_no")
     private String doorNo;
+
+    @Column(name = "building_name")
     private String buildingName;
+
+    @Column(name = "lane_no")
     private String laneNo;
 
+    @Column(name = "area")
     private Integer area;
+
+    @Column(name = "city")
     private Integer city;
 
     @Column(name = "created_at")
