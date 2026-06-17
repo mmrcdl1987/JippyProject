@@ -2,6 +2,7 @@ package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.AuthResponseDto;
 import com.jippy.foodandmart.dto.LoginRequestDto;
+import com.jippy.foodandmart.entity.FmUser;
 import com.jippy.foodandmart.security.JwtUtils;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,10 +13,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/fm/auth")
@@ -41,7 +46,23 @@ public class FmLoginController {
 
             // 2. If successful, generate JWT
             String jwt = jwtUtils.generateToken(authentication);
-            return ResponseEntity.ok(new AuthResponseDto(jwt));
+
+            // 2. Fetch the authenticated principal
+            FmUser user = (FmUser) authentication.getPrincipal();
+
+            // 4. Extract roles as a list of strings
+            List<String> roles = user.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
+
+            AuthResponseDto authResponseDto = new AuthResponseDto();
+
+            authResponseDto.setJwt(jwt);
+            authResponseDto.setUserType(user.getUserType());
+            authResponseDto.setUserId(user.getUserId());
+            authResponseDto.setRoles(roles);
+
+            return ResponseEntity.ok(authResponseDto);
 
         } catch (AuthenticationException e) {
             e.printStackTrace();

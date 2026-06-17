@@ -211,7 +211,7 @@ public final class FmMerchantMapper {
 
 	public static FmUserRolePermissions toUserRolesEntity(FmUser user, FmRolePermissions rp) {
 		FmUserRolePermissions urp = new FmUserRolePermissions();
-		urp.setUserId(user.getUserId());
+		urp.setUserId(user.getUsersId());
 		urp.setRolePermission(rp);
 		urp.setCreatedAt(LocalDateTime.now());
 		return urp;
