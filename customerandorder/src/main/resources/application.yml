@@ -69,6 +69,11 @@ management:
         endpoint: http://localhost:4317 # The OTLP gRPC endpoint exposed by Grafana Tempo
 
   logging:
+    level:
+      root: WARN                                      # Silences all general framework info spams globally
+      org.springframework: WARN                       # Limits core spring internal operational logs
+      com.netflix.discovery: WARN                     # Silences all Netflix/Eureka endpoint fetching logs
+      com.jippy.customerandorder: INFO                     # KEEP: Ensures your own custom application business logs are still visible
     # Forces Spring Boot to append [Service-Name, TraceId, SpanId] into standard logs out-of-the-box
     include-application-name: true
 

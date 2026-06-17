@@ -118,4 +118,18 @@ public class GlobalExceptionHandler {
                 );
     }
 
+    @ExceptionHandler(CoResourceNotFoundException.class)
+    public CoErrorResponse handleResourceNotFoundException(CoResourceNotFoundException ex) {
+
+        log.error("Resource not found exception occurred : {}", ex.getMessage());
+
+        CoErrorResponse error = new CoErrorResponse();
+
+        error.setErrorCode("504_RESOURCE_NOT_FOUND");
+
+        error.setErrorMessage("Requested resource not found");
+
+        return error;
+    }
+
 }

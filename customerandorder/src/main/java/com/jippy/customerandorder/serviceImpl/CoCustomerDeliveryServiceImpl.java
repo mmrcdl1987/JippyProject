@@ -6,6 +6,7 @@ import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderRejection;
 import com.jippy.customerandorder.entity.CoOrderWaitingPeriod;
 import com.jippy.customerandorder.exception.CoBusinessException;
+import com.jippy.customerandorder.exception.CoResourceNotFoundException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.CoCustomerDeliveryService;
 import com.jippy.customerandorder.mapper.CoCustomerDeliveryMapper;
@@ -15,7 +16,7 @@ import com.jippy.customerandorder.constants.COConstants;
 import java.time.Duration;
 
 
-import com.jippy.foodandmart.exception.ResourceNotFoundException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -204,7 +205,7 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
 
         log.info("CREATE_CUSTOMER_ADDRESS_SERVICE_START | customerId={}", requestDto.getCustomerId());
 
-        customerRepository.findById(requestDto.getCustomerId()).orElseThrow(() -> new ResourceNotFoundException("Customer not found with customerId : " + requestDto.getCustomerId()));
+        customerRepository.findById(requestDto.getCustomerId()).orElseThrow(() -> new CoResourceNotFoundException("Customer not found with customerId : " + requestDto.getCustomerId()));
 
 //        mapping the request DTO to the entity class CoCustomerDeliveryAddress
 //        using the CoCustomerDeliveryMapper
@@ -228,13 +229,13 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
         log.info("Validating customer existence for customerId={}", customerId);
 
 
-        customerRepository.findById(customerId).orElseThrow(() -> new ResourceNotFoundException("Customer not found with customerId : " + customerId));
+        customerRepository.findById(customerId).orElseThrow(() -> new CoResourceNotFoundException("Customer not found with customerId : " + customerId));
 
         List<CoCustomerDeliveryAddress> customerDeliveryAddresses = customerDeliveryAddressRepository.findByCustomerId(customerId);
 
         if (customerDeliveryAddresses.isEmpty()) {
 
-            throw new ResourceNotFoundException("No delivery addresses found for customerId : " + customerId);
+            throw new CoResourceNotFoundException("No delivery addresses found for customerId : " + customerId);
         }
 
         List<CoCustomerDeliveryAddressResponseDto> addressResponseDtoList = new ArrayList<>();
@@ -261,7 +262,7 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
 
         CoCustomerDeliveryAddress customerDeliveryAddress =
                 customerDeliveryAddressRepository.findById(customerAddressId).orElseThrow(
-                        () -> new ResourceNotFoundException("Customer delivery address not found with customerAddressId : " + customerAddressId));
+                        () -> new CoResourceNotFoundException("Customer delivery address not found with customerAddressId : " + customerAddressId));
 
 //        if you use deleteById method of the repository, it will directly delete the record
 //        without checking if it exists or not.
