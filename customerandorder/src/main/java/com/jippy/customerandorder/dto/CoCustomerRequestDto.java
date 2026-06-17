@@ -17,7 +17,6 @@ public class CoCustomerRequestDto {
 
     private Integer createdBy;
 
-    private Integer customerStatusId;
 
     private String referralCode;
 

@@ -3,119 +3,124 @@ package com.jippy.customerandorder.exception;
 import com.jippy.customerandorder.dto.CoErrorResponseDto;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    // ── BUSINESS EXCEPTIONS ────────────────────────────────────────────────────
-
-    // Handle OrderException (parent of CartException)
     @ExceptionHandler(OrderException.class)
     public ResponseEntity<CoErrorResponseDto> handleOrderException(OrderException ex, HttpServletRequest request) {
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
-    }
-
-    // Handle CartException specifically
-    @ExceptionHandler(CartException.class)
-    public ResponseEntity<CoErrorResponseDto> handleCartException(CartException ex, HttpServletRequest request) {
+        log.warn("OrderException | path={} | message={}", request.getRequestURI(), ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
     }
-
 
     @ExceptionHandler(CoBadRequestException.class)
-    public ResponseEntity<CoErrorResponseDto> handleBadRequest(CoBadRequestException ex, HttpServletRequest request) {
+    public ResponseEntity<CoErrorResponseDto> handleBadRequestException(CoBadRequestException ex, HttpServletRequest request) {
+
+        log.warn("CoBadRequestException | path={} | message={}", request.getRequestURI(), ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
     }
 
-    // GENERIC EXCEPTION
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception ex, HttpServletRequest request) {
-
-        ex.printStackTrace();
-
-        Map<String, Object> error = new HashMap<>();
-
-        error.put("apiPath", request.getRequestURI());
-        error.put("errorCode", "INTERNAL_SERVER_ERROR");
-        error.put("errorMessage", ex.getMessage());
-        error.put("errorTime", LocalDateTime.now());
-
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-/*    @ExceptionHandler(CoZoneException.class)
-    public ResponseEntity<Map<String, String>> handleZoneException(CoZoneException ex) {
-
-        Map<String, String> error = new HashMap<>();
-        error.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
-    }*/
-
     @ExceptionHandler(CoBusinessException.class)
-    public ResponseEntity<?> handleBusinessException(CoBusinessException ex) {
-        return ResponseEntity.badRequest().body(ex.getMessage());
+    public ResponseEntity<CoErrorResponseDto> handleBusinessException(CoBusinessException ex, HttpServletRequest request) {
+
+        log.warn("CoBusinessException | path={} | message={}", request.getRequestURI(), ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
     }
 
     @ExceptionHandler(CoOrderSettingsException.class)
-    public ResponseEntity<CoErrorResponseDto>
-    handleOrderSettingsException(CoOrderSettingsException ex, HttpServletRequest request) {
+    public ResponseEntity<CoErrorResponseDto> handleOrderSettingsException(CoOrderSettingsException ex, HttpServletRequest request) {
 
         log.error("CoOrderSettingsException | path={} | message={}", request.getRequestURI(), ex.getMessage(), ex);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
     }
 
-//    Handle FM feign exceptions automatically caught by service with out try-catch
-//    we can check by making down Fm or ay Microservice and then calling any API
-//    which is calling FM service,then it will throw FeignException
-//    and we can check the response from this handler
-    @ExceptionHandler(FeignException.class)
-    public CoErrorResponse handleFeignException(FeignException ex) {
-
-        log.error("Feign exception occurred : {}", ex.getMessage());
-
-//        created inside exception package
-        CoErrorResponse error = new CoErrorResponse();
-
-        error.setErrorCode("FM_SERVICE_ERROR");
-
-        error.setErrorMessage("Failed to communicate with FM service");
-
-        return error;
-    }
-
     @ExceptionHandler(CoReorderException.class)
-    public ResponseEntity<CoErrorResponseDto> handleReorderException(
-            CoReorderException ex,
-            HttpServletRequest request) {
+    public ResponseEntity<CoErrorResponseDto> handleReorderException(CoReorderException ex, HttpServletRequest request) {
 
-        log.error(
-                "CoReorderException | path={} | message={}",
-                request.getRequestURI(),
-                ex.getMessage());
+        log.warn("CoReorderException | path={} | message={}", request.getRequestURI(), ex.getMessage());
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(
-                        new CoErrorResponseDto(
-                                request.getRequestURI(),
-                                HttpStatus.BAD_REQUEST,
-                                ex.getMessage(),
-                                LocalDateTime.now()
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
     }
 
+    @ExceptionHandler(CustomerNotFoundException.class)
+    public ResponseEntity<CoErrorResponseDto> handleCustomerNotFoundException(CustomerNotFoundException ex, HttpServletRequest request) {
+
+        log.warn("CustomerNotFoundException | path={} | message={}", request.getRequestURI(), ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.NOT_FOUND, ex.getMessage(), LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(CoResourceNotFoundException.class)
+    public ResponseEntity<CoErrorResponseDto> handleResourceNotFoundException(CoResourceNotFoundException ex, HttpServletRequest request) {
+
+        log.warn("CoResourceNotFoundException | path={} | message={}", request.getRequestURI(), ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.NOT_FOUND, ex.getMessage(), LocalDateTime.now()));
+    }
+
+    @ExceptionHandler({InvalidOtpException.class, OtpExpiredException.class, OtpNotFoundException.class, OtpAlreadyUsedException.class, MaxOtpRetryException.class, MaxOtpResendException.class, CustomerBlockedException.class})
+    public ResponseEntity<CoErrorResponseDto> handleOtpExceptions(RuntimeException ex, HttpServletRequest request) {
+
+        log.warn("OtpException | path={} | message={}", request.getRequestURI(), ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(SmsFailedException.class)
+    public ResponseEntity<CoErrorResponseDto> handleSmsFailedException(SmsFailedException ex, HttpServletRequest request) {
+
+        log.error("SmsFailedException | path={} | message={}", request.getRequestURI(), ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<CoErrorResponseDto> handleFeignException(FeignException ex, HttpServletRequest request) {
+
+        log.error("FeignException | path={} | status={} | message={}", request.getRequestURI(), ex.status(), ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.SERVICE_UNAVAILABLE, "Dependent service unavailable", LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<CoErrorResponseDto> handleValidationException(MethodArgumentNotValidException ex, HttpServletRequest request) {
+
+        String errorMessage = ex.getBindingResult().getFieldErrors().stream().findFirst().map(FieldError::getDefaultMessage).orElse("Validation failed");
+
+        log.warn("ValidationException | path={} | message={}", request.getRequestURI(), errorMessage);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, errorMessage, LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<CoErrorResponseDto> handleConstraintViolationException(ConstraintViolationException ex, HttpServletRequest request) {
+
+        log.warn("ConstraintViolationException | path={} | message={}", request.getRequestURI(), ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<CoErrorResponseDto> handleException(Exception ex, HttpServletRequest request) {
+
+        log.error("UnhandledException | path={} | message={}", request.getRequestURI(), ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", LocalDateTime.now()));
+    }
 }

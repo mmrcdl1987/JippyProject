@@ -42,8 +42,6 @@ public class CoCustomerMapper {
 
         customer.setPhoneNumber(dto.getPhoneNumber());
 
-        customer.setCustomerStatusId(1);
-
         customer.setReferralCode(generateReferralCode(
 
                 dto.getFirstName(),
@@ -105,7 +103,7 @@ public class CoCustomerMapper {
         dto.setEmail(customer.getEmail());
         dto.setPhoneNumber(customer.getPhoneNumber());
         dto.setReferralCode(customer.getReferralCode());
-        dto.setCustomerStatusId(customer.getCustomerStatusId());
+        dto.setCustomerStatusId(customer.getCustomerStatus().getCustomerStatusId());
 
         return dto;
     }
