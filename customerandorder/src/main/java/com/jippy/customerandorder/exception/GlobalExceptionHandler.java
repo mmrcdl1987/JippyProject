@@ -116,11 +116,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<CoErrorResponseDto> handleException(Exception ex, HttpServletRequest request) {
+    @ExceptionHandler(CoResourceNotFoundException.class)
+    public CoErrorResponse handleResourceNotFoundException(CoResourceNotFoundException ex) {
 
-        log.error("UnhandledException | path={} | message={}", request.getRequestURI(), ex.getMessage(), ex);
+        log.error("Resource not found exception occurred : {}", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", LocalDateTime.now()));
+        CoErrorResponse error = new CoErrorResponse();
+
+        error.setErrorCode("504_RESOURCE_NOT_FOUND");
+
+        error.setErrorMessage("Requested resource not found");
+
+        return error;
     }
+
 }
