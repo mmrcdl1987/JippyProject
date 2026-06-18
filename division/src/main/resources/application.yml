@@ -4,6 +4,22 @@ server:
 spring:
   application:
     name: division
+
+  #     gMail SMTP Configuration -- gmail integration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: jippyfooddelivery2026@gmail.com
+    password: cgbh eipp hner gdap
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  # --------------------------------------------------------
+
   datasource:
     URL: jdbc:postgresql://187.127.156.147:5432/div_db
     USERNAME: div_user
