@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.FmSubscriptionPlanDto;
+import com.jippy.foodandmart.dto.SubscriptionPlanResponseDto;
 import com.jippy.foodandmart.entity.FmSubscriptionPlan;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmSubscriptionPlanMapper;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 public class FmSubscriptionPlanServiceImpl implements IFmSubscriptionPlanService {
 
     private final FmSubscriptionPlanRepository repository;
+    private final FmSubscriptionPlanMapper subscriptionPlanMapper;
 
     @Override
     public FmSubscriptionPlanDto createAndUpdatePlans(FmSubscriptionPlanDto dto) {
@@ -54,4 +57,39 @@ public class FmSubscriptionPlanServiceImpl implements IFmSubscriptionPlanService
 
         return FmSubscriptionPlanMapper.mapToDto(savedPlan);
     }
+
+
+    @Override
+    public List<SubscriptionPlanResponseDto> getSubscriptionPlans(Integer areaId) {
+
+        log.info("SERVICE_START | GET_SUBSCRIPTION_PLANS | areaId={}", areaId);
+
+        try {
+
+            log.debug("Fetching subscription plans | areaId={}", areaId);
+
+            List<FmSubscriptionPlan> subscriptionPlans = repository.findByAreaIdOrderByPriceAsc(areaId);
+
+            if (subscriptionPlans.isEmpty()) {
+
+                log.warn("No subscription plans found | areaId={}", areaId);
+
+                throw new ResourceNotFoundException("No subscription plans found for the given area");
+            }
+
+            List<SubscriptionPlanResponseDto> response = subscriptionPlans.stream().map(subscriptionPlanMapper::toResponseDto).toList();
+
+            log.info("SERVICE_SUCCESS | GET_SUBSCRIPTION_PLANS | areaId={} | count={}", areaId, response.size());
+
+            return response;
+
+        } catch (Exception ex) {
+
+            log.error("SERVICE_ERROR | GET_SUBSCRIPTION_PLANS | areaId={}", areaId, ex);
+
+            throw ex;
+        }
+    }
+
+
 }

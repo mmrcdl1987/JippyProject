@@ -1,17 +1,15 @@
-
-
 package com.jippy.customerandorder.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @Entity
-@Table(name = "customer",
-        schema = "jippy_customer_and_order")
+@Table(name = "customer", schema = "jippy_customer_and_order",indexes = {@Index(name = "idx_customer_phone", columnList = "phone_number", unique = true)})
 public class CoCustomer {
 
     @Id
@@ -31,8 +29,21 @@ public class CoCustomer {
     @Column(name = "phone_number", nullable = false, unique = true)
     private String phoneNumber;
 
-    @Column(name = "customer_status_id")
-    private Integer customerStatusId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_status_id", referencedColumnName = "customer_status_id")
+    private CustomerStatus customerStatus;
+
+    @Column(name = "referral_code")
+    private String referralCode;
+
+    @Column(name = "profile_pic_url")
+    private String profilePicUrl;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "area_id")
+    private Integer areaId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -45,17 +56,9 @@ public class CoCustomer {
 
     @Column(name = "updated_by")
     private Integer updatedBy;
-    @Column(name = "referral_code")
-    private String referralCode;
-
 
     // ONE TO MANY RELATIONSHIP
-    @OneToMany(
-            mappedBy = "customer",
-            cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY
-    )
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CoCustomerWallet> wallets;
 
-    private String profilePicUrl;
 }

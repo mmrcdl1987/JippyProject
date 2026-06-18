@@ -1,10 +1,13 @@
 package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.dto.FmSubscriptionPlanDto;
+import com.jippy.foodandmart.dto.SubscriptionPlanResponseDto;
 import com.jippy.foodandmart.entity.FmSubscriptionPlan;
-
+import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
+
+@Component
 public class FmSubscriptionPlanMapper {
 
     // Convert DTO → Entity
@@ -67,5 +70,27 @@ public class FmSubscriptionPlanMapper {
         entity.setAreaId(dto.getAreaId());
 
         entity.setUpdatedAt(LocalDateTime.now());
+    }
+
+    public SubscriptionPlanResponseDto toResponseDto(FmSubscriptionPlan entity) {
+
+        if (entity == null) {
+            return null;
+        }
+
+        SubscriptionPlanResponseDto dto = new SubscriptionPlanResponseDto();
+
+        dto.setSubscriptionPlanId(entity.getSubscriptionPlanId());
+        dto.setPlanName(entity.getPlanName());
+        dto.setPrice(entity.getPrice());
+        dto.setDurationInDays(entity.getDurationInDays());
+        dto.setRadiusInKms(entity.getRadiusInKms());
+        dto.setBannerSlots(entity.getBannerSlots());
+        dto.setBannerDays(entity.getBannerDays());
+        dto.setBestRestaurantSlot(entity.getBestRestaurantSlot());
+        dto.setWhatsappBroadcast(entity.getWhatsappBroadcast());
+        dto.setVideoCredits(entity.getVideoCredits());
+
+        return dto;
     }
 }

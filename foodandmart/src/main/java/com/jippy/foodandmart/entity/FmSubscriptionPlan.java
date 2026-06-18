@@ -52,7 +52,7 @@ public class FmSubscriptionPlan {
     @Column(name = "whatsapp_broadcast")
     private String whatsappBroadcast;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "Video credits must not exceed 50 characters")
     @Column(name = "video_credits")
     private String videoCredits;
 
