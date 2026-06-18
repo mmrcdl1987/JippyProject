@@ -1,0 +1,605 @@
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Jippy Mart Weekly Settlement Report</title>
+
+        <style>
+
+            body{
+                margin:0;
+                padding:0;
+                background:#f4f6f9;
+                font-family:Arial, Helvetica, sans-serif;
+            }
+
+         .container{
+        width:100%;
+        max-width:800px;
+        margin:20px auto;
+        background:#ffffff;
+        border-radius:15px;
+        overflow:hidden;
+        box-shadow:0 4px 15px rgba(0,0,0,0.1);
+       }
+
+           .banner{
+        width:100%;
+        max-width:100%;
+        height:auto;
+        display:block;
+        margin-bottom:10px;
+        }
+
+        .content{
+       padding:25px;
+            }
+
+            .title{
+                color:#1f2937;
+                font-size:34px;
+                margin:0;
+            }
+
+            .sub-text{
+                color:#555;
+                line-height:1.6;
+            }
+
+            .report-period{
+              background:#f8fafc;
+            border:1px solid #e5e7eb;
+            border-radius:10px;
+            padding:15px;
+            text-align:center;
+            min-width:180px;
+            }
+
+            .report-period-title{
+                color:#16a34a;
+                font-weight:bold;
+                margin-bottom:10px;
+            }
+
+        .settlement-card{
+       margin-top:15px;
+     background:#16a34a;
+        color:white;
+        border:3px solid #16a34a;
+        text-align:center;
+        border-radius:15px;
+        padding:20px;
+            }
+
+           .settlement-card h2{
+            margin:0;
+            font-size:22px;
+            }
+
+        .amount{
+         font-size:36px;
+        font-weight:bold;
+        margin-top:15px;
+        line-height:1.2;
+        overflow-wrap:break-word;
+        white-space:normal;
+
+        }
+
+            .status-badge{
+           display:inline-block;
+        background:#ffffff;
+        color:#16a34a;
+        padding:10px 25px;
+        border-radius:25px;
+        font-weight:700;
+        font-size:14px;
+        text-transform:uppercase;
+            }
+
+            .card{
+                border:1px solid #e5e7eb;
+                border-radius:10px;
+                overflow:hidden;
+                  margin-top:15px;
+            }
+
+            .card-title-orange{
+                background:#fff7ed;
+                color:#ea580c;
+                padding:15px;
+                font-size:18px;
+                font-weight:bold;
+            }
+
+            .card-title-green{
+                background:#ecfdf5;
+                color:#16a34a;
+                padding:15px;
+                font-size:18px;
+                font-weight:bold;
+            }
+
+            table{
+                width:100%;
+                border-collapse:collapse;
+            }
+
+            td{
+             padding:12px;
+             border-bottom:1px solid #eeeeee;
+            }
+
+            .highlight-row{
+                background:#ecfdf5;
+                color:#16a34a;
+                font-weight:bold;
+            }
+
+            .payment-box{
+                margin-top:30px;
+                background:#fefce8;
+                border:1px solid #fde68a;
+                border-radius:12px;
+                padding:20px;
+                border-bottom:none;
+
+            }
+            .payment-box td{
+        border-bottom:none !important;
+    }
+
+            .payment-title{
+                color:#ca8a04;
+                margin-top:0;
+                 font-size:18px;
+        font-weight:bold;
+            }
+            .thank-you{
+             margin-top:30px;
+        background:#fff4e6;
+        border:1px solid #f59e0b;
+        border-radius:12px;
+        padding:25px;
+            }
+            .transaction-id{
+        margin-top:15px;
+        font-size:14px;
+        color:#ffffff;
+        font-weight:500;
+    }
+
+    .thank-you h3{
+        color:#ea580c;
+        margin-top:0;
+    }
+
+        .transaction-badge{
+        display:inline-block;
+        background:#fef3c7;
+        color:#ca8a04;
+        padding:10px 25px;
+        border-radius:25px;
+        font-weight:700;
+        /* margin-left:10px; */
+
+        max-width:260px;
+        white-space:normal;
+        overflow-wrap:anywhere;
+        text-align:center;
+        box-sizing:border-box;
+}
+
+        .footer{
+            margin-top:40px;
+            text-align:center;
+            border-top:1px solid #e5e7eb;
+            padding-top:25px;
+        }
+
+            .footer h3{
+                color:#16a34a;
+            }
+
+            .footer p{
+                margin:5px;
+            }
+
+            .copyright{
+                color:#9ca3af;
+                font-size:13px;
+                margin-top:15px;
+            }
+
+        .payment-info-row{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        gap:24px;
+        margin-top:20px;
+         flex-wrap:wrap;
+    }
+    .status-badge,
+    .transaction-badge{
+        display:inline-block;
+        font-size:12px;
+        padding:8px 18px;
+    }
+
+            table td:last-child{
+                  text-align:center;
+                }
+
+    body{
+        color:#1f2937;
+    }
+
+    td{
+        color:#374151;
+    }
+
+    .thank-you p{
+        color:#374151;
+    }
+    .main-heading{
+    text-align:center;
+    }
+    /*---------------------------------------------------------------------*/
+            /* Mobile Support */
+        @media screen and (max-width: 600px){
+
+        .content{
+            padding:12px !important;
+        }
+
+        .title{
+            font-size:26px !important;
+        }
+
+        td{
+            font-size:13px !important;
+            padding:10px !important;
+        }
+
+        .card-title-orange,
+        .card-title-green{
+            font-size:16px !important;
+        }
+
+        .settlement-card{
+            padding:20px 10px !important;
+        }
+
+     .status-badge,
+        .transaction-badge{
+            font-size:12px !important;
+            padding:8px 14px !important;
+        }
+
+          .amount{
+            font-size:28px !important;
+            line-height:1.3 !important;
+        }
+
+        .title{
+            font-size:24px !important;
+        }
+
+        .payment-title{
+            font-size:18px !important   ;
+        }
+
+        .thank-you h3{
+            font-size:20px !important;
+        }
+
+    .payment-info-row{
+       display:flex !important;
+    flex-wrap:nowrap !important;
+    justify-content:center !important;
+    align-items:center !important;
+    gap:12px !important;
+    }
+
+    .status-badge,
+    .transaction-badge{
+        padding:8px 12px !important;
+        font-size:12px !important;
+        margin:0 !important;
+        white-space:normal !important;
+        text-align:center !important;
+        box-sizing:border-box !important;
+    }
+            }
+
+      @media screen and (max-width: 350px){
+        .payment-info-row{
+            flex-direction:column !important;
+            align-items:center !important;
+            gap:10px !important;
+        }
+
+        .status-badge,
+        .transaction-badge{
+            width:85% !important;
+            max-width:none !important;
+            margin:0 !important;
+        }
+    }
+
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <img src="cid:bannerImage" class="banner" alt="Jippy Mart Banner">
+
+
+    <div class="content">
+        <h2 class="main-heading">
+            Weekly Settlement Report
+        </h2>
+        <p style="color:#16a34a;font-weight:bold;margin-top:5px;">
+            Dear Partner,
+        </p>
+
+        <p style="color:#6b7280;line-height:1.6;">
+            Please find your weekly settlement summary below.
+        </p>
+        <div class="settlement-card">
+
+            <h2>Net Settlement Amount</h2>
+
+            <div class="amount">
+                ₹ {{netSettlementAmount}}
+            </div>
+
+            <div class="payment-info-row">
+
+    <span class="status-badge">
+        Payment Status : {{paymentStatus}}
+    </span>
+        <span class="transaction-badge">
+        Transaction ID : {{transactionId}}
+     </span>
+
+            </div>
+        </div>
+        <div style="margin-top:30px;">
+
+            <!-- Settlement Details -->
+
+            <div class="card" style="margin-bottom:20px;">
+
+                <div class="card-title-orange">
+                    Settlement Details
+                </div>
+
+                <table>
+
+                    <tr>
+                        <td>Weekly Settlement ID</td>
+                        <td>{{weeklySettlementId}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Outlet ID</td>
+                        <td>{{outletId}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Week Start Date</td>
+                        <td>{{weekStartDate}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Week End Date</td>
+                        <td>{{weekEndDate}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Orders Count</td>
+                        <td>{{ordersCount}}</td>
+                    </tr>
+
+                </table>
+
+            </div>
+
+            <!-- Financial Summary -->
+
+            <div class="card">
+
+                <div class="card-title-green">
+                    Financial Summary
+                </div>
+
+                <table>
+
+                    <tr>
+                        <td>Total Settlement Amount</td>
+                        <td>₹ {{totalSettlementAmount}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Deductions</td>
+                        <td>₹ {{deductions}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>GST</td>
+                        <td>₹ {{gst}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Promotion Amount</td>
+                        <td>₹ {{promotionAmount}}</td>
+                    </tr>
+
+                    <tr>
+                        <td>Subscription Amount</td>
+                        <td>₹ {{subscriptionAmount}}</td>
+                    </tr>
+
+                    <tr class="highlight-row">
+                        <td><strong>Net Settlement Amount</strong></td>
+                        <td><strong>₹ {{netSettlementAmount}}</strong></td>
+                    </tr>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+<!--        <div class="payment-box">-->
+
+<!--            <h3 class="payment-title">-->
+<!--                Payment Information-->
+<!--            </h3>-->
+
+<!--            <table width="100%">-->
+<!--                <tr><td>-->
+<!--                        <strong>Payment Status</strong><br>{{paymentStatus}}</td>-->
+<!--                    <td>-->
+<!--                        <strong>Transaction ID</strong><br>-->
+<!--                        {{transactionId}}-->
+<!--                    </td>-->
+<!--                </tr>-->
+
+<!--            </table>-->
+
+<!--        </div>-->
+
+        <div class="thank-you">
+
+            <h3>
+                Thank You for Partnering with Jippy Mart
+            </h3>
+
+            <p>
+                We appreciate your continued trust and partnership.
+                Together, we are delivering fresh food and vegetables
+                to customers every day.
+            </p>
+
+        </div>
+
+        <div class="footer">
+
+            <h3>Need Assistance?</h3>
+
+            <p><strong>📞</strong> +91 93905 79864</p>
+            <p><strong>✉</strong> support@jippymart.in</p>
+            <p><strong>🌐</strong> www.jippymart.in</p>
+            <p class="copyright">
+                This is an automated email. Please do not reply.
+            </p>
+
+            <p class="copyright">
+                © 2025 Jippy Mart. All Rights Reserved.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
+
+<!--sample Table Template-->
+<!--<html>-->
+<!--<body>-->
+
+<!--<h2>Jippy Mart Weekly Settlement Report</h2>-->
+
+<!--<p>Dear Partner,</p>-->
+
+<!--<p>Please find below your weekly settlement summary.</p>-->
+
+<!--<table border="1" cellpadding="10" cellspacing="0"-->
+<!--       style="border-collapse: collapse; width: 80%; margin: auto;">-->
+
+<!--    <tr>-->
+<!--        <th>Field</th>-->
+<!--        <th>Value</th>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Weekly Settlement Id</td>-->
+<!--        <td>{{weeklySettlementId}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Outlet Id</td>-->
+<!--        <td>{{outletId}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Week Start Date</td>-->
+<!--        <td>{{weekStartDate}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Week End Date</td>-->
+<!--        <td>{{weekEndDate}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Orders Count</td>-->
+<!--        <td>{{ordersCount}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Total Settlement Amount</td>-->
+<!--        <td>₹ {{totalSettlementAmount}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Deductions</td>-->
+<!--        <td>₹ {{deductions}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>GST</td>-->
+<!--        <td>₹ {{gst}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Promotion Amount</td>-->
+<!--        <td>₹ {{promotionAmount}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Subscription Amount</td>-->
+<!--        <td>₹ {{subscriptionAmount}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td><b>Net Settlement Amount</b></td>-->
+<!--        <td><b>₹ {{netSettlementAmount}}</b></td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Payment Status</td>-->
+<!--        <td>{{paymentStatus}}</td>-->
+<!--    </tr>-->
+
+<!--    <tr>-->
+<!--        <td>Transaction Id</td>-->
+<!--        <td>{{transactionId}}</td>-->
+<!--    </tr>-->
+
+<!--</table>-->
+
+<!--</body>-->
+<!--</html>-->

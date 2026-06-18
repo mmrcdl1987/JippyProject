@@ -9,6 +9,7 @@ public class DConstants {
     public static final String STATUS_400 = "400";
     public static final String STATUS_500 = "500";
     public static final String MSG_SUCCESS = "Success";
+    public static final String ROLE_DRIVER ="ROLE_DRIVER";
 
     public static final String AWS_PROFILE_PIC_STATIC_URL ="https://jippys3bucket.s3.ap-south-2.amazonaws.com/";
     public static final String TYPE_DRIVER="DRIVER";

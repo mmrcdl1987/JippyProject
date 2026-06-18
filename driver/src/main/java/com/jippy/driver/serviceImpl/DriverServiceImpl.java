@@ -81,6 +81,26 @@ public class DriverServiceImpl implements DriverService {
         } catch (Exception e) {
             log.error("User creation failed in FM", e);
         }
+
+//        // Fetch role
+//        FmRoles role = roleRepository.findByRoleName(DConstants.ROLE_DRIVER);
+//        if (role == null) {
+//            throw new RuntimeException("Role not found");
+//        }
+//        //  Fetch role_permissions
+//        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
+//
+//        if (rolePermissionsList.isEmpty()) {
+//            throw new RuntimeException("No permissions mapped to role");
+//        }
+//
+//        //  Map user → role_permissions
+//        for (FmRolePermissions rp : rolePermissionsList) {
+//
+//            FmUserRolePermissions urp = FmMerchantMapper.toUserRolesEntity(users, rp);
+//
+//            userRolesRepository.save(urp);
+//        }
 //---------------------------------------------------------------------------------------------
 
         log.info("Driver saved with id: {}", savedDriver.getDriverId());

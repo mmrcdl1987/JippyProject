@@ -301,7 +301,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
 
         //  Fetch role_permissions
-
         List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
 
         if (rolePermissionsList.isEmpty()) {
