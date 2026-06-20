@@ -3,7 +3,6 @@ package com.jippy.customerandorder.repository;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
 import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
-import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
 import com.jippy.customerandorder.projection.CoSalesReportProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -304,4 +303,6 @@ Optional<CoOrder> findByOrderIdAndDriverId(
 
 
     Optional<CoOrder> findByOrderIdAndCustomerId(String orderId, Integer customerId);
+
+    List<CoOrder> findByGroupOrderInvitationIdAndCustomerId(Integer goInvitationId, Integer customerId);
 }

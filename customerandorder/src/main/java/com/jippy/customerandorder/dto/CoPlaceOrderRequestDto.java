@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -89,4 +90,12 @@ public class CoPlaceOrderRequestDto {
      * CUSTOM PLAN
      */
     private List<CoScheduledOrderDto> scheduledOrders;
+
+    private Integer createdBy;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    // used only in group orders
+    private Integer groupOrderInvitationId;
 }

@@ -72,4 +72,7 @@ public class CoOrder {
 
     @Column(name = "updated_by")
     private Integer updatedBy;
+
+    @Column(name = "group_order_invitation_id")
+    private Integer groupOrderInvitationId;
 }

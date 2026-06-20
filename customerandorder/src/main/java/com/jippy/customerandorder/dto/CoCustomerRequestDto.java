@@ -22,5 +22,5 @@ public class CoCustomerRequestDto {
 
     private Integer customerId;
 
-    private String profilePicUrl;
+    //private String profilePicUrl;
 }
