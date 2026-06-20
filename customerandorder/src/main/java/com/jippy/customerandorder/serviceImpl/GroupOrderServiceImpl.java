@@ -136,7 +136,8 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         if (!"ACTIVE".equals(groupOrderInvitation.getStatus()) && !"LOCKED".equals(groupOrderInvitation.getStatus())) {
             log.warn("Attempt to join group order with code {} which is not active. Current status: {}",
                     joinGroupMembersDto.getInvitationCode(), groupOrderInvitation.getStatus());
-            throw new IllegalStateException("This group order is no longer active.");
+            return ResponseEntity.ok(new CoResponseDto("500", "This group :  "
+                    +groupOrderInvitation.getInvitationCode()+" is no longer active"));
         }
 
         // 4. Validate Capacity Limit
@@ -144,7 +145,8 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         if (currentMemberCount >= groupOrderInvitation.getMaxMembers()) {
             log.warn("Attempt to join full group order with code {}. Current members: {}, Max members: {}",
                     joinGroupMembersDto.getInvitationCode(), currentMemberCount, groupOrderInvitation.getMaxMembers());
-            throw new IllegalStateException("Group is full! Maximum limit reached.");
+            return ResponseEntity.ok(new CoResponseDto("500", "Group is full! Maximum limit reached in the group :  "
+                    +groupOrderInvitation.getInvitationCode()));
         }
 
         // 5. Check if user is already a member to prevent duplicates
