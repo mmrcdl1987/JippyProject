@@ -112,12 +112,12 @@ public class CoCustomerController {
 
 
     // Update Customer Profile Pic
-    @PutMapping("/updateCustomerProfilePic")
-    public ResponseEntity<CoResponseDto> updateCustomerProfilePic(@RequestBody CoCustomerRequestDto requestDto) {
+    @PutMapping("/updateCustomerProfile")
+    public ResponseEntity<CoResponseDto> updateCustomerProfile(@RequestBody CoCustomerRequestDto requestDto) {
 
         log.info("Update customer profile pic API called {} ", requestDto.getCustomerId());
 
-        String profilePicUrl = customerService.updateCustomerProfilePic(requestDto);
+        String profilePicUrl = customerService.updateCustomerProfile(requestDto);
 
         log.info("UPDATE_CUSTOMER_API_SUCCESS | customerId {}", requestDto.getCustomerId());
 

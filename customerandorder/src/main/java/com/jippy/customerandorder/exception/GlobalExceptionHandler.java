@@ -65,14 +65,14 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.NOT_FOUND, ex.getMessage(), LocalDateTime.now()));
     }
-
+/*
     @ExceptionHandler(CoResourceNotFoundException.class)
     public ResponseEntity<CoErrorResponseDto> handleResourceNotFoundException(CoResourceNotFoundException ex, HttpServletRequest request) {
 
         log.warn("CoResourceNotFoundException | path={} | message={}", request.getRequestURI(), ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CoErrorResponseDto(request.getRequestURI(), HttpStatus.NOT_FOUND, ex.getMessage(), LocalDateTime.now()));
-    }
+    }*/
 
     @ExceptionHandler({InvalidOtpException.class, OtpExpiredException.class, OtpNotFoundException.class, OtpAlreadyUsedException.class, MaxOtpRetryException.class, MaxOtpResendException.class, CustomerBlockedException.class})
     public ResponseEntity<CoErrorResponseDto> handleOtpExceptions(RuntimeException ex, HttpServletRequest request) {

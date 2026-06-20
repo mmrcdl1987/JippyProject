@@ -9,7 +9,31 @@
         </encoder>
     </appender>
 
+    <appender name="OTLP" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <url>http://187.127.156.147:4318/v1/logs</url>
+    </appender>
+
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/active.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/archived/%d{yyyy-MM-dd}-%i.log.gz</fileNamePattern>
+
+            <maxFileSize>10MB</maxFileSize>
+
+            <maxHistory>10</maxHistory>
+
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>{"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%p","service":"${spring.application.name}","traceId":"%X{trace_id}","spanId":"%X{span_id}","thread":"%t","logger":"%c","message":"%m"}%n</pattern>
+        </encoder>
+    </appender>
     <root level="INFO">
         <appender-ref ref="JSON_CONSOLE" />
+        <appender-ref ref="OTLP" />
+        <appender-ref ref="ROLLING_FILE" />
+        <appender-ref ref="CONSOLE" />
     </root>
 </configuration>

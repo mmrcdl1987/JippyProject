@@ -516,28 +516,31 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     }
 
     @Override
-    public String updateCustomerProfilePic(CoCustomerRequestDto requestDto) {
-        log.info("UPDATE_PROFILE_PIC_STARTED | customerId={}", requestDto.getCustomerId());
+    public String updateCustomerProfile(CoCustomerRequestDto requestDto) {
+        log.info("UPDATE_PROFILE_STARTED | customerId={}", requestDto.getCustomerId());
 
         CoCustomer customer = customerRepository.findById(requestDto.getCustomerId()).orElseThrow(() -> {
 
-            log.error("UPDATE_PROFILE_PIC_FAILED | customerId={} | reason=CUSTOMER_NOT_FOUND", requestDto.getCustomerId());
+            log.error("UPDATE_PROFILE_FAILED | customerId={} | reason=CUSTOMER_NOT_FOUND", requestDto.getCustomerId());
 
             return new CoBadRequestException(COConstants.MSG_CUSTOMER_NOT_FOUND);
         });
 
-        customer.setProfilePicUrl(requestDto.getProfilePicUrl());
+        customer.setFirstName(requestDto.getFirstName());
+        customer.setLastName(requestDto.getLastName());
+        customer.setEmail(requestDto.getEmail());
+       // customer.setProfilePicUrl(requestDto.getProfilePicUrl());
         customer.setUpdatedAt(LocalDateTime.now());
         customer.setUpdatedBy(requestDto.getCreatedBy());
 
         try {
             customerRepository.save(customer);
 
-            log.info("UPDATE_PROFILE_PIC_DB_SAVE_SUCCESS | customerId={}", requestDto.getCustomerId());
-            return "Customer Profile pic Url: " + customer.getProfilePicUrl();
+            log.info("UPDATE_PROFILE_DB_SAVE_SUCCESS | customerId={}", requestDto.getCustomerId());
+            return "Customer Profile Updated Successfully ";
         } catch (DataAccessException ex) {
 
-            log.error("UPDATE_PROFILE_PIC_DB_SAVE_FAILED | customerId={} | error={}", requestDto.getCustomerId(), ex.getMessage(), ex);
+            log.error("UPDATE_PROFILE_DB_SAVE_FAILED | customerId={} | error={}", requestDto.getCustomerId(), ex.getMessage(), ex);
 
             throw new CoBadRequestException(COConstants.MSG_DATABASE_ERROR);
         }

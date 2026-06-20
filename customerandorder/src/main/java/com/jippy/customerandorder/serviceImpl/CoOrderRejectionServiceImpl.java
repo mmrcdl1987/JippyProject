@@ -35,7 +35,7 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
 
     private final FMFeignClient fmFeignClient;
 
-    private final KafkaTemplate<String, COOrderEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public CoOrderRejection rejectOrder(CoOrderRejectionRequestDto request) {

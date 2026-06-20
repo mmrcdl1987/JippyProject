@@ -21,7 +21,7 @@ public class ScheduledOrderReminderScheduler {
 
     private final CoOrderRepository orderRepository;
 
-    private final KafkaTemplate<String, COOrderEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     /*
      * MORNING REMINDER

@@ -244,6 +244,7 @@ CREATE TABLE IF NOT EXISTS jippy_fm.outlets
     total_reviews integer DEFAULT 0,
     subscription_status character varying(20) DEFAULT false, -- subscribed, unsubscribed
     promotion_status character varying(20) DEFAULT false, -- promoted, not promoted
+    outlet_email character varying(100) NOT NULL,
     created_at timestamp without time zone,
     created_by integer,
     updated_at timestamp without time zone,
@@ -458,10 +459,11 @@ CREATE TABLE IF NOT EXISTS jippy_fm.subscription_plans
     plan_name character varying(100) NOT NULL, --
     price NUMERIC(10, 2) NOT NULL,
     duration_in_days integer NOT NULL DEFAULT 30,
+    banner_duration_in_days integer,
     radius_in_kms NUMERIC(10,2) NOT NULL,
-    banner_slots character varying(50),
-    banner_days integer,
-    best_restaurant_slot character varying(50),
+    banner_slot integer, ---3
+    best_restaurant_slot integer,
+    deals_slot integer,
     whatsapp_broadcast character varying(50),
     video_credits character varying(50),
     state_id integer,
@@ -483,6 +485,11 @@ CREATE TABLE IF NOT EXISTS jippy_fm.outlet_subscription_plans
     subscription_to_date date,
     banner_from_date date,
     banner_to_date date,
+   main_banner_url character varying(100),
+   best_restaurant_banner_url character varying(100),
+   deals_banner_url character varying(100),
+   price_model_type character varying(50),
+   offer_amount NUMERIC(10,2),
     created_at timestamp without time zone,
     created_by integer,
     updated_at timestamp without time zone,
