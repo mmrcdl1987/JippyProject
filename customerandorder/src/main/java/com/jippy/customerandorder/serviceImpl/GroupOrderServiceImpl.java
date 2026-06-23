@@ -199,7 +199,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
         return ResponseEntity.ok(new CoResponseDto("200", "Customer with ID: "+joinGroupMembersDto.getCustomerId()
                 + " successfully joined group order with code "+ joinGroupMembersDto.getInvitationCode()+
-                "GroupOrderMembers ID: "+groupOrderMembersEntity.getGroupOrderMembersId()));
+                " GroupOrderMembers ID: "+groupOrderMembersEntity.getGroupOrderMembersId()));
 
     }
 
@@ -224,7 +224,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         //  Check whether the customer exists or not
         CoCustomer customer = customerRepository.findById(groupCartItemsDto.getCustomerId())
                 .orElseThrow(() -> {
-                    log.warn("Customer not found with ID: {}", groupCartItemsDto.getCustomerId());
+                    log.warn("Customer with ID: {} does not belong to this group ", groupCartItemsDto.getCustomerId());
                         return new CoBadRequestException("Customer not found with id: "
                         + groupCartItemsDto.getCustomerId());
                 });
