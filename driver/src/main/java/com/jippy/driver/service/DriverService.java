@@ -27,4 +27,5 @@ public interface DriverService {
 
     String saveOrUpdateProfilePic(@Valid UploadProfilePicDto uploadProfilePicDto);
 
+    DriverDto findByEmail(String email);
 }

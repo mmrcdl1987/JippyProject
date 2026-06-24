@@ -105,4 +105,29 @@ public class EmailService {
 
         log.info("Settlement mail sent to : {}", settlement.getOutletEmail());
     }
+
+//     for api in Fm to send otp to email's
+    public void sendOtpMail(String email, String otp) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setFrom(DivAppConstants.JIPPY_DEFAULT_EMAIL);
+
+        message.setTo(email);
+//        message.setCc("srk.bench3@gmail.com");
+//        message.setCc("thatikondaprathyusha56@gmail.com");
+
+        message.setSubject("Jippy Food Delivery Password Reset OTP");
+
+        message.setText(
+                "Dear User,\n\n" +
+                        "Your OTP for password reset is : " + otp +
+                        "\n\nOTP is valid for 5 minutes." +
+                        "\n\nRegards,\nJippy Team"
+        );
+
+        mailSender.send(message);
+
+        log.info("OTP mail sent successfully to {}", email);
+    }
 }

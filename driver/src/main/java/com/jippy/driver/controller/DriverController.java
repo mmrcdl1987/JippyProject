@@ -144,5 +144,14 @@
             return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
         }
 
+//        used for forget password api in Fm
+        @GetMapping("/findByEmail")
+        @Operation(summary = "Find Driver By Email")
+        public ResponseEntity<DriverDto> findByEmail(@RequestParam String email) {
+
+            log.info("Finding driver by email : {}", email);
+
+            return ResponseEntity.ok(driverService.findByEmail(email));
+        }
 
     }

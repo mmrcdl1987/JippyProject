@@ -26,6 +26,8 @@ public class FmOutlet {
 
     @Column(name = "outlet_name", length = 100, nullable = false)
     private String outletName;
+    @Column(name = "outlet_email")
+    private String outletEmail;
     @Column(name = "merchant_id", nullable = false)
     private Integer merchantId;
     @Column(name = "cuisine_type", length = 100, nullable = false)

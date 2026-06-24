@@ -25,6 +25,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
 
     List<FmOutlet> findByMerchantId(Integer merchantId);
 
+   // for finding the email in te outlet table
+    Optional<FmOutlet> findByOutletEmailIgnoreCase(String outletEmail);
 
     @Query(value = """
                SELECT

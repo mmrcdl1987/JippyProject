@@ -18,4 +18,9 @@ public interface FmUserRepository extends JpaRepository<FmUser, Integer> {
     // -------------------------------
 //    used for api for "updateCODAmountByFleetManager" also
     FmUser findByUserIdAndUserType(Integer userId, String userType);
+
+//    1)used for PasswordResetByAdminRoles - Api
+//    2)checks if already found to prevent unique
+//    username and unique user type for 1)MERCHANT 2)OUTLET 3)DRIVER roles
+    Optional<FmUser> findByUsernameAndUserType(String username, String userType);
 }

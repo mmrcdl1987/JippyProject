@@ -59,7 +59,6 @@ public class GlobalExceptionHandler {
     }
 
     // --- File and System Limits ---
-
     @ExceptionHandler(FileProcessingException.class)
     public ResponseEntity<FmApiResponse<Void>> handleFileProcessing(FileProcessingException ex) {
         log.error("File processing error: {}", ex.getMessage());
@@ -105,9 +104,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(FeignException.class)
     public ResponseEntity<Object> handleFeignException(FeignException ex) {
 
-        String message = (ex.status() == 404) ? "No orders found for given customerId" : "Customer & Order service is unavailable";
+        log.error("Feign Exception Status: {}", ex.status());
+        log.error("Feign Exception Message: {}", ex.getMessage(), ex);
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", message, "timestamp", LocalDateTime.now()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "success", false,
+                        "status", ex.status(),
+                        "message", ex.getMessage(),
+                        "timestamp", LocalDateTime.now()
+                ));
+
     }
-
 }
