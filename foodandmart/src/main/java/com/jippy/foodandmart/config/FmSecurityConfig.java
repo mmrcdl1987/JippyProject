@@ -54,12 +54,12 @@ public class FmSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN")
 
                         // 3. CREATE/UPDATE ROLE (Can perform POST/PUT/PATCH)
-                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
+                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
+                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
 
                         // 4. FULL ADMIN (Can also DELETE)
-                        .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

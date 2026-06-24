@@ -48,6 +48,8 @@ public class CoOrderMapper {
         order.setCreatedAt(LocalDateTime.now());
 
         order.setCreatedBy(requestDto.getCustomerId());
+        //exists only in group ordering
+        order.setGroupOrderInvitationId(requestDto.getGroupOrderInvitationId());
 
         log.info("MAPPER_END | MAP_ORDER_SUCCESS | customerId={}", requestDto.getCustomerId());
 

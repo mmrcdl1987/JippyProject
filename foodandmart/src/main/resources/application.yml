@@ -9,6 +9,11 @@ spring:
   application:
     name: foodandmart
 
+  data:
+    redis:
+      host: 187.127.156.147
+      port: 6379
+
   datasource:
     url: jdbc:postgresql://187.127.156.147:5431/fm_db
     username: fm_user
@@ -22,7 +27,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
 
 
@@ -75,7 +80,15 @@ google:
   maps:
     api-key: AIzaSyB6p_DgqwikOUxdpM3l6wbOxzFWRj5lkmg
 
+
 springdoc:
   api-docs:
-    # Forces the microservice to expose its docs at /api/fm/v3/api-docs
     path: /api/fm/v3/api-docs
+
+aws:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+  s3:
+    region: ap-south-2
+    bucket-name: jippys3bucket

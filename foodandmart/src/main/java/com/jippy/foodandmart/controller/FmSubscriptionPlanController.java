@@ -1,65 +1,99 @@
 package com.jippy.foodandmart.controller;
 
-import com.jippy.foodandmart.dto.FmSubscriptionPlanDto;
+import com.jippy.foodandmart.dto.FmApiResponse;
+import com.jippy.foodandmart.dto.FmSubscriptionPlanRequestDto;
 import com.jippy.foodandmart.dto.SubscriptionPlanResponseDto;
 import com.jippy.foodandmart.service.IFmSubscriptionPlanService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-
 import jakarta.validation.Valid;
-
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("api/fm/subscription")
+@RequestMapping("/api/fm/subscription-plans")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Subscription Plans API", description = "Create and Update Subscription Plans")
 public class FmSubscriptionPlanController {
 
-    private final IFmSubscriptionPlanService service;
+    private final IFmSubscriptionPlanService subscriptionPlanService;
 
-    @PostMapping("/createAndUpdateSubscriptionPlans")
-    @Operation(summary = "Create or Update Subscription Plan", description = "Creates new plan if id is null, updates existing plan if id is present holds in service logic ")
-    public ResponseEntity<FmSubscriptionPlanDto> createAndUpdatePlans(@Valid @RequestBody FmSubscriptionPlanDto dto) {
+    @PostMapping
+    public FmApiResponse<SubscriptionPlanResponseDto> saveOrUpdateSubscriptionPlan(
+            @Valid @RequestBody FmSubscriptionPlanRequestDto request) {
 
-        log.info("Create/Update subscription plan API called");
+        log.info(
+                "SAVE_OR_UPDATE_SUBSCRIPTION_PLAN_API_START | subscriptionPlanId={}",
+                request.getSubscriptionPlanId());
 
-        FmSubscriptionPlanDto updatePlans = service.createAndUpdatePlans(dto);
-        return ResponseEntity.ok(updatePlans);
+        SubscriptionPlanResponseDto response =
+                subscriptionPlanService.saveOrUpdate(request);
+
+        log.info(
+                "SAVE_OR_UPDATE_SUBSCRIPTION_PLAN_API_END | subscriptionPlanId={}",
+                response.getSubscriptionPlanId());
+
+        return FmApiResponse.success(
+                request.getSubscriptionPlanId() == null
+                        ? "Subscription plan created successfully"
+                        : "Subscription plan updated successfully",
+                response);
     }
 
+    @GetMapping("/{subscriptionPlanId}")
+    public FmApiResponse<SubscriptionPlanResponseDto> getSubscriptionPlanById(
+            @PathVariable Integer subscriptionPlanId) {
+
+        log.info(
+                "GET_SUBSCRIPTION_PLAN_BY_ID_API_START | subscriptionPlanId={}",
+                subscriptionPlanId);
+
+        SubscriptionPlanResponseDto response =
+                subscriptionPlanService.getById(subscriptionPlanId);
+
+        log.info(
+                "GET_SUBSCRIPTION_PLAN_BY_ID_API_END | subscriptionPlanId={}",
+                subscriptionPlanId);
+
+        return FmApiResponse.success(
+                "Subscription plan fetched successfully",
+                response);
+    }
 
     @GetMapping
-    @Operation(summary = "Get Subscription Plans By Area")
-    public ResponseEntity<List<SubscriptionPlanResponseDto>> getSubscriptionPlans(@RequestParam @Min(value = 1, message = "Area Id must be greater than 0") Integer areaId) {
+    public FmApiResponse<List<SubscriptionPlanResponseDto>> getAllSubscriptionPlans() {
 
-        log.info("API_START | GET_SUBSCRIPTION_PLANS | areaId={}", areaId);
+        log.info("GET_ALL_SUBSCRIPTION_PLANS_API_START");
 
-        try {
+        List<SubscriptionPlanResponseDto> response =
+                subscriptionPlanService.getAll();
 
-            List<SubscriptionPlanResponseDto> response = service.getSubscriptionPlans(areaId);
+        log.info(
+                "GET_ALL_SUBSCRIPTION_PLANS_API_END | count={}",
+                response.size());
 
-            log.info("API_SUCCESS | GET_SUBSCRIPTION_PLANS | areaId={} | count={}", areaId, response.size());
+        return FmApiResponse.success(
+                "Subscription plans fetched successfully",
+                response);
+    }
 
-            return ResponseEntity.ok(response);
+    @DeleteMapping("/{subscriptionPlanId}")
+    public FmApiResponse<String> deleteSubscriptionPlan(
+            @PathVariable Integer subscriptionPlanId) {
 
-        } catch (Exception ex) {
+        log.info(
+                "DELETE_SUBSCRIPTION_PLAN_API_START | subscriptionPlanId={}",
+                subscriptionPlanId);
 
-            log.error("API_ERROR | GET_SUBSCRIPTION_PLANS | areaId={}", areaId, ex);
+        subscriptionPlanService.delete(subscriptionPlanId);
 
-            throw ex;
+        log.info(
+                "DELETE_SUBSCRIPTION_PLAN_API_END | subscriptionPlanId={}",
+                subscriptionPlanId);
 
-        } finally {
-
-            log.info("API_END | GET_SUBSCRIPTION_PLANS | areaId={}", areaId);
-        }
+        return FmApiResponse.success(
+                "Subscription plan deleted successfully",
+                "SUCCESS");
     }
 }

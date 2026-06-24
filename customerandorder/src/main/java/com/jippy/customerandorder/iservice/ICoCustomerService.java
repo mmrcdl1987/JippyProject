@@ -21,5 +21,5 @@ public interface ICoCustomerService {
 
     CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto);
 
-    String updateCustomerProfilePic(CoCustomerRequestDto requestDto);
+    String updateCustomerProfile(CoCustomerRequestDto requestDto);
 }

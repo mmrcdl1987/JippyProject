@@ -280,17 +280,28 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     private void saveOutletUser(String loginId, String password, String phone, Integer outletId, String outletName) {
         String username = loginId;
-        if (userRepository.existsByUsername(username)) {
+//
+        //  checking whether username with same role already exists or not
+        Optional<FmUser> existingUser = userRepository.findByUsernameAndUserType
+                (username, FmAppConstants.TYPE_OUTLET);
+        if (existingUser.isPresent()) {
+            throw new ResourceNotFoundException(
+                    "Username already exists with this role. Please try a different username.");
+        }
+       /* if (userRepository.existsByUsername(username)) {
             String base = username;
             int suffix = 1;
             while (userRepository.existsByUsername(username)) {
                 username = base + suffix++;
             }
             log.warn("[OUTLET] Username collision resolved: final={}", username);
-        }
+        }*/
 
         String encodedPassword = passwordEncoder.encode(password);
-        FmUser users = FmMerchantMapper.toUserEntity(username, encodedPassword, outletId, FmAppConstants.TYPE_MERCHANT);
+//
+
+
+        FmUser users = FmMerchantMapper.toUserEntity(username, encodedPassword, outletId, FmAppConstants.TYPE_OUTLET);
         users = userRepository.save(users);
         log.info("[OUTLET] User saved: username={}, outletId={}", username, outletId);
 
@@ -301,7 +312,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
 
         //  Fetch role_permissions
-
         List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
 
         if (rolePermissionsList.isEmpty()) {

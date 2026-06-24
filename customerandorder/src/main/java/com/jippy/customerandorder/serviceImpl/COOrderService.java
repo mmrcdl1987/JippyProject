@@ -41,7 +41,7 @@ public class COOrderService implements IOrderService {
 
     private final CoOrderMapper orderMapper;
     private final CoOrderSequenceRepository sequenceRepository;
-    private final KafkaTemplate<String, COOrderEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     /*
      * PLACE ORDER
@@ -59,7 +59,8 @@ public class COOrderService implements IOrderService {
             /*
              * NORMAL ORDER
              */
-            if (COConstants.ORDER_TYPE_NORMAL.equalsIgnoreCase(dto.getOrderType())) {
+            if (COConstants.ORDER_TYPE_NORMAL.equalsIgnoreCase(dto.getOrderType()) ||
+                    COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType())) {
 
                 return processNormalOrder(dto);
             }

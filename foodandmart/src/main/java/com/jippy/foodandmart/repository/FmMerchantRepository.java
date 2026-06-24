@@ -16,6 +16,8 @@ public interface FmMerchantRepository extends JpaRepository<FmMerchant, Integer>
     boolean existsByMerchantEmail(String email);
     boolean existsByMerchantPhone(String phone);
 
+    //    for finding the email in the Merchant table
+    Optional<FmMerchant> findByMerchantEmailIgnoreCase(String merchantEmail);
 
     @Query(value = """
             SELECT 
@@ -41,4 +43,7 @@ public interface FmMerchantRepository extends JpaRepository<FmMerchant, Integer>
             """, nativeQuery = true)
 //     for fetching bank details from the Merchant-table
     FmMerchantWithBankProjection getMerchantWithBank(@Param("merchantId") Long merchantId);
+
+
+
 }

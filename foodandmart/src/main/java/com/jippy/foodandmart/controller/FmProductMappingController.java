@@ -17,6 +17,7 @@ public class FmProductMappingController {
 
     private final IFmProductMappingService productMappingService;
 
+
     /**
      * POST /api/products/from-master
      * Maps selected products (from compare result) into jippy_fm.products

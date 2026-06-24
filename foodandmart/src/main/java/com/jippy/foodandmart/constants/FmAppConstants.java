@@ -9,7 +9,8 @@ public final class FmAppConstants {
     public static final String ROLE_OUTLET = "ROLE_OUTLET";
     public static final String ROLE_MERCHANT = "ROLE_MERCHANT";
 
-
+//-------------------Forget Password ---------------------------------------
+    public static final String FORGOT_PASSWORD_OTP="FORGOT_PASSWORD_OTP_";
     // ───────────────── STATUS CODES ─────────────────
 
     public static final String STATUS_200 = "200";

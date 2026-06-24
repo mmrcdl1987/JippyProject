@@ -20,6 +20,8 @@ public class OutletUnavailabilityController {
 
     private final OutletUnavailabilityService unavailabilityService;
 
+
+
     /**
      * Handles:
      * 1. Temporary close

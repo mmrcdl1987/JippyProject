@@ -6,38 +6,34 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class FmSubscriptionPlanDto {
+public class FmSubscriptionPlanRequestDto {
 
     private Integer subscriptionPlanId;
 
     @NotBlank(message = "Plan name is required")
-    @Size(max = 100)
     private String planName;
 
     @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.0", inclusive = false)
+    @DecimalMin(value = "0.0", inclusive = false,
+            message = "Price must be greater than zero")
     private BigDecimal price;
 
-    @NotNull(message = "Duration is required")
-    @Min(value = 1)
+    @NotNull(message = "Duration in days is required")
+    @Positive(message = "Duration must be greater than zero")
     private Integer durationInDays;
 
-    @NotNull(message = "Radius is required")
-    @DecimalMin(value = "0.0", inclusive = false)
+    private Integer bannerDurationInDays;
+
     private BigDecimal radiusInKms;
 
-    @Size(max = 50)
-    private String bannerSlots;
+    private Integer bannerSlot;
 
-    private Integer bannerDays;
+    private Integer bestRestaurantSlot;
 
-    @Size(max = 50)
-    private String bestRestaurantSlot;
+    private Integer dealsSlot;
 
-    @Size(max = 50)
     private String whatsappBroadcast;
 
-    @Size(max = 50)
     private String videoCredits;
 
     @NotNull(message = "State id is required")
@@ -48,4 +44,7 @@ public class FmSubscriptionPlanDto {
 
     @NotNull(message = "Area id is required")
     private Integer areaId;
+
+    @NotNull(message = "User Id is required")
+    private Integer userId;
 }

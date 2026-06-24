@@ -1,40 +1,46 @@
 package com.jippy.foodandmart.mapper;
 
-import com.jippy.foodandmart.dto.OutletSubscriptionResponseDto;
-import com.jippy.foodandmart.entity.FmSubscriptionPlan;
+import com.jippy.foodandmart.dto.OutletSubscriptionPlanResponseDto;
 import com.jippy.foodandmart.entity.FmOutletSubscriptionPlan;
-import org.springframework.stereotype.Component;
 
-@Component
-public class OutletSubscriptionPlanMapper {
+public final class OutletSubscriptionPlanMapper {
 
-    public OutletSubscriptionResponseDto toResponseDto(
-            FmOutletSubscriptionPlan subscription,
-            FmSubscriptionPlan plan) {
+    private OutletSubscriptionPlanMapper() {
+    }
 
-        OutletSubscriptionResponseDto dto =
-                new OutletSubscriptionResponseDto();
+    public static OutletSubscriptionPlanResponseDto toDto(
+           FmOutletSubscriptionPlan entity) {
+
+        OutletSubscriptionPlanResponseDto dto =
+                new OutletSubscriptionPlanResponseDto();
 
         dto.setOutletSubscriptionPlanId(
-                subscription.getOutletSubscriptionPlanId());
+                entity.getOutletSubscriptionPlanId());
 
-        dto.setOutletId(subscription.getOutletId());
-
-        dto.setSubscriptionPlanId(plan.getSubscriptionPlanId());
-        dto.setPlanName(plan.getPlanName());
+        dto.setOutletId(entity.getOutletId());
+        dto.setSubscriptionPlanId(
+                entity.getSubscriptionPlanId());
 
         dto.setSubscriptionFromDate(
-                subscription.getSubscriptionFromDate());
+                entity.getSubscriptionFromDate());
 
         dto.setSubscriptionToDate(
-                subscription.getSubscriptionToDate());
+                entity.getSubscriptionToDate());
 
-        dto.setBannerSlots(plan.getBannerSlots());
-        dto.setBannerDays(plan.getBannerDays());
-        dto.setBestRestaurantSlot(plan.getBestRestaurantSlot());
-        dto.setWhatsappBroadcast(plan.getWhatsappBroadcast());
-        dto.setVideoCredits(plan.getVideoCredits());
+        dto.setBannerFromDate(
+                entity.getBannerFromDate());
+
+        dto.setBannerToDate(
+                entity.getBannerToDate());
+
+        dto.setPriceModelType(
+                entity.getPriceModelType());
+
+        dto.setOfferAmount(
+                entity.getOfferAmount());
 
         return dto;
     }
+
+
 }
