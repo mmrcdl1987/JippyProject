@@ -14,7 +14,7 @@ public class SettlementMailScheduler {
     private final DivOutletWeeklySettlementService divOutletWeeklySettlementService;
 
 //     for every minute there is email notification
-    @Scheduled(cron = "0 * * * * *")
+//    @Scheduled(cron = "0 * * * * *")
     public void scheduleSettlementMail() {
 
         log.info("Running Settlement Mail Scheduler for every 1 minute");

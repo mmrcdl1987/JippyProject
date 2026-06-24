@@ -5,6 +5,7 @@ spring:
   application:
     name: division
 
+
   #     gMail SMTP Configuration -- gmail integration
   mail:
     host: smtp.gmail.com

@@ -359,7 +359,8 @@ public class DriverMapper {
         return driverOrder;
     }
 
-    public static DriverWalletTransactions mapToTransaction(Integer driverWalletId, String orderId, double orderAmount,Integer driverId) {
+    public static DriverWalletTransactions mapToTransaction(Integer driverWalletId,
+                        String orderId, double orderAmount,Integer driverId) {
         DriverWalletTransactions txn = new DriverWalletTransactions();
 
         // Wallet reference

@@ -9,6 +9,11 @@ spring:
   application:
     name: foodandmart
 
+  data:
+    redis:
+      host: 187.127.156.147
+      port: 6379
+
   datasource:
     url: jdbc:postgresql://187.127.156.147:5431/fm_db
     username: fm_user

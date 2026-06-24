@@ -708,4 +708,21 @@ public class DriverServiceImpl implements DriverService {
     private boolean isValidType(String contentType) {
         return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png") || contentType.equals("image/webp"));
     }
+
+    @Override
+    public DriverDto findByEmail(String email) {
+
+        Driver driver = driverRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Driver not found with email : " + email));
+
+        DriverDto dto = new DriverDto();
+
+        dto.setDriverId(driver.getDriverId());
+        dto.setEmail(driver.getEmail());
+        dto.setFirstName(driver.getFirstName());
+        dto.setLastName(driver.getLastName());
+
+        return dto;
+    }
 }

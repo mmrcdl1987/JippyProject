@@ -1,14 +1,16 @@
 package com.jippy.foodandmart.controller;
 
 
+import com.jippy.foodandmart.dto.FmPasswordResetByAdminRequestDto;
 import com.jippy.foodandmart.dto.FmUserDto;
-import com.jippy.foodandmart.entity.FmUser;
-import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.service.IFmUsersService;
+import io.swagger.v3.oas.annotations.Operation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/fm/users")
 public class FmUsersController {
@@ -33,4 +35,19 @@ public class FmUsersController {
     public ResponseEntity<FmUserDto> createUser(@RequestBody FmUserDto dto) {
         return ResponseEntity.ok(usersService.createUser(dto));
     }
+
+    @PostMapping("/passwordResetByAdminForRoles")
+    @Operation(summary = "Reset Password By Admin", description =
+                    "Allows admin to reset password for an existing user" +
+                            " by username and user type:1)DRIVER,2)MERCHANT,3)OUTLET s")
+    public ResponseEntity<String> passwordResetByAdminForRoles(
+            @RequestBody FmPasswordResetByAdminRequestDto dto) {
+
+        log.info("Password reset request received for username: {}", dto.getUsername());
+
+        return ResponseEntity.ok(usersService.passwordResetByAdminForRoles(dto));
+
+    }
+
+
 }
