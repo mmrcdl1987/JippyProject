@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct, Integer> {
 
@@ -52,5 +53,10 @@ public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct
     );
 
     boolean existsByCategoryId(Integer categoryId);
+
+    Optional<FmMasterProduct> findByMasterProductNameIgnoreCaseAndCategoryId(
+            String masterProductName,
+            Integer categoryId);
+
 }
 
