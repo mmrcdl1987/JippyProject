@@ -33,35 +33,7 @@ public class FmCategoryController {
     private final FmCategoryRepository categoryRepository;
     private final FmOutletCategoryRepository outletCategoryRepository;
     private final FmOutletRepository outletRepository;
-    private final FmMasterProductService service;
 
-    /**
-     * Returns all global categories from the jippy_fm.categories table.
-     *
-     * <p>GET /api/categories</p>
-     *
-     * <p>Why no pagination: the number of food categories is small and stable
-     * (typically < 100). Loading all at once for dropdowns is acceptable.</p>
-     *
-     * @return 200 with the full list of {@link FmCategory} entities
-     */
-    @GetMapping("/categories")
-    public ResponseEntity<FmApiResponse<List<FmCategory>>> getAllCategories() {
-        log.info("[CATEGORY] GET /api/categories");
-        List<FmCategory> cats = categoryRepository.findAll();
-        return ResponseEntity.ok(FmApiResponse.success("Categories fetched", cats));
-    }
-
-    //fetching the products based on category id from master products
-    @GetMapping("/{categoryId}")
-    public ResponseEntity<FmApiResponse<List<FmMasterProductResponseDto>>> getProductsByCategory(@PathVariable Integer categoryId, @RequestParam(required = false) String keyword) {
-
-        log.info("GET_PRODUCTS_BY_CATEGORY_STARTED | categoryId={} | keyword={}", categoryId, keyword);
-
-        List<FmMasterProductResponseDto> products = service.getProductsByCategory(categoryId, keyword);
-
-        return ResponseEntity.ok(FmApiResponse.success("Products fetched successfully", products));
-    }
 
     /**
      * Creates an outlet-category link if it doesn't already exist.

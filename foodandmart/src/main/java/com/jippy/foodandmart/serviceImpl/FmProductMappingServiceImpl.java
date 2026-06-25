@@ -3,10 +3,11 @@ package com.jippy.foodandmart.serviceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jippy.foodandmart.dto.FmMapToProductRequest;
-import com.jippy.foodandmart.dto.FmMapToProductResult;
-import com.jippy.foodandmart.dto.FmMasterProductMappingResultDTO;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.exception.DuplicateResourceException;
+import com.jippy.foodandmart.exception.ResourceNotFoundException;
+import com.jippy.foodandmart.mapper.FmCreateMasterProductMapper;
 import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.IFmProductMappingService;
@@ -43,6 +44,51 @@ public class FmProductMappingServiceImpl implements IFmProductMappingService {
     private final FmProductAvailableTimingRepository productAvailableTimingRepository;
     private final FmDaysOfWeekRepository daysOfWeekRepository;
     private final ObjectMapper                     objectMapper;
+    private final FmCreateMasterProductMapper mapper;
+
+
+    @Override
+    public FmCreateMasterProductResponseDto createMasterProduct(
+            FmCreateMasterProductRequestDto request) {
+
+        log.info(
+                "CREATE_MASTER_PRODUCT_STARTED | categoryId={} | productName={}",
+                request.getCategoryId(),
+                request.getMasterProductName());
+
+        FmCreateMasterProductMapper.validate(request);
+
+        FmCategory category = categoryRepository
+                .findById(request.getCategoryId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Category not found with id : "
+                                        + request.getCategoryId()));
+
+        if (masterProductRepository
+                .existsByMasterProductNameIgnoreCaseAndCategoryId(
+                        request.getMasterProductName().trim(),
+                        request.getCategoryId())) {
+
+            throw new DuplicateResourceException(
+                    "Master Product already exists in this category.");
+        }
+
+        FmMasterProduct entity =
+                FmCreateMasterProductMapper.toEntity(
+                        request,
+                        category.getCategoryName(),
+                        1);
+
+        FmMasterProduct savedProduct =
+                masterProductRepository.save(entity);
+
+        log.info(
+                "CREATE_MASTER_PRODUCT_COMPLETED | masterProductId={}",
+                savedProduct.getMasterProductId());
+
+        return mapper.toResponseDto(savedProduct);
+    }
 
     /**
      * Maps a list of manually supplied product entries into the outlet's product table.
