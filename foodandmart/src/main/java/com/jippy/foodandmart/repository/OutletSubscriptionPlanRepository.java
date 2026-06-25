@@ -7,7 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface OutletSubscriptionPlanRepository extends JpaRepository<FmOutletSubscriptionPlan, Integer> {
+public interface OutletSubscriptionPlanRepository
+        extends JpaRepository<FmOutletSubscriptionPlan, Integer> {
 
-    Optional<FmOutletSubscriptionPlan> findTopByOutletIdOrderBySubscriptionToDateDesc(Integer outletId);
+    Optional<FmOutletSubscriptionPlan> findByOutletId(Integer outletId);
 }

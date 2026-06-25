@@ -59,6 +59,7 @@ public class GlobalExceptionHandler {
     }
 
     // --- File and System Limits ---
+
     @ExceptionHandler(FileProcessingException.class)
     public ResponseEntity<FmApiResponse<Void>> handleFileProcessing(FileProcessingException ex) {
         log.error("File processing error: {}", ex.getMessage());
@@ -114,6 +115,17 @@ public class GlobalExceptionHandler {
                         "message", ex.getMessage(),
                         "timestamp", LocalDateTime.now()
                 ));
-
     }
+    @ExceptionHandler(BannerUploadException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleBannerUploadException(
+            BannerUploadException ex) {
+
+        log.error("Banner upload failed: {}", ex.getMessage(), ex);
+
+        log.error("Banner upload failed: {}", ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
+
 }

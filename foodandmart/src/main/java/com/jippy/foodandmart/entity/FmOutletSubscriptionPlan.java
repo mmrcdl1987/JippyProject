@@ -3,6 +3,7 @@ package com.jippy.foodandmart.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -16,16 +17,16 @@ public class FmOutletSubscriptionPlan {
     @Column(name = "outlet_subscription_plan_id")
     private Integer outletSubscriptionPlanId;
 
-    @Column(name = "outlet_id", nullable = false)
+    @Column(name = "outlet_id")
     private Integer outletId;
 
-    @Column(name = "subscription_plan_id", nullable = false)
+    @Column(name = "subscription_plan_id")
     private Integer subscriptionPlanId;
 
-    @Column(name = "subscription_from_date", nullable = false)
+    @Column(name = "subscription_from_date")
     private LocalDate subscriptionFromDate;
 
-    @Column(name = "subscription_to_date", nullable = false)
+    @Column(name = "subscription_to_date")
     private LocalDate subscriptionToDate;
 
     @Column(name = "banner_from_date")
@@ -33,6 +34,21 @@ public class FmOutletSubscriptionPlan {
 
     @Column(name = "banner_to_date")
     private LocalDate bannerToDate;
+
+    @Column(name = "main_banner_url")
+    private String mainBannerUrl;
+
+    @Column(name = "best_restaurant_banner_url")
+    private String bestRestaurantBannerUrl;
+
+    @Column(name = "deals_banner_url")
+    private String dealsBannerUrl;
+
+    @Column(name = "price_model_type")
+    private String priceModelType;
+
+    @Column(name = "offer_amount")
+    private BigDecimal offerAmount;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

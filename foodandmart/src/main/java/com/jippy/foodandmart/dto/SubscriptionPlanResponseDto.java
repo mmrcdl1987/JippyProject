@@ -1,4 +1,5 @@
 package com.jippy.foodandmart.dto;
+
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -10,10 +11,16 @@ public class SubscriptionPlanResponseDto {
     private String planName;
     private BigDecimal price;
     private Integer durationInDays;
+    private Integer bannerDurationInDays;
     private BigDecimal radiusInKms;
-    private String bannerSlots;
-    private Integer bannerDays;
-    private String bestRestaurantSlot;
+    private Integer bannerSlot;
+    private Integer bestRestaurantSlot;
+    private Integer dealsSlot;
+
     private String whatsappBroadcast;
     private String videoCredits;
+
+    private Integer stateId;
+    private Integer cityId;
+    private Integer areaId;
 }
