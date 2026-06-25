@@ -33,10 +33,10 @@ public class CoCustomerDeliveryAddressRequestDto {
     @NotBlank(message = "Lane No is required")
     private String laneNo;
 
-    @NotNull(message = "Area is required")
+//    @NotNull(message = "Area is required")--//changed for production
     private Integer area;
 
-    @NotNull(message = "City is required")
+//    @NotNull(message = "City is required")--//changed for production
     private Integer city;
 
     @NotNull(message = "Created By is required")

@@ -129,7 +129,8 @@ public class CoCustomerController {
     @PostMapping("/saveCustomerDeliveryAddress")
     @Operation(summary = "Create Customer Delivery Address",
             description = "Creates and stores a customer delivery address using the provided customer details and geographic coordinates. " + "The latitude and longitude values are converted into a geographic Point location and persisted in the customer_delivery_addresses table. " + "Mandatory fields: customerId, latitude, longitude, doorNo, buildingName, laneNo, area, city and createdBy. " + "Returns the saved customer delivery address details including the generated customerAddressId.")
-    public ResponseEntity<CoCustomerDeliveryAddressResponseDto> createCustomerDeliveryAddress(@Valid @RequestBody CoCustomerDeliveryAddressRequestDto requestDto) {
+    public ResponseEntity<CoCustomerDeliveryAddressResponseDto> createCustomerDeliveryAddress
+    (@Valid @RequestBody CoCustomerDeliveryAddressRequestDto requestDto) {
 
         log.info("CREATE_CUSTOMER_ADDRESS_API_START | customerId={}", requestDto.getCustomerId());
 

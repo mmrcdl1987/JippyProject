@@ -98,11 +98,32 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return result;
     }
 
-    @Override
-    public FmOutlet getOutletById(Integer id) {
-        return outletRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Outlet ID " + id + " does not exist"));
-    }
+//    @Override
+//    public FmOutlet getOutletById(Integer id) {
+//        return outletRepository.findById(id)
+//                .orElseThrow(() -> new IllegalArgumentException
+//                        ("Outlet ID " + id + " does not exist"));
+//    }
 
+//    -----------------------------------------------
+    @Override
+    public FmOutletResponseDto getOutletById(Integer outletId) {
+
+        log.info("Fetching outlet details for outletId: {}", outletId);
+
+        FmOutlet outlet = outletRepository.findById(outletId)
+                .orElseThrow(() -> {
+                    log.error("Outlet not found with outletId: {}", outletId);
+                    return new ResourceNotFoundException("Outlet not found with id: " + outletId);
+                });
+
+        FmOutletResponseDto outletResponseDto = FmOutletMapper.toOutletResponseDto(outlet);
+        log.info("Successfully fetched outlet details for outletId: {}", outletId);
+
+        return outletResponseDto;
+
+    }
+//    ------------------------------------------------------------------------
     // ── Single Create ─────────────────────────────────────────────────────────
 
     @Override

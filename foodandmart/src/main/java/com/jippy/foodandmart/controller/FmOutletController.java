@@ -103,10 +103,28 @@ public class FmOutletController {
      * @param id the outlet's primary key
      * @return 200 with the {@link FmOutlet} entity
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<FmApiResponse<FmOutlet>> getOutletById(@PathVariable Integer id) {
-        log.info("[OUTLET] GET /api/outlets/{}", id);
-        return ResponseEntity.ok(FmApiResponse.success("Outlet fetched", outletService.getOutletById(id)));
+//    @GetMapping("/{id}")
+//    public ResponseEntity<FmApiResponse<FmOutlet>> getOutletById(@PathVariable Integer id) {
+//        log.info("[OUTLET] GET /api/outlets/{}", id);
+//        return ResponseEntity.ok
+//                (FmApiResponse.success("Outlet fetched", outletService.getOutletById(id)));
+//    }
+
+    @GetMapping("/getOutletById/{outletId}")
+    @Operation(summary = "Get outlet details by outlet ID")
+    public ResponseEntity<FmApiResponse<FmOutletResponseDto>> getOutletById(
+            @PathVariable Integer outletId) {
+
+        log.info("[OUTLET] GET /api/fm/outlets/{}", outletId);
+
+        FmOutletResponseDto response = outletService.getOutletById(outletId);
+
+        log.info("Successfully returned outlet details for outletId: {}", outletId);
+
+        return ResponseEntity.ok(FmApiResponse.success
+                ("Outlet fetched successfully", response
+                )
+        );
     }
 
     /**

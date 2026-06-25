@@ -23,7 +23,7 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FmOutletRequestDTO {
 
-    // ── outlets table ─────────────────────────────────────────────────────────
+    // ──────────────────────── outlets table ───────────────────────────────────
 
     @NotBlank(message = "Outlet name is required")
     @Size(max = 100, message = "Outlet name must not exceed 100 characters")

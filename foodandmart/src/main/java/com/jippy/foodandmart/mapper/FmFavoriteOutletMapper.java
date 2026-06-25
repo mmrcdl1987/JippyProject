@@ -28,6 +28,8 @@ public class FmFavoriteOutletMapper {
         dto.setCustomerId(entity.getCustomerId());
         dto.setOutletId(entity.getOutletId());
         dto.setCreatedAt(entity.getCreatedAt());
+        dto.setIsFavourite(true);
+
         return dto;
     }
 }
