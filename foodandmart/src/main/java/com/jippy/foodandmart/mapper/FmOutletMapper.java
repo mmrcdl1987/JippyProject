@@ -181,6 +181,29 @@ public final class FmOutletMapper {
         return outlet;
     }
 
+    public static FmOutletResponseDto toOutletResponseDto(FmOutlet outlet) {
+
+        FmOutletResponseDto dto = new FmOutletResponseDto();
+
+        dto.setOutletId(outlet.getOutletId());
+        dto.setOutletName(outlet.getOutletName());
+        dto.setOutletEmail(outlet.getOutletEmail());
+        dto.setMerchantId(outlet.getMerchantId());
+        dto.setCuisineType(outlet.getCuisineType());
+        dto.setOutletPhone(outlet.getOutletPhone());
+        dto.setRadius(outlet.getRadius());
+        dto.setIsActive(outlet.getIsActive());
+        dto.setIsApproved(outlet.getIsApproved());
+
+        // Convert Point -> Latitude X & Longitude Y
+        if (outlet.getOutletLocation() != null) {
+            dto.setLongitude(outlet.getOutletLocation().getX());
+            dto.setLatitude(outlet.getOutletLocation().getY());
+        }
+
+        return dto;
+    }
+
     public static  FmAddressRequestDto toAddressRequestDto(FmOutletAddress fmOutletAddress){
         FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
         fmAddressRequestDto.setJippyAddressId(fmOutletAddress.getJippyAddressId());

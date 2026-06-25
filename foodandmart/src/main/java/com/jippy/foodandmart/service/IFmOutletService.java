@@ -16,7 +16,9 @@ public interface IFmOutletService {
 
     List<FmOutletSummaryDTO> getOutletsByMerchantId(Integer merchantId);
 
-    FmOutlet getOutletById(Integer id);
+//    FmOutlet getOutletById(Integer id);
+
+    FmOutletResponseDto getOutletById(Integer id);
 
     FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto);
 

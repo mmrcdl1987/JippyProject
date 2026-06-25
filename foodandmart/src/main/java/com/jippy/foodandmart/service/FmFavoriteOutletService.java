@@ -9,9 +9,10 @@ import java.util.List;
 
 public interface FmFavoriteOutletService {
 
-    FmFavoriteOutletResponseDto addFavorite(FmFavoriteOutletRequestDto dto);
+    FmFavoriteOutletResponseDto toggleFavorite(FmFavoriteOutletRequestDto dto);
 
-    void removeFavorite(Integer customerId, Integer outletId);
+    //changed for production
+//    void removeFavorite(Integer customerId, Integer outletId);
 
 //    List<FmFavoriteOutletResponseDto> getFavorites(Integer customerId);
 
