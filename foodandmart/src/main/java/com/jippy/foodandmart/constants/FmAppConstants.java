@@ -8,7 +8,8 @@ public final class FmAppConstants {
 
     public static final String ROLE_OUTLET = "ROLE_OUTLET";
     public static final String ROLE_MERCHANT = "ROLE_MERCHANT";
-
+    public static final String ROLE_DRIVER = "ROLE_DRIVER";
+    public static final String ROLE_CUSTOMER = "ROLE_CUSTOMER";
 //-------------------Forget Password ---------------------------------------
     public static final String FORGOT_PASSWORD_OTP="FORGOT_PASSWORD_OTP_";
     // ───────────────── STATUS CODES ─────────────────
@@ -31,6 +32,8 @@ public final class FmAppConstants {
     // ── User Types ────────────────────────────────────────────────────────────
     public static final String TYPE_MERCHANT = "MERCHANT";
     public static final String TYPE_OUTLET = "OUTLET";
+    public static final String TYPE_DRIVER = "DRIVER";
+    public static final String TYPE_CUSTOMER = "CUSTOMER";
 
     // ── Role IDs ──────────────────────────────────────────────────────────────
     public static final int ROLE_ID_OUTLET = 2;

@@ -1,4 +1,4 @@
-package com.jippy.foodandmart.dto;
+package com.jippy.customerandorder.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,12 +9,9 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class WebAuthResponseDto {
-
-    private String token;
+public class AuthResponseDto {
+    private String jwt;
     private String userType;
     private Integer userId;
-    private List<String> role;
-    private List<String> permissions;
-    private String username;
+    private List<String> roles;
 }

@@ -21,6 +21,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -350,10 +351,11 @@ public FmForgotPasswordResponseDto updateForgotPassword(
      * WHERE user_id = 7(users table)
      * AND user_type = 'EMPLOYEE'
      */
-    FmUser user = usersRepository.findByUserIdAndUserType(userId, userType.name());
-    if (user == null) {
+    Optional<FmUser> user = usersRepository.findByUserIdAndUserType(userId, userType.name());
+    if (!user.isPresent()) {
         throw new ResourceNotFoundException("User not found with userId : " + userId);
     }
+    FmUser existingUser = user.get();
     /*
      * Encrypt password using BCrypt
      *-----------------------------------
@@ -361,9 +363,9 @@ public FmForgotPasswordResponseDto updateForgotPassword(
      Rohan@123 becomes  $2a$10$Kx..... */
         String encryptedPassword = passwordEncoder.encode(requestDto.getNewPassword());
 
-        user.setPassword(encryptedPassword);
+    existingUser.setPassword(encryptedPassword);
 
-        usersRepository.save(user);
+        usersRepository.save(existingUser);
 
         log.info("Password updated successfully for userId : {}", userId);
 

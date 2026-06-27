@@ -18,6 +18,10 @@ public class GatewayCorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         log.info("===================cors called===========");
+        //config.addAllowedOrigin("http://localhost:5173"); // Or port 3000 depending on your local Vite/React setup
+
+        // 2. Allow your production Hostinger VPS domain or IP
+        config.addAllowedOrigin("http://srv1617582.hstgr.cloud:3005");
         // Allow the exact origin Swagger is running on
         config.addAllowedOriginPattern("*");
         config.addAllowedMethod("*"); // Allow GET, POST, PUT, DELETE, OPTIONS

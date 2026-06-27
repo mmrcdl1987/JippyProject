@@ -17,7 +17,7 @@ public interface FmUserRepository extends JpaRepository<FmUser, Integer> {
     // FIND DRIVER BY user_id + user_type
     // -------------------------------
 //    used for api for "updateCODAmountByFleetManager" also
-    FmUser findByUserIdAndUserType(Integer userId, String userType);
+    Optional<FmUser> findByUserIdAndUserType(Integer userId, String userType);
 
 //    1)used for PasswordResetByAdminRoles - Api
 //    2)checks if already found to prevent unique

@@ -8,6 +8,7 @@ public class COConstants {
 
     }
 
+    public static final String ROLE_CUSTOMER = "ROLE_CUSTOMER";
     public static final String STATUS_200 = "200";
     public static final String STATUS_400 = "400";
     public static final String STATUS_500 = "500";

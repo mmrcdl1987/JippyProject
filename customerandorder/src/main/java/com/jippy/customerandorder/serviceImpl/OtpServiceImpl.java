@@ -1,14 +1,13 @@
 package com.jippy.customerandorder.serviceImpl;
 
-import com.jippy.customerandorder.dto.ApiResponseDto;
-import com.jippy.customerandorder.dto.JwtResponseDto;
-import com.jippy.customerandorder.dto.OtpCacheDto;
-import com.jippy.customerandorder.dto.SendOtpRequestDto;
-import com.jippy.customerandorder.dto.VerifyOtpRequestDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jippy.customerandorder.constants.COConstants;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.entity.CustomerOtp;
 import com.jippy.customerandorder.entity.CustomerStatus;
 import com.jippy.customerandorder.exception.*;
+import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.OtpService;
 import com.jippy.customerandorder.iservice.SmsCountryService;
 import com.jippy.customerandorder.repository.CoCustomerRepository;
@@ -18,6 +17,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +31,8 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 
 @Service
 @Transactional
@@ -45,6 +52,7 @@ public class OtpServiceImpl implements OtpService {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final CustomerStatusRepository customerStatusRepository;
+    private final FMFeignClient fmFeignClient;
 
     @Override
     public ApiResponseDto sendOtp(SendOtpRequestDto request) {
@@ -166,14 +174,44 @@ public class OtpServiceImpl implements OtpService {
 
             redisTemplate.delete(redisKey);
 
-            String token = jwtService.generateToken(customer);
+            ResponseEntity<CoUserDto> existingUser = fmFeignClient.
+                    findByUserIdAndUserType(customer.getCustomerId(),COConstants.CUSTOMER);
+            CoUserDto existingUserDto = existingUser.getBody();
+            if (existingUserDto.getUserId() == null) {
+                CoUserDto userDto = new CoUserDto();
+
+                userDto.setUsername(mobileNumber);
+                userDto.setUserId(customer.getCustomerId());
+                userDto.setUserType(COConstants.CUSTOMER);
+                userDto.setPassword(customer.getCustomerId()+mobileNumber);
+                try{
+                    ResponseEntity<CoUserDto> userDtoResponseEntity = fmFeignClient.createUser(userDto);
+                    existingUserDto = userDtoResponseEntity.getBody();
+                } catch (Exception e) {
+                    log.error("User creation failed in FM", e);
+                    throw new RuntimeException(e);
+                }
+
+                log.info("User created in FM for CustomerId: {}", customer.getCustomerId());
+            }
+
+            CoLoginDto loginDto = new CoLoginDto();
+
+            loginDto.setUsername(mobileNumber);
+            loginDto.setPassword(customer.getCustomerId()+mobileNumber);
+            ResponseEntity<?> userDtoResponseEntity =  fmFeignClient.login(loginDto);
+            Object body = userDtoResponseEntity.getBody();
+
+            ObjectMapper mapper = new ObjectMapper();
+            // Safely convert the LinkedHashMap to your desired DTO
+            AuthResponseDto responseDto = mapper.convertValue(body, AuthResponseDto.class);
 
             JwtResponseDto response = new JwtResponseDto();
             response.setCustomerId(customer.getCustomerId().longValue());
             response.setMobileNumber(customer.getPhoneNumber());
             response.setFirstName(customer.getFirstName());
             response.setLastName(customer.getLastName());
-            response.setAccessToken(token);
+            response.setAccessToken(responseDto.getJwt());
             response.setExpiresIn(24 * 60 * 60L);
 
             log.info("OTP_SERVICE | VERIFY_OTP | SUCCESS");

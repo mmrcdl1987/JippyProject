@@ -62,7 +62,7 @@ public class CustomerAuthController {
         }
     }
 
-    @GetMapping("/validate-token")
+   /* @GetMapping("/validate-token")
     public ResponseEntity<ValidateTokenResponseDto> validateToken() {
 
         log.info("API | CUSTOMER_AUTH | VALIDATE_TOKEN | START");
@@ -70,5 +70,5 @@ public class CustomerAuthController {
         response.setValid(true);
         log.info("API | CUSTOMER_AUTH | VALIDATE_TOKEN | SUCCESS | valid={}", response.isValid());
         return ResponseEntity.ok(response);
-    }
+    }*/
 }

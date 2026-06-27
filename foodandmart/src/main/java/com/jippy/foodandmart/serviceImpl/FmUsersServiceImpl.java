@@ -1,18 +1,27 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmPasswordResetByAdminRequestDto;
 import com.jippy.foodandmart.dto.FmUserDto;
+import com.jippy.foodandmart.entity.FmRolePermissions;
+import com.jippy.foodandmart.entity.FmRoles;
 import com.jippy.foodandmart.entity.FmUser;
+import com.jippy.foodandmart.entity.FmUserRolePermissions;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
+import com.jippy.foodandmart.repository.FmRolePermissionsRepository;
+import com.jippy.foodandmart.repository.FmRoleRepository;
 import com.jippy.foodandmart.repository.FmUserRepository;
+import com.jippy.foodandmart.repository.FmUserRolesRepository;
 import com.jippy.foodandmart.service.IFmUsersService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -24,6 +33,15 @@ public class FmUsersServiceImpl implements IFmUsersService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private FmRoleRepository roleRepository;
+
+    @Autowired
+    private FmRolePermissionsRepository rolePermissionsRepository;
+
+    @Autowired
+    private FmUserRolesRepository userRolesRepository;
+
 
     // -------------------------------
     // LOGIC: UPDATE is_active = 'N'
@@ -32,23 +50,25 @@ public class FmUsersServiceImpl implements IFmUsersService {
     public void deactivateDriver(Integer userId) {
 
         // Find driver user
-        FmUser user = usersRepo.findByUserIdAndUserType(userId, "DRIVER");
+        Optional<FmUser> user = usersRepo.findByUserIdAndUserType(userId, "DRIVER");
 
-        if (user == null) {
+        if (!user.isPresent()) {
             throw new RuntimeException("Driver not found in users table");
         }
 
+        FmUser existingUser = user.get();
         //for updating the user record, we will set is_active = 'N' when orders lock in Co wallet table = false
-        user.setIsActive("N");
+        existingUser.setIsActive("N");
 
-        user.setUpdatedAt(LocalDateTime.now());
+        existingUser.setUpdatedAt(LocalDateTime.now());
 
-        usersRepo.save(user);
+        usersRepo.save(existingUser);
     }
 
     //  for creating user in FM microservice, we will receive the user details from
     //  CO microservice and then we will save the user details in FM microservice users table
     @Override
+    @Transactional
     public FmUserDto createUser(FmUserDto dto) {
 
 //  checking whether username with same role already exists or not
@@ -67,6 +87,37 @@ public class FmUsersServiceImpl implements IFmUsersService {
         user.setCreatedBy(dto.getUserId()); // userid = driverid by CO MicroService
 
         FmUser savedUser = usersRepo.save(user);
+
+        FmRoles role = new FmRoles();
+        log.info("=-========================{}",dto.getUserType());
+
+        if(dto.getUserType().equals(FmAppConstants.TYPE_DRIVER)){
+            role = roleRepository.findByRoleName(FmAppConstants.ROLE_DRIVER);
+            if (role == null) {
+                throw new RuntimeException("Role not found");
+            }
+        }else if(dto.getUserType().equals(FmAppConstants.TYPE_CUSTOMER)){
+            log.info("=-========================{}",dto.getUserType());
+            role = roleRepository.findByRoleName(FmAppConstants.ROLE_CUSTOMER);
+            if (role == null) {
+                throw new RuntimeException("Role not found");
+            }
+            log.info("=-========================{}",role.getRoleName());
+        }
+
+        //  Fetch role_permissions
+        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
+
+        if (rolePermissionsList.isEmpty()) {
+            throw new RuntimeException("No permissions mapped to role");
+        }
+        log.info("=-========================{}",rolePermissionsList.size());
+        //  Map user → role_permissions
+        for (FmRolePermissions rp : rolePermissionsList) {
+            FmUserRolePermissions urp = FmMerchantMapper.toUserRolesEntity(savedUser, rp);
+            userRolesRepository.save(urp);
+            log.info("=-========================{}",urp.getUserId());
+        }
 
         FmUserDto userDto = new FmUserDto();
         userDto.setUserId(savedUser.getUserId());
@@ -105,5 +156,33 @@ public class FmUsersServiceImpl implements IFmUsersService {
                 +" for your Role :" + dto.getUserType();
 
     }
+
+    @Override
+    public FmUserDto findByUserIdAndUserType(Integer userId, String userType) {
+
+        log.info("findByUserIdAndUserType API called with userId: {}, userType:{} ", userId,
+                userType);
+        Optional<FmUser> user = usersRepo.findByUserIdAndUserType(userId,userType);
+               /* .orElseThrow(() -> {
+                    log.error("User not found with userId: {} and userType: {}", userId,
+                            userType);
+
+                    return new ResourceNotFoundException("User not found with username: "
+                           +userId + " and userType: " +userType);
+                });*/
+        FmUserDto userDto = new FmUserDto();
+        if(!user.isPresent()){
+            return userDto;
+        }
+
+        userDto.setUserId(user.get().getUsersId());
+        userDto.setUserId(user.get().getUserId());
+        userDto.setUserType(user.get().getUserType());
+        userDto.setUsername(user.get().getUsername());
+        userDto.setIsActive(user.get().getIsActive());
+
+        return  userDto;
+    }
+
 
 }

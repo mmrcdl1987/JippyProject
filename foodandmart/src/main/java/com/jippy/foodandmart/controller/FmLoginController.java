@@ -121,11 +121,12 @@ public class FmLoginController {
 
             WebAuthResponseDto authResponseDto = new WebAuthResponseDto();
 
-            authResponseDto.setJwt(jwt);
+            authResponseDto.setToken(jwt);
             authResponseDto.setUserType(user.getUserType());
             authResponseDto.setUserId(user.getUserId());
-            authResponseDto.setRoles(roles);
+            authResponseDto.setRole(roles);
             authResponseDto.setPermissions(permissions);
+            authResponseDto.setUsername(user.getUsername());
 
             return ResponseEntity.ok(authResponseDto);
 

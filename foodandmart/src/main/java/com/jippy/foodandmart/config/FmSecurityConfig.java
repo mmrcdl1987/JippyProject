@@ -32,7 +32,6 @@ public class FmSecurityConfig {
         return config.getAuthenticationManager();
     }
 
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
@@ -46,20 +45,22 @@ public class FmSecurityConfig {
 
                         // 2. ADD THIS: Allow Health Checks
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/fm/users/findByUserIdAndUserType").permitAll()
+                        .requestMatchers("/api/fm/users/createUser").permitAll()
 
                         .requestMatchers("/api/fm/auth/**", "/auth/**").permitAll() // Public login/register
 
                         //.requestMatchers("/api/fm/**").authenticated() // Protected routes
                         // 2. READ-ONLY ROLE (Can only perform GET requests)
-                        .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN","CUSTOMER")
 
                         // 3. CREATE/UPDATE ROLE (Can perform POST/PUT/PATCH)
-                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
-                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
-                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
+                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
+                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
 
                         // 4. FULL ADMIN (Can also DELETE)
-                        .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT")
+                        .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

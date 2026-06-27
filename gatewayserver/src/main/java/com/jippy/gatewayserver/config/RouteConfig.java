@@ -109,11 +109,31 @@ public class RouteConfig     {
                         })
                         .uri("lb://FOODANDMART"))
 
+                .route("foodandmart-login", r -> r.path("/api/fm/users/findByUserIdAndUserType")
+                        .filters(f -> {
+                            return f;
+                        })
+                        .uri("lb://FOODANDMART"))
+                .route("co-foodandmart-login", r -> r.path("/api/fm/users/createUser")
+                        .filters(f -> {
+                            return f;
+                        })
+                        .uri("lb://FOODANDMART"))
+
 
                 // 3. PROTECTED SERVICE ENDPOINTS (Applies your Auth Filter)
                 .route("foodandmart-protected", r -> r.path("/api/fm/**")
                         .filters(f -> f.filter(authFilter.apply(new AuthenticationFilter.Config())))
                         .uri("lb://FOODANDMART"))
+
+                // 1. Customer Service Route (Permit All)
+                .route("co-auth-service", r -> r.path("/api/co/auth/**")
+                        .filters(f -> {
+                            log.info("DEBUG: Routing public login/registration to Auth Service...");
+                            // CRUCIAL: Strips /api/fm from the path so downstream microservice gets /auth/login
+                            return f;
+                        })
+                        .uri("lb://CUSTOMERANDORDER"))
 
                 // 4. PUBLIC BYPASS ROUTE FOR CUSTOMERANDORDER SWAGGER DOCS JSON
                 .route("customerandorder-docs", r -> r.path("/api/co/v3/api-docs")

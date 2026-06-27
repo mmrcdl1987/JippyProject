@@ -50,4 +50,12 @@ public class FmUsersController {
     }
 
 
+    @GetMapping("/findByUserIdAndUserType")
+    public ResponseEntity<FmUserDto> findByUserIdAndUserType(@RequestParam Integer userId,@RequestParam String userType) {
+        return ResponseEntity.ok(usersService.findByUserIdAndUserType(userId,userType));
+    }
+
+
+
+
 }

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -40,18 +41,18 @@ public class FmFleetManagerServiceImpl implements FmFleetManagerService {
 
         log.info("Amount received from Driver Service = {}", walletResponse.getUpdatedCodAmount());
 
-        FmUser user = fmUsersRepository.findByUserIdAndUserType(driverId, "DRIVER");
+        Optional<FmUser> user = fmUsersRepository.findByUserIdAndUserType(driverId, "DRIVER");
 
-        if (user == null) {
+        if (!user.isPresent()) {
             throw new ResourceNotFoundException("Driver not found for driverId : " + driverId);
         }
+        FmUser existingUser = user.get();
+        log.info("User status before update = {}", existingUser.getIsActive());
 
-        log.info("User status before update = {}", user.getIsActive());
+        existingUser.setIsActive("Y");
+        existingUser.setUpdatedAt(LocalDateTime.now());
 
-        user.setIsActive("Y");
-        user.setUpdatedAt(LocalDateTime.now());
-
-        FmUser savedUser = fmUsersRepository.save(user);
+        FmUser savedUser = fmUsersRepository.save(existingUser);
 
         log.info("After Save User Status = {}", savedUser.getIsActive());
 

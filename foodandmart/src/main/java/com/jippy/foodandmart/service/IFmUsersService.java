@@ -15,4 +15,6 @@ public interface IFmUsersService {
 
 //     for api -passwordResetByAdminForRoles
     String passwordResetByAdminForRoles( FmPasswordResetByAdminRequestDto dto);
+
+    FmUserDto findByUserIdAndUserType(Integer userId, String userType);
 }
