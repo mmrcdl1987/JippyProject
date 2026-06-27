@@ -86,9 +86,8 @@ springdoc:
     path: /api/fm/v3/api-docs
 
 aws:
+  s3:
+    bucket-name: jippys3bucket
+    region: ap-south-2
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
-
-  s3:
-    region: ap-south-2
-    bucket-name: jippys3bucket
