@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -14,6 +15,10 @@ public class FmProductDto {
     private BigDecimal Price;
     private Boolean    isVeg;
     private Boolean    hasProductVariants;
+    // Outlet Category Toggle
+    @Schema(example = "true")
+    private Boolean isAvailable;
+
     private List<FmProductVariantDTO> variants;
     private List<FmProductTimingDto> productTimings;
 }

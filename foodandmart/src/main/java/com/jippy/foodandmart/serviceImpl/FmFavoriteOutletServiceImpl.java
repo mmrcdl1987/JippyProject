@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +35,7 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 
     //    changed for production
     @Override
+    @Transactional
     public FmFavoriteOutletResponseDto toggleFavorite(FmFavoriteOutletRequestDto dto) {
 
         logger.info("Favorite toggle request received for customerId: {} and outletId: {}",
@@ -125,10 +127,74 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 //    }
 
 
+    /**
+     * Builds a complete outlet response for Favorites, Frequent and Recent sections.
+     *
+     * Scenarios Supported:
+     * 1. Favorites + Frequent + Recent
+     * 2. Favorites but No Order History
+     * 3. Order History but No Favorites
+     */
+    //    HELPER METHOD- 1 /RE_USABLE Function
+    private FmFavoriteOutletResponseDto buildOutletResponse(
+            Integer customerId, Integer outletId) {
+
+//        First it creates an empty DTO.
+        FmFavoriteOutletResponseDto dto = new FmFavoriteOutletResponseDto();
+
+        // Customer & Outlet Details
+        dto.setCustomerId(customerId);
+        dto.setOutletId(outletId);
+
+        // Reuse common outlet details mapping
+        setOutletDetails(dto, outletId);
+
+        // Check whether this outlet is already marked as favourite from favourites table
+        Optional<FmFavoriteOutlet> favourite =
+                repository.findByCustomerIdAndOutletId(customerId, outletId);
+
+        if (favourite.isPresent()) {
+
+            dto.setFavoriteOutletId(favourite.get().getFavoriteOutletsId());
+            dto.setCreatedAt(favourite.get().getCreatedAt());
+            dto.setIsFavourite(true);
+        } else {
+            dto.setIsFavourite(false);
+
+        }
+
+        return dto;
+    }
+    //    HELPER METHOD- 2 /RE_USABLE Function
+    private void setOutletDetails(FmFavoriteOutletResponseDto dto, Integer outletId) {
+
+        FmOutlet outlet = outletRepository.findById(outletId).orElse(null);
+
+        if (outlet != null) {
+            dto.setOutletName(outlet.getOutletName());
+            dto.setOutletPicUrl(outlet.getOutletPicUrl());
+            dto.setReview(outlet.getReview());
+
+        }
+    }
+
+
     //    returning list of favorite outlets for a customer based on the customerId
 //   response + wrapper class to return list of favorite outlets for a customer
     @Override
     public FmFavoriteOutletWrapperDto getFavorites(Integer customerId) {
+        /*
+         * UI Response Scenarios:
+         *
+         * 1. Favorites + Frequent + Recent:
+         *    Returns complete details for favorite, frequent, and recent outlets.
+         *
+         * 2. Favorites but No Order History:
+         *    Returns favorite outlets, an empty frequentOutlets list, and recentOutlet as null.
+         *
+         * 3. Order History but No Favorites:
+         *    Returns an empty favorites list along with frequent and recent outlet details.
+         */
 
         logger.info("Fetching favorites for customerId: {}", customerId);
 
@@ -149,45 +215,87 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
             FmFavoriteOutletResponseDto dto =
                     FmFavoriteOutletMapper.toFavOutletDto(entity);
 
-            FmOutlet outlet = outletRepository.findById(entity.getOutletId())
-                    .orElse(null);
-
-//            from Outlet table//FmOutlet Entity
-            if (outlet != null) {
-                dto.setOutletName(outlet.getOutletName());
-                dto.setOutletPicUrl(outlet.getOutletPicUrl());
-                dto.setReview(outlet.getReview());
-
-            }
-
+            // Reuse common outlet details mapping
+            setOutletDetails(dto, entity.getOutletId());
             favorites.add(dto);
         }
- // -------------------------------------------------
-
+        // -------------------------------------------------
 
         // 2. Get frequent outlets from CO
-        List<Integer> frequentOutlets = feignClient.getFrequentOutlets(customerId);
+        //        List<Integer> frequentOutlets = feignClient.getFrequentOutlets(customerId);
+        //        if (frequentOutlets == null) {
+        //            frequentOutlets = new ArrayList<>();
+        //        }
+        // ------------------------------------------------------------
+        // Fetch Frequent Outlets
+        // If customer has no frequent orders,
+        // return an empty list instead of failing the API.
+        // ------------------------------------------------------------
 
-//        for the case when there are no frequent outlets,
-//        we should return empty list [] instead of null in the response
-        if (frequentOutlets == null) {
-            frequentOutlets = new ArrayList<>();
+        List<Integer> frequentOutletIds = new ArrayList<>();
+
+        try {
+            List<Integer> ids = feignClient.getFrequentOutlets(customerId);
+
+            if (ids != null) {
+                frequentOutletIds.addAll(ids);
+            }
+        } catch (Exception e) {
+
+            logger.info("No frequent outlets found for customerId: {}", customerId);
+
         }
 
+        List<FmFavoriteOutletResponseDto> frequentOutlets = new ArrayList<>();
+
+        for (Integer outletId : frequentOutletIds) {
+
+            // Build complete outlet response for this outlet
+            FmFavoriteOutletResponseDto frequentOutlet = buildOutletResponse(customerId, outletId);
+
+            // Add it to the frequent outlets list
+            frequentOutlets.add(frequentOutlet);
+
+        }
+//  ---------------------------------------------------------------------------
         //  3. Get recent outlet from CO
-        // this handles the case when there are no orders at all for the customer.
-//        if no order handled by global exception handler and
-//        return recentOutlet as null in the response
-        Integer recentOutlet = feignClient.getRecentOutlet(customerId);
+//        Integer recentOutlet = feignClient.getRecentOutlet(customerId);
+        // ------------------------------------------------------------
+        // Fetch Recent Outlet
+        // If customer has no recent orders,
+        // return recentOutlet as null instead of throwing an exception.
+        // ------------------------------------------------------------
 
-            // 4. Prepare response
-            FmFavoriteOutletWrapperDto response = new FmFavoriteOutletWrapperDto();
+        Integer recentOutletId = null;
 
-            response.setFavorites(favorites);
-            response.setFrequentOutlets(frequentOutlets);
-            response.setRecentOutlet(recentOutlet);
+        try {
+            recentOutletId = feignClient.getRecentOutlet(customerId);
 
-            return response;
+        } catch (Exception e) {
+
+            logger.info("No recent outlet found for customerId: {}", customerId);
 
         }
+
+        FmFavoriteOutletResponseDto recentOutlet = null;
+
+        if (recentOutletId != null) {
+
+            // Build complete response for recent outlet
+            recentOutlet = buildOutletResponse(customerId, recentOutletId);
+
+        }
+
+        // 4. Prepare response
+        FmFavoriteOutletWrapperDto response = new FmFavoriteOutletWrapperDto();
+
+        response.setFavorites(favorites);
+
+        response.setFrequentOutlets(frequentOutlets);
+
+        response.setRecentOutlet(recentOutlet);
+
+        return response;
+
+    }
  }
