@@ -37,6 +37,17 @@ public class FmMerchantRequestDTO {
     @Pattern(regexp = "^[6-9]\\d{9}$", message = "Phone must be a valid 10-digit Indian mobile number")
     private String phone;
 
+    @NotBlank(message = "Username is required")
+    @Size(min = 4, max = 50, message = "Username must be between 4 and 50 characters")
+    private String username;
+
+    @NotBlank(message = "Password is required")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).{8,20}$",
+            message = "Password must contain uppercase, lowercase, number and special character"
+    )
+    private String password;
+
     @NotBlank(message = "Outlet type is required")
     @Size(max = 50, message = "Outlet type must not exceed 50 characters")
     private String outletType;

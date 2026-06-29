@@ -172,12 +172,15 @@ public final class FmOutletMapper {
      * Converts an {@link FmOutletRequestDTO} into a new {@link FmOutlet} entity.
      */
     public static FmOutlet toEntity(FmOutletRequestDTO dto) {
+
         FmOutlet outlet = new FmOutlet();
+
         outlet.setOutletName(dto.getOutletName().trim());
         outlet.setMerchantId(dto.getMerchantId());
         outlet.setCuisineType(dto.getCuisineType().trim());
         outlet.setOutletPhone(dto.getOutletPhone().trim());
         outlet.setIsActive("Y");
+
         return outlet;
     }
 
@@ -259,16 +262,17 @@ public final class FmOutletMapper {
      * Converts a saved {@link FmOutlet} entity into an {@link FmOutletCreatedDTO}
      * including one-time generated credentials.
      */
-    public static FmOutletCreatedDTO toCreatedDTO(FmOutlet outlet, String loginId, String password) {
+    public static FmOutletCreatedDTO toCreatedDTO(FmOutlet outlet) {
+
         FmOutletCreatedDTO dto = new FmOutletCreatedDTO();
+
         dto.setOutletId(outlet.getOutletId());
         dto.setOutletName(outlet.getOutletName());
         dto.setMerchantId(outlet.getMerchantId());
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
         dto.setIsActive(outlet.getIsActive());
-        dto.setOutletLoginId(loginId);
-        dto.setOutletPassword(password);
+
         return dto;
     }
 

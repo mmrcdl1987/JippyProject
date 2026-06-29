@@ -58,11 +58,14 @@ public class FmOutletController {
      * @return 201 with an {@link FmOutletCreatedDTO} including portal credentials
      */
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutlet(@Valid @RequestBody FmOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutlet(
+            @RequestHeader("Create-Outlet-Token") String token,
+            @Valid @RequestBody FmOutletRequestDTO dto) {
 
         log.info("[OUTLET] POST /api/outlets name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
         FmOutletCreatedDTO saved = outletService.createOutlet(dto);
-        log.info("[OUTLET] Created: outletId={}, loginId={}", saved.getOutletId(), saved.getOutletLoginId());
+        log.info("[OUTLET] Created: outletId={}",
+                saved.getOutletId());
         return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Outlet created successfully", saved));
     }
 
@@ -537,8 +540,6 @@ public class FmOutletController {
                 FmBulkOutletResultDTO.OutletCredential cred = new FmBulkOutletResultDTO.OutletCredential();
                 cred.setOutletId(created.getOutletId());
                 cred.setOutletName(created.getOutletName());
-                cred.setOutletLoginId(created.getOutletLoginId());
-                cred.setOutletPassword(created.getOutletPassword());
                 credentials.add(cred);
             } catch (Exception e) {
                 log.warn("[BULK] Row {} failed: {}", rowNum, e.getMessage());

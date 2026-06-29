@@ -3,10 +3,7 @@ package com.jippy.foodandmart.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.util.List;
@@ -40,12 +37,20 @@ public class FmOutletRequestDTO {
     @Pattern(regexp = "^[6-9]\\d{9}$", message = "Outlet phone must be a valid 10-digit Indian mobile number")
     private String outletPhone;
 
-    // Outlet ID used as the predecessor / login identity
-    private String outletId;
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    private String email;
 
-    // Outlet password (portal credential)
-    private String outletPassword;
+    @NotBlank(message = "Username is required")
+    @Size(min = 4, max = 50)
+    private String username;
 
+    @NotBlank(message = "Password is required")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).{8,20}$",
+            message = "Password must contain uppercase, lowercase, number and special character"
+    )
+    private String password;
     // ── address table ─────────────────────────────────────────────────────────
 
     @NotBlank(message = "Building number is required")
