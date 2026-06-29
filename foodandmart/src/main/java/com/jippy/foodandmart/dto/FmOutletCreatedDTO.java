@@ -16,9 +16,4 @@ public class FmOutletCreatedDTO {
     private String  outletPhone;
     private String  isActive;
 
-    /** Auto-generated login ID  e.g. "ravi4567" (name4 + phone-last4) */
-    private String outletLoginId;
-
-    /** Auto-generated password e.g. "ravi4567" (same formula, share with manager) */
-    private String outletPassword;
 }

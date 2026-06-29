@@ -45,7 +45,6 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     private final FmMerchantKycRepository merchantKycRepository;
     private final FmMerchantBankDetailsRepository bankDetailsRepository;
     private final FmUserRepository userRepository;
-    private final FmEmployeeRepository employeeRepository;
     private final Validator validator;
     private final FmUserRolesRepository userRolesRepository;
     private final FmRoleRepository roleRepository;
@@ -61,7 +60,6 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         this.merchantKycRepository = merchantKycRepository;
         this.bankDetailsRepository = bankDetailsRepository;
         this.userRepository = userRepository;
-        this.employeeRepository = employeeRepository;
         this.validator = validator;
         this.roleRepository = roleRepository;
         this.userRolesRepository = userRolesRepository;
@@ -111,6 +109,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         log.info("[MERCHANT] Onboarding complete: merchantId={}", merchant.getMerchantId());
         return merchant;
     }
+
 
     // ── Bulk Upload ───────────────────────────────────────────────────────────
 
@@ -199,52 +198,63 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     }
 
     private void createMerchantUser(FmMerchantRequestDTO dto, Integer merchantId) {
-        String phone = dto.getPhone().trim();
-        String email = dto.getEmail().toLowerCase().trim();
-        String phoneLast4 = phone.length() >= 4 ? phone.substring(phone.length() - 4) : phone;
-        String emailFirst4 = email.length() >= 4 ? email.substring(0, 4) : email;
 
-        String username = dto.getFirstName().trim().toLowerCase().replaceAll("\\s+", "") + phoneLast4;
-        String password = emailFirst4 + phoneLast4;
-//
-     //  checking whether username with same role already exists or not
-        Optional<FmUser> existingUser = userRepository.findByUsernameAndUserType
-                (username, FmAppConstants.TYPE_MERCHANT);
+        String username = dto.getUsername().trim();
+
+        Optional<FmUser> existingUser =
+                userRepository.findByUsernameAndUserType(
+                        username,
+                        FmAppConstants.TYPE_MERCHANT
+                );
+
         if (existingUser.isPresent()) {
-            throw new ResourceNotFoundException("Username already exists with this role." +
-                    " Please try a different username.");
+            throw new MerchantAlreadyExistsException(
+                    "Username already exists."
+            );
         }
 
-//				for encoding the password before saving to database, we will use the password encoder bean that we have defined in the security configuration class. we will autowire the password encoder bean in the service class and then we will use it to encode the password before saving to database. this is a one way encoding and we cannot decode the password back to original form. when user tries to login with username and password, we will encode the password entered by user and then we will compare it with the encoded password stored in database.
-//				if both are same then login is successful otherwise login will fail.
-        String encodedPassword = passwordEncoder.encode(password);
-//
-        //  Save user
-        FmUser user = FmMerchantMapper.toUserEntity(username, encodedPassword, merchantId, FmAppConstants.TYPE_MERCHANT);
+        String encodedPassword =
+                passwordEncoder.encode(dto.getPassword());
+
+        FmUser user =
+                FmMerchantMapper.toUserEntity(
+                        username,
+                        encodedPassword,
+                        merchantId,
+                        FmAppConstants.TYPE_MERCHANT
+                );
+
         user = userRepository.save(user);
 
-        // Fetch role
-        FmRoles role = roleRepository.findByRoleName(FmAppConstants.ROLE_MERCHANT);
+        FmRoles role = roleRepository.findByRoleName(
+                FmAppConstants.ROLE_MERCHANT
+        );
+
         if (role == null) {
-            throw new RuntimeException("Role not found");
+            throw new ResourceNotFoundException("Merchant role not found.");
         }
 
-        //  Fetch role_permissions
-        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
+        List<FmRolePermissions> rolePermissions =
+                rolePermissionsRepository.findByRole(role);
 
-        if (rolePermissionsList.isEmpty()) {
-            throw new RuntimeException("No permissions mapped to role");
+        if (rolePermissions.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No permissions mapped to Merchant role."
+            );
         }
 
-        //  Map user → role_permissions
-        for (FmRolePermissions rp : rolePermissionsList) {
+        for (FmRolePermissions permission : rolePermissions) {
 
-            FmUserRolePermissions urp = FmMerchantMapper.toUserRolesEntity(user, rp);
+            FmUserRolePermissions userRole =
+                    FmMerchantMapper.toUserRolesEntity(
+                            user,
+                            permission
+                    );
 
-            userRolesRepository.save(urp);
+            userRolesRepository.save(userRole);
         }
 
-        log.info("[MERCHANT] Portal user created with permissions: {}", username);
+        log.info("Merchant login created successfully. username={}", username);
     }
 
     private FmBulkUploadResultDTO buildErrorResult(int rowNum, String reason) {

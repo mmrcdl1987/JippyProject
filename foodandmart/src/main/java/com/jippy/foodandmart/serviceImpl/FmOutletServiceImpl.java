@@ -1,10 +1,13 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.Enum.FmOtpPurpose;
+import com.jippy.foodandmart.Enum.FmOtpStatus;
 import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.exception.InvalidOtpException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmNearbyOutletMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
@@ -63,6 +66,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmProductVariantRepository productVariantRepository;
     private final FmGoogleMapsService googleMapsService;
     private final PasswordEncoder passwordEncoder;
+    private final FmEmailOtpVerificationRepository otpRepository;
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -125,38 +129,111 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 //    ------------------------------------------------------------------------
     // ── Single Create ─────────────────────────────────────────────────────────
-
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
-        log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
+
+        log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}",
+                dto.getOutletName(),
+                dto.getMerchantId(),
+                dto.getOutletPhone());
 
         validateOutletRequest(dto);
 
-        if (!merchantRepository.existsById(dto.getMerchantId()))
-            throw new IllegalArgumentException("Merchant ID " + dto.getMerchantId() + " does not exist");
-        if (outletRepository.existsByOutletPhone(dto.getOutletPhone()))
-            throw new IllegalArgumentException("An outlet with phone " + dto.getOutletPhone() + " already exists");
-        if (outletRepository.existsByMerchantIdAndOutletName(dto.getMerchantId(), dto.getOutletName()))
-            throw new IllegalArgumentException("Outlet '" + dto.getOutletName() + "' already exists for this merchant");
+        if (!merchantRepository.existsById(dto.getMerchantId())) {
+            throw new IllegalArgumentException(
+                    "Merchant ID " + dto.getMerchantId() + " does not exist");
+        }
 
-        Point location = buildPoint(dto.getLatitude(), dto.getLongitude());
+        if (outletRepository.existsByOutletPhone(dto.getOutletPhone())) {
+            throw new IllegalArgumentException(
+                    "An outlet with phone " + dto.getOutletPhone() + " already exists");
+        }
+
+        if (userRepository.findByUsernameAndUserType(
+                dto.getUsername(),
+                FmAppConstants.TYPE_OUTLET
+        ).isPresent()) {
+
+            throw new IllegalArgumentException(
+                    "Username already exists.");
+        }
+
+        if (outletRepository.existsByMerchantIdAndOutletName(
+                dto.getMerchantId(),
+                dto.getOutletName())) {
+
+            throw new IllegalArgumentException(
+                    "Outlet '" + dto.getOutletName() + "' already exists for this merchant");
+        }
+
+        Point location = buildPoint(
+                dto.getLatitude(),
+                dto.getLongitude());
+
+        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Merchant not found."));
+
+        // Merchant email and outlet email must be same
+        if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getEmail())) {
+
+            throw new IllegalArgumentException(
+                    "Merchant email and outlet email must be same."
+            );
+        }
+
+        // Verify latest CREATE_OUTLET OTP
+        FmEmailOtpVerification otpVerification =
+                otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                                merchant.getMerchantEmail(),
+                                FmOtpPurpose.CREATE_OUTLET)
+                        .orElseThrow(() ->
+                                new InvalidOtpException(
+                                        "Please verify OTP before creating outlet."
+                                ));
+
+        if (otpVerification.getStatus() != FmOtpStatus.VERIFIED
+                || !Boolean.TRUE.equals(otpVerification.getIsVerified())) {
+
+            throw new InvalidOtpException(
+                    "Please verify OTP before creating outlet."
+            );
+        }
+
+
         FmOutlet outlet = FmOutletMapper.toEntity(dto);
+
+        // Always use merchant email
+        outlet.setOutletEmail(
+                merchant.getMerchantEmail()
+        );
+
         outlet.setOutletLocation(location);
+
         outlet = outletRepository.save(outlet);
+
         log.info("[OUTLET] Saved: outletId={}", outlet.getOutletId());
 
         saveAddress(dto, outlet.getOutletId());
+
         saveOperatingDays(dto, outlet.getOutletId());
 
-        String loginId = FmCredentialUtil.generateOutletLoginId(dto.getOutletName(), dto.getOutletPhone());
-        String password = FmCredentialUtil.generateOutletPassword(dto.getOutletName(), dto.getOutletPhone());
-        saveOutletUser(loginId, password, dto.getOutletPhone(), outlet.getOutletId(), outlet.getOutletName());
-        log.info("[OUTLET] Onboarding complete: outletId={}, loginId={}", outlet.getOutletId(), loginId);
+        saveOutletUser(
+                dto.getUsername(),
+                dto.getPassword(),
+                outlet.getOutletId()
+        );
 
-        return FmOutletMapper.toCreatedDTO(outlet, loginId, password);
+        otpVerification.setStatus(FmOtpStatus.CONSUMED);
+        otpVerification.setVerifiedAt(LocalDateTime.now());
+        otpRepository.save(otpVerification);
+
+        log.info("[OUTLET] Onboarding complete: outletId={}",
+                outlet.getOutletId());
+
+        return FmOutletMapper.toCreatedDTO(outlet);
     }
-
     // ── Bulk Upload ───────────────────────────────────────────────────────────
    /* @Transactional(rollbackFor =  Exception.class)
     @Override
@@ -299,57 +376,70 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("[OUTLET] Operating slots saved for outletId={}", outletId);
     }
 
-    private void saveOutletUser(String loginId, String password, String phone, Integer outletId, String outletName) {
-        String username = loginId;
-//
-        //  checking whether username with same role already exists or not
-        Optional<FmUser> existingUser = userRepository.findByUsernameAndUserType
-                (username, FmAppConstants.TYPE_OUTLET);
+    private void saveOutletUser(
+            String username,
+            String password,
+            Integer outletId) {
+
+        Optional<FmUser> existingUser =
+                userRepository.findByUsernameAndUserType(
+                        username,
+                        FmAppConstants.TYPE_OUTLET
+                );
+
         if (existingUser.isPresent()) {
+
             throw new ResourceNotFoundException(
-                    "Username already exists with this role. Please try a different username.");
+                    "Username already exists."
+            );
         }
-       /* if (userRepository.existsByUsername(username)) {
-            String base = username;
-            int suffix = 1;
-            while (userRepository.existsByUsername(username)) {
-                username = base + suffix++;
-            }
-            log.warn("[OUTLET] Username collision resolved: final={}", username);
-        }*/
 
-        String encodedPassword = passwordEncoder.encode(password);
-//
+        String encodedPassword =
+                passwordEncoder.encode(password);
 
+        FmUser user =
+                FmMerchantMapper.toUserEntity(
+                        username,
+                        encodedPassword,
+                        outletId,
+                        FmAppConstants.TYPE_OUTLET
+                );
 
-        FmUser users = FmMerchantMapper.toUserEntity(username, encodedPassword, outletId, FmAppConstants.TYPE_OUTLET);
-        users = userRepository.save(users);
-        log.info("[OUTLET] User saved: username={}, outletId={}", username, outletId);
+        user = userRepository.save(user);
 
-        // Fetch role
-        FmRoles role = roleRepository.findByRoleName(FmAppConstants.ROLE_OUTLET);
+        log.info("[OUTLET] User created successfully. Username={}",
+                username);
+
+        FmRoles role =
+                roleRepository.findByRoleName(
+                        FmAppConstants.ROLE_OUTLET
+                );
+
         if (role == null) {
             throw new RuntimeException("Role not found");
         }
 
-        //  Fetch role_permissions
-        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
+        List<FmRolePermissions> permissions =
+                rolePermissionsRepository.findByRole(role);
 
-        if (rolePermissionsList.isEmpty()) {
+        if (permissions.isEmpty()) {
             throw new RuntimeException("No permissions mapped to role");
         }
 
-        //  Map user → role_permissions
-        for (FmRolePermissions rp : rolePermissionsList) {
+        for (FmRolePermissions permission : permissions) {
 
-            FmUserRolePermissions urp = FmMerchantMapper.toUserRolesEntity(users, rp);
+            FmUserRolePermissions userRole =
+                    FmMerchantMapper.toUserRolesEntity(
+                            user,
+                            permission
+                    );
 
-            userRolesRepository.save(urp);
+            userRolesRepository.save(userRole);
         }
 
-        log.info("[MERCHANT] Portal user created with permissions: {}", username);
+        log.info("[OUTLET] Role mapping completed for username={}",
+                username);
     }
-
 
     private LocalTime parseTime(String s, LocalTime fallback) {
         if (s == null || s.isBlank()) return fallback;
