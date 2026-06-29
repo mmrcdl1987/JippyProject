@@ -1,10 +1,13 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.Enum.FmOtpPurpose;
+import com.jippy.foodandmart.Enum.FmOtpStatus;
 import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.exception.InvalidOtpException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmNearbyOutletMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
@@ -64,6 +67,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmGoogleMapsService googleMapsService;
     private final PasswordEncoder passwordEncoder;
     private final FmEmailOtpVerificationRepository otpRepository;
+    private final FmFavoriteOutletRepository favoriteOutletRepository;
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
