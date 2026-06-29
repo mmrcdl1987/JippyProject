@@ -298,6 +298,8 @@ public final class FmOutletMapper {
                 outlet.setOutletId(row.getOutletId());
                 outlet.setOutletName(row.getOutletName());
                 outlet.setOutletPhone(row.getOutletPhone());
+                // Outlet availability from outlets.is_toggle
+                outlet.setIsAvailable(row.getOutletAvailable());
 
                 // Map Timings
                 String day = row.getOutletDay();
@@ -317,6 +319,8 @@ public final class FmOutletMapper {
                         FmCategoryDto c = new FmCategoryDto();
                         c.setCategoryId(id);
                         c.setCategoryName(row.getCategoryName());
+                        // Category availability from outlet_categories.is_toggle
+                        c.setIsAvailable(row.getCategoryAvailable());
                         c.setProducts(new ArrayList<>());
                         return c;
                     });
@@ -335,7 +339,7 @@ public final class FmOutletMapper {
                             product.setDescription(row.getDescription());
 
                             // Pricing logic
-                            if ("CUSTOMER".equalsIgnoreCase(userType) && row.getOnlinePrice() != null) {
+                            if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && row.getOnlinePrice() != null) {
                                 product.setPrice(row.getOnlinePrice());
                             } else {
                                 product.setPrice(row.getMerchantPrice());
@@ -343,6 +347,8 @@ public final class FmOutletMapper {
 
                             product.setIsVeg(row.getIsVeg());
                             product.setHasProductVariants(row.getHasProductVariants());
+                            // Product availability from products.is_toggle
+                            product.setIsAvailable(row.getProductAvailable());
                             product.setProductTimings(new ArrayList<>());
                             category.getProducts().add(product);
                         }

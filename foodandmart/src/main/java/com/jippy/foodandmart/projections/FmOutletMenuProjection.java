@@ -15,22 +15,30 @@ public interface FmOutletMenuProjection {
     Integer getOutletId();
     String getOutletName();
     String getOutletPhone();
+    // Outlet is_available
+    Boolean getOutletAvailable();
 
-//    for product_online_pricing table
+
+    //    for product_online_pricing table
     Integer productIdFromOnlinePricing();
     BigDecimal getOnlinePrice();
 
 //    for category table
     Integer getCategoryId();
     String getCategoryName();
+    // Category is_available
+    Boolean getCategoryAvailable();
 
-//    for product table
+
+    //    for product table
     Integer getProductId();
     String getProductName();
     String getDescription();
     BigDecimal getMerchantPrice();
     Boolean getIsVeg();
     Boolean getHasProductVariants();
+    // Product is_available
+    Boolean getProductAvailable();
 
 //    for outlet_days table
     Boolean getIsOpen();
@@ -42,4 +50,7 @@ public interface FmOutletMenuProjection {
     LocalTime getStartTime();
     LocalTime getEndTime();
     String getProductDay();
+
 }
+
+

@@ -26,7 +26,7 @@ public interface IFmOutletService {
 
 
     //     for api to get outlet details by outlet id and user type (merchant or customer)
-    FmOutletDetailsDto getOutletDetails(Integer outletId, String userType);
+    FmOutletDetailsDto getOutletDetails(Integer outletId, String userType,Integer customerId);
 
     //    for api to get all outlets by merchant id
     List<FmOutletByMerchantDto> getOutletsByFmMerchantId(Integer merchantId);
