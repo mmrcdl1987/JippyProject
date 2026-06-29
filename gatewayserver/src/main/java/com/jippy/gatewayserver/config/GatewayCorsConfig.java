@@ -9,6 +9,8 @@ import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.util.pattern.PathPatternParser;
 
+import java.util.List;
+
 @Configuration
 @Slf4j
 public class GatewayCorsConfig {
@@ -21,9 +23,13 @@ public class GatewayCorsConfig {
         //config.addAllowedOrigin("http://localhost:5173"); // Or port 3000 depending on your local Vite/React setup
 
         // 2. Allow your production Hostinger VPS domain or IP
-        config.addAllowedOrigin("http://srv1617582.hstgr.cloud:3005");
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "http://srv1617582.hstgr.cloud:3005"
+        ));
+
         // Allow the exact origin Swagger is running on
-        config.addAllowedOriginPattern("*");
+        //config.addAllowedOriginPattern("*");
         config.addAllowedMethod("*"); // Allow GET, POST, PUT, DELETE, OPTIONS
         config.addAllowedHeader("*"); // Allow all authentication headers
         config.setAllowCredentials(true);

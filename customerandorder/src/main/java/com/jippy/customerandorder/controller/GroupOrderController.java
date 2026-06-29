@@ -18,7 +18,7 @@ public class GroupOrderController {
 
     // CREATE Group Order Invitation
     @PostMapping("/createGroupOrderInvitation")
-    public ResponseEntity<GroupOrderInvitationDto>  createGroupOrderInvitation(@Valid @RequestBody GroupOrderInvitationDto
+    public ResponseEntity<?>  createGroupOrderInvitation(@Valid @RequestBody GroupOrderInvitationDto
                                                                                  groupCreationDto) {
 
         log.info("Create group order invitation request received: {}", groupCreationDto);
@@ -77,6 +77,17 @@ public class GroupOrderController {
 
         return groupOrderService.placeGroupOrder(placeGroupOrderRequestDto);
     }
+
+
+    @GetMapping("/getGroupOrderInvitation")
+    public ResponseEntity<?>  getGroupOrderInvitation(@RequestParam Integer hostCustomerId) {
+
+        log.info("Get Group order details with customerId: {} ",hostCustomerId);
+
+        return groupOrderService.getActiveGroupOrder(hostCustomerId);
+    }
+
+
 
 
 }
