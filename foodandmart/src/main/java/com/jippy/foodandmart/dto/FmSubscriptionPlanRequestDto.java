@@ -36,11 +36,11 @@ public class FmSubscriptionPlanRequestDto {
 
     private String videoCredits;
 
-    @NotNull(message = "State id is required")
+   /* @NotNull(message = "State id is required")
     private Integer stateId;
 
     @NotNull(message = "City id is required")
-    private Integer cityId;
+    private Integer cityId;*/
 
     @NotNull(message = "Area id is required")
     private Integer areaId;

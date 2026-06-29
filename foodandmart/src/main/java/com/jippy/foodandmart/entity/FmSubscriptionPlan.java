@@ -47,11 +47,11 @@ public class FmSubscriptionPlan {
     @Column(name = "video_credits")
     private String videoCredits;
 
-    @Column(name = "state_id")
+ /*   @Column(name = "state_id")
     private Integer stateId;
 
     @Column(name = "city_id")
-    private Integer cityId;
+    private Integer cityId;*/
 
     @Column(name = "area_id")
     private Integer areaId;
