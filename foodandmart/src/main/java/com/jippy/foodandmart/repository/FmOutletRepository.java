@@ -34,6 +34,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            o.outlet_id,          -- jippy_fm.outlets
                            o.outlet_name,        -- jippy_fm.outlets
                            o.outlet_phone,       -- jippy_fm.outlets
+                           o.is_toggle AS outlet_available,     -- jippy_fm.outlets
+            
             
                            --- online pricing details (from product_online_pricing table)
                            --product_id from product_online_pricing table 
@@ -43,6 +45,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            -- Category details (from categories table)
                            c.category_id,        -- jippy_fm.categories
                            c.category_name,      -- jippy_fm.categories
+                           oc.is_toggle AS category_available,   -- jippy_fm.categories
+            
             
                            -- Product details (from products table)
                            p.product_id,         -- jippy_fm.products
@@ -51,6 +55,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            p.merchant_price,     -- jippy_fm.products
                            p.is_veg,             -- jippy_fm.products
                            p.has_product_variants, -- jippy_fm.products
+                           p.is_toggle AS product_available,       -- jippy_fm.products
+            
             
                            -- Outlet day-wise availability (from outlet_days table)
                            od.is_open,           -- jippy_fm.outlet_days

@@ -63,6 +63,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmProductVariantRepository productVariantRepository;
     private final FmGoogleMapsService googleMapsService;
     private final PasswordEncoder passwordEncoder;
+    private final FmFavoriteOutletRepository favoriteOutletRepository;
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -367,9 +368,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
     //    for api to get outlet details by outlet id and user type
 //    (merchant or customer) service implementation
     @Override
-    public FmOutletDetailsDto getOutletDetails(Integer outletId, String userType) {
+    public FmOutletDetailsDto getOutletDetails(Integer outletId, String userType,Integer customerId) {
 
-        log.info("Fetching outlet details for outletId={}", outletId);
+        log.info("Fetching outlet details for outletId={}, userType={}, customerId={}",
+                outletId, userType, customerId);
 
         List<FmOutletMenuProjection> rows = outletRepository.getOutletMenu(outletId);
 
@@ -379,6 +381,31 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
 
         FmOutletDetailsDto outletDtoresponse = FmOutletMapper.mapToOutletDto(rows, userType);
+        log.debug("Added For UI - Outlet availability : {}", outletDtoresponse.getIsAvailable());
+//      -----------------------------------------------------------------------------------
+        /*
+         * Default value.
+         * If customerId is not passed,
+         * favourite should be false.
+         */
+        outletDtoresponse.setIsFavourite(false);
+
+//        Check favourite only for CUSTOMER.
+        if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
+                && customerId != null) {
+
+      log.info("Checking favourite status for customerId={} and outletId={}", customerId, outletId);
+
+  Optional<FmFavoriteOutlet> favourite = favoriteOutletRepository.findByCustomerIdAndOutletId(
+                            customerId,
+                            outletId);
+
+//  favourite.isPresent() --> returns true if record exists in the favourite table
+            outletDtoresponse.setIsFavourite(favourite.isPresent());
+
+            log.info("Favourite status: {}", favourite.isPresent());
+        }
+//  ---------------------------------------------------------------------------
 
         log.info("Successfully fetched outlet details for outletId={}", outletId);
 
@@ -401,6 +428,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     //    for update outlet details by outlet id service implementation
+    @Transactional
     @Override
     public FmOutletDetailsDto updateOutletDetails(Integer outletId, FmOutletDetailsDto dto, String userType) {
 
@@ -552,7 +580,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
         // Returning DTO after update
         // Instead of returning request data, we call GET method
         // This ensures response includes latest DB data along with variants
-        return getOutletDetails(outletId, userType);
+
+        // Return latest outlet details after update.
+        // customerId is not applicable for update API, so pass null.
+        return getOutletDetails(outletId, userType,null);
     }
 
     //    method to convert day name into integer id used in database
