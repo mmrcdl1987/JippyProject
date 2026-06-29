@@ -5,6 +5,7 @@ package com.jippy.foodandmart.mapper;
 import com.jippy.foodandmart.dto.FmFavoriteOutletRequestDto;
 import com.jippy.foodandmart.dto.FmFavoriteOutletResponseDto;
 import com.jippy.foodandmart.entity.FmFavoriteOutlet;
+import com.jippy.foodandmart.entity.FmOutlet;
 
 import java.time.LocalDateTime;
 
@@ -29,6 +30,34 @@ public class FmFavoriteOutletMapper {
         dto.setOutletId(entity.getOutletId());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setIsFavourite(true);
+
+        return dto;
+    }
+
+    public static FmFavoriteOutletResponseDto toFavoriteOutletResponseDto(
+            Integer customerId,
+            Integer outletId,
+            FmOutlet outlet,
+            FmFavoriteOutlet favourite) {
+
+        FmFavoriteOutletResponseDto dto = new FmFavoriteOutletResponseDto();
+
+        dto.setCustomerId(customerId);
+        dto.setOutletId(outletId);
+
+        if (outlet != null) {
+            dto.setOutletName(outlet.getOutletName());
+            dto.setOutletPicUrl(outlet.getOutletPicUrl());
+            dto.setReview(outlet.getReview());
+        }
+
+        if (favourite != null) {
+            dto.setFavoriteOutletId(favourite.getFavoriteOutletsId());
+            dto.setCreatedAt(favourite.getCreatedAt());
+            dto.setIsFavourite(true);
+        } else {
+            dto.setIsFavourite(false);
+        }
 
         return dto;
     }

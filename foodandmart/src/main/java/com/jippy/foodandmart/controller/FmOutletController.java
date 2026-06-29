@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.controller;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
@@ -43,9 +44,6 @@ public class FmOutletController {
 
     private final IFmOutletService outletService;
     private final FmSpecializedOutletService service;
-
-    private static final String CUSTOMER = "CUSTOMER";
-    private static final String MERCHANT = "MERCHANT";
 
     /**
      * Creates a single outlet from a JSON request body.
@@ -464,18 +462,27 @@ public class FmOutletController {
     @GetMapping("/getOutletDetails")
     public ResponseEntity<FmOutletDetailsDto> getOutletDetails(
 
-            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId,
+            @Parameter(description = "Outlet ID", required = true)
+            @RequestParam Integer outletId,
 
-            @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true) @RequestParam String userType) {
+            @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true)
+            @RequestParam String userType,
 
-        log.info("Fetching outlet details for outletId: {}, userType: {}", outletId, userType);
+            @Parameter(description = "Customer ID (Optional). If provided, the " +
+                            "response includes the is_favourite feild status of the outlet " +
+                    "for that customer.", required = false)
+            @RequestParam(required = false) Integer customerId) {
 
-        // Custom validation
-        if (!CUSTOMER.equalsIgnoreCase(userType) && !MERCHANT.equalsIgnoreCase(userType)) {
+        log.info("Fetching outlet details for outletId={}, userType={}, customerId={}",
+                outletId, userType, customerId);
+        // Custom validation for case sensitivity
+        if (!FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
+                && !FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
             throw new InvalidUserTypeException("Invalid userType. Allowed values: CUSTOMER or MERCHANT");
         }
 
-        FmOutletDetailsDto outletDetails = outletService.getOutletDetails(outletId, userType);
+        FmOutletDetailsDto outletDetails =
+                outletService.getOutletDetails(outletId, userType, customerId);
 
         log.info("Successfully fetched outlet details for outletId: {}, userType: {}", outletId, userType);
 
