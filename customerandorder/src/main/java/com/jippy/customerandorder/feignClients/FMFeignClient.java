@@ -2,8 +2,6 @@ package com.jippy.customerandorder.feignClients;
 
 import com.jippy.customerandorder.config.FeignClientConfig;
 import com.jippy.customerandorder.dto.*;
-//import com.jippy.foodandmart.entity.FmUser;
-import com.jippy.foodandmart.dto.LoginRequestDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -43,6 +43,11 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             log.info("AuthenticationFilter triggered for: {}", exchange.getRequest().getPath());
             ServerHttpRequest request = exchange.getRequest();
 
+            // For react UI -- gateway  CRITICAL CORS FIX: Pass through all HTTP OPTIONS (Preflight) requests safely
+            if (org.springframework.http.HttpMethod.OPTIONS.equals(request.getMethod())) {
+                return chain.filter(exchange);
+            }
+
             String path = exchange.getRequest().getURI().getPath();
             boolean isExcluded = EXCLUDED_URLS.stream().anyMatch(path::contains);
 
