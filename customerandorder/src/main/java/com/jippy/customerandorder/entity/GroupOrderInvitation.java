@@ -46,5 +46,23 @@ public class GroupOrderInvitation {
     @OneToMany(mappedBy = "groupOrders", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<GroupCartItems> cartItems;
 
-
+    @Override
+    public String toString() {
+        return "GroupOrderInvitation{" +
+                "groupOrdersInvitationId=" + groupOrdersInvitationId +
+                ", customer=" + customer +
+                ", outletId=" + outletId +
+                ", invitationCode='" + invitationCode + '\'' +
+                ", status='" + status + '\'' +
+                ", orderClosingTimeInMinutes=" + orderClosingTimeInMinutes +
+                ", paymentResponsibility='" + paymentResponsibility + '\'' +
+                ", maxMembers=" + maxMembers +
+                ", createdAt=" + createdAt +
+                ", createdBy=" + createdBy +
+                ", updatedBy=" + updatedBy +
+                ", updatedAt=" + updatedAt +
+                ", groupOrderMembers=" + groupOrderMembers +
+                ", cartItems=" + cartItems +
+                '}';
+    }
 }

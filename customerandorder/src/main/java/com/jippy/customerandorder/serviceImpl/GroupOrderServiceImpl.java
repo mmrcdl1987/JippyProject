@@ -75,13 +75,20 @@ public class GroupOrderServiceImpl implements GroupOrderService {
     private static final String TOPIC = "group-order-events";
 
     @Override
-    public ResponseEntity<GroupOrderInvitationDto> createGroupOrderInvitation(GroupOrderInvitationDto groupCreationDto) {
+    public ResponseEntity<?> createGroupOrderInvitation(GroupOrderInvitationDto groupCreationDto) {
+
         CoCustomer customer = customerRepository.findById(groupCreationDto.getHostCustomerId())
                 .orElseThrow(() -> {
             log.error("Customer not found with id: {}", groupCreationDto.getHostCustomerId());
             return new CoBadRequestException("Customer not found with id: " + groupCreationDto.getHostCustomerId());
         });
 
+       Optional<GroupOrderInvitation> existingActiveGO = groupOrderInvitationRepository.getActiveGroupOrderByCustomerId(groupCreationDto.getHostCustomerId(), COConstants.GROUP_ORDER_INVITATION_CREATED);
+        if(existingActiveGO.isPresent()){
+            log.error("An active group order is associated with this customer id: {}", groupCreationDto.getHostCustomerId());
+            return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body
+                    ("An active group order is associated with this customer id: " + groupCreationDto.getHostCustomerId());
+        }
 
         GroupOrderInvitation groupOrderInvitation = GroupOrderMapper.toGroupOrderInvitation(groupCreationDto, customer,generateRandomCode());
         GroupOrderInvitation savedGroupOrderInvitation = groupOrderInvitationRepository.save(groupOrderInvitation);
@@ -715,6 +722,25 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         }
         return  ResponseEntity.status(HttpStatus.OK).body(new CoResponseDto("200",
                 "Group Placed placed for invitation id : "+goInvitationId));
+    }
+
+    @Override
+    public ResponseEntity<?> getActiveGroupOrder(Integer hostCustomerId) {
+
+     Optional<GroupOrderInvitation> groupOrderInvitation = groupOrderInvitationRepository.
+             getActiveGroupOrderByCustomerId(hostCustomerId,COConstants.GROUP_ORDER_INVITATION_CREATED);
+
+        GroupOrderInvitationDto groupOrderInvitationDto = new GroupOrderInvitationDto();
+     if(groupOrderInvitation.isPresent()){
+         groupOrderInvitationDto =  GroupOrderMapper.toGroupOrderInvitationResponseDto(groupOrderInvitation.get());
+        log.info("Active Group order found with host customer Id :{}, and Group order details {}",
+                hostCustomerId,groupOrderInvitation.get().getOutletId());
+
+         return ResponseEntity.status(HttpStatus.OK).body(groupOrderInvitationDto);
+     }else{
+         log.info("No active group found with this host customer Id : {}", hostCustomerId);
+         return  ResponseEntity.status(HttpStatus.NOT_FOUND).body("No active group found with this host customer Id: "+hostCustomerId);
+     }
     }
 
 

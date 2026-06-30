@@ -5,7 +5,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 
 public interface GroupOrderService {
-    ResponseEntity<GroupOrderInvitationDto> createGroupOrderInvitation(GroupOrderInvitationDto groupCreationDto);
+
+    ResponseEntity<?> createGroupOrderInvitation(GroupOrderInvitationDto groupCreationDto);
 
     ResponseEntity<CoResponseDto> joinGroupMembers(
             @Valid JoinGroupMembersDto joinGroupMembersDto);
@@ -19,4 +20,6 @@ public interface GroupOrderService {
     ResponseEntity<GroupOrderPaymentDetailsResponseDto> groupPaymentDetails(GroupPaymentDetailsDto groupPaymentDetailsDto);
 
     ResponseEntity<CoResponseDto> placeGroupOrder(PlaceGroupOrderRequestDto placeGroupOrderRequestDto);
+
+    ResponseEntity<?> getActiveGroupOrder(Integer hostCustomerId);
 }

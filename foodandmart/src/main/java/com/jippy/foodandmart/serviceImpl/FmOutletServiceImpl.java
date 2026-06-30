@@ -130,112 +130,111 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 //    ------------------------------------------------------------------------
     // ── Single Create ─────────────────────────────────────────────────────────
+    // @Override
+    // @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    // public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
 
-    @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
+    //     log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}",
+    //             dto.getOutletName(),
+    //             dto.getMerchantId(),
+    //             dto.getOutletPhone());
 
-        log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}",
-                dto.getOutletName(),
-                dto.getMerchantId(),
-                dto.getOutletPhone());
+    //     validateOutletRequest(dto);
 
-        validateOutletRequest(dto);
+    //     if (!merchantRepository.existsById(dto.getMerchantId())) {
+    //         throw new IllegalArgumentException(
+    //                 "Merchant ID " + dto.getMerchantId() + " does not exist");
+    //     }
 
-        if (!merchantRepository.existsById(dto.getMerchantId())) {
-            throw new IllegalArgumentException(
-                    "Merchant ID " + dto.getMerchantId() + " does not exist");
-        }
+    //     if (outletRepository.existsByOutletPhone(dto.getOutletPhone())) {
+    //         throw new IllegalArgumentException(
+    //                 "An outlet with phone " + dto.getOutletPhone() + " already exists");
+    //     }
 
-        if (outletRepository.existsByOutletPhone(dto.getOutletPhone())) {
-            throw new IllegalArgumentException(
-                    "An outlet with phone " + dto.getOutletPhone() + " already exists");
-        }
+    //     if (userRepository.findByUsernameAndUserType(
+    //             dto.getUsername(),
+    //             FmAppConstants.TYPE_OUTLET
+    //     ).isPresent()) {
 
-        if (userRepository.findByUsernameAndUserType(
-                dto.getUsername(),
-                FmAppConstants.TYPE_OUTLET
-        ).isPresent()) {
+    //         throw new IllegalArgumentException(
+    //                 "Username already exists.");
+    //     }
 
-            throw new IllegalArgumentException(
-                    "Username already exists.");
-        }
+    //     if (outletRepository.existsByMerchantIdAndOutletName(
+    //             dto.getMerchantId(),
+    //             dto.getOutletName())) {
 
-        if (outletRepository.existsByMerchantIdAndOutletName(
-                dto.getMerchantId(),
-                dto.getOutletName())) {
+    //         throw new IllegalArgumentException(
+    //                 "Outlet '" + dto.getOutletName() + "' already exists for this merchant");
+    //     }
 
-            throw new IllegalArgumentException(
-                    "Outlet '" + dto.getOutletName() + "' already exists for this merchant");
-        }
+    //     Point location = buildPoint(
+    //             dto.getLatitude(),
+    //             dto.getLongitude());
 
-        Point location = buildPoint(
-                dto.getLatitude(),
-                dto.getLongitude());
+    //     FmMerchant merchant = merchantRepository.findById(dto.getMerchantId())
+    //             .orElseThrow(() ->
+    //                     new ResourceNotFoundException("Merchant not found."));
 
-        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Merchant not found."));
+    //     // Merchant email and outlet email must be same
+    //     if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getEmail())) {
 
-        // Merchant email and outlet email must be same
-        if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getEmail())) {
+    //         throw new IllegalArgumentException(
+    //                 "Merchant email and outlet email must be same."
+    //         );
+    //     }
 
-            throw new IllegalArgumentException(
-                    "Merchant email and outlet email must be same."
-            );
-        }
+    //     // Verify latest CREATE_OUTLET OTP
+    //     FmEmailOtpVerification otpVerification =
+    //             otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+    //                             merchant.getMerchantEmail(),
+    //                             FmOtpPurpose.CREATE_OUTLET)
+    //                     .orElseThrow(() ->
+    //                             new InvalidOtpException(
+    //                                     "Please verify OTP before creating outlet."
+    //                             ));
 
-        // Verify latest CREATE_OUTLET OTP
-        FmEmailOtpVerification otpVerification =
-                otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
-                                merchant.getMerchantEmail(),
-                                FmOtpPurpose.CREATE_OUTLET)
-                        .orElseThrow(() ->
-                                new InvalidOtpException(
-                                        "Please verify OTP before creating outlet."
-                                ));
+    //     if (otpVerification.getStatus() != FmOtpStatus.VERIFIED
+    //             || !Boolean.TRUE.equals(otpVerification.getIsVerified())) {
 
-        if (otpVerification.getStatus() != FmOtpStatus.VERIFIED
-                || !Boolean.TRUE.equals(otpVerification.getIsVerified())) {
-
-            throw new InvalidOtpException(
-                    "Please verify OTP before creating outlet."
-            );
-        }
+    //         throw new InvalidOtpException(
+    //                 "Please verify OTP before creating outlet."
+    //         );
+    //     }
 
 
-        FmOutlet outlet = FmOutletMapper.toEntity(dto);
+    //     FmOutlet outlet = FmOutletMapper.toEntity(dto);
 
-        // Always use merchant email
-        outlet.setOutletEmail(
-                merchant.getMerchantEmail()
-        );
+    //     // Always use merchant email
+    //     outlet.setOutletEmail(
+    //             merchant.getMerchantEmail()
+    //     );
 
-        outlet.setOutletLocation(location);
+    //     outlet.setOutletLocation(location);
 
-        outlet = outletRepository.save(outlet);
+    //     outlet = outletRepository.save(outlet);
 
-        log.info("[OUTLET] Saved: outletId={}", outlet.getOutletId());
+    //     log.info("[OUTLET] Saved: outletId={}", outlet.getOutletId());
 
-        saveAddress(dto, outlet.getOutletId());
+    //     saveAddress(dto, outlet.getOutletId());
 
-        saveOperatingDays(dto, outlet.getOutletId());
+    //     saveOperatingDays(dto, outlet.getOutletId());
 
-        saveOutletUser(
-                dto.getUsername(),
-                dto.getPassword(),
-                outlet.getOutletId()
-        );
+    //     saveOutletUser(
+    //             dto.getUsername(),
+    //             dto.getPassword(),
+    //             outlet.getOutletId()
+    //     );
 
-        otpVerification.setStatus(FmOtpStatus.CONSUMED);
-        otpVerification.setVerifiedAt(LocalDateTime.now());
-        otpRepository.save(otpVerification);
+    //     otpVerification.setStatus(FmOtpStatus.CONSUMED);
+    //     otpVerification.setVerifiedAt(LocalDateTime.now());
+    //     otpRepository.save(otpVerification);
 
-        log.info("[OUTLET] Onboarding complete: outletId={}",
-                outlet.getOutletId());
+    //     log.info("[OUTLET] Onboarding complete: outletId={}",
+    //             outlet.getOutletId());
 
-        return FmOutletMapper.toCreatedDTO(outlet);
-    }
+    //     return FmOutletMapper.toCreatedDTO(outlet);
+    // }
     // ── Bulk Upload ───────────────────────────────────────────────────────────
    /* @Transactional(rollbackFor =  Exception.class)
     @Override
@@ -442,7 +441,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("[OUTLET] Role mapping completed for username={}",
                 username);
     }
-
 
     private LocalTime parseTime(String s, LocalTime fallback) {
         if (s == null || s.isBlank()) return fallback;

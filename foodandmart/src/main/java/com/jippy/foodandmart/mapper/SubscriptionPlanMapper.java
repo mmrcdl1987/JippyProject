@@ -26,8 +26,8 @@ public final class SubscriptionPlanMapper {
         entity.setDealsSlot(request.getDealsSlot());
         entity.setWhatsappBroadcast(request.getWhatsappBroadcast());
         entity.setVideoCredits(request.getVideoCredits());
-        entity.setStateId(request.getStateId());
-        entity.setCityId(request.getCityId());
+       /* entity.setStateId(request.getStateId());
+        entity.setCityId(request.getCityId());*/
         entity.setAreaId(request.getAreaId());
 
         entity.setCreatedAt(LocalDateTime.now());
@@ -50,8 +50,8 @@ public final class SubscriptionPlanMapper {
         entity.setDealsSlot(request.getDealsSlot());
         entity.setWhatsappBroadcast(request.getWhatsappBroadcast());
         entity.setVideoCredits(request.getVideoCredits());
-        entity.setStateId(request.getStateId());
-        entity.setCityId(request.getCityId());
+      /*  entity.setStateId(request.getStateId());
+        entity.setCityId(request.getCityId());*/
         entity.setAreaId(request.getAreaId());
 
         entity.setUpdatedAt(LocalDateTime.now());
@@ -75,8 +75,8 @@ public final class SubscriptionPlanMapper {
         dto.setDealsSlot(entity.getDealsSlot());
         dto.setWhatsappBroadcast(entity.getWhatsappBroadcast());
         dto.setVideoCredits(entity.getVideoCredits());
-        dto.setStateId(entity.getStateId());
-        dto.setCityId(entity.getCityId());
+       /* dto.setStateId(entity.getStateId());
+        dto.setCityId(entity.getCityId());*/
         dto.setAreaId(entity.getAreaId());
 
         return dto;
