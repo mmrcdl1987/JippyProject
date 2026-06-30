@@ -128,6 +128,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return outletResponseDto;
 
     }
+
+     @Override
+    public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
+        return null;
+    }
 //    ------------------------------------------------------------------------
     // ── Single Create ─────────────────────────────────────────────────────────
     // @Override
