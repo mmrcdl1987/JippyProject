@@ -34,6 +34,7 @@ public final class FmAppConstants {
     public static final String TYPE_OUTLET = "OUTLET";
     public static final String TYPE_DRIVER = "DRIVER";
     public static final String TYPE_CUSTOMER = "CUSTOMER";
+    public static final String TYPE_PRODUCT = "PRODUCT";
 
     // ── Role IDs ──────────────────────────────────────────────────────────────
     public static final int ROLE_ID_OUTLET = 2;

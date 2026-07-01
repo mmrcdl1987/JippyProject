@@ -4,6 +4,7 @@ package com.jippy.foodandmart.service;
 import com.jippy.foodandmart.dto.FmFavoriteOutletRequestDto;
 import com.jippy.foodandmart.dto.FmFavoriteOutletResponseDto;
 import com.jippy.foodandmart.dto.FmFavoriteOutletWrapperDto;
+import com.jippy.foodandmart.dto.FmFavoriteProductWrapperDto;
 
 import java.util.List;
 
@@ -17,4 +18,7 @@ public interface FmFavoriteOutletService {
 //    List<FmFavoriteOutletResponseDto> getFavorites(Integer customerId);
 
     FmFavoriteOutletWrapperDto getFavorites(Integer customerId);
+
+    // Get favourite products for a customer
+    FmFavoriteProductWrapperDto getFavoriteProducts(Integer customerId);
 }

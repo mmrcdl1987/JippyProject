@@ -19,6 +19,11 @@ public class FmProductDto {
     @Schema(example = "true")
     private Boolean isAvailable;
 
+    // Product favourite status for logged-in customer
+    @Schema(example = "true",
+            description = "Indicates whether this product is marked as favourite by the customer.")
+    private Boolean isProductFavourite;
+
     private List<FmProductVariantDTO> variants;
     private List<FmProductTimingDto> productTimings;
 }

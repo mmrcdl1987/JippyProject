@@ -8,10 +8,26 @@ import java.util.Optional;
 
 public interface FmFavoriteOutletRepository extends JpaRepository<FmFavoriteOutlet, Integer> {
 
-//    based on the customerId, find all the favorite outlets for that customer
+    /*
+     * Fetch all favourite records for a customer.
+     * Returns both OUTLET and PRODUCT favourites.
+     */
     List<FmFavoriteOutlet> findByCustomerId(Integer customerId);
 
-//    based on the customerId and outletId,
-//    find if the outlet is already marked as favorite by the customer
-    Optional<FmFavoriteOutlet> findByCustomerIdAndOutletId(Integer customerId, Integer outletId);
+    /*
+     * Check whether a specific OUTLET or PRODUCT
+     * is already marked as favourite by the customer.
+     */
+    Optional<FmFavoriteOutlet> findByCustomerIdAndFavoriteIdAndFavouriteType(
+            Integer customerId,
+            Integer favoriteId,
+            String favouriteType);
+
+    /*
+     * Fetch all favourites of a specific type
+     * (OUTLET / PRODUCT) for a customer.
+     */
+    List<FmFavoriteOutlet> findByCustomerIdAndFavouriteType(
+            Integer customerId,
+            String favouriteType);
 }

@@ -16,8 +16,10 @@ public class FmFavoriteOutletMapper {
     public static FmFavoriteOutlet toFavOutletEntity(FmFavoriteOutletRequestDto dto) {
         FmFavoriteOutlet entity = new FmFavoriteOutlet();
         entity.setCustomerId(dto.getCustomerId());
-        entity.setOutletId(dto.getOutletId());
-        entity.setCreatedBy(dto.getCreatedBy());
+//        entity.setOutletId(dto.getOutletId());
+        entity.setFavoriteId(dto.getFavoriteId());
+        entity.setFavouriteType(dto.getFavouriteType().toUpperCase());
+        entity.setCreatedBy(dto.getCustomerId());
         entity.setCreatedAt(LocalDateTime.now());
         return entity;
     }
@@ -27,38 +29,13 @@ public class FmFavoriteOutletMapper {
         FmFavoriteOutletResponseDto dto = new FmFavoriteOutletResponseDto();
         dto.setFavoriteOutletId(entity.getFavoriteOutletsId());
         dto.setCustomerId(entity.getCustomerId());
-        dto.setOutletId(entity.getOutletId());
-        dto.setCreatedAt(entity.getCreatedAt());
+//        dto.setOutletId(entity.getOutletId());
+        dto.setFavoriteId(entity.getFavoriteId());
+        dto.setFavouriteType(entity.getFavouriteType().toUpperCase());
+//        dto.setCreatedAt(entity.getCreatedAt());
         dto.setIsFavourite(true);
 
         return dto;
     }
 
-    public static FmFavoriteOutletResponseDto toFavoriteOutletResponseDto(
-            Integer customerId,
-            Integer outletId,
-            FmOutlet outlet,
-            FmFavoriteOutlet favourite) {
-
-        FmFavoriteOutletResponseDto dto = new FmFavoriteOutletResponseDto();
-
-        dto.setCustomerId(customerId);
-        dto.setOutletId(outletId);
-
-        if (outlet != null) {
-            dto.setOutletName(outlet.getOutletName());
-            dto.setOutletPicUrl(outlet.getOutletPicUrl());
-            dto.setReview(outlet.getReview());
-        }
-
-        if (favourite != null) {
-            dto.setFavoriteOutletId(favourite.getFavoriteOutletsId());
-            dto.setCreatedAt(favourite.getCreatedAt());
-            dto.setIsFavourite(true);
-        } else {
-            dto.setIsFavourite(false);
-        }
-
-        return dto;
-    }
 }
