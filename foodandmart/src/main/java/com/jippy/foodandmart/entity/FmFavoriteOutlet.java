@@ -19,8 +19,14 @@ public class FmFavoriteOutlet {
     @Column(name = "customer_id")
     private Integer customerId;
 
-    @Column(name = "outlet_id")
-    private Integer outletId;
+//    @Column(name = "outlet_id")
+//    private Integer outletId;
+
+    @Column(name = "favorite_id")
+    private Integer favoriteId;
+
+    @Column(name = "favourite_type")
+    private String favouriteType;
 
     @Column(name = "created_by")
     private Integer createdBy;

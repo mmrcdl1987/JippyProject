@@ -44,7 +44,14 @@ public class FmProduct {
     @Builder.Default
     private Boolean hasProductVariants = false;
 //    @Column(name = "image_link",          length = 500) private String imageLink;
-@Column(name = "image_link", columnDefinition = "TEXT") private String imageLink;
+//-----------------------------------------
+    @Column(name = "image_link")
+    private String imageLink;
+
+    @Column(name = "rating")
+    private BigDecimal rating;
+    //-------------------------------------
+
     @Column(name = "photos", columnDefinition = "TEXT")
     private String photos;
     @Column(name = "thumbnail", columnDefinition = "TEXT")

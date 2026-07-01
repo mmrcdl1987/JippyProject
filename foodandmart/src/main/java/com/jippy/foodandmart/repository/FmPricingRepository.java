@@ -70,4 +70,16 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
     Optional<FmProductOnlinePricing> findByProductIdAndOutletId(
             @Param("productId") Integer productId,
             @Param("outletId") Integer outletId);
+
+    @Query(value = """
+    SELECT online_price
+    FROM jippy_fm.product_online_pricing
+    WHERE product_id = :productId
+      AND outlet_category_id = :outletCategoryId
+      AND is_approved = true
+    LIMIT 1
+    """, nativeQuery = true)
+    Optional<BigDecimal> findOnlinePriceByProductIdAndOutletCategoryId(
+            @Param("productId") Integer productId,
+            @Param("outletCategoryId") Integer outletCategoryId);
 }

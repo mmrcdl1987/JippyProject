@@ -489,20 +489,59 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
       log.info("Checking favourite status for customerId={} and outletId={}", customerId, outletId);
 
-  Optional<FmFavoriteOutlet> favourite = favoriteOutletRepository.findByCustomerIdAndOutletId(
-                            customerId,
-                            outletId);
+//      ----------------------------------------------------------------------------
+     Optional<FmFavoriteOutlet> favourite =
+                    favoriteOutletRepository.findByCustomerIdAndFavoriteIdAndFavouriteType(
+                            customerId, outletId, FmAppConstants.TYPE_OUTLET);
 
 //  favourite.isPresent() --> returns true if record exists in the favourite table
             outletDtoresponse.setIsFavourite(favourite.isPresent());
 
             log.info("Favourite status: {}", favourite.isPresent());
+
+            /*
+             * Populate product favourite status for logged-in customer.
+             */
+            log.info("Checking is_product_favourite status");
+
+           setProductFavouriteStatus(outletDtoresponse, customerId);
+
         }
+
 //  ---------------------------------------------------------------------------
 
         log.info("Successfully fetched outlet details for outletId={}", outletId);
 
         return outletDtoresponse;
+    }
+
+    /** HELPER_METHOD 1
+     * Populate favourite status for every product
+     * available in the outlet.
+     */
+    private void setProductFavouriteStatus(
+            FmOutletDetailsDto outlet, Integer customerId) {
+
+        for (FmCategoryDto category : outlet.getCategories()) {
+
+            for (FmProductDto product : category.getProducts()) {
+
+                log.info("Checking Product Id : {}", product.getProductId());
+
+                Optional<FmFavoriteOutlet> favourite =
+                        favoriteOutletRepository
+                                .findByCustomerIdAndFavoriteIdAndFavouriteType(
+                                        customerId,
+                                        product.getProductId(),
+                                        FmAppConstants.TYPE_PRODUCT);
+
+                log.info("Repository Result : {}", favourite.isPresent());
+
+                product.setIsProductFavourite(favourite.isPresent());
+
+                log.info("After Setting : {}", product.getIsProductFavourite());
+            }
+        }
     }
 
     //    for api to get all outlets by merchant id service implementation

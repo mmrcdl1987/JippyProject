@@ -17,21 +17,30 @@ public class FmFavoriteOutletRequestDto {
     )
     private Integer customerId;
 
-    @NotNull(message = "Outlet Id is required")
-    @Positive(message = "Outlet Id must be greater than 0")
-    @Schema(
-            example = "501",
-            description = "Unique outlet identifier",
-            requiredMode = Schema.RequiredMode.REQUIRED
-    )
-    private Integer outletId;
+//    @NotNull(message = "Outlet Id is required")
+//    @Positive(message = "Outlet Id must be greater than 0")
+//    @Schema(
+//            example = "501",
+//            description = "Unique outlet identifier",
+//            requiredMode = Schema.RequiredMode.REQUIRED
+//    )
+//    private Integer outletId;
 
-    @NotNull(message = "Created By is required")
-    @Positive(message = "Created By must be greater than 0")
-    @Schema(
-            example = "101",
-            description = "User who is performing the favorite/unfavorite action",
-            requiredMode = Schema.RequiredMode.REQUIRED
+    @Schema(example = "16")
+    private Integer favoriteId;
+
+    @Schema(example = "OUTLET",
+            allowableValues = {"OUTLET","PRODUCT"},
+            description = "Favourite entity type"
     )
-    private Integer createdBy;
+    private String favouriteType;
+
+//    @NotNull(message = "Created By is required")
+//    @Positive(message = "Created By must be greater than 0")
+//    @Schema(
+//            example = "101",
+//            description = "User who is performing the favorite/unfavorite action",
+//            requiredMode = Schema.RequiredMode.REQUIRED
+//    )
+//    private Integer createdBy;
 }

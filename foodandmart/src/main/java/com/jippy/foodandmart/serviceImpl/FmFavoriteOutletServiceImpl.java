@@ -1,15 +1,15 @@
 package com.jippy.foodandmart.serviceImpl;
 
-import com.jippy.foodandmart.dto.FmFavoriteOutletRequestDto;
-import com.jippy.foodandmart.dto.FmFavoriteOutletResponseDto;
-import com.jippy.foodandmart.dto.FmFavoriteOutletWrapperDto;
+import com.jippy.foodandmart.constants.FmAppConstants;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmFavoriteOutlet;
 import com.jippy.foodandmart.entity.FmOutlet;
+import com.jippy.foodandmart.entity.FmOutletCategory;
+import com.jippy.foodandmart.entity.FmProduct;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.CustomerAndOrderFeignClient;
 import com.jippy.foodandmart.mapper.FmFavoriteOutletMapper;
-import com.jippy.foodandmart.repository.FmFavoriteOutletRepository;
-import com.jippy.foodandmart.repository.FmOutletRepository;
+import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmFavoriteOutletService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,25 +34,56 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 
     private final FmOutletRepository outletRepository;
 
+    private final FmProductRepository productRepository;
+
+    private final FmPricingRepository pricingRepository;
+
+    private final FmOutletCategoryRepository outletCategoryRepository;
+
     //    changed for production
     @Override
     @Transactional
     public FmFavoriteOutletResponseDto toggleFavorite(FmFavoriteOutletRequestDto dto) {
 
-        logger.info("Favorite toggle request received for customerId: {} and outletId: {}",
-                dto.getCustomerId(), dto.getOutletId());
+        logger.info("Favorite toggle request received for customerId={}, favouriteType={}, favoriteId={}",
+                dto.getCustomerId(), dto.getFavouriteType(), dto.getFavoriteId());
 
 //        outletRepository.findById(dto.getOutletId())
 //                .orElseThrow(() ->
 //                        new ResourceNotFoundException(
 //                                "Outlet not found with id: " + dto.getOutletId()));
 
-//
-        // Check whether this outlet is already marked as favorite by the customer
-        Optional<FmFavoriteOutlet> existing = repository.findByCustomerIdAndOutletId(
-                        dto.getCustomerId(),
-                        dto.getOutletId());
+//        ------------------------------------------------------------------------------------------
+        /*
+         * Validate whether the favourite item exists.
+         * OUTLET -> Validate in outlets table.
+         * PRODUCT -> Validate in products table.
+         */
+        if (FmAppConstants.TYPE_OUTLET.equalsIgnoreCase(dto.getFavouriteType())) {
 
+            outletRepository.findById(dto.getFavoriteId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Outlet not found with id: " + dto.getFavoriteId()));
+
+        } else if (FmAppConstants.TYPE_PRODUCT.equalsIgnoreCase(dto.getFavouriteType())) {
+
+            productRepository.findById(dto.getFavoriteId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Product not found with id: " + dto.getFavoriteId()));
+
+        } else {
+            throw new ResourceNotFoundException("Invalid favouriteType. " +
+                    "Allowed values: OUTLET or PRODUCT");
+        }
+//        ------------------------------------------------------------------------------------------
+//        always convert to uppercase to avoid case sensitivity issues in DB queries
+        String favouriteType = dto.getFavouriteType().toUpperCase();
+
+        // Check whether this OUTLET/PRODUCT is already marked as favorite by the customer
+        Optional<FmFavoriteOutlet> existing =
+                repository.findByCustomerIdAndFavoriteIdAndFavouriteType(
+                        dto.getCustomerId(), dto.getFavoriteId(), favouriteType);
+        logger.info("Existing = {}", existing);
         /*
          * UI Behavior:
          *  First Click(CLICK HEART SYMBOL)  -> Add to Favorites
@@ -65,8 +97,8 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 
             FmFavoriteOutlet entity = existing.get();
 
-            logger.info("Favorite outlet already exists. Removing favorite for customerId: {} and outletId: {}",
-                    dto.getCustomerId(), dto.getOutletId());
+         logger.info("Favorite already exists. Removing favourite for customerId={}, favouriteType={}, favoriteId={}",
+                    dto.getCustomerId(), dto.getFavouriteType(), dto.getFavoriteId());
 
 //            deleting the ROW in the DB but not in Java memory we use entity obj for mapper
             repository.delete(entity);
@@ -77,8 +109,8 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
             // Indicates to UI that heart icon should be unfilled
             response.setIsFavourite(false);
 
-            logger.info("Favorite outlet removed successfully for customerId: {} and outletId: {}",
-                    dto.getCustomerId(), dto.getOutletId());
+            logger.info("Favorite outlet removed successfully for customerId: {} and FavoriteId: {} FavoriteType: {}",
+                    dto.getCustomerId(), dto.getFavoriteId(),dto.getFavouriteType());
 
             return response;
         }
@@ -88,8 +120,8 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
          * Customer is clicking the empty heart icon,
          * so create a new favorite record and return isFavourite = true.
          */
-        logger.info("Favorite outlet not found. Adding favorite for customerId: {} and outletId: {}",
-                dto.getCustomerId(), dto.getOutletId());
+        logger.info("Favorite not found. Adding favourite for customerId={}, favouriteType={}, favoriteId={}",
+                dto.getCustomerId(), dto.getFavouriteType(), dto.getFavoriteId());
 
 //       for inserting record ->DTO setting to entity(DB)
         FmFavoriteOutlet entity =
@@ -105,8 +137,8 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
         // Indicates to UI that heart icon should be filled
         response.setIsFavourite(true);
 
-        logger.info("Favorite outlet added successfully for customerId: {} and outletId: {}",
-                dto.getCustomerId(), dto.getOutletId());
+        logger.info("Favourite added successfully for customerId={}, favouriteType={}, favoriteId={}",
+                dto.getCustomerId(), dto.getFavouriteType(), dto.getFavoriteId());
 
         return response;
     }
@@ -127,55 +159,152 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 //    }
 
 
-    /**
-     * Builds a complete outlet response for Favorites, Frequent and Recent sections.
+    /** HELPER METHOD 1 FOR FAVOURITE OUTLETS API
+     * Builds a complete favourite outlet response.
      *
-     * Scenarios Supported:
-     * 1. Favorites + Frequent + Recent
-     * 2. Favorites but No Order History
-     * 3. Order History but No Favorites
+     * Reused By:
+     * 1. Favourite Outlets
+     * 2. Frequent Outlets
+     * 3. Recent Outlet
+     *
+     * Steps:
+     * 1. Fetch outlet details from outlets table.
+     * 2. Check whether this outlet exists in favourite_outlets table.
+     * 3. Populate favourite information.
      */
-    //    HELPER METHOD- 1 /RE_USABLE Function
     private FmFavoriteOutletResponseDto buildOutletResponse(
             Integer customerId, Integer outletId) {
 
-//        First it creates an empty DTO.
+        // Create response DTO
         FmFavoriteOutletResponseDto dto = new FmFavoriteOutletResponseDto();
 
-        // Customer & Outlet Details
+        // Basic favourite information
         dto.setCustomerId(customerId);
-        dto.setOutletId(outletId);
+        dto.setFavoriteId(outletId);
+        dto.setFavouriteType(FmAppConstants.TYPE_OUTLET);
 
-        // Reuse common outlet details mapping
-        setOutletDetails(dto, outletId);
-
-        // Check whether this outlet is already marked as favourite from favourites table
-        Optional<FmFavoriteOutlet> favourite =
-                repository.findByCustomerIdAndOutletId(customerId, outletId);
-
-        if (favourite.isPresent()) {
-
-            dto.setFavoriteOutletId(favourite.get().getFavoriteOutletsId());
-            dto.setCreatedAt(favourite.get().getCreatedAt());
-            dto.setIsFavourite(true);
-        } else {
-            dto.setIsFavourite(false);
-
-        }
-
-        return dto;
-    }
-    //    HELPER METHOD- 2 /RE_USABLE Function
-    private void setOutletDetails(FmFavoriteOutletResponseDto dto, Integer outletId) {
-
+        /*
+         * Fetch outlet details
+         * from outlets table.
+         */
         FmOutlet outlet = outletRepository.findById(outletId).orElse(null);
 
         if (outlet != null) {
+
             dto.setOutletName(outlet.getOutletName());
             dto.setOutletPicUrl(outlet.getOutletPicUrl());
             dto.setReview(outlet.getReview());
 
         }
+        /*
+         * Check whether this outlet
+         * is already marked as favourite.
+         */
+        Optional<FmFavoriteOutlet> favourite =
+                repository.findByCustomerIdAndFavoriteIdAndFavouriteType(
+                        customerId, outletId, FmAppConstants.TYPE_OUTLET);
+        /*
+         * Populate favourite details.
+         */
+        if (favourite.isPresent()) {
+
+            dto.setFavoriteOutletId(favourite.get().getFavoriteOutletsId());
+
+//            dto.setCreatedAt(favourite.get().getCreatedAt());
+
+            dto.setIsFavourite(true);
+        } else {
+            dto.setIsFavourite(false);
+        }
+        return dto;
+    }
+
+    /** HELPER METHOD 1 FOR FAVOURITE PRODUCTS API
+     * Builds a complete favourite product response.
+     *
+     * Reused By:
+     * 1. Favourite Products API
+     *
+     * Steps:
+     * 1. Fetch product details.
+     * 2. Fetch latest online price.
+     * 3. Check favourite status.
+     * 4. Populate response.
+     */
+    private FmFavoriteProductResponseDto buildProductResponse(
+            Integer customerId,
+            Integer productId) {
+
+        // Create response DTO
+        FmFavoriteProductResponseDto dto = new FmFavoriteProductResponseDto();
+
+        // Basic favourite information
+        dto.setCustomerId(customerId);
+        dto.setFavoriteId(productId);
+        dto.setFavouriteType(FmAppConstants.TYPE_PRODUCT);
+
+        /*
+         * Fetch product details
+         * from products table.
+         */
+        FmProduct product = productRepository.findById(productId).orElse(null);
+
+        if (product != null) {
+            // Product Details
+            dto.setProductName(product.getProductName());
+
+            dto.setImageUrl(product.getImageLink());
+
+            dto.setIsVeg(product.getIsVeg());
+
+            dto.setRating(product.getRating());
+            /*
+             * Fetch outletId using outletCategoryId.
+             */
+            FmOutletCategory outletCategory =
+               outletCategoryRepository.findById(product.getOutletCategoryId()).orElse(null);
+
+            if (outletCategory != null) {
+                dto.setOutletId(outletCategory.getOutletId());
+
+            }
+
+            /*
+             * Fetch latest approved online price.
+             */
+            Optional<BigDecimal> onlinePrice =
+                    pricingRepository.findOnlinePriceByProductIdAndOutletCategoryId(
+                            product.getProductId(), product.getOutletCategoryId());
+
+            if (onlinePrice.isPresent()) {
+                dto.setOnlinePrice(onlinePrice.get());
+
+            }
+        }
+
+        /*
+         * Check whether product
+         * is already marked as favourite.
+         */
+        Optional<FmFavoriteOutlet> favourite =
+                repository.findByCustomerIdAndFavoriteIdAndFavouriteType(
+                        customerId, productId, FmAppConstants.TYPE_PRODUCT);
+
+        /*
+         * Populate favourite details.
+         */
+        if (favourite.isPresent()) {
+
+            dto.setFavoriteOutletId(favourite.get().getFavoriteOutletsId());
+
+//            dto.setCreatedAt(favourite.get().getCreatedAt());
+
+            dto.setIsFavourite(true);
+
+        } else {
+            dto.setIsFavourite(false);
+        }
+        return dto;
     }
 
 
@@ -200,8 +329,8 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 
 //        ONE CUSTOMER CAN HAVE MULTIPLE FAVORITE OUTLETS, SO WE ARE USING LIST
         // 1. Get favorites from FM DB
-        List<FmFavoriteOutlet> list = repository.findByCustomerId(customerId);
-
+        List<FmFavoriteOutlet> list = repository.findByCustomerIdAndFavouriteType(
+                        customerId, FmAppConstants.TYPE_OUTLET);
         if (list.isEmpty()) {
             throw new ResourceNotFoundException("No favorite outlets found for customerId: " + customerId);
         }
@@ -212,14 +341,12 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 // -------------------------------------------------
         for (FmFavoriteOutlet entity : list) {
 
-            FmFavoriteOutletResponseDto dto =
-                    FmFavoriteOutletMapper.toFavOutletDto(entity);
+            FmFavoriteOutletResponseDto dto = buildOutletResponse(
+                            entity.getCustomerId(), entity.getFavoriteId());
 
-            // Reuse common outlet details mapping
-            setOutletDetails(dto, entity.getOutletId());
             favorites.add(dto);
         }
-        // -------------------------------------------------
+//        ---------------------------------------------
 
         // 2. Get frequent outlets from CO
         //        List<Integer> frequentOutlets = feignClient.getFrequentOutlets(customerId);
@@ -251,7 +378,8 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
         for (Integer outletId : frequentOutletIds) {
 
             // Build complete outlet response for this outlet
-            FmFavoriteOutletResponseDto frequentOutlet = buildOutletResponse(customerId, outletId);
+            FmFavoriteOutletResponseDto frequentOutlet = buildOutletResponse(
+                            customerId, outletId);
 
             // Add it to the frequent outlets list
             frequentOutlets.add(frequentOutlet);
@@ -283,7 +411,6 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 
             // Build complete response for recent outlet
             recentOutlet = buildOutletResponse(customerId, recentOutletId);
-
         }
 
         // 4. Prepare response
@@ -297,5 +424,34 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 
         return response;
 
+    }
+
+    @Override
+    public FmFavoriteProductWrapperDto getFavoriteProducts(Integer customerId) {
+
+        logger.info("Fetching favourite products for customerId={}", customerId);
+
+        List<FmFavoriteOutlet> favouriteProducts =
+                repository.findByCustomerIdAndFavouriteType(
+                        customerId, FmAppConstants.TYPE_PRODUCT);
+
+        if (favouriteProducts.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No favourite products found for customerId : " + customerId);
+        }
+
+        List<FmFavoriteProductResponseDto> products = new ArrayList<>();
+
+        for (FmFavoriteOutlet favourite : favouriteProducts) {
+
+            products.add(buildProductResponse(favourite.getCustomerId(),
+                            favourite.getFavoriteId()));
+        }
+
+        FmFavoriteProductWrapperDto response = new FmFavoriteProductWrapperDto();
+
+        response.setFavoriteProducts(products);
+
+        return response;
     }
  }
