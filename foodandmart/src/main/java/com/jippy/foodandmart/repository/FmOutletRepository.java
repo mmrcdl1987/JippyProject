@@ -286,9 +286,16 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             JOIN jippy_fm.days_of_week dow
                    ON dow.day_id = od.day_of_week_id
             
+            LEFT JOIN jippy_fm.outlet_categories oc
+                   ON oc.outlet_id = o.outlet_id
+            
+            LEFT JOIN jippy_fm.categories c
+                   ON c.category_id = oc.category_id
+            
             WHERE o.is_active = 'Y'
               AND o.outlet_location IS NOT NULL
               AND o.is_approved = true
+              AND (:categoryId IS NULL OR c.category_id = :categoryId)
             
               AND ST_DWithin(
                     o.outlet_location::geography,
@@ -313,7 +320,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             ORDER BY distance_km ASC
             
             """, nativeQuery = true)
-    List<Object[]> findCustomerNearbyOutlets(@Param("customerLat") double customerLat, @Param("customerLng") double customerLng);
+    List<Object[]> findCustomerNearbyOutlets(@Param("customerLat") double customerLat,
+            @Param("customerLng") double customerLng,@Param("categoryId") Integer categoryId);
 
 
     @Query(value = """
