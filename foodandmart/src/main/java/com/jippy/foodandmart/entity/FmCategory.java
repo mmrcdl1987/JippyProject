@@ -21,10 +21,20 @@ public class FmCategory {
     @Column(name = "category_name", length = 100, nullable = false)
     private String categoryName;
 
-    @Column(name = "created_at") private LocalDateTime createdAt;
-    @Column(name = "created_by") private Integer createdBy;
-    @Column(name = "updated_at") private LocalDateTime updatedAt;
-    @Column(name = "updated_by") private Integer updatedBy;
+    @Column(name = "category_type", length = 50, nullable = false)
+    private String categoryType;
+
+    @Column(name = "category_image_url", length = 255)
+    private String categoryImageUrl;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+    @Column(name = "created_by")
+    private Integer createdBy;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    @Column(name = "updated_by")
+    private Integer updatedBy;
 
     @JsonIgnore
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

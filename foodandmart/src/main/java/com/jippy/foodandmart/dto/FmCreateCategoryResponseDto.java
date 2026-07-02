@@ -11,4 +11,6 @@ public class FmCreateCategoryResponseDto {
 
     private Integer categoryId;
     private String categoryName;
+    private String categoryType;
+    private String CategoryImageUrl;
 }

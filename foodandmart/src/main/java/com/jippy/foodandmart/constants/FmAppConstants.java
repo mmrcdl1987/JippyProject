@@ -40,6 +40,11 @@ public final class FmAppConstants {
     public static final int ROLE_ID_OUTLET = 2;
     public static final int ROLE_ID_MERCHANT = 3;
 
+    // ── CATEGORY_TYPES ──────────────────────────────────────────────────────────────
+    public static final String CATEGORY_TYPE_ALL = "ALL";
+    public static final String  CATEGORY_TYPE_HOME= "HOME";
+
+
     // ── Transfer Status ───────────────────────────────────────────────────────
     public static final String TRANSFER_STATUS_COMPLETED = "COMPLETED";
     public static final String TRANSFER_STATUS_PENDING = "PENDING";
