@@ -796,13 +796,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     @Override
-    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng) {
+    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng,Integer categoryId) {
 
         double radiusKm = FmAppConstants.DEFAULT_RADIUS_KM;
 
         log.info("[OutletService] fetchCustomerNearbyOutlets lat={} lng={} radius={} km", customerLat, customerLng, radiusKm);
 
-        List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(customerLat, customerLng);
+        List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(customerLat, customerLng,categoryId);
 
         /*
          * NO OUTLETS FOUND

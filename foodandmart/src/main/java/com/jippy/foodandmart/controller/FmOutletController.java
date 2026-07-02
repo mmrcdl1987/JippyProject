@@ -98,7 +98,10 @@ public class FmOutletController {
 
     /**
      * Fetches a single outlet by its primary key.
+     *
      * <p>GET /api/outlets/{id}</p>
+     *
+     * @param {id} the outlet's primary key
      * @return 200 with the {@link FmOutlet} entity
      */
 //    @GetMapping("/{id}")
@@ -587,10 +590,11 @@ public class FmOutletController {
     @GetMapping("/customer/nearby")
     public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(@Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true) @RequestParam double lat,
 
-                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng) {
+                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng,
+            @RequestParam(required = false) Integer categoryId) {
 
         log.info("GET /api/outlets/customer/nearby lat={}, lng={}", lat, lng);
-        FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng);
+        FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng,categoryId);
         return ResponseEntity.ok(response);
     }
 
@@ -645,30 +649,5 @@ public class FmOutletController {
         log.info("Fetching nearby specialized outlets for latitude={} longitude={}", latitude, longitude);
 
         return ResponseEntity.ok(service.fetchNearbySpecializedOutlets(latitude, longitude));
-    }
-    @GetMapping("/available-outlets/{areaId}")
-    public ResponseEntity<List<FmOutletDto>>
-    fetchAvailableOutletsByArea(
-            @PathVariable Integer areaId) {
-
-        log.info(
-                "Fetching outlets by areaId={}",
-                areaId);
-
-        List<FmOutlet> outlets =
-                outletService
-                        .getOutletsByAreaId(
-                                areaId);
-
-        List<FmOutletDto> response =
-                outlets.stream()
-                        .map(outlet ->
-                                new FmOutletDto(
-                                        outlet.getOutletId(),
-                                        outlet.getOutletName()))
-                        .toList();
-
-        return ResponseEntity.ok(
-                response);
     }
 }
