@@ -11,12 +11,15 @@ public class CategoryMapper {
     private CategoryMapper() {
     }
 
-    public static FmCategory toEntity(FmCreateCategoryRequestDto request, Integer createdBy) {
+    public static FmCategory toEntity(FmCreateCategoryRequestDto request) {
 
         FmCategory entity = new FmCategory();
         entity.setCategoryName(request.getCategoryName().trim());
-        entity.setCreatedBy(createdBy);
+        entity.setCreatedBy(request.getCreatedBy());
         entity.setCreatedAt(LocalDateTime.now());
+        entity.setCategoryType(request.getCategoryType());
+        entity.setCategoryImageUrl(request.getCategoryImageUrl());
+
 
         return entity;
     }
@@ -26,6 +29,8 @@ public class CategoryMapper {
         FmCreateCategoryResponseDto response = new FmCreateCategoryResponseDto();
         response.setCategoryId(entity.getCategoryId());
         response.setCategoryName(entity.getCategoryName());
+        response.setCategoryType(entity.getCategoryType());
+        response.setCategoryImageUrl(entity.getCategoryImageUrl());
 
         return response;
     }
