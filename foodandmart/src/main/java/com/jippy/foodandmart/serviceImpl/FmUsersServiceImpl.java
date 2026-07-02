@@ -1,18 +1,14 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
+import com.jippy.foodandmart.dto.FmCreateEmployeeDto;
 import com.jippy.foodandmart.dto.FmPasswordResetByAdminRequestDto;
 import com.jippy.foodandmart.dto.FmUserDto;
-import com.jippy.foodandmart.entity.FmRolePermissions;
-import com.jippy.foodandmart.entity.FmRoles;
-import com.jippy.foodandmart.entity.FmUser;
-import com.jippy.foodandmart.entity.FmUserRolePermissions;
+import com.jippy.foodandmart.dto.FmUserResponseDto;
+import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
-import com.jippy.foodandmart.repository.FmRolePermissionsRepository;
-import com.jippy.foodandmart.repository.FmRoleRepository;
-import com.jippy.foodandmart.repository.FmUserRepository;
-import com.jippy.foodandmart.repository.FmUserRolesRepository;
+import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.IFmUsersService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -41,6 +38,9 @@ public class FmUsersServiceImpl implements IFmUsersService {
 
     @Autowired
     private FmUserRolesRepository userRolesRepository;
+
+    @Autowired
+    private FmEmployeeRepository employeeRepository;
 
 
     // -------------------------------
@@ -184,5 +184,109 @@ public class FmUsersServiceImpl implements IFmUsersService {
         return  userDto;
     }
 
+    @Override
+    @Transactional
+    public void assignRolesToUser(Integer userId, List<Integer> roleIds) {
 
+        FmUser user = usersRepo.findByUsersId(userId).orElseThrow(() -> new RuntimeException("User not found"));
+
+        userRolesRepository.deleteByUserId(userId);
+
+        for (Integer roleId : roleIds) {
+
+            FmRoles role = roleRepository.findById(roleId).orElseThrow(() -> new RuntimeException("Role not found"));
+
+            List<FmRolePermissions> rolePermissions = rolePermissionsRepository.findByRole(role);
+
+            for (FmRolePermissions rp : rolePermissions) {
+
+                FmUserRolePermissions urp = new FmUserRolePermissions();
+
+                urp.setUserId(userId);
+
+                urp.setRolePermission(rp);
+
+                urp.setCreatedAt(LocalDateTime.now());
+
+                urp.setCreatedBy(1);
+
+                userRolesRepository.save(urp);
+            }
+        }
+    }
+
+    @Override
+    public List<FmUserResponseDto> getAllUsers() {
+
+        List<FmUser> users = usersRepo.findByUserType("EMPLOYEE");
+
+        return users.stream().map(user -> {
+
+            FmUserResponseDto dto = new FmUserResponseDto();
+
+            dto.setUsersId(user.getUsersId());
+            dto.setUserId(user.getUserId());
+            dto.setUsername(user.getUsername());
+            dto.setUserType(user.getUserType());
+
+            String roleName = user.getUserRolePermissions().stream().map(urp -> urp.getRolePermission().getRole().getRoleName()).distinct().collect(Collectors.joining(", "));
+
+            dto.setRoleName(roleName);
+
+            return dto;
+        }).toList();
+    }
+
+    @Override
+    public List<Integer> getUserRoleIds(Integer userId) {
+        return userRolesRepository.findRoleIdsByUserId(userId);
+    }
+
+    @Override
+    @Transactional
+    public void createEmployee(FmCreateEmployeeDto dto) {
+
+        log.info("Employee Creation Started | username={} | email={}", dto.getUsername(), dto.getEmail());
+
+        try {
+
+            FmEmployee employee = new FmEmployee();
+
+            employee.setEmployeeName(dto.getEmployeeName());
+
+            employee.setEmail(dto.getEmail());
+
+            employee.setMobileNumber(dto.getMobileNumber());
+
+            employee.setIsActive("Y");
+
+            employee = employeeRepository.save(employee);
+
+            log.info("Employee Record Created | employeeId={} | email={}", employee.getEmployeeId(), employee.getEmail());
+
+            FmUser user = new FmUser();
+
+            user.setUsername(dto.getUsername());
+
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+
+            user.setUserId(employee.getEmployeeId());
+
+            user.setUserType("EMPLOYEE");
+
+            user.setIsActive("Y");
+
+            user = usersRepo.save(user);
+
+            log.info("User Record Created | usersId={} | username={} | userType={}", user.getUsersId(), user.getUsername(), user.getUserType());
+
+            log.info("Employee Creation Completed Successfully | employeeId={} | usersId={}", employee.getEmployeeId(), user.getUsersId());
+
+        } catch (Exception ex) {
+
+            log.error("Employee Creation Failed | username={} | email={} | error={}", dto.getUsername(), dto.getEmail(), ex.getMessage(), ex);
+
+            throw ex;
+        }
+    }
 }

@@ -178,5 +178,46 @@ public class CoCustomerController {
         return ResponseEntity.ok(customerDeliveryAddressDeletedSuccessfullyDto);
 
     }
+    @GetMapping
+    public ResponseEntity<List<CoCustomerListDto>>
+    getAllCustomers() {
+
+        log.info("GET_ALL_CUSTOMERS_API_START");
+
+        List<CoCustomerListDto> customers =
+                customerService.getAllCustomers();
+
+        log.info(
+                "GET_ALL_CUSTOMERS_API_SUCCESS | count={}",
+                customers.size()
+        );
+
+        return ResponseEntity.ok(customers);
+    }
+    @GetMapping("/wallet/{customerId}")
+    public ResponseEntity<CoCustomerWalletResponseDto> getCustomerWallet(
+            @PathVariable Integer customerId) {
+
+        log.info("GET_CUSTOMER_WALLET_API_START | customerId={}", customerId);
+
+        CoCustomerWalletResponseDto response = customerService.getCustomerWallet(customerId);
+
+        log.info("GET_CUSTOMER_WALLET_API_SUCCESS | customerId={}", customerId);
+
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/wallet/history/{customerId}")
+    public ResponseEntity<List<CoWalletTransactionHistoryDto>> getWalletTransactionHistory(
+            @PathVariable Integer customerId) {
+
+        log.info("GET_WALLET_TRANSACTION_HISTORY_API_START | customerId={}", customerId);
+
+        List<CoWalletTransactionHistoryDto> response =
+                customerService.getWalletTransactionHistory(customerId);
+
+        log.info("GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={}", customerId);
+
+        return ResponseEntity.ok(response);
+    }
 
 }

@@ -2,6 +2,8 @@ package com.jippy.customerandorder.feignClients;
 
 import com.jippy.customerandorder.config.FeignClientConfig;
 import com.jippy.customerandorder.dto.*;
+//import com.jippy.foodandmart.entity.FmUser;
+//import com.jippy.foodandmart.dto.LoginRequestDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -82,4 +84,8 @@ public interface FMFeignClient {
 
     @PostMapping(path = "/api/fm/auth/login")
     public ResponseEntity<?> login(@RequestBody CoLoginDto loginDto);
+
+    @GetMapping("/api/fm/areas")
+    List<FmAreaDto> getAllAreas();
+
 }

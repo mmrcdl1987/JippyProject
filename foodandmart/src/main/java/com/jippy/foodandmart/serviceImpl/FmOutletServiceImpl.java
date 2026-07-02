@@ -974,4 +974,15 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         return response;
     }
+    @Override
+    public List<FmOutlet> getOutletsByAreaId(
+            Integer areaId) {
+
+        log.info(
+                "Fetching outlets by areaId={}",
+                areaId);
+
+        return outletRepository
+                .getOutletsByAreaId(areaId);
+    }
 }

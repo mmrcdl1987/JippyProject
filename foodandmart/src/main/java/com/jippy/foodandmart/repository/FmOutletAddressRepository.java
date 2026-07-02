@@ -4,7 +4,15 @@ import com.jippy.foodandmart.entity.FmOutletAddress;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 @Repository
 public interface FmOutletAddressRepository extends JpaRepository<FmOutletAddress, Integer> {
-    java.util.Optional<FmOutletAddress> findByJippyAddressId(Integer outletId);
+
+    Optional<FmOutletAddress> findById(Integer addressId);
+
+    Optional<FmOutletAddress> findByJippyAddressId(Integer jippyAddressId);
+
+    Optional<FmOutletAddress> findByJippyAddressIdAndAddressType(
+            Integer jippyAddressId,
+            String addressType);
 }

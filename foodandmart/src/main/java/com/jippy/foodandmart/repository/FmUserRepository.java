@@ -5,6 +5,7 @@ import org.apache.catalina.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -23,4 +24,9 @@ public interface FmUserRepository extends JpaRepository<FmUser, Integer> {
 //    2)checks if already found to prevent unique
 //    username and unique user type for 1)MERCHANT 2)OUTLET 3)DRIVER roles
     Optional<FmUser> findByUsernameAndUserType(String username, String userType);
+
+
+    Optional<FmUser> findByUsersId(Integer usersId);
+
+    List<FmUser> findByUserType(String userType);
 }

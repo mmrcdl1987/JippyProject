@@ -383,4 +383,19 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                     LIMIT 1
             """, nativeQuery = true)
     FmOutletSettlementProjection getOutletDetailsAndAreaAddressForSettlement(@Param("outletId") Integer outletId);
+ @Query(value = """
+        SELECT o.*
+        FROM jippy_fm.outlets o
+
+        JOIN jippy_fm.address a
+        ON o.outlet_id = a.jippy_address_id
+
+        WHERE a.area_id = :areaId
+        AND o.is_active = 'Y'
+        AND o.is_approved = true
+        """,
+         nativeQuery = true)
+ List<FmOutlet> getOutletsByAreaId(
+         Integer areaId);
+
 }
