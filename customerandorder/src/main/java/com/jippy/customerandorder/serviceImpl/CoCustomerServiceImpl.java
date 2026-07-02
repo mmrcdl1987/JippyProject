@@ -4,6 +4,7 @@ import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoBusinessException;
+import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.CoCustomerMapper;
 import com.jippy.customerandorder.repository.*;
@@ -17,7 +18,10 @@ import com.jippy.customerandorder.exception.CoBadRequestException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -35,6 +39,8 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     private final CoCustomerStreakRepository streakRepository;
 
     private final CoCustomerMapper customerMapper;
+
+    private final FMFeignClient fmFeignClient;
 
 
     // CREATE CUSTOMER
@@ -544,6 +550,128 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
             throw new CoBadRequestException(COConstants.MSG_DATABASE_ERROR);
         }
+    }
+    @Override
+    public List<CoCustomerListDto> getAllCustomers() {
+
+        log.info("GET_ALL_CUSTOMERS_SERVICE_START");
+
+        List<CoCustomer> customers = customerRepository.findAll();
+
+        log.info("GET_ALL_CUSTOMERS_DB_FETCH_SUCCESS | count={}", customers.size());
+
+        List<FmAreaDto> areas = fmFeignClient.getAllAreas();
+
+        log.info("GET_ALL_AREAS_FROM_FM_SUCCESS | count={}", areas.size());
+
+        Map<Integer, String> areaMap = areas.stream().collect(Collectors.toMap(FmAreaDto::getAreaId, FmAreaDto::getAreaName));
+
+        List<CoCustomerListDto> response = customers.stream().map(customer -> {
+
+            log.debug("MAPPING_CUSTOMER | customerId={}", customer.getCustomerId());
+
+            CoCustomerListDto dto = new CoCustomerListDto();
+
+            dto.setCustomerId(customer.getCustomerId());
+
+            dto.setCustomerName(customer.getFirstName() + " " + (customer.getLastName() == null ? "" : customer.getLastName()));
+
+            dto.setEmail(customer.getEmail());
+
+            dto.setPhoneNumber(customer.getPhoneNumber());
+
+            dto.setAreaId(customer.getAreaId());
+
+            dto.setAreaName(areaMap.getOrDefault(customer.getAreaId(), "-"));
+
+            dto.setCreatedAt(customer.getCreatedAt());
+
+            streakRepository.findTopByCustomerIdOrderByCheckInDateDesc(customer.getCustomerId()).ifPresent(streak -> {
+
+                dto.setCurrentStreak(streak.getCurrentStreak());
+
+                log.debug("CUSTOMER_STREAK_FOUND | customerId={} | streak={}", customer.getCustomerId(), streak.getCurrentStreak());
+            });
+
+            if (dto.getCurrentStreak() == null) {
+
+                dto.setCurrentStreak(0);
+
+                log.debug("CUSTOMER_STREAK_NOT_FOUND | customerId={}", customer.getCustomerId());
+            }
+
+            return dto;
+
+        }).toList();
+
+        log.info("GET_ALL_CUSTOMERS_SERVICE_SUCCESS | count={}", response.size());
+
+        return response;
+    }
+    @Override
+    public CoCustomerWalletResponseDto getCustomerWallet(Integer customerId) {
+
+        log.info("GET_CUSTOMER_WALLET_SERVICE_START | customerId={}", customerId);
+
+        CoCustomerWallet wallet = walletRepository
+                .findByCustomerCustomerId(customerId)
+                .orElseThrow(() ->
+                        new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+
+        CoCustomerWalletResponseDto response = new CoCustomerWalletResponseDto();
+
+        response.setCustomerId(customerId);
+        response.setBalanceAmount(
+                wallet.getBalanceAmount() != null
+                        ? wallet.getBalanceAmount()
+                        : BigDecimal.ZERO);
+
+        response.setBalancePoints(
+                wallet.getBalancePoints() != null
+                        ? wallet.getBalancePoints()
+                        : 0);
+
+        log.info("GET_CUSTOMER_WALLET_SERVICE_SUCCESS | customerId={}", customerId);
+
+        return response;
+    }
+
+    @Override
+    public List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId) {
+
+        log.info("GET_WALLET_TRANSACTION_HISTORY_SERVICE_START | customerId={}", customerId);
+
+        if (customerId == null || customerId <= 0) {
+
+            log.error("INVALID_CUSTOMER_ID | customerId={}", customerId);
+
+            throw new CoBadRequestException("Invalid Customer Id");
+        }
+
+        CoCustomerWallet wallet = walletRepository
+                .findByCustomerCustomerId(customerId)
+                .orElseThrow(() -> {
+
+                    log.error("WALLET_NOT_FOUND | customerId={}", customerId);
+
+                    return new CoBusinessException(COConstants.WALLET_NOT_FOUND);
+                });
+
+        List<CoCustomerWalletTransactions> transactions =
+                transactionsRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId());
+
+        List<CoWalletTransactionHistoryDto> response = transactions.stream()
+                .map(transaction -> new CoWalletTransactionHistoryDto(
+                        transaction.getPointsType(),
+                        transaction.getPoints(),
+                        transaction.getCreatedAt()))
+                .toList();
+
+        log.info("GET_WALLET_TRANSACTION_HISTORY_SERVICE_SUCCESS | customerId={} | transactionCount={}",
+                customerId,
+                response.size());
+
+        return response;
     }
 
 }

@@ -98,10 +98,7 @@ public class FmOutletController {
 
     /**
      * Fetches a single outlet by its primary key.
-     *
      * <p>GET /api/outlets/{id}</p>
-     *
-     * @param id the outlet's primary key
      * @return 200 with the {@link FmOutlet} entity
      */
 //    @GetMapping("/{id}")
@@ -648,5 +645,30 @@ public class FmOutletController {
         log.info("Fetching nearby specialized outlets for latitude={} longitude={}", latitude, longitude);
 
         return ResponseEntity.ok(service.fetchNearbySpecializedOutlets(latitude, longitude));
+    }
+    @GetMapping("/available-outlets/{areaId}")
+    public ResponseEntity<List<FmOutletDto>>
+    fetchAvailableOutletsByArea(
+            @PathVariable Integer areaId) {
+
+        log.info(
+                "Fetching outlets by areaId={}",
+                areaId);
+
+        List<FmOutlet> outlets =
+                outletService
+                        .getOutletsByAreaId(
+                                areaId);
+
+        List<FmOutletDto> response =
+                outlets.stream()
+                        .map(outlet ->
+                                new FmOutletDto(
+                                        outlet.getOutletId(),
+                                        outlet.getOutletName()))
+                        .toList();
+
+        return ResponseEntity.ok(
+                response);
     }
 }

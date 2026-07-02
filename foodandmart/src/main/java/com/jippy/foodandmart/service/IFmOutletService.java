@@ -47,4 +47,6 @@ public interface IFmOutletService {
     OutletLocationResponseDto getOutletLocation(Integer outletId);
 
     public String fetchOutletName(Integer outletId);
+
+    List<FmOutlet> getOutletsByAreaId(Integer areaId);
 }
