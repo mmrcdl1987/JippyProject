@@ -7,6 +7,7 @@ import com.jippy.foodandmart.entity.FmSubscriptionPlan;
 import com.jippy.foodandmart.exception.BannerUploadException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.OutletSubscriptionPlanMapper;
+import com.jippy.foodandmart.projections.ActiveBannerProjection;
 import com.jippy.foodandmart.repository.FmOutletRepository;
 import com.jippy.foodandmart.repository.FmSubscriptionPlanRepository;
 import com.jippy.foodandmart.repository.OutletSubscriptionPlanRepository;
@@ -348,5 +349,11 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
         dto.setPriceModelType(outletPlan.getPriceModelType());
 
         return dto;
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActiveBannerProjection> getActiveBanners() {
+
+        return outletSubscriptionPlanRepository.findActiveBanners();
     }
 }

@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.*;
+import com.jippy.foodandmart.projections.ActiveBannerProjection;
 import com.jippy.foodandmart.service.OutletSubscriptionPlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -138,4 +139,11 @@ public class OutletSubscriptionPlanController {
             endOperation();
         }
     }
+//    @GetMapping("/active-banners")
+//    public FmApiResponse<List<ActiveBannerProjection>> getActiveBanners() {
+//
+//        return FmApiResponse.success(
+//                "Active banners fetched successfully",
+//                outletSubscriptionPlanService.getActiveBanners());
+//    }
 }

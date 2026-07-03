@@ -101,7 +101,7 @@ public class FmOutletController {
      *
      * <p>GET /api/outlets/{id}</p>
      *
-     * @param {id} the outlet's primary key
+     * @param id the outlet's primary key
      * @return 200 with the {@link FmOutlet} entity
      */
 //    @GetMapping("/{id}")
@@ -456,9 +456,9 @@ public class FmOutletController {
     //    for getOutletDetails API - to fetch outlet details including menu, categories,
     //    product timings and outlet timings based on user type (customer or merchant)
     @Operation(summary = "Get Outlet Details", description = "Fetch outlet details including menu, categories, product timings and outlet timings based on user type")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid userType")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Outlet not found")
+    @ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid userType")
+    @ApiResponse(responseCode = "404", description = "Outlet not found")
     @GetMapping("/getOutletDetails")
     public ResponseEntity<FmOutletDetailsDto> getOutletDetails(
 
@@ -491,9 +491,9 @@ public class FmOutletController {
 
     @Operation(summary = "Get Outlets by Merchant ID", description = "Fetch all outlets for a merchant with state, city, and area details. Throws error if outlet is not approved.")
     //    for getOutletsByMerchant API - to fetch outlet's, address-state,city,area details based on merchant id
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Outlets fetched successfully")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Outlet not approved")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No outlets found")
+    @ApiResponse(responseCode = "200", description = "Outlets fetched successfully")
+    @ApiResponse(responseCode = "400", description = "Outlet not approved")
+    @ApiResponse(responseCode = "404", description = "No outlets found")
     @GetMapping("/getOutletsByMerchant")
     public ResponseEntity<List<FmOutletByMerchantDto>> getOutletsByFmMerchant(
 

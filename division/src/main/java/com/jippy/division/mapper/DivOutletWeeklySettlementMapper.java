@@ -1,6 +1,5 @@
 package com.jippy.division.mapper;
 
-
 import com.jippy.division.dto.DivOutletWeeklySettlementResponseDto;
 import com.jippy.division.entity.DivOutletWeeklySettlement;
 import org.springframework.stereotype.Component;
@@ -8,32 +7,42 @@ import org.springframework.stereotype.Component;
 @Component
 public class DivOutletWeeklySettlementMapper {
 
-    public DivOutletWeeklySettlementResponseDto convertToResponseDto(DivOutletWeeklySettlement settlement) {
+    public DivOutletWeeklySettlementResponseDto convertToResponseDto(
+            DivOutletWeeklySettlement settlement) {
 
-        DivOutletWeeklySettlementResponseDto responseDto = new DivOutletWeeklySettlementResponseDto();
+        DivOutletWeeklySettlementResponseDto dto =
+                new DivOutletWeeklySettlementResponseDto();
 
-        responseDto.setWeeklySettlementId(settlement.getWeeklySettlementId());
+        dto.setWeeklySettlementId(settlement.getWeeklySettlementId());
 
-        responseDto.setOutletId(settlement.getOutletId());
+        dto.setOutletId(settlement.getOutletId());
 
-        responseDto.setWeekStartDate(settlement.getWeekStartDate());
+        dto.setWeekStartDate(settlement.getWeekStartDate());
 
-        responseDto.setWeekEndDate(settlement.getWeekEndDate());
+        dto.setWeekEndDate(settlement.getWeekEndDate());
 
-        responseDto.setTotalSettlementAmount(settlement.getTotalSettlementAmount());
+        dto.setTotalSettlementAmount(settlement.getTotalSettlementAmount());
 
-        responseDto.setPaymentStatus(settlement.getPaymentStatus());
+        dto.setPaymentStatus(settlement.getPaymentStatus());
 
-        responseDto.setTransactionId(settlement.getTransactionId());
+        dto.setTransactionId(settlement.getTransactionId());
 
-        responseDto.setOutletMobileNumber(settlement.getOutletMobileNumber());
+        dto.setOutletMobileNumber(settlement.getOutletMobileNumber());
 
-        responseDto.setOutletEmail(settlement.getOutletEmail());
+        dto.setOutletEmail(settlement.getOutletEmail());
 
-        responseDto.setOrdersCount(settlement.getOrdersCount());
+        dto.setOrdersCount(settlement.getOrdersCount());
 
-        responseDto.setDeductions(settlement.getDeductions());
+        dto.setDeductions(settlement.getDeductions());
 
-        return responseDto;
+        dto.setGst(settlement.getGst());
+
+        dto.setPromotionAmount(settlement.getPromotionAmount());
+
+        dto.setSubscriptionAmount(settlement.getSubscriptionAmount());
+
+        dto.setNetSettlementAmount(settlement.getNetSettlementAmount());
+
+        return dto;
     }
 }

@@ -507,7 +507,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
            setProductFavouriteStatus(outletDtoresponse, customerId);
 
         }
-
 //  ---------------------------------------------------------------------------
 
         log.info("Successfully fetched outlet details for outletId={}", outletId);

@@ -2,6 +2,7 @@ package com.jippy.division.controller;
 
 
 import com.jippy.division.dto.DivOutletWeeklySettlementResponseDto;
+import com.jippy.division.enums.DivSettlementFilter;
 import com.jippy.division.service.DivOutletWeeklySettlementService;
 import com.jippy.division.serviceImpl.EmailService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/div")
@@ -26,11 +29,26 @@ public class DivOutletWeeklySettlementController {
 
         log.info("Received request to fetch outlet weekly settlement details for weeklySettlementId : {}", weeklySettlementId);
 
-        DivOutletWeeklySettlementResponseDto response = divOutletWeeklySettlementService.
-                getOutletWeeklySettlement(weeklySettlementId);
+        DivOutletWeeklySettlementResponseDto response = divOutletWeeklySettlementService.getOutletWeeklySettlement(weeklySettlementId);
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping
+    @Operation(summary = "Get weekly settlement history")
+    public ResponseEntity<List<DivOutletWeeklySettlementResponseDto>> getWeeklySettlements(
+
+            @RequestParam Integer merchantId,
+
+            @RequestParam(required = false) Integer outletId,
+
+            @RequestParam DivSettlementFilter filter) {
+
+        log.info("GET_WEEKLY_SETTLEMENT_HISTORY | merchantId={} | outletId={} | filter={}", merchantId, outletId, filter);
+
+        return ResponseEntity.ok(divOutletWeeklySettlementService.getWeeklySettlements(merchantId, outletId, filter));
+    }
+
 
     //     for gmail integration
 //    @PostMapping("/sendOutletSettlementMail")
@@ -42,7 +60,7 @@ public class DivOutletWeeklySettlementController {
 //    }
 
 
-//testing mail integration
+    //testing mail integration
     @GetMapping("/testMail")
     public String testMail() {
 
