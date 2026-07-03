@@ -6,6 +6,7 @@ import com.jippy.foodandmart.dto.FmCreateCategoryResponseDto;
 import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.repository.FmCategoryRepository;
 import com.jippy.foodandmart.service.IFmCategoryService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ public class CategoryController {
      * Newly created categories will be visible through
      * GET /api/fm/categories after refresh.
      */
-    @PostMapping("/categories")
+    @PostMapping("/createCategory")
     public ResponseEntity<FmApiResponse<FmCreateCategoryResponseDto>> createCategory(
             @Valid @RequestBody FmCreateCategoryRequestDto request) {
 
@@ -44,23 +45,43 @@ public class CategoryController {
         FmCreateCategoryResponseDto response =
                 categoryService.createCategory(request);
 
-        log.info("CREATE_CATEGORY_API_COMPLETED | categoryId={}",
-                response.getCategoryId());
+        log.info("CREATE_CATEGORY_API_COMPLETED | categoryId={}", response.getCategoryId());
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(
-                        FmApiResponse.success(
-                                "Category created successfully",
-                                response
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(FmApiResponse.success("Category created successfully", response));
     }
 
-    @GetMapping("/categories")
-    public ResponseEntity<FmApiResponse<List<FmCategory>>> getAllCategories() {
-        log.info("[CATEGORY] GET /api/categories");
-        List<FmCategory> cats = categoryRepository.findAll();
-        return ResponseEntity.ok(FmApiResponse.success("Categories fetched", cats));
+//    @GetMapping("/Categories")
+//    public ResponseEntity<FmApiResponse<List<FmCategory>>> getAllCategories() {
+//        log.info("[CATEGORY] GET /api/categories");
+//
+//        List<FmCategory> cats = categoryRepository.findAll();
+//
+//        return ResponseEntity.ok(FmApiResponse.success("Categories fetched", cats));
+//    }
+
+
+//    this API is used to fetch categories based on the filter provided.
+//    The filter can be either "ALL" or "HOME". If the filter is "ALL", it will fetch all categories.
+//    If the filter is "HOME", it will fetch only the categories that are marked as home categories.
+
+    @GetMapping("/getHomeOrAllCategories")
+    public ResponseEntity<FmApiResponse<List<FmCreateCategoryResponseDto>>> getHomeOrAllCategories(
+            @Parameter(description = "Filter categories. Allowed values: ALL or HOME",
+                    example = "ALL")
+            @RequestParam String filter) {
+
+        log.info("GET_HOME_OR_ALL_CATEGORIES_API_STARTED | filter={}", filter);
+
+        List<FmCreateCategoryResponseDto> categories =
+                categoryService.getHomeOrAllCategories(filter);
+
+        log.info("GET_HOME_OR_ALL_CATEGORIES_API_COMPLETED | totalCategories={}",
+                categories.size());
+
+        return ResponseEntity.ok(
+                FmApiResponse.success("Categories fetched successfully", categories));
     }
+
+
 }

@@ -13,5 +13,7 @@ public interface FmCategoryRepository extends JpaRepository<FmCategory, Integer>
     Optional<FmCategory> findByCategoryNameIgnoreCase(String categoryName);
     boolean existsByCategoryNameIgnoreCase(String categoryName);
     //List<FmOutletCategory> findByOutletId(Integer outletId);
+
+    List<FmCategory> findByCategoryType(String categoryType);
 }
     

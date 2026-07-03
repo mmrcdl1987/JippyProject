@@ -2,11 +2,13 @@ package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.FmApiResponse;
 import com.jippy.foodandmart.dto.FmSubscriptionPlanRequestDto;
+import com.jippy.foodandmart.dto.FmSubscriptionPlanResponseDto;
 import com.jippy.foodandmart.dto.SubscriptionPlanResponseDto;
 import com.jippy.foodandmart.service.IFmSubscriptionPlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -95,5 +97,18 @@ public class FmSubscriptionPlanController {
         return FmApiResponse.success(
                 "Subscription plan deleted successfully",
                 "SUCCESS");
+    }
+    @GetMapping("/area/{areaId}")
+    public ResponseEntity<FmApiResponse<List<FmSubscriptionPlanResponseDto>>> getSubscriptionPlans(
+            @PathVariable Integer areaId) {
+
+        log.info("Received API request to fetch subscription plans for Area Id: {}", areaId);
+
+        FmApiResponse<List<FmSubscriptionPlanResponseDto>> response =
+                subscriptionPlanService.getSubscriptionPlansByAreaId(areaId);
+
+        log.info("Subscription plan API completed successfully for Area Id: {}", areaId);
+
+        return ResponseEntity.ok(response);
     }
 }

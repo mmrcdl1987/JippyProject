@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.dto.FmSubscriptionPlanRequestDto;
+import com.jippy.foodandmart.dto.FmSubscriptionPlanResponseDto;
 import com.jippy.foodandmart.dto.SubscriptionPlanResponseDto;
 import com.jippy.foodandmart.entity.FmSubscriptionPlan;
 
@@ -77,6 +78,27 @@ public final class SubscriptionPlanMapper {
         dto.setVideoCredits(entity.getVideoCredits());
        /* dto.setStateId(entity.getStateId());
         dto.setCityId(entity.getCityId());*/
+//        dto.setStateId(entity.getStateId());
+//        dto.setCityId(entity.getCityId());
+        dto.setAreaId(entity.getAreaId());
+
+        return dto;
+    }
+    public static FmSubscriptionPlanResponseDto toFmDto(FmSubscriptionPlan entity) {
+
+        FmSubscriptionPlanResponseDto dto = new FmSubscriptionPlanResponseDto();
+
+        dto.setSubscriptionPlanId(entity.getSubscriptionPlanId());
+        dto.setPlanName(entity.getPlanName());
+        dto.setPrice(entity.getPrice());
+        dto.setDurationInDays(entity.getDurationInDays());
+        dto.setBannerDurationInDays(entity.getBannerDurationInDays());
+        dto.setRadiusInKms(entity.getRadiusInKms());
+        dto.setBannerSlot(entity.getBannerSlot());
+        dto.setBestRestaurantSlot(entity.getBestRestaurantSlot());
+        dto.setDealsSlot(entity.getDealsSlot());
+        dto.setWhatsappBroadcast(entity.getWhatsappBroadcast());
+        dto.setVideoCredits(entity.getVideoCredits());
         dto.setAreaId(entity.getAreaId());
 
         return dto;

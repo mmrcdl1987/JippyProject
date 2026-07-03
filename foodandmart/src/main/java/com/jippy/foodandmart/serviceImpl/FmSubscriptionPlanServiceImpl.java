@@ -1,6 +1,8 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.dto.FmApiResponse;
 import com.jippy.foodandmart.dto.FmSubscriptionPlanRequestDto;
+import com.jippy.foodandmart.dto.FmSubscriptionPlanResponseDto;
 import com.jippy.foodandmart.dto.SubscriptionPlanResponseDto;
 import com.jippy.foodandmart.entity.FmSubscriptionPlan;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
@@ -13,7 +15,9 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -176,5 +180,44 @@ public class FmSubscriptionPlanServiceImpl implements IFmSubscriptionPlanService
             MDC.remove("operationId");
             MDC.remove("planId");
         }
+    }
+    @Override
+    public FmApiResponse<List<FmSubscriptionPlanResponseDto>> getSubscriptionPlansByAreaId(Integer areaId) {
+
+        log.info("Received request to fetch subscription plans for Area Id: {}", areaId);
+
+        if (areaId == null || areaId <= 0) {
+            log.error("Invalid Area Id received: {}", areaId);
+            throw new IllegalArgumentException("Area Id must be greater than zero.");
+        }
+
+        log.debug("Fetching subscription plans from database for Area Id: {}", areaId);
+
+        List<FmSubscriptionPlan> plans = repository.findByAreaIdOrderByPriceAsc(areaId);
+
+        if (plans == null || plans.isEmpty()) {
+
+            log.warn("No subscription plans found for Area Id: {}", areaId);
+            log.info("Returning successful response with no subscription plans for Area Id: {}", areaId);
+
+            return FmApiResponse.success(
+                    "No subscription plans found for the selected area.",
+                    Collections.emptyList()
+            );
+        }
+
+        List<FmSubscriptionPlanResponseDto> response = plans.stream()
+                .map(SubscriptionPlanMapper::toFmDto)
+                .collect(Collectors.toList());
+
+        log.info("Successfully fetched {} subscription plan(s) for Area Id: {}",
+                response.size(), areaId);
+
+        log.debug("Subscription plan response prepared successfully for Area Id: {}", areaId);
+
+        return FmApiResponse.success(
+                "Subscription plans fetched successfully.",
+                response
+        );
     }
 }

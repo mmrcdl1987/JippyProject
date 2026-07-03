@@ -4,6 +4,7 @@ import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface ICoCustomerService {
 
@@ -22,4 +23,10 @@ public interface ICoCustomerService {
     CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto);
 
     String updateCustomerProfile(CoCustomerRequestDto requestDto);
+
+    List<CoCustomerListDto> getAllCustomers();
+
+    CoCustomerWalletResponseDto getCustomerWallet(Integer customerId);
+
+    List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId);
 }

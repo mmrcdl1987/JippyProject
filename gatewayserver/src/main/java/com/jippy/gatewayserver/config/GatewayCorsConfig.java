@@ -24,6 +24,7 @@ public class GatewayCorsConfig {
 
         // 2. Allow your production Hostinger VPS domain or IP
         config.setAllowedOrigins(List.of(
+                "http://localhost:3000",
                 "http://localhost:5173",
                 "http://srv1617582.hstgr.cloud:3005"
         ));
@@ -34,7 +35,7 @@ public class GatewayCorsConfig {
         config.addAllowedHeader("*"); // Allow all authentication headers
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource(new PathPatternParser());
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
         return new CorsWebFilter(source);

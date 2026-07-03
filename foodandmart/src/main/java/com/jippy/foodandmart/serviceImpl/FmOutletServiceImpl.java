@@ -1,13 +1,11 @@
 package com.jippy.foodandmart.serviceImpl;
 
-import com.jippy.foodandmart.Enum.FmOtpPurpose;
-import com.jippy.foodandmart.Enum.FmOtpStatus;
+
 import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
-import com.jippy.foodandmart.exception.InvalidOtpException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmNearbyOutletMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
@@ -66,7 +64,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmProductVariantRepository productVariantRepository;
     private final FmGoogleMapsService googleMapsService;
     private final PasswordEncoder passwordEncoder;
-    private final FmEmailOtpVerificationRepository otpRepository;
+   // private final FmEmailOtpVerificationRepository otpRepository;
     private final FmFavoriteOutletRepository favoriteOutletRepository;
 
     // ── Queries ───────────────────────────────────────────────────────────────
@@ -127,6 +125,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         return outletResponseDto;
 
+    }
+
+     @Override
+    public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
+        return null;
     }
 //    ------------------------------------------------------------------------
     // ── Single Create ─────────────────────────────────────────────────────────
@@ -486,20 +489,59 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
       log.info("Checking favourite status for customerId={} and outletId={}", customerId, outletId);
 
-  Optional<FmFavoriteOutlet> favourite = favoriteOutletRepository.findByCustomerIdAndOutletId(
-                            customerId,
-                            outletId);
+//      ----------------------------------------------------------------------------
+     Optional<FmFavoriteOutlet> favourite =
+                    favoriteOutletRepository.findByCustomerIdAndFavoriteIdAndFavouriteType(
+                            customerId, outletId, FmAppConstants.TYPE_OUTLET);
 
 //  favourite.isPresent() --> returns true if record exists in the favourite table
             outletDtoresponse.setIsFavourite(favourite.isPresent());
 
             log.info("Favourite status: {}", favourite.isPresent());
+
+            /*
+             * Populate product favourite status for logged-in customer.
+             */
+            log.info("Checking is_product_favourite status");
+
+           setProductFavouriteStatus(outletDtoresponse, customerId);
+
         }
+
 //  ---------------------------------------------------------------------------
 
         log.info("Successfully fetched outlet details for outletId={}", outletId);
 
         return outletDtoresponse;
+    }
+
+    /** HELPER_METHOD 1
+     * Populate favourite status for every product
+     * available in the outlet.
+     */
+    private void setProductFavouriteStatus(
+            FmOutletDetailsDto outlet, Integer customerId) {
+
+        for (FmCategoryDto category : outlet.getCategories()) {
+
+            for (FmProductDto product : category.getProducts()) {
+
+                log.info("Checking Product Id : {}", product.getProductId());
+
+                Optional<FmFavoriteOutlet> favourite =
+                        favoriteOutletRepository
+                                .findByCustomerIdAndFavoriteIdAndFavouriteType(
+                                        customerId,
+                                        product.getProductId(),
+                                        FmAppConstants.TYPE_PRODUCT);
+
+                log.info("Repository Result : {}", favourite.isPresent());
+
+                product.setIsProductFavourite(favourite.isPresent());
+
+                log.info("After Setting : {}", product.getIsProductFavourite());
+            }
+        }
     }
 
     //    for api to get all outlets by merchant id service implementation
@@ -754,13 +796,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     @Override
-    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng) {
+    public FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng,Integer categoryId) {
 
         double radiusKm = FmAppConstants.DEFAULT_RADIUS_KM;
 
         log.info("[OutletService] fetchCustomerNearbyOutlets lat={} lng={} radius={} km", customerLat, customerLng, radiusKm);
 
-        List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(customerLat, customerLng);
+        List<Object[]> rows = outletRepository.findCustomerNearbyOutlets(customerLat, customerLng,categoryId);
 
         /*
          * NO OUTLETS FOUND
@@ -931,5 +973,16 @@ public class FmOutletServiceImpl implements IFmOutletService {
         response.setOutlets(outlets);
 
         return response;
+    }
+    @Override
+    public List<FmOutlet> getOutletsByAreaId(
+            Integer areaId) {
+
+        log.info(
+                "Fetching outlets by areaId={}",
+                areaId);
+
+        return outletRepository
+                .getOutletsByAreaId(areaId);
     }
 }

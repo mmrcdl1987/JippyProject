@@ -101,7 +101,7 @@ public class FmOutletController {
      *
      * <p>GET /api/outlets/{id}</p>
      *
-     * @param id the outlet's primary key
+     * @param {id} the outlet's primary key
      * @return 200 with the {@link FmOutlet} entity
      */
 //    @GetMapping("/{id}")
@@ -590,10 +590,11 @@ public class FmOutletController {
     @GetMapping("/customer/nearby")
     public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(@Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true) @RequestParam double lat,
 
-                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng) {
+                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng,
+            @RequestParam(required = false) Integer categoryId) {
 
         log.info("GET /api/outlets/customer/nearby lat={}, lng={}", lat, lng);
-        FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng);
+        FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng,categoryId);
         return ResponseEntity.ok(response);
     }
 

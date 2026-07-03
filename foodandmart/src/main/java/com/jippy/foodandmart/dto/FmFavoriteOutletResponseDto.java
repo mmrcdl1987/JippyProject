@@ -10,15 +10,19 @@ import java.time.LocalDateTime;
 @Setter
 public class FmFavoriteOutletResponseDto {
 
+    // Favourite Details
     private Integer favoriteOutletId;
     private Integer customerId;
-    private Integer outletId;
-    private LocalDateTime createdAt;
+//   private Integer outletId;
 
-    //changed for production
+   //outletID = favoriteId
+    private Integer favoriteId;
+    private String favouriteType;
     private Boolean isFavourite;
-  //  from Outlet Table
+
+    // Outlet Details
     private BigDecimal review;
     private String outletName;
     private String outletPicUrl;
+
 }

@@ -38,7 +38,7 @@ public interface IFmOutletService {
      * Customer App: fetch active outlets within default 3 km of the customer.
      * Always uses DEFAULT_RADIUS_KM = 3.0 km — no caller override.
      */
-    FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng);
+    FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng,Integer categoryId);
 
     FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto);
 
@@ -47,4 +47,6 @@ public interface IFmOutletService {
     OutletLocationResponseDto getOutletLocation(Integer outletId);
 
     public String fetchOutletName(Integer outletId);
+
+    List<FmOutlet> getOutletsByAreaId(Integer areaId);
 }
