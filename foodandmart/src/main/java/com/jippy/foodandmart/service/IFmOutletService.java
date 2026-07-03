@@ -22,6 +22,8 @@ public interface IFmOutletService {
 
     FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto);
 
+    FmOutletCreatedDTO createOutletBulkUpload(FmOutletRequestDTO dto);
+
     //FmBulkOutletResultDTO bulkUpload(List<FmOutletRequestDTO> rows);
 
 
