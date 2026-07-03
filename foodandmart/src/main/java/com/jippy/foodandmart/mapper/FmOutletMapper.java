@@ -197,6 +197,7 @@ public final class FmOutletMapper {
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());
+        dto.setOutletPicUrl(outlet.getOutletPicUrl());
 
         // Convert Point -> Latitude X & Longitude Y
         if (outlet.getOutletLocation() != null) {

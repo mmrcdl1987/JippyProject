@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.service;
 
 import com.jippy.foodandmart.dto.*;
+import com.jippy.foodandmart.projections.ActiveBannerProjection;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -21,4 +22,6 @@ public interface OutletSubscriptionPlanService {
     List<OutletSubscriptionPlanResponseDto> getAllSubscriptions();
     public OutletSubscriptionStatusResponseDto getSubscriptionStatus(
             Integer outletId);
+
+    List<ActiveBannerProjection> getActiveBanners();
 }

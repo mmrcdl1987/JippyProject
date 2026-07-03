@@ -104,7 +104,13 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
             DriveCustomerLocationDto customerLocation = getCustomerLocation(requestDto.getCustomerAddressId());
 
-            BigDecimal deliveryDistanceKm = calculateDistance(outletLocation.getLatitude().doubleValue(), outletLocation.getLongitude().doubleValue(), customerLocation.getLatitude(), customerLocation.getLongitude());
+            BigDecimal deliveryDistanceKm = calculateDistance(
+                    outletLocation.getLatitude().doubleValue(),
+                    outletLocation.getLongitude().doubleValue(),
+                    customerLocation.getLatitude(),
+                    customerLocation.getLongitude());
+
+            log.info("DELIVERY_DISTANCE_KM = {}", deliveryDistanceKm);
 
             DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(deliveryDistanceKm);
 
@@ -244,12 +250,15 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
     private DriverDeliveryChargeSettings getDeliverySlab(BigDecimal deliveryDistanceKm) {
 
-        return chargeSettingsRepository.findDeliverySlab(deliveryDistanceKm).orElseThrow(() -> {
+        log.info("Finding delivery slab for distance: {} KM", deliveryDistanceKm);
 
-            log.error("DELIVERY_SLAB_NOT_FOUND | deliveryDistanceKm={}", deliveryDistanceKm);
+        return chargeSettingsRepository.findDeliverySlab(deliveryDistanceKm)
+                .orElseThrow(() -> {
 
-            return new DriverBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
-        });
+                    log.error("DELIVERY_SLAB_NOT_FOUND | deliveryDistanceKm={}", deliveryDistanceKm);
+
+                    return new DriverBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
+                });
     }
 
     private BigDecimal calculateCharge(BigDecimal distance, BigDecimal unitPrice) {

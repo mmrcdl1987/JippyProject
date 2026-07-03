@@ -18,6 +18,16 @@ public class DivOutletWeeklySettlementResponseDto {
 
     private BigDecimal totalSettlementAmount;
 
+    private BigDecimal deductions;
+
+    private BigDecimal gst;
+
+    private BigDecimal promotionAmount;
+
+    private BigDecimal subscriptionAmount;
+
+    private BigDecimal netSettlementAmount;
+
     private String paymentStatus;
 
     private String transactionId;
@@ -27,6 +37,4 @@ public class DivOutletWeeklySettlementResponseDto {
     private String outletEmail;
 
     private Integer ordersCount;
-
-    private BigDecimal deductions;
 }

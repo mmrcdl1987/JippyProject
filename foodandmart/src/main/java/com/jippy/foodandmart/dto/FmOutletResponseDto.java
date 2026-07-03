@@ -16,7 +16,7 @@ public class FmOutletResponseDto {
     private BigDecimal radius;
     private String isActive;
     private Boolean isApproved;
-
+    private String outletPicUrl;
 //    From Location Column
     private Double latitude;
     private Double longitude;

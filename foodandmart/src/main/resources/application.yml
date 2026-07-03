@@ -25,7 +25,6 @@ spring:
       minimum-idle: 2
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
     show-sql: true
@@ -89,5 +88,5 @@ aws:
   s3:
     bucket-name: jippys3bucket
     region: ap-south-2
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
+    access-key:
+    secret-key:
