@@ -33,9 +33,6 @@ public interface OutletSubscriptionPlanRepository
                 osp.bestRestaurantBannerUrl      AS bestRestaurantBannerUrl,
                 osp.dealsBannerUrl               AS dealsBannerUrl,
             
-                osp.bannerFromDate               AS bannerFromDate,
-                osp.bannerToDate                 AS bannerToDate,
-            
                 osp.priceModelType               AS priceModelType,
                 osp.offerAmount                  AS offerAmount
             
@@ -44,16 +41,13 @@ public interface OutletSubscriptionPlanRepository
                  ON sp.subscriptionPlanId = osp.subscriptionPlanId
             JOIN FmOutlet o
                  ON o.outletId = osp.outletId
-            
-            WHERE CURRENT_DATE
-                  BETWEEN osp.bannerFromDate
-                  AND osp.bannerToDate
-            AND o.isActive = 'Y'
+           
+            WHERE o.isActive = 'Y'
             
             ORDER BY
                 sp.areaId,
                 sp.bannerSlot DESC
             """)
     List<ActiveBannerProjection> findActiveBanners();
-
+    //Removed banner from date and to date from query(in where clause and columns) to resolve compilation issue
 }

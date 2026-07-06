@@ -27,11 +27,11 @@ public final class OutletSubscriptionPlanMapper {
         dto.setSubscriptionToDate(
                 entity.getSubscriptionToDate());
 
-        dto.setBannerFromDate(
+      /*  dto.setBannerFromDate(
                 entity.getBannerFromDate());
 
         dto.setBannerToDate(
-                entity.getBannerToDate());
+                entity.getBannerToDate());*/
 
         dto.setPriceModelType(
                 entity.getPriceModelType());

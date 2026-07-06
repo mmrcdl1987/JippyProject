@@ -45,18 +45,18 @@ public class FmBannerDesignerServiceImpl
         dto.setSubscriptionPlanId(entity.getSubscriptionPlanId());
         dto.setSubscriptionFromDate(entity.getSubscriptionFromDate());
         dto.setSubscriptionToDate(entity.getSubscriptionToDate());
-        dto.setBannerFromDate(entity.getBannerFromDate());
-        dto.setBannerToDate(entity.getBannerToDate());
+       /* dto.setBannerFromDate(entity.getBannerFromDate());
+        dto.setBannerToDate(entity.getBannerToDate());*/
         dto.setMainBannerUrl(entity.getMainBannerUrl());
         dto.setBestRestaurantBannerUrl(entity.getBestRestaurantBannerUrl());
         dto.setDealsBannerUrl(entity.getDealsBannerUrl());
         dto.setPriceModelType(entity.getPriceModelType());
         dto.setOfferAmount(entity.getOfferAmount());
 
-        dto.setStatus(
+      /*  dto.setStatus(
                 calculateStatus(
                         entity.getBannerFromDate(),
-                        entity.getBannerToDate()));
+                        entity.getBannerToDate()));*/
 
         return dto;
     }

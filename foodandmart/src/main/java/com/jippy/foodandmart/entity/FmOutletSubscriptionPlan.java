@@ -29,11 +29,11 @@ public class FmOutletSubscriptionPlan {
     @Column(name = "subscription_to_date")
     private LocalDate subscriptionToDate;
 
-    @Column(name = "banner_from_date")
+    /*@Column(name = "banner_from_date")
     private LocalDate bannerFromDate;
 
     @Column(name = "banner_to_date")
-    private LocalDate bannerToDate;
+    private LocalDate bannerToDate;*/
 
     @Column(name = "main_banner_url")
     private String mainBannerUrl;

@@ -56,8 +56,8 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
             entity.setSubscriptionPlanId(plan.getSubscriptionPlanId());
             entity.setSubscriptionFromDate(subscriptionFromDate);
             entity.setSubscriptionToDate(subscriptionToDate);
-            entity.setBannerFromDate(request.getBannerFromDate());
-            entity.setBannerToDate(bannerToDate);
+          /*  entity.setBannerFromDate(request.getBannerFromDate());
+            entity.setBannerToDate(bannerToDate);*/
             entity.setPriceModelType(request.getPriceModelType());
             entity.setOfferAmount(request.getOfferAmount());
             entity.setCreatedAt(LocalDateTime.now());
@@ -99,9 +99,9 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
             dto.setSubscriptionToDate(outletPlan.getSubscriptionToDate());
 
-            dto.setBannerFromDate(outletPlan.getBannerFromDate());
+           /* dto.setBannerFromDate(outletPlan.getBannerFromDate());
 
-            dto.setBannerToDate(outletPlan.getBannerToDate());
+            dto.setBannerToDate(outletPlan.getBannerToDate());*/
 
             dto.setBannerSlot(plan.getBannerSlot());
 
@@ -330,9 +330,9 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
         dto.setSubscriptionToDate(outletPlan.getSubscriptionToDate());
 
-        dto.setBannerFromDate(outletPlan.getBannerFromDate());
+      /*  dto.setBannerFromDate(outletPlan.getBannerFromDate());
 
-        dto.setBannerToDate(outletPlan.getBannerToDate());
+        dto.setBannerToDate(outletPlan.getBannerToDate());*/
 
         dto.setBannerSlot(plan.getBannerSlot());
 
