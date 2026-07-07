@@ -35,10 +35,34 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            -- Outlet basic details (from outlets table)
                            o.outlet_id,          -- jippy_fm.outlets
                            o.outlet_name,        -- jippy_fm.outlets
+                           o.outlet_email,       -- jippy_fm.outlets
                            o.outlet_phone,       -- jippy_fm.outlets
+                           o.alternate_outlet_phone,   -- jippy_fm.outlets
+                           o.cuisine_type,       -- jippy_fm.outlets
+            
+                           --Location details 
+                           ST_Y(o.outlet_location::geometry) AS latitude,
+                           ST_X(o.outlet_location::geometry) AS longitude,
                            o.is_toggle AS outlet_available,     -- jippy_fm.outlets
+           
+                           -- Outlet bank details (from user_bank_details table)
+                           ubd.account_number,
+                           ubd.ifsc_code,
+                           ubd.bank_name,
+                           ubd.account_holder_name,
+                           
+                           -- Outlet address details (from address table)
+                           a.building_number,
+                           a.road,
+                           a.landmark,
+                           a.city_id,
+                           ct.city_name,
+                           a.state_id,
+                           st.state_name,
+                           a.area_id,
+                           ar.area_name,
             
-            
+           
                            --- online pricing details (from product_online_pricing table)
                            --product_id from product_online_pricing table 
                            pop.product_id AS pop_id,          -- jippy_fm.product_online_pricing
@@ -78,8 +102,29 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             
                        -- Start from outlet (main table: jippy_fm.outlets)
                        FROM jippy_fm.outlets o
-            
-            
+                       
+                       -- Fetch outlet bank details
+                       LEFT JOIN jippy_fm.user_bank_details ubd
+                              ON ubd.recipient_id = o.outlet_id
+                             AND ubd.user_type = 'OUTLET'
+                             
+                       -- Fetch outlet address
+                       LEFT JOIN jippy_fm.address a
+                              ON a.jippy_address_id = o.outlet_id
+                             AND a.address_type = 'OUTLET'
+      
+                       -- Fetch state details
+                       LEFT JOIN jippy_fm.state st
+                              ON st.state_id = a.state_id
+      
+                       -- Fetch city details
+                       LEFT JOIN jippy_fm.city ct
+                              ON ct.city_id = a.city_id
+      
+                       -- Fetch area details
+                       LEFT JOIN jippy_fm.area ar
+                              ON ar.area_id = a.area_id
+           
                        -- Join outlet_categories (maps outlet to categories)
                        JOIN jippy_fm.outlet_categories oc
                            ON o.outlet_id = oc.outlet_id
@@ -403,7 +448,25 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
         AND o.is_approved = true
         """,
          nativeQuery = true)
- List<FmOutlet> getOutletsByAreaId(
-         Integer areaId);
+ List<FmOutlet> getOutletsByAreaId(Integer areaId);
+
+
+ // this query checks if an outlet with the same name already exists for the given merchant and area,
+// ignoring case and whitespace differences. It returns true if such an outlet exists, otherwise false.
+ @Query(value = """
+    SELECT EXISTS (
+        SELECT 1
+        FROM jippy_fm.outlets o
+        JOIN jippy_fm.address a
+          ON o.outlet_id = a.jippy_address_id
+         AND a.address_type = 'OUTLET'
+        WHERE o.merchant_id = :merchantId
+          AND LOWER(TRIM(o.outlet_name)) = LOWER(TRIM(:outletName))
+          AND a.area_id = :areaId
+    )
+    """, nativeQuery = true)
+ boolean existsByMerchantAndOutletNameAndArea(@Param("merchantId") Integer merchantId,
+                                              @Param("outletName") String outletName,
+                                              @Param("areaId") Integer areaId);
 
 }

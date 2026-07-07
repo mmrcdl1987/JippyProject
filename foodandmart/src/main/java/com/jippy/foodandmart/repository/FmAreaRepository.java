@@ -26,4 +26,13 @@ public interface FmAreaRepository extends JpaRepository<FmArea, Integer> {
     Optional<FmArea> findByAreaNameIgnoreCase(@Param("name") String name);
 
     List<FmArea> findByCityId(Integer cityId);
+
+    @Query("""
+       SELECT a
+       FROM FmArea a
+       WHERE LOWER(TRIM(a.areaName)) = LOWER(TRIM(:areaName))
+       AND a.cityId = :cityId
+       """)
+    Optional<FmArea> findByAreaNameIgnoreCaseAndCityId(@Param("areaName") String areaName,
+            @Param("cityId") Integer cityId);
 }

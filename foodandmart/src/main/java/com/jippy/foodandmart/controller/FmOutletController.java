@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.function.Function;
 
@@ -57,18 +58,170 @@ public class FmOutletController {
      * @param dto the validated outlet creation request
      * @return 201 with an {@link FmOutletCreatedDTO} including portal credentials
      */
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutlet(
+    @PostMapping(value="/bulkUpload",consumes = MediaType.APPLICATION_JSON_VALUE)
+//    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutlet(
+    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutletForBulkUploadAndOtpValidation(
             @RequestHeader("Create-Outlet-Token") String token,
             @Valid @RequestBody FmOutletRequestDTO dto) {
 
         log.info("[OUTLET] POST /api/outlets name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
-        FmOutletCreatedDTO saved = outletService.createOutlet(dto);
+//        FmOutletCreatedDTO saved = outletService.createOutlet(dto);
+        FmOutletCreatedDTO saved = outletService.createOutletForBulkUploadAndOtpValidation(dto);
+
         log.info("[OUTLET] Created: outletId={}",
                 saved.getOutletId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Outlet created successfully", saved));
+        return ResponseEntity.status(HttpStatus.CREATED).
+                body(FmApiResponse.success("Outlet created successfully", saved));
     }
 
+//    -------------------------------------------------------------------------------------------
+    @PostMapping("/createOutlet")
+    @Operation(summary = "Create Outlet",
+            description = "Creates outlet along with address, user, operating days and bank details.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Outlet created successfully"),
+            @ApiResponse(responseCode = "400", description = "Validation Failed"),
+            @ApiResponse(responseCode = "404", description = "Merchant Not Found")})
+    public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet
+    (@Valid @RequestBody FmOutletRequestDTO dto) {
+
+        log.info("Received request to create outlet : {}", dto.getOutletName());
+
+        FmOutletCreateResponseDTO response = outletService.createOutlet(dto);
+
+        log.info("Outlet created successfully");
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(FmApiResponse.success("Outlet created successfully", response));
+    }
+
+    //---------------------------------------------------------------------------------
+
+    /**
+     * Updates outlet details by Merchant.
+     *
+     * This API allows a merchant to update
+     * outlet information including:
+     * - Outlet Details
+     * - Bank Details
+     * - Address Details
+     * - Operating Days
+     *
+     * Username and Password cannot be updated
+     * through this API.
+     */
+    @PutMapping("/updateOutletDetailsByMerchant/{outletId}")
+    @Operation(
+            summary = "Update Outlet Details By Merchant ",
+            description = "Allows Merchant to update outlet details," +
+                    " address, bank details and operating days. " +
+                    "[Username and Password cannot be updated]."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Outlet updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "404", description = "Outlet or Merchant not found")
+    })
+    public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(
+            @PathVariable Integer outletId,
+            @Valid @RequestBody FmUpdateOutletRequestDTO dto) {
+
+        log.info("Received request to update outlet details for outletId : {}", outletId);
+
+        FmUpdateOutletRequestDTO response =
+                outletService.updateOutletDetailsByMerchant(outletId, dto);
+
+        log.info("Outlet details updated successfully for outletId : {}", outletId);
+
+        return ResponseEntity.ok(FmApiResponse.success("Outlet details updated successfully",
+                        response));
+    }
+//    --------------------------------------------------------------------------------------------
+    //edit and Update outlet product details
+    @PutMapping("/editAndUpdateOutletProducts")
+    @Operation(summary = "Update outlet details", description = "Updates outlet timings, categories, products and product timings. " + "OutletId, outletName and outletPhone are not editable.")
+    public ResponseEntity<FmOutletDetailsDto> updateOutletDetailsByMerchant(
+
+            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId, @RequestParam String userType, @RequestBody FmOutletDetailsDto dto) {
+
+        log.info("Received request to update outlet with id={}", outletId);
+
+        // Call service
+        FmOutletDetailsDto response = outletService.updateOutletDetails(outletId, dto, userType);
+
+        log.info("Successfully updated outlet with id={}", outletId);
+
+        return ResponseEntity.ok(response);
+    }
+
+//    -----------------------------------------------------------------------------------------
+//    for getOutletDetails API - to fetch outlet details including menu, categories,
+//    product timings and outlet timings based on user type (customer or merchant)
+@Operation(summary = "Get Outlet Details",
+     description = """
+                Fetches complete outlet details including outlet information, address,
+                bank details, operating days, categories and products. based on user type
+                
+                Prerequisites - to use this API:
+                1. Merchant should be created.
+                2. Outlet should be created.
+                3. Outlet Category should be created and mapped to the outlet.
+                4. At least one Product should be created under the Outlet Category.
+                5. (Optional) Product Online Pricing can be configured.
+                6. (Optional) Product Available Timings can be configured.
+                -- Ignore if  already Created/Exists.
+                
+                Note:
+                - If the outlet has no Outlet Categories or Products, this API will not return any data.
+                - For CUSTOMER userType, favourite status is returned when customerId is provided.
+                - For MERCHANT userType, complete outlet configuration details are returned.
+                """)
+    @ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid userType")
+    @ApiResponse(responseCode = "404", description = "Outlet not found")
+    @GetMapping("/getOutletDetails")
+    public ResponseEntity<FmOutletDetailsDto> getOutletDetails(
+
+        @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId,
+
+        @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true) @RequestParam String userType,
+
+        @Parameter(description = "Customer ID (Optional). If provided, the " + "response includes the is_favourite feild status of the outlet " + "for that customer.", required = false) @RequestParam(required = false) Integer customerId) {
+
+    log.info("Fetching outlet details for outletId={}, userType={}, customerId={}", outletId, userType, customerId);
+    // Custom validation for case sensitivity
+    if (!FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && !FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
+        throw new InvalidUserTypeException("Invalid userType. Allowed values: CUSTOMER or MERCHANT");
+    }
+
+    FmOutletDetailsDto outletDetails = outletService.getOutletDetails(outletId, userType, customerId);
+
+    log.info("Successfully fetched outlet details for outletId: {}, userType: {}", outletId, userType);
+
+    return ResponseEntity.ok(outletDetails);
+}
+//---------------------------------------------------------------------------------------------------
+
+    @Operation(summary = "Get Outlets by Merchant ID", description = "Fetch all outlets for a merchant with state, city, and area details. Throws error if outlet is not approved.")
+    //    for getOutletsByMerchant API - to fetch outlet's, address-state,city,area details based on merchant id
+    @ApiResponse(responseCode = "200", description = "Outlets fetched successfully")
+    @ApiResponse(responseCode = "400", description = "Outlet not approved")
+    @ApiResponse(responseCode = "404", description = "No outlets found")
+    @GetMapping("/getOutletsByMerchant")
+    public ResponseEntity<List<FmOutletByMerchantDto>> getOutletsByFmMerchant(
+
+            @Parameter(description = "Merchant ID", required = true) @RequestParam Integer merchantId) {
+
+        log.info("Fetching outlets for merchantId={}", merchantId);
+
+        List<FmOutletByMerchantDto> OutletByMerchantDetails = outletService.getOutletsByFmMerchantId(merchantId);
+
+        log.info("Successfully fetched outlets for merchantId={}", merchantId);
+
+        return ResponseEntity.ok(OutletByMerchantDetails);
+    }
+
+//    -----------------------------------------------------------------------------------------
     /**
      * Returns all outlets as summary DTOs.
      *
@@ -109,11 +262,9 @@ public class FmOutletController {
 //        return ResponseEntity.ok
 //                (FmApiResponse.success("Outlet fetched", outletService.getOutletById(id)));
 //    }
-
     @GetMapping("/getOutletById/{outletId}")
     @Operation(summary = "Get outlet details by outlet ID")
-    public ResponseEntity<FmApiResponse<FmOutletResponseDto>> getOutletById(
-            @PathVariable Integer outletId) {
+    public ResponseEntity<FmApiResponse<FmOutletResponseDto>> getOutletById(@PathVariable Integer outletId) {
 
         log.info("[OUTLET] GET /api/fm/outlets/{}", outletId);
 
@@ -121,10 +272,7 @@ public class FmOutletController {
 
         log.info("Successfully returned outlet details for outletId: {}", outletId);
 
-        return ResponseEntity.ok(FmApiResponse.success
-                ("Outlet fetched successfully", response
-                )
-        );
+        return ResponseEntity.ok(FmApiResponse.success("Outlet fetched successfully", response));
     }
 
     /**
@@ -365,8 +513,8 @@ public class FmOutletController {
             FmOutletDayDTO dayDto = new FmOutletDayDTO();
             dayDto.setDayOfWeekId(i + 1);
             dayDto.setIsOpen(isOpen);
-            dayDto.setOpeningTime(open);
-            dayDto.setClosingTime(close);
+            dayDto.setOpeningTime(LocalTime.parse(open));
+            dayDto.setClosingTime(LocalTime.parse(close));
             days.add(dayDto);
         }
         return days;
@@ -452,77 +600,8 @@ public class FmOutletController {
         }
     }
 
-    //    for getOutletDetails API - to fetch outlet details including menu, categories,
-    //    product timings and outlet timings based on user type (customer or merchant)
-    @Operation(summary = "Get Outlet Details", description = "Fetch outlet details including menu, categories, product timings and outlet timings based on user type")
-    @ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid userType")
-    @ApiResponse(responseCode = "404", description = "Outlet not found")
-    @GetMapping("/getOutletDetails")
-    public ResponseEntity<FmOutletDetailsDto> getOutletDetails(
 
-            @Parameter(description = "Outlet ID", required = true)
-            @RequestParam Integer outletId,
 
-            @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true)
-            @RequestParam String userType,
-
-            @Parameter(description = "Customer ID (Optional). If provided, the " +
-                            "response includes the is_favourite feild status of the outlet " +
-                    "for that customer.", required = false)
-            @RequestParam(required = false) Integer customerId) {
-
-        log.info("Fetching outlet details for outletId={}, userType={}, customerId={}",
-                outletId, userType, customerId);
-        // Custom validation for case sensitivity
-        if (!FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
-                && !FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
-            throw new InvalidUserTypeException("Invalid userType. Allowed values: CUSTOMER or MERCHANT");
-        }
-
-        FmOutletDetailsDto outletDetails =
-                outletService.getOutletDetails(outletId, userType, customerId);
-
-        log.info("Successfully fetched outlet details for outletId: {}, userType: {}", outletId, userType);
-
-        return ResponseEntity.ok(outletDetails);
-    }
-
-    @Operation(summary = "Get Outlets by Merchant ID", description = "Fetch all outlets for a merchant with state, city, and area details. Throws error if outlet is not approved.")
-    //    for getOutletsByMerchant API - to fetch outlet's, address-state,city,area details based on merchant id
-    @ApiResponse(responseCode = "200", description = "Outlets fetched successfully")
-    @ApiResponse(responseCode = "400", description = "Outlet not approved")
-    @ApiResponse(responseCode = "404", description = "No outlets found")
-    @GetMapping("/getOutletsByMerchant")
-    public ResponseEntity<List<FmOutletByMerchantDto>> getOutletsByFmMerchant(
-
-            @Parameter(description = "Merchant ID", required = true) @RequestParam Integer merchantId) {
-
-        log.info("Fetching outlets for merchantId={}", merchantId);
-
-        List<FmOutletByMerchantDto> OutletByMerchantDetails = outletService.getOutletsByFmMerchantId(merchantId);
-
-        log.info("Successfully fetched outlets for merchantId={}", merchantId);
-
-        return ResponseEntity.ok(OutletByMerchantDetails);
-    }
-
-    //Update outlet details
-    @PutMapping("/editAndUpdateOutletProducts")
-    @Operation(summary = "Update outlet details", description = "Updates outlet timings, categories, products and product timings. " + "OutletId, outletName and outletPhone are not editable.")
-    public ResponseEntity<FmOutletDetailsDto> updateOutletDetails(
-
-            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId, @RequestParam String userType, @RequestBody FmOutletDetailsDto dto) {
-
-        log.info("Received request to update outlet with id={}", outletId);
-
-        // Call service
-        FmOutletDetailsDto response = outletService.updateOutletDetails(outletId, dto, userType);
-
-        log.info("Successfully updated outlet with id={}", outletId);
-
-        return ResponseEntity.ok(response);
-    }
 
 
     public FmBulkOutletResultDTO outletBulkUpload(List<FmOutletRequestDTO> rows) {
@@ -589,11 +668,10 @@ public class FmOutletController {
     @GetMapping("/customer/nearby")
     public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(@Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true) @RequestParam double lat,
 
-                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng,
-            @RequestParam(required = false) Integer categoryId) {
+                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng, @RequestParam(required = false) Integer categoryId) {
 
         log.info("GET /api/outlets/customer/nearby lat={}, lng={}", lat, lng);
-        FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng,categoryId);
+        FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng, categoryId);
         return ResponseEntity.ok(response);
     }
 

@@ -42,6 +42,7 @@ public class FmMerchantController {
         return ResponseEntity.ok(FmApiResponse.success("Merchants fetched", merchantService.getAllMerchants()));
     }
 
+//    ------------------------------------------------------------
     /** GET /api/merchants/{id} */
     @GetMapping("/{id}")
     public ResponseEntity<FmApiResponse<FmMerchantDto>> getMerchantById(@PathVariable Integer id) {
@@ -78,8 +79,7 @@ public class FmMerchantController {
     }
 
     // update merchant with bank details
-    @Operation(
-            summary = "Update Merchant Profile",
+    @Operation(summary = "Update Merchant Profile",
             description = "Update merchant and bank details"
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant updated successfully")
@@ -95,16 +95,17 @@ public class FmMerchantController {
 
         return ResponseEntity.ok(updated);
     }
+
+//    --------------------------------------------------------------------------
     //    get merchant details with bank details
-    @Operation(
-            summary = "Get Merchant Profile with Bank Details",
+    @Operation(summary = "Get Merchant Profile with Bank Details",
             description = "Fetch merchant details along with bank information using merchant ID"
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant fetched successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Merchant not found")
     @GetMapping("/getMerchantProfile")
     public ResponseEntity<FmMerchantWithBankDto> getMerchantProfile(
-            @RequestParam Long merchantId) {
+            @RequestParam Integer merchantId) {
         log.info("Fetching merchant profile for merchantId: {}", merchantId);
         FmMerchantWithBankDto response =
                 merchantService.getMerchantWithBank(merchantId);

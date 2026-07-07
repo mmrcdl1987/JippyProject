@@ -5,7 +5,7 @@ package com.jippy.foodandmart.projections;
 public interface FmMerchantWithBankProjection {
 
     //    for merchant basic details to fetch
-    Long getMerchantId();
+    Integer getMerchantId();
     String getMerchantName();
     String getMerchantEmail();
     String getMerchantPhone();

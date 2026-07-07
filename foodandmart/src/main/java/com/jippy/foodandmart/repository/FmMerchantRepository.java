@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmMerchant;
+import com.jippy.foodandmart.entity.FmMerchantBankDetails;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +16,8 @@ public interface FmMerchantRepository extends JpaRepository<FmMerchant, Integer>
     Optional<FmMerchant> findByMerchantPhone(String phone);
     boolean existsByMerchantEmail(String email);
     boolean existsByMerchantPhone(String phone);
+
+
 
     //    for finding the email in the Merchant table
     Optional<FmMerchant> findByMerchantEmailIgnoreCase(String merchantEmail);
@@ -42,7 +45,7 @@ public interface FmMerchantRepository extends JpaRepository<FmMerchant, Integer>
             WHERE m.merchant_id = :merchantId
             """, nativeQuery = true)
 //     for fetching bank details from the Merchant-table
-    FmMerchantWithBankProjection getMerchantWithBank(@Param("merchantId") Long merchantId);
+    FmMerchantWithBankProjection getMerchantWithBank(@Param("merchantId") Integer merchantId);
 
 
 

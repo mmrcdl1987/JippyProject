@@ -15,7 +15,7 @@ public class FmMerchantWithBankDto {
         // for merchant
 
         @NotNull(message = "Merchant ID cannot be null for update")
-        private Long merchantId;
+        private Integer merchantId;
 
         @NotBlank(message = "Merchant name should not be empty")
         @Size(min = 3, max = 100, message = "Merchant name must be between 3 and 100 characters")

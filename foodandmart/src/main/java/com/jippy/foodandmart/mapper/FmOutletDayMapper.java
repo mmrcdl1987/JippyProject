@@ -29,10 +29,10 @@ public final class FmOutletDayMapper {
         entity.setIsOpen(dto.getIsOpen() != null ? dto.getIsOpen() : true);
 
         // Convert opening time string → LocalTime
-        entity.setOpeningTime(parseTime(dto.getOpeningTime()));
+        entity.setOpeningTime(dto.getOpeningTime());
 
         // Convert closing time string → LocalTime
-        entity.setClosingTime(parseTime(dto.getClosingTime()));
+        entity.setClosingTime(dto.getClosingTime());
 
         // Set current timestamp as created time
         entity.setCreatedAt(LocalDateTime.now());
@@ -55,10 +55,10 @@ public final class FmOutletDayMapper {
         dto.setIsOpen(entity.getIsOpen());
 
         // Convert opening time → "HH:mm" string (null-safe)
-        dto.setOpeningTime(entity.getOpeningTime() != null ? entity.getOpeningTime().format(TIME_FMT) : null);
+        dto.setOpeningTime(entity.getOpeningTime() != null ? entity.getOpeningTime() : null);
 
         // Convert closing time → "HH:mm" string (null-safe)
-        dto.setClosingTime(entity.getClosingTime() != null ? entity.getClosingTime().format(TIME_FMT) : null);
+        dto.setClosingTime(entity.getClosingTime() != null ? entity.getClosingTime(): null);
 
         // Return DTO
         return dto;

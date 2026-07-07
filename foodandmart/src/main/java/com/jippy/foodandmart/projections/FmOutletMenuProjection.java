@@ -15,9 +15,45 @@ public interface FmOutletMenuProjection {
     Integer getOutletId();
     String getOutletName();
     String getOutletPhone();
+    String getOutletEmail();
+    String getAlternateOutletPhone();
+
+
+//    ---------------------------------------------------------
+    String getCuisineType();
+    Double getLatitude();
+    Double getLongitude();
     // Outlet is_available
     Boolean getOutletAvailable();
+//    -----------------------------------------------------------
+    // Outlet bank details (user_bank_details table)
+    String getAccountNumber();
 
+    String getIfscCode();
+
+    String getBankName();
+
+    String getAccountHolderName();
+
+    // Address table
+
+    String getBuildingNumber();
+
+    String getRoad();
+
+    String getLandmark();
+
+    Integer getCityId();
+
+    String getCityName();
+
+    Integer getStateId();
+
+    String getStateName();
+
+    Integer getAreaId();
+
+    String getAreaName();
 
     //    for product_online_pricing table
     Integer productIdFromOnlinePricing();
