@@ -258,7 +258,8 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     }
 
     private FmBulkUploadResultDTO buildErrorResult(int rowNum, String reason) {
-        return FmBulkUploadResultDTO.builder().totalRows(0).successCount(0).failureCount(0).errors(List.of(FmBulkUploadResultDTO.RowErrorDTO.builder().rowNumber(rowNum).field("file").value("").reason(reason).build())).build();
+        return FmBulkUploadResultDTO.builder().totalRows(0).successCount(0).failureCount(0).errors
+                (List.of(FmBulkUploadResultDTO.RowErrorDTO.builder().rowNumber(rowNum).field("file").value("").reason(reason).build())).build();
     }
 
     //    get only merchant
@@ -276,7 +277,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
     //   get -> merchant + bank (native query)
     @Override
-    public FmMerchantWithBankDto getMerchantWithBank(Long merchantId) {
+    public FmMerchantWithBankDto getMerchantWithBank(Integer merchantId) {
         log.info("Fetching merchant with bank details for merchantId: {}", merchantId);
         FmMerchantWithBankProjection data = merchantRepository.getMerchantWithBank(merchantId);
         if (data == null) {

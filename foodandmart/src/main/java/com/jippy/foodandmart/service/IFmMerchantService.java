@@ -18,7 +18,7 @@ public interface IFmMerchantService {
 
     FmBulkUploadResultDTO bulkUpload(MultipartFile file);
     // Get--> merchant + bank
-    FmMerchantWithBankDto getMerchantWithBank(Long merchantId);
+    FmMerchantWithBankDto getMerchantWithBank(Integer merchantId);
 
     // Update--> merchant + bank
     FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto);

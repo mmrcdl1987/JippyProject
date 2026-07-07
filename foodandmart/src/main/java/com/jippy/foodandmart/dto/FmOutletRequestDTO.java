@@ -1,7 +1,7 @@
 package com.jippy.foodandmart.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -17,86 +17,151 @@ import java.util.List;
  * the correct behaviour — the removed fields are simply not persisted.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class FmOutletRequestDTO {
-
     // ──────────────────────── outlets table ───────────────────────────────────
 
+    @Schema(description = "Outlet Name", example = "Mehfil Restaurant")
     @NotBlank(message = "Outlet name is required")
     @Size(max = 100, message = "Outlet name must not exceed 100 characters")
     private String outletName;
 
+    @Schema(description = "Merchant Id", example = "50")
     @NotNull(message = "Merchant ID is required")
     private Integer merchantId;
 
+    @Schema(description = "Cuisine Type", example = "Indian")
     @NotBlank(message = "Cuisine type is required")
     @Size(max = 100, message = "Cuisine type must not exceed 100 characters")
     private String cuisineType;
 
+    @Schema(description = "Primary outlet phone number", example = "9876543210")
     @NotBlank(message = "Outlet phone is required")
     @Pattern(regexp = "^[6-9]\\d{9}$", message = "Outlet phone must be a valid 10-digit Indian mobile number")
     private String outletPhone;
 
-    @NotBlank(message = "Email is required")
+    @Schema(description = "Primary outlet email address", example = "friendsrestaurant@gmail.com")
+    @NotBlank(message = "Outlet email is required")
     @Email(message = "Invalid email format")
-    private String email;
+    private String outletEmail;
 
+    @Schema(description = "Alternate outlet phone number", example = "9876543211")
+    @Pattern(regexp = "^[6-9]\\d{9}$",
+            message = "Alternate outlet phone must be a valid 10-digit Indian mobile number")
+    private String alternateOutletPhone;
+
+
+    @Schema(description = "Username for outlet login", example = "friends_outlet")
     @NotBlank(message = "Username is required")
     @Size(min = 4, max = 50)
     private String username;
 
+    @Schema(description = "Password for outlet login", example = "Rohan@123")
     @NotBlank(message = "Password is required")
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).{8,20}$",
-            message = "Password must contain uppercase, lowercase, number and special character"
-    )
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).{8,20}$",
+            message = "Password must contain uppercase, lowercase, number and special character")
     private String password;
+//------------------------------------------------------------
+//    outlet bank details from user bank details table
+    @Schema(description = "Bank account number of the outlet", example = "123456789012")
+    @NotBlank(message = "Account number is required")
+    @Pattern(regexp = "^[0-9]{9,18}$",
+            message = "Account number must contain 9 to 18 digits")
+    private String accountNumber;
+
+    @Schema(description = "IFSC code of the bank branch", example = "SBIN0001234")
+    @NotBlank(message = "IFSC code is required")
+    @Pattern(regexp = "^[A-Z]{4}0[A-Z0-9]{6}$",
+            message = "Invalid IFSC Code")
+    private String ifscCode;
+
+    @Schema(description = "Name of the bank", example = "State Bank of India")
+    @NotBlank(message = "Bank name is required")
+    @Size(max = 100)
+    private String bankName;
+
+    @Schema(description = "Name of the account holder", example = "John Doe")
+    @NotBlank(message = "Account holder name is required")
+    @Size(max = 100)
+    private String accountHolderName;
+
+
     // ── address table ─────────────────────────────────────────────────────────
 
+    @Schema(description = "Building Number", example = "10-1-20")
     @NotBlank(message = "Building number is required")
     @Size(max = 50)
     private String buildingNumber;
 
+    @Schema(description = "Road Name", example = "Main Road")
     @NotBlank(message = "Road is required")
     @Size(max = 100)
     private String road;
 
+    @Schema(description = "Nearby Landmark", example = "Near Metro Station")
     @Size(max = 150)
     private String landmark;
 
-    @NotNull(message = "City ID is required")
+    @Schema(description = "State Id", example = "2")
+//    @NotNull(message = "state ID is required")
+    private Integer stateId;
+
+    @Schema(description = "City Id", example = "3")
+//    @NotNull(message = "city ID is required")
     private Integer cityId;
 
-    /**
-     * State name as entered in the XLS sheet (e.g. "Maharashtra").
-     * The service will look this up in the states table and resolve the state_id.
+
+    @Schema(description = "Area Id", example = "16")
+//    @NotNull(message = "City ID is required")
+    private Integer areaId;
+
+    /*
+     * Used only during bulk upload.
+     * Ignored while creating a single outlet.
      */
-    @JsonAlias({"state", "stateName"})
-    @NotBlank(message = "State name is required")
-    @Size(max = 100)
+    @Schema(description = "Area Name (Used only for bulk upload)", example = "Kukatpally")
+    private String areaName;
+    @Schema(description = "State Name (Used only for bulk upload)", example = "Telangana")
     private String stateName;
 
-    /**
-     * Area name as entered in the upload sheet\'s ZipCode column (e.g. "Banjara Hills").
-     *
-     * <p>The service resolves this name to the integer area_id FK via the area table.
-     * The upload template column is still labelled "ZipCode" for backward compatibility,
-     * but its value is now a human-readable area name, not a 6-digit numeric code.</p>
-     */
-    @JsonAlias({"zipcode", "areaCode", "areaName"})
-    @NotBlank(message = "Area name is required")
-    @Size(max = 50, message = "Area name must not exceed 50 characters")
-    private String areaName;
-
     // Latitude and longitude — stored to oulet_location GEOGRAPHY(POINT, 4326)
+    @Schema(description = "Latitude of outlet location", example = "17.4940")
     private String latitude;
+
+    @Schema(description = "Longitude of outlet location", example = "78.3990")
     private String longitude;
 
     // ── outlet_days table ─────────────────────────────────────────────────────
+    @Schema(
+            description = "Outlet operating days and timings",
+            example = """
+        [
+          {
+            "dayOfWeekId": 1,
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00",
+          },
+          {
+            "dayOfWeekId": 2,
+            "isOpen": true,
+            "openingTime": "08:00",
+            "closingTime": "21:00",
+          }
+        ]
+        """)
     @Valid
     private List<FmOutletDayDTO> operatingDays;
 
     // ── tracking ──────────────────────────────────────────────────────────────
-    @Size(max = 100)
+    @Schema(description = "User who created the outlet", example = "101")
+    private Integer updatedBy;
+
     private String uploadedBy;
+
+
 }

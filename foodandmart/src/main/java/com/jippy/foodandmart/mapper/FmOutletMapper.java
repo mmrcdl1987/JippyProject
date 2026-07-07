@@ -140,11 +140,16 @@ import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.dto.FmOutletDto;
 import com.jippy.foodandmart.dto.*;
+import com.jippy.foodandmart.entity.FmMerchantBankDetails;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmOutletAddress;
+import com.jippy.foodandmart.entity.FmOutletDay;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -179,7 +184,10 @@ public final class FmOutletMapper {
         outlet.setMerchantId(dto.getMerchantId());
         outlet.setCuisineType(dto.getCuisineType().trim());
         outlet.setOutletPhone(dto.getOutletPhone().trim());
+        outlet.setOutletEmail(dto.getOutletEmail());
+        outlet.setAlternateOutletPhone(dto.getAlternateOutletPhone());
         outlet.setIsActive("Y");
+        outlet.setUpdatedBy(dto.getUpdatedBy());
 
         return outlet;
     }
@@ -299,8 +307,41 @@ public final class FmOutletMapper {
                 outlet.setOutletId(row.getOutletId());
                 outlet.setOutletName(row.getOutletName());
                 outlet.setOutletPhone(row.getOutletPhone());
-                // Outlet availability from outlets.is_toggle
-                outlet.setIsAvailable(row.getOutletAvailable());
+                outlet.setAlternateOutletPhone(row.getAlternateOutletPhone());
+                outlet.setOutletEmail(row.getOutletEmail());
+
+                /*
+                 * Merchant users can view complete outlet configuration details.
+                 * Customer userType should not receive these details. only visible
+                 * to merchant userType
+                 */
+                if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
+
+                    // Outlet Details
+                    outlet.setCuisineType(row.getCuisineType());
+                    outlet.setLatitude(row.getLatitude());
+                    outlet.setLongitude(row.getLongitude());
+
+                    // Bank Details
+                    outlet.setAccountNumber(row.getAccountNumber());
+                    outlet.setIfscCode(row.getIfscCode());
+                    outlet.setBankName(row.getBankName());
+                    outlet.setAccountHolderName(row.getAccountHolderName());
+
+                    // Address Details
+                    outlet.setBuildingNumber(row.getBuildingNumber());
+                    outlet.setRoad(row.getRoad());
+                    outlet.setLandmark(row.getLandmark());
+
+                    outlet.setCityId(row.getCityId());
+                    outlet.setCityName(row.getCityName());
+
+                    outlet.setStateId(row.getStateId());
+                    outlet.setStateName(row.getStateName());
+
+                    outlet.setAreaId(row.getAreaId());
+                    outlet.setAreaName(row.getAreaName());
+                }
 
                 // Map Timings
                 String day = row.getOutletDay();
@@ -372,6 +413,76 @@ public final class FmOutletMapper {
         return outlet;
     }
 
+//    ------------update outlet details mapping to dto for merchant userType ONLY-----------------
+
+    /**
+     * Updates outlet details.
+     *
+     * @param outlet Existing outlet entity
+     * @param dto Update request DTO
+     */
+    public static void updateOutletEntity(FmOutlet outlet, FmUpdateOutletRequestDTO dto) {
+
+        outlet.setOutletName(dto.getOutletName());
+
+        outlet.setMerchantId(dto.getMerchantId());
+
+        outlet.setCuisineType(dto.getCuisineType());
+
+        outlet.setOutletPhone(dto.getOutletPhone());
+
+        outlet.setUpdatedBy(dto.getUpdatedBy());
+
+        /*
+         * Update outlet location.
+         */
+        if (dto.getLatitude() != null && dto.getLongitude() != null) {
+
+            GeometryFactory geometryFactory = new GeometryFactory();
+
+            Point point = geometryFactory.createPoint(new Coordinate(
+            Double.parseDouble(dto.getLongitude()), Double.parseDouble(dto.getLatitude())));
+            point.setSRID(4326);
+            outlet.setOutletLocation(point);
+        }
+    }
+    /**
+     * Updates outlet address details.
+     *
+     * @param address Existing outlet address entity
+     * @param dto Update request DTO
+     */
+    public static void updateOutletAddressEntity(
+            FmOutletAddress address,
+            FmUpdateOutletRequestDTO dto) {
+
+        address.setBuildingNumber(dto.getBuildingNumber());
+        address.setRoad(dto.getRoad());
+        address.setLandmark(dto.getLandmark());
+
+        address.setStateId(dto.getStateId());
+        address.setCityId(dto.getCityId());
+        address.setAreaId(dto.getAreaId());
+    }
+    /**
+     * Updates outlet bank details.
+     *
+     * @param bankDetails Existing bank details entity
+     * @param dto Update request DTO
+     */
+    public static void updateOutletBankEntity(
+            FmMerchantBankDetails bankDetails,
+            FmUpdateOutletRequestDTO dto) {
+
+        bankDetails.setAccountNumber(dto.getAccountNumber());
+
+        bankDetails.setIfscCode(dto.getIfscCode());
+
+        bankDetails.setBankName(dto.getBankName());
+
+        bankDetails.setAccountHolderName(dto.getAccountHolderName());
+    }
+//    ------------------------------------------------------------------------------------------------
     /**
      * Maps projection results to a list of DTOs for Merchant-view outlet listings.
      */
@@ -429,5 +540,158 @@ public final class FmOutletMapper {
     private static Double toDouble(Object o) {
 
         return o == null ? null : Double.parseDouble(o.toString());
+    }
+
+    /**
+     * Converts outlet bank details from request DTO to User Bank Details entity.
+     *
+     * Why:
+     * Keeps all entity mapping inside the mapper instead of the service.
+     */
+    public static FmMerchantBankDetails toOutletBankEntity(
+            FmOutletRequestDTO dto, Integer outletId) {
+
+        FmMerchantBankDetails bankDetails = new FmMerchantBankDetails();
+
+        bankDetails.setRecipientId(outletId);
+
+        bankDetails.setAccountNumber(dto.getAccountNumber());
+
+        bankDetails.setIfscCode(dto.getIfscCode());
+
+        bankDetails.setBankName(dto.getBankName());
+
+        bankDetails.setAccountHolderName(dto.getAccountHolderName());
+
+        // Store as OUTLET in user_bank_details table
+        bankDetails.setUserType(FmAppConstants.TYPE_OUTLET);
+
+        return bankDetails;
+    }
+
+    /**
+     * Converts the created outlet entity and request DTO into
+     * the response DTO returned after successful outlet creation.
+     */
+
+    public static FmOutletCreateResponseDTO toCreateResponseDto(
+            FmOutletRequestDTO request,
+            FmOutlet outlet) {
+
+        FmOutletCreateResponseDTO response = new FmOutletCreateResponseDTO();
+
+        // ---------------- Outlet Details ----------------
+
+        response.setOutletId(outlet.getOutletId());
+        response.setOutletName(outlet.getOutletName());
+        response.setMerchantId(outlet.getMerchantId());
+        response.setCuisineType(outlet.getCuisineType());
+        response.setOutletPhone(outlet.getOutletPhone());
+        response.setOutletEmail(request.getOutletEmail());
+        response.setAlternateOutletPhone(request.getAlternateOutletPhone());
+        response.setUsername(request.getUsername());
+        response.setUpdatedBy(request.getUpdatedBy());
+
+        // Never expose actual password
+        response.setPassword("********");
+
+        response.setIsActive(outlet.getIsActive());
+
+        // ---------------- Bank Details ----------------
+
+        response.setAccountNumber(request.getAccountNumber());
+        response.setIfscCode(request.getIfscCode());
+        response.setBankName(request.getBankName());
+        response.setAccountHolderName(request.getAccountHolderName());
+
+        // ---------------- Address ----------------
+
+        response.setBuildingNumber(request.getBuildingNumber());
+        response.setRoad(request.getRoad());
+        response.setLandmark(request.getLandmark());
+        response.setCityId(request.getCityId());
+        response.setStateId(request.getStateId());
+        response.setAreaId(request.getAreaId());
+        response.setLatitude(request.getLatitude());
+        response.setLongitude(request.getLongitude());
+
+        // ---------------- Operating Days ----------------
+
+        response.setOperatingDays(request.getOperatingDays());
+
+        // ---------------- Tracking ----------------
+
+        response.setUpdatedBy(request.getUpdatedBy());
+
+        return response;
+    }
+
+//    ------------------------------------------------------------------------------------------
+    /**
+     * Converts the updated outlet entity and request DTO into
+     * the response returned after successful outlet update.
+     *
+     * Note:
+     * Username and Password are not part of the update API.
+     */
+    public static FmUpdateOutletRequestDTO toUpdateResponseDto(
+            FmUpdateOutletRequestDTO request,
+            FmOutlet outlet) {
+
+        FmUpdateOutletRequestDTO response = new FmUpdateOutletRequestDTO();
+
+        // ---------------- Outlet Details ----------------
+
+        response.setOutletName(outlet.getOutletName());
+        response.setMerchantId(outlet.getMerchantId());
+        response.setOutletEmail(outlet.getOutletEmail());
+        response.setCuisineType(outlet.getCuisineType());
+        response.setOutletPhone(outlet.getOutletPhone());
+        response.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
+
+        // ---------------- Tracking ----------------
+        response.setUpdatedBy(request.getUpdatedBy());
+
+        // ---------------- Bank Details ----------------
+
+        response.setAccountNumber(request.getAccountNumber());
+        response.setIfscCode(request.getIfscCode());
+        response.setBankName(request.getBankName());
+        response.setAccountHolderName(request.getAccountHolderName());
+
+        // ---------------- Address Details ----------------
+
+        response.setBuildingNumber(request.getBuildingNumber());
+        response.setRoad(request.getRoad());
+        response.setLandmark(request.getLandmark());
+        response.setStateId(request.getStateId());
+        response.setCityId(request.getCityId());
+        response.setAreaId(request.getAreaId());
+
+        // ---------------- Outlet Location ----------------
+
+        response.setLatitude(request.getLatitude());
+        response.setLongitude(request.getLongitude());
+
+        // ---------------- Operating Days ----------------
+
+        response.setOperatingDays(request.getOperatingDays());
+
+
+        return response;
+    }
+
+    public static FmOutletDay toOutletDayEntity(FmOutletDayDTO dto,
+            Integer outletId) {
+
+        FmOutletDay day = new FmOutletDay();
+
+        day.setOutletId(outletId);
+        day.setDayOfWeekId(dto.getDayOfWeekId());
+        day.setIsOpen(dto.getIsOpen());
+        day.setOpeningTime(dto.getOpeningTime());
+        day.setClosingTime(dto.getClosingTime());
+
+        return day;
     }
 }

@@ -30,6 +30,8 @@ public class FmOutlet {
     private String outletPicUrl;
     @Column(name = "outlet_email")
     private String outletEmail;
+    @Column(name = "alternate_outlet_phone", length = 10)
+    private String alternateOutletPhone;
     @Column(name = "merchant_id", nullable = false)
     private Integer merchantId;
     @Column(name = "cuisine_type", length = 100, nullable = false)
