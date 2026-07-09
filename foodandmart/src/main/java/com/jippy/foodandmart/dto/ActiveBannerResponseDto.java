@@ -7,35 +7,31 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Data
-public class OutletSubscriptionStatusResponseDto {
+public class ActiveBannerResponseDto {
+
+    private Integer areaId;
 
     private Integer outletId;
 
     private String outletName;
 
+    private Integer outletSubscriptionPlanId;
+
     private Integer subscriptionPlanId;
-
-    private String planName;
-
-    private String subscriptionStatus;
-
-    private LocalDate subscriptionFromDate;
-
-    private LocalDate subscriptionToDate;
-
-    private LocalDate bannerFromDate;
-
-    private LocalDate bannerToDate;
-
-    private Integer bannerSlotDaysId;
-
-    private List<MealTypeTimingResponseDto> mealTypeTimings;
 
     private Integer bannerSlot;
 
     private Integer bestRestaurantSlot;
 
     private Integer dealsSlot;
+
+    private Integer bannerSlotDaysId;
+
+    private LocalDate bannerFromDate;
+
+    private LocalDate bannerToDate;
+
+    private List<MealTypeTimingResponseDto> mealTypeTimings;
 
     private String mainBannerUrl;
 

@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class OutletBannerDesignerResponseDto {
@@ -20,9 +21,13 @@ public class OutletBannerDesignerResponseDto {
 
     private LocalDate subscriptionToDate;
 
+    private Integer bannerSlotDaysId;
+
     private LocalDate bannerFromDate;
 
     private LocalDate bannerToDate;
+
+    private List<MealTypeTimingResponseDto> mealTypeTimings;
 
     private Integer bannerSlot;
 

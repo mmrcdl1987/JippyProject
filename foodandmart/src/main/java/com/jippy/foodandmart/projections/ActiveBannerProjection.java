@@ -27,9 +27,15 @@ public interface ActiveBannerProjection {
 
     String getDealsBannerUrl();
 
+    // From BannerSlotDay
+    Integer getBannerSlotDaysId();
+
     LocalDate getBannerFromDate();
 
     LocalDate getBannerToDate();
+
+    // From OutletSubscriptionPlan
+    Integer[] getMealTypeTimingsIds();
 
     String getPriceModelType();
 

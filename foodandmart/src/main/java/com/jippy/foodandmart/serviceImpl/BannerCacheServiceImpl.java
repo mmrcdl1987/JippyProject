@@ -3,13 +3,13 @@ package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.dto.AreaBannerCacheDto;
 import com.jippy.foodandmart.dto.CustomerBannerDto;
 import com.jippy.foodandmart.mapper.CustomerBannerMapper;
-import com.jippy.foodandmart.projections.ActiveBannerProjection;
-import com.jippy.foodandmart.repository.OutletSubscriptionPlanRepository;
 import com.jippy.foodandmart.service.BannerCacheService;
+import com.jippy.foodandmart.service.OutletSubscriptionPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import com.jippy.foodandmart.dto.ActiveBannerResponseDto;
 
 import java.util.*;
 
@@ -18,8 +18,8 @@ import java.util.*;
 @Slf4j
 public class BannerCacheServiceImpl implements BannerCacheService {
 
-    private final OutletSubscriptionPlanRepository outletSubscriptionPlanRepository;
     private final RedisTemplate<String, AreaBannerCacheDto> redisTemplate;
+    private final OutletSubscriptionPlanService outletSubscriptionPlanService;
 
 
     @Override
@@ -28,14 +28,16 @@ public class BannerCacheServiceImpl implements BannerCacheService {
         log.info("BANNER_CACHE_REFRESH_STARTED");
 
         // Step 1 - Fetch active banners
-        List<ActiveBannerProjection> banners = outletSubscriptionPlanRepository.findActiveBanners();
+        List<ActiveBannerResponseDto> banners =
+                outletSubscriptionPlanService.getActiveBanners();
+
 
         log.info("Total Active Banner Records : {}", banners.size());
 
         // Step 2 - Convert Projection -> CustomerBannerDto
         List<CustomerBannerDto> customerBanners = new ArrayList<>();
 
-        for (ActiveBannerProjection banner : banners) {
+        for (ActiveBannerResponseDto banner : banners) {
 
             if (banner.getMainBannerUrl() != null) {
 
