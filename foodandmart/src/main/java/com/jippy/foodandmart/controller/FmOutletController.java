@@ -254,7 +254,7 @@ public class FmOutletController {
      *
      * <p>GET /api/outlets/{id}</p>
      *
-     * @param id the outlet's primary key
+     * @param outletId the outlet's primary key
      * @return 200 with the {@link FmOutlet} entity
      */
 //    @GetMapping("/{id}")
