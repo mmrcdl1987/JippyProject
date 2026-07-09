@@ -9,38 +9,29 @@ public final class OutletSubscriptionPlanMapper {
     }
 
     public static OutletSubscriptionPlanResponseDto toDto(
-           FmOutletSubscriptionPlan entity) {
+            FmOutletSubscriptionPlan entity) {
 
         OutletSubscriptionPlanResponseDto dto =
                 new OutletSubscriptionPlanResponseDto();
 
-        dto.setOutletSubscriptionPlanId(
-                entity.getOutletSubscriptionPlanId());
+        dto.setOutletSubscriptionPlanId(entity.getOutletSubscriptionPlanId());
 
         dto.setOutletId(entity.getOutletId());
-        dto.setSubscriptionPlanId(
-                entity.getSubscriptionPlanId());
 
-        dto.setSubscriptionFromDate(
-                entity.getSubscriptionFromDate());
+        dto.setSubscriptionPlanId(entity.getSubscriptionPlanId());
 
-        dto.setSubscriptionToDate(
-                entity.getSubscriptionToDate());
+        dto.setSubscriptionFromDate(entity.getSubscriptionFromDate());
 
-      /*  dto.setBannerFromDate(
-                entity.getBannerFromDate());
+        dto.setSubscriptionToDate(entity.getSubscriptionToDate());
 
-        dto.setBannerToDate(
-                entity.getBannerToDate());*/
+        dto.setBannerSlotDaysId(entity.getBannerSlotDaysId());
 
-        dto.setPriceModelType(
-                entity.getPriceModelType());
+        dto.setMealTypeTimingsIds(entity.getMealTypeTimingsIds());
 
-        dto.setOfferAmount(
-                entity.getOfferAmount());
+        dto.setPriceModelType(entity.getPriceModelType());
+
+        dto.setOfferAmount(entity.getOfferAmount());
 
         return dto;
     }
-
-
 }

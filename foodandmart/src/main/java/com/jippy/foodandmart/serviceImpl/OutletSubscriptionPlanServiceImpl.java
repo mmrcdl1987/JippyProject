@@ -1,16 +1,12 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.*;
-import com.jippy.foodandmart.entity.FmOutlet;
-import com.jippy.foodandmart.entity.FmOutletSubscriptionPlan;
-import com.jippy.foodandmart.entity.FmSubscriptionPlan;
+import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.BannerUploadException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.OutletSubscriptionPlanMapper;
 import com.jippy.foodandmart.projections.ActiveBannerProjection;
-import com.jippy.foodandmart.repository.FmOutletRepository;
-import com.jippy.foodandmart.repository.FmSubscriptionPlanRepository;
-import com.jippy.foodandmart.repository.OutletSubscriptionPlanRepository;
+import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.OutletSubscriptionPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -37,49 +35,133 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
     private final S3ImageService s3ImageService;
 
+    private final BannerSlotDayRepository bannerSlotDayRepository;
+
+    private final MealTypeTimingRepository mealTypeTimingRepository;
+
+
     @Override
     @Transactional
     public OutletSubscriptionPlanResponseDto subscribeOutlet(OutletSubscriptionPlanRequestDto request) {
-        String op = "SUBSCRIPTION_CREATE_" + UUID.randomUUID();
-        log.info("{} | START | outletId={} | subscriptionPlanId={}", op, request.getOutletId(), request.getSubscriptionPlanId());
-        try {
-            FmOutlet outlet = outletRepository.findById(request.getOutletId()).orElseThrow(() -> new ResourceNotFoundException("Outlet not found with id : " + request.getOutletId()));
 
-            FmSubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId()).orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found with id : " + request.getSubscriptionPlanId()));
+        String op = "SUBSCRIPTION_CREATE_" + UUID.randomUUID();
+
+        log.info("{} | START | outletId={} | subscriptionPlanId={}", op, request.getOutletId(), request.getSubscriptionPlanId());
+
+        try {
+            log.info("{} | START | outletId={}", op, request.getOutletId());
+
+            FmSubscriptionPlan subscriptionPlan = subscriptionPlanRepository
+                    .findById(request.getSubscriptionPlanId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Subscription plan not found"));
+
+            BannerSlotDay bannerSlot = bannerSlotDayRepository
+                    .findById(request.getBannerSlotDaysId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Banner slot not found"));
+
+            outletRepository.findById(request.getOutletId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Outlet not found"));
+
+// Validate subscription plan uniqueness
+            Optional<FmOutletSubscriptionPlan> existingSubscriptionPlan =
+                    outletSubscriptionPlanRepository.findBySubscriptionPlanId(
+                            request.getSubscriptionPlanId());
+
+            if (existingSubscriptionPlan.isPresent()
+                    && !existingSubscriptionPlan.get().getOutletId().equals(request.getOutletId())) {
+
+                throw new IllegalArgumentException(
+                        "Selected subscription plan is already assigned to another outlet.");
+            }
+
+// Validate banner slot uniqueness
+            Optional<FmOutletSubscriptionPlan> existingBannerSlot =
+                    outletSubscriptionPlanRepository.findByBannerSlotDaysId(
+                            request.getBannerSlotDaysId());
+
+            if (existingBannerSlot.isPresent()
+                    && !existingBannerSlot.get().getOutletId().equals(request.getOutletId())) {
+
+                throw new IllegalArgumentException(
+                        "Selected banner slot is already assigned to another outlet.");
+            }
 
             LocalDate subscriptionFromDate = LocalDate.now();
-            LocalDate subscriptionToDate = subscriptionFromDate.plusDays(plan.getDurationInDays());
-            LocalDate bannerToDate = request.getBannerFromDate().plusDays(plan.getBannerDurationInDays());
 
-            FmOutletSubscriptionPlan entity = new FmOutletSubscriptionPlan();
-            entity.setOutletId(outlet.getOutletId());
-            entity.setSubscriptionPlanId(plan.getSubscriptionPlanId());
+            LocalDate subscriptionToDate = subscriptionFromDate.plusDays(
+                    subscriptionPlan.getDurationInDays() - 1);
+
+            // Fetch existing subscription or create a new one
+            FmOutletSubscriptionPlan entity = outletSubscriptionPlanRepository
+                    .findByOutletId(request.getOutletId())
+                    .orElse(new FmOutletSubscriptionPlan());
+
+            boolean isNew = entity.getOutletSubscriptionPlanId() == null;
+
+            entity.setOutletId(request.getOutletId());
+            entity.setSubscriptionPlanId(request.getSubscriptionPlanId());
+
             entity.setSubscriptionFromDate(subscriptionFromDate);
             entity.setSubscriptionToDate(subscriptionToDate);
-          /*  entity.setBannerFromDate(request.getBannerFromDate());
-            entity.setBannerToDate(bannerToDate);*/
+
+            entity.setBannerSlotDaysId(request.getBannerSlotDaysId());
+            entity.setMealTypeTimingsIds(request.getMealTypeTimingsIds());
+
             entity.setPriceModelType(request.getPriceModelType());
             entity.setOfferAmount(request.getOfferAmount());
-            entity.setCreatedAt(LocalDateTime.now());
-            entity.setCreatedBy(request.getUserId());
 
-            FmOutletSubscriptionPlan saved = outletSubscriptionPlanRepository.saveAndFlush(entity);
+            if (isNew) {
 
-            log.info("{} | SUCCESS | outletSubscriptionPlanId={}", op, saved.getOutletSubscriptionPlanId());
+                entity.setCreatedAt(LocalDateTime.now());
+                entity.setCreatedBy(request.getUserId());
 
-            return OutletSubscriptionPlanMapper.toDto(saved);
+            } else {
+
+                entity.setUpdatedAt(LocalDateTime.now());
+                entity.setUpdatedBy(request.getUserId());
+            }
+
+            FmOutletSubscriptionPlan saved =
+                    outletSubscriptionPlanRepository.saveAndFlush(entity);
+
+            OutletSubscriptionPlanResponseDto response =
+                    OutletSubscriptionPlanMapper.toDto(saved);
+
+            response.setBannerFromDate(bannerSlot.getSlotStartDate());
+            response.setBannerToDate(bannerSlot.getSlotEndDate());
+
+            response.setMealTypeTimings(
+                    getMealTypeTimingDtos(saved.getMealTypeTimingsIds()));
+
+            log.info("{} | SUCCESS | outletSubscriptionPlanId={} | action={}",
+                    op,
+                    saved.getOutletSubscriptionPlanId(),
+                    isNew ? "CREATED" : "UPDATED");
+
+            return response;
+
+
         } catch (Exception ex) {
-            log.error("{} | ERROR while creating subscription | outletId={} | error={}", op, request.getOutletId(), ex.getMessage(), ex);
+
+            log.error("{} | ERROR | outletId={} | error={}", op, request.getOutletId(), ex.getMessage(), ex);
+
             throw ex;
         }
-    }
 
+    }
     @Override
     @Transactional(readOnly = true)
     public OutletBannerDesignerResponseDto getDesignerDetails(Integer outletId) {
+
         String op = "DESIGNER_DETAILS_" + UUID.randomUUID();
+
         log.info("{} | START | outletId={}", op, outletId);
+
         try {
+
             FmOutletSubscriptionPlan outletPlan = outletSubscriptionPlanRepository.findByOutletId(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet subscription not found"));
 
             FmSubscriptionPlan plan = subscriptionPlanRepository.findById(outletPlan.getSubscriptionPlanId()).orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));
@@ -87,6 +169,7 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
             FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet not found with id : " + outletId));
 
             OutletBannerDesignerResponseDto dto = new OutletBannerDesignerResponseDto();
+
             dto.setOutletId(outlet.getOutletId());
 
             dto.setOutletName(outlet.getOutletName());
@@ -99,10 +182,18 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
             dto.setSubscriptionToDate(outletPlan.getSubscriptionToDate());
 
-           /* dto.setBannerFromDate(outletPlan.getBannerFromDate());
+            dto.setBannerSlotDaysId(outletPlan.getBannerSlotDaysId());
 
-            dto.setBannerToDate(outletPlan.getBannerToDate());*/
+            BannerSlotDay bannerSlot = bannerSlotDayRepository
+                    .findById(outletPlan.getBannerSlotDaysId())
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Banner slot not found"));
 
+            dto.setBannerFromDate(bannerSlot.getSlotStartDate());
+            dto.setBannerToDate(bannerSlot.getSlotEndDate());
+
+            dto.setMealTypeTimings(
+                    getMealTypeTimingDtos(outletPlan.getMealTypeTimingsIds()));
             dto.setBannerSlot(plan.getBannerSlot());
 
             dto.setBestRestaurantSlot(plan.getBestRestaurantSlot());
@@ -126,9 +217,13 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
             dto.setOfferAmount(outletPlan.getOfferAmount());
 
             log.info("{} | SUCCESS | outletId={}", op, outletId);
+
             return dto;
+
         } catch (Exception ex) {
-            log.error("{} | ERROR fetching designer details | outletId={} | error={}", op, outletId, ex.getMessage(), ex);
+
+            log.error("{} | ERROR | outletId={} | error={}", op, outletId, ex.getMessage(), ex);
+
             throw ex;
         }
     }
@@ -281,8 +376,33 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
         List<FmOutletSubscriptionPlan> subscriptions = outletSubscriptionPlanRepository.findAll();
 
-        List<OutletSubscriptionPlanResponseDto> response = subscriptions.stream().map(OutletSubscriptionPlanMapper::toDto).toList();
+        List<OutletSubscriptionPlanResponseDto> response =
+                subscriptions.stream()
+                        .map(subscription -> {
 
+                            OutletSubscriptionPlanResponseDto dto =
+                                    OutletSubscriptionPlanMapper.toDto(subscription);
+                            log.info("Subscription Id : {}", subscription.getOutletSubscriptionPlanId());
+                            log.info("Banner Slot Id : {}", subscription.getBannerSlotDaysId());
+                            BannerSlotDay bannerSlot =
+                                    bannerSlotDayRepository.findById(
+                                                    subscription.getBannerSlotDaysId())
+                                            .orElseThrow(() ->
+                                                    new ResourceNotFoundException(
+                                                            "Banner slot not found"));
+
+                            dto.setBannerFromDate(
+                                    bannerSlot.getSlotStartDate());
+
+                            dto.setBannerToDate(
+                                    bannerSlot.getSlotEndDate());
+
+                            dto.setMealTypeTimings(
+                                    getMealTypeTimingDtos(subscription.getMealTypeTimingsIds()));
+
+                            return dto;
+                        })
+                        .toList();
         log.info("GET_ALL_SUBSCRIPTIONS_SUCCESS | count={}", response.size());
 
         return response;
@@ -292,68 +412,178 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
     @Transactional(readOnly = true)
     public OutletSubscriptionStatusResponseDto getSubscriptionStatus(Integer outletId) {
 
-        FmOutletSubscriptionPlan outletPlan = outletSubscriptionPlanRepository.findByOutletId(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet subscription not found"));
+        String op = "GET_SUBSCRIPTION_STATUS_" + UUID.randomUUID();
 
-        FmSubscriptionPlan plan = subscriptionPlanRepository.findById(outletPlan.getSubscriptionPlanId()).orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));
+        log.info("{} | START | outletId={}", op, outletId);
 
-        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
+        try {
 
-        LocalDate today = LocalDate.now();
+            FmOutletSubscriptionPlan outletPlan = outletSubscriptionPlanRepository.findByOutletId(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet subscription not found"));
 
-        String status;
+            FmSubscriptionPlan plan = subscriptionPlanRepository.findById(outletPlan.getSubscriptionPlanId()).orElseThrow(() -> new ResourceNotFoundException("Subscription plan not found"));
 
-        if (today.isBefore(outletPlan.getSubscriptionFromDate())) {
+            FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
 
-            status = "UPCOMING";
+            LocalDate today = LocalDate.now();
 
-        } else if (today.isAfter(outletPlan.getSubscriptionToDate())) {
+            String status;
 
-            status = "EXPIRED";
+            if (today.isBefore(outletPlan.getSubscriptionFromDate())) {
 
-        } else {
+                status = "UPCOMING";
 
-            status = "ACTIVE";
+            } else if (today.isAfter(outletPlan.getSubscriptionToDate())) {
+
+                status = "EXPIRED";
+
+            } else {
+
+                status = "ACTIVE";
+            }
+
+            OutletSubscriptionStatusResponseDto dto = new OutletSubscriptionStatusResponseDto();
+
+            dto.setOutletId(outlet.getOutletId());
+
+            dto.setOutletName(outlet.getOutletName());
+
+            dto.setSubscriptionPlanId(plan.getSubscriptionPlanId());
+
+            dto.setPlanName(plan.getPlanName());
+
+            dto.setSubscriptionStatus(status);
+
+            dto.setSubscriptionFromDate(outletPlan.getSubscriptionFromDate());
+
+            dto.setSubscriptionToDate(outletPlan.getSubscriptionToDate());
+
+            dto.setBannerSlotDaysId(outletPlan.getBannerSlotDaysId());
+
+            BannerSlotDay bannerSlot = bannerSlotDayRepository
+                    .findById(outletPlan.getBannerSlotDaysId())
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Banner slot not found"));
+
+            dto.setBannerFromDate(bannerSlot.getSlotStartDate());
+            dto.setBannerToDate(bannerSlot.getSlotEndDate());
+
+            dto.setMealTypeTimings(
+                    getMealTypeTimingDtos(outletPlan.getMealTypeTimingsIds()));
+            dto.setBannerSlot(plan.getBannerSlot());
+
+            dto.setBestRestaurantSlot(plan.getBestRestaurantSlot());
+
+            dto.setDealsSlot(plan.getDealsSlot());
+
+            dto.setMainBannerUrl(outletPlan.getMainBannerUrl());
+
+            dto.setBestRestaurantBannerUrl(outletPlan.getBestRestaurantBannerUrl());
+
+            dto.setDealsBannerUrl(outletPlan.getDealsBannerUrl());
+
+            dto.setPriceModelType(outletPlan.getPriceModelType());
+
+            dto.setOfferAmount(outletPlan.getOfferAmount());
+
+            log.info("{} | SUCCESS | outletId={} | status={}", op, outletId, status);
+
+            return dto;
+
+        } catch (Exception ex) {
+
+            log.error("{} | ERROR | outletId={} | error={}", op, outletId, ex.getMessage(), ex);
+
+            throw ex;
+        }
+    }
+
+    private List<MealTypeTimingResponseDto> getMealTypeTimingDtos(Integer[] mealTypeTimingIds) {
+
+        if (mealTypeTimingIds == null || mealTypeTimingIds.length == 0) {
+            return List.of();
         }
 
-        OutletSubscriptionStatusResponseDto dto = new OutletSubscriptionStatusResponseDto();
+        return Arrays.stream(mealTypeTimingIds)
+                .map(id -> {
+                    MealTypeTiming meal = mealTypeTimingRepository.findById(id)
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException("Meal timing not found : " + id));
 
-        dto.setOutletId(outlet.getOutletId());
-        dto.setOutletName(outlet.getOutletName());
+                    MealTypeTimingResponseDto dto = new MealTypeTimingResponseDto();
+                    dto.setMealTypeTimingsId(meal.getMealTypeTimingsId());
+                    dto.setMealType(meal.getMealType());
+                    dto.setFromTime(meal.getFromTime());
+                    dto.setToTime(meal.getToTime());
 
-        dto.setSubscriptionPlanId(plan.getSubscriptionPlanId());
-
-        dto.setPlanName(plan.getPlanName());
-
-        dto.setSubscriptionStatus(status);
-
-        dto.setSubscriptionFromDate(outletPlan.getSubscriptionFromDate());
-
-        dto.setSubscriptionToDate(outletPlan.getSubscriptionToDate());
-
-      /*  dto.setBannerFromDate(outletPlan.getBannerFromDate());
-
-        dto.setBannerToDate(outletPlan.getBannerToDate());*/
-
-        dto.setBannerSlot(plan.getBannerSlot());
-
-        dto.setBestRestaurantSlot(plan.getBestRestaurantSlot());
-
-        dto.setDealsSlot(plan.getDealsSlot());
-
-        dto.setMainBannerUrl(outletPlan.getMainBannerUrl());
-
-        dto.setBestRestaurantBannerUrl(outletPlan.getBestRestaurantBannerUrl());
-
-        dto.setDealsBannerUrl(outletPlan.getDealsBannerUrl());
-
-        dto.setPriceModelType(outletPlan.getPriceModelType());
-
-        return dto;
+                    return dto;
+                })
+                .toList();
     }
+
     @Override
     @Transactional(readOnly = true)
-    public List<ActiveBannerProjection> getActiveBanners() {
+    public List<ActiveBannerResponseDto> getActiveBanners() {
 
-        return outletSubscriptionPlanRepository.findActiveBanners();
+        List<ActiveBannerProjection> projections =
+                outletSubscriptionPlanRepository.findActiveBanners();
+
+        return projections.stream()
+                .map(this::mapToActiveBannerResponse)
+                .toList();
+    }
+
+    private ActiveBannerResponseDto mapToActiveBannerResponse(
+            ActiveBannerProjection projection) {
+
+        ActiveBannerResponseDto dto = new ActiveBannerResponseDto();
+
+        dto.setAreaId(projection.getAreaId());
+
+        dto.setOutletId(projection.getOutletId());
+
+        dto.setOutletName(projection.getOutletName());
+
+        dto.setOutletSubscriptionPlanId(
+                projection.getOutletSubscriptionPlanId());
+
+        dto.setSubscriptionPlanId(
+                projection.getSubscriptionPlanId());
+
+        dto.setBannerSlot(projection.getBannerSlot());
+
+        dto.setBestRestaurantSlot(
+                projection.getBestRestaurantSlot());
+
+        dto.setDealsSlot(projection.getDealsSlot());
+
+        dto.setBannerSlotDaysId(
+                projection.getBannerSlotDaysId());
+
+        dto.setBannerFromDate(
+                projection.getBannerFromDate());
+
+        dto.setBannerToDate(
+                projection.getBannerToDate());
+
+        dto.setMainBannerUrl(
+                projection.getMainBannerUrl());
+
+        dto.setBestRestaurantBannerUrl(
+                projection.getBestRestaurantBannerUrl());
+
+        dto.setDealsBannerUrl(
+                projection.getDealsBannerUrl());
+
+        dto.setPriceModelType(
+                projection.getPriceModelType());
+
+        dto.setOfferAmount(
+                projection.getOfferAmount());
+
+        dto.setMealTypeTimings(
+                getMealTypeTimingDtos(
+                        projection.getMealTypeTimingsIds()));
+
+        return dto;
     }
 }

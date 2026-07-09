@@ -11,10 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
-
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -103,29 +100,66 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(FeignException.class)
-    public ResponseEntity<Object> handleFeignException(FeignException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleFeignException(FeignException ex) {
 
         log.error("Feign Exception Status: {}", ex.status());
         log.error("Feign Exception Message: {}", ex.getMessage(), ex);
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "success", false,
-                        "status", ex.status(),
-                        "message", ex.getMessage(),
-                        "timestamp", LocalDateTime.now()
-                ));
+        HttpStatus status = HttpStatus.resolve(ex.status());
+
+        if (status == null) {
+            status = HttpStatus.BAD_GATEWAY;
+        }
+
+        return ResponseEntity.status(status)
+                .body(FmApiResponse.error(ex.getMessage()));
     }
+
     @ExceptionHandler(BannerUploadException.class)
     public ResponseEntity<FmApiResponse<Void>> handleBannerUploadException(
             BannerUploadException ex) {
 
         log.error("Banner upload failed: {}", ex.getMessage(), ex);
 
-        log.error("Banner upload failed: {}", ex.getMessage(), ex);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(FmApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(EmailSendingException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleEmailSendingException(
+            EmailSendingException ex) {
+
+        log.error("Email sending failed: {}", ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
+    @ExceptionHandler(InvalidOtpException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleInvalidOtpException(
+            InvalidOtpException ex) {
+
+        log.warn("Invalid OTP: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
+    @ExceptionHandler(OtpExpiredException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleOtpExpiredException(
+            OtpExpiredException ex) {
+
+        log.warn("OTP expired: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleInvalidTokenException(
+            InvalidTokenException ex) {
+
+        log.warn("Invalid token: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
 }
