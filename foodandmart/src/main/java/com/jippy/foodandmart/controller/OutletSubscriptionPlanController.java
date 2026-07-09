@@ -1,12 +1,10 @@
 package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.*;
-import com.jippy.foodandmart.projections.ActiveBannerProjection;
 import com.jippy.foodandmart.service.OutletSubscriptionPlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-// ...existing imports...
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -140,7 +138,7 @@ public class OutletSubscriptionPlanController {
         }
     }
 //    @GetMapping("/active-banners")
-//    public FmApiResponse<List<ActiveBannerProjection>> getActiveBanners() {
+//    public FmApiResponse<List<ActiveBannerResponseDto>> getActiveBanners() {
 //
 //        return FmApiResponse.success(
 //                "Active banners fetched successfully",

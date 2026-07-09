@@ -1,7 +1,6 @@
 package com.jippy.foodandmart.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -46,12 +45,6 @@ public class FmSubscriptionPlan {
 
     @Column(name = "video_credits")
     private String videoCredits;
-
- /*   @Column(name = "state_id")
-    private Integer stateId;
-
-    @Column(name = "city_id")
-    private Integer cityId;*/
 
     @Column(name = "area_id")
     private Integer areaId;

@@ -1,11 +1,12 @@
 package com.jippy.foodandmart.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -27,4 +28,12 @@ public class CustomerBannerDto {
     private String priceModelType;
 
     private BigDecimal offerAmount;
+
+    // Banner validity
+    private LocalDate bannerFromDate;
+
+    private LocalDate bannerToDate;
+
+    // Meal timings
+    private List<MealTypeTimingResponseDto> mealTypeTimings;
 }

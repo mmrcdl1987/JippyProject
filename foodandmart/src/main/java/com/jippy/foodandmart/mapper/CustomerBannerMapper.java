@@ -1,7 +1,7 @@
 package com.jippy.foodandmart.mapper;
 
+import com.jippy.foodandmart.dto.ActiveBannerResponseDto;
 import com.jippy.foodandmart.dto.CustomerBannerDto;
-import com.jippy.foodandmart.projections.ActiveBannerProjection;
 
 public final class CustomerBannerMapper {
 
@@ -9,18 +9,18 @@ public final class CustomerBannerMapper {
     }
 
     public static CustomerBannerDto toDto(
-            ActiveBannerProjection projection,
+            ActiveBannerResponseDto banner,
             String bannerType,
             Integer slotNumber,
             String bannerUrl) {
 
         CustomerBannerDto dto = new CustomerBannerDto();
 
-        dto.setAreaId(projection.getAreaId());
+        dto.setAreaId(banner.getAreaId());
 
-        dto.setOutletId(projection.getOutletId());
+        dto.setOutletId(banner.getOutletId());
 
-        dto.setOutletName(projection.getOutletName());
+        dto.setOutletName(banner.getOutletName());
 
         dto.setSlotNumber(slotNumber);
 
@@ -28,9 +28,16 @@ public final class CustomerBannerMapper {
 
         dto.setBannerUrl(bannerUrl);
 
-        dto.setPriceModelType(projection.getPriceModelType());
+        dto.setPriceModelType(banner.getPriceModelType());
 
-        dto.setOfferAmount(projection.getOfferAmount());
+        dto.setOfferAmount(banner.getOfferAmount());
+
+        // NEW
+        dto.setBannerFromDate(banner.getBannerFromDate());
+
+        dto.setBannerToDate(banner.getBannerToDate());
+
+        dto.setMealTypeTimings(banner.getMealTypeTimings());
 
         return dto;
     }
