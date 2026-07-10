@@ -21,7 +21,7 @@ public class OutletSubscriptionPlanRequestDto {
     private Integer bannerSlotDaysId;
 
     @NotEmpty(message = "At least one meal timing must be selected")
-    private Integer[] mealTypeTimingsIds;
+    private Integer mealTypeTimingsIds[];
 
     @NotBlank(message = "Price Model Type is required")
     private String priceModelType;

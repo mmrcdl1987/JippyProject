@@ -66,7 +66,7 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
                             "Outlet not found"));
 
 // Validate subscription plan uniqueness
-            Optional<FmOutletSubscriptionPlan> existingSubscriptionPlan =
+         /*   Optional<FmOutletSubscriptionPlan> existingSubscriptionPlan =
                     outletSubscriptionPlanRepository.findBySubscriptionPlanId(
                             request.getSubscriptionPlanId());
 
@@ -75,16 +75,15 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
                 throw new IllegalArgumentException(
                         "Selected subscription plan is already assigned to another outlet.");
-            }
+            }*/
 
 // Validate banner slot uniqueness
-            Optional<FmOutletSubscriptionPlan> existingBannerSlot =
-                    outletSubscriptionPlanRepository.findByBannerSlotDaysId(
-                            request.getBannerSlotDaysId());
+            boolean existingBannerSlot =
+                    outletSubscriptionPlanRepository.findByBannerSlotDaysSubscriptionPlansAndMealTypes(
+                            request.getBannerSlotDaysId(),request.getSubscriptionPlanId(),
+                            java.util.Arrays.asList(request.getMealTypeTimingsIds()));
 
-            if (existingBannerSlot.isPresent()
-                    && !existingBannerSlot.get().getOutletId().equals(request.getOutletId())) {
-
+            if (existingBannerSlot) {
                 throw new IllegalArgumentException(
                         "Selected banner slot is already assigned to another outlet.");
             }
