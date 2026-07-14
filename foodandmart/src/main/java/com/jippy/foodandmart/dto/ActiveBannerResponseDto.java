@@ -42,4 +42,12 @@ public class ActiveBannerResponseDto {
     private String priceModelType;
 
     private BigDecimal offerAmount;
+
+    private BigDecimal radiusInKms;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    private Integer[] mealTypeTimingsIds;
 }

@@ -1,3 +1,4 @@
+/*
 package com.jippy.division.feignClient;
 
 import com.jippy.division.dto.DivOutletDto;
@@ -12,4 +13,4 @@ public interface DivFmClient {
 
     @GetMapping("/api/outlets/available-outlets/{areaId}")
     List<DivOutletDto> getOutletsByAreaId(@PathVariable Integer areaId);
-}
+}*/

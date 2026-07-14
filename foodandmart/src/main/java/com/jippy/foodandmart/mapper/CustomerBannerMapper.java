@@ -39,6 +39,14 @@ public final class CustomerBannerMapper {
 
         dto.setMealTypeTimings(banner.getMealTypeTimings());
 
+        dto.setRadiusInKms(banner.getRadiusInKms());
+
+        dto.setMealTypeTimingIds(banner.getMealTypeTimingsIds());
+
+        dto.setLatitude(banner.getLatitude());
+
+        dto.setLongitude(banner.getLongitude());
+
         return dto;
     }
 }

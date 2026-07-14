@@ -29,6 +29,14 @@ public class CustomerBannerDto {
 
     private BigDecimal offerAmount;
 
+    private BigDecimal radiusInKms;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    private Integer[] mealTypeTimingIds;
+
     // Banner validity
     private LocalDate bannerFromDate;
 

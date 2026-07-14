@@ -55,13 +55,14 @@ eureka:
 
 management:
   tracing:
+    enabled: false
     sampling:
       probability: 1.0 # Capture 100% of traces for development. Reduce in production (e.g., 0.1).
-  otlp:
-    tracing:
-      endpoint: http://187.127.156.147:4317
-      # Explicitly forces the app to use gRPC stream pipes over port 4317
-      transport: grpc
+    otlp:
+      tracing:
+        endpoint: http://187.127.156.147:4317
+        # Explicitly forces the app to use gRPC stream pipes over port 4317
+        transport: grpc
   endpoints:
     web:
       exposure:

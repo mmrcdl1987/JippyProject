@@ -11,6 +11,7 @@ spring:
 
   data:
     redis:
+      password: jippy-redis@574
       host: 187.127.156.147
       port: 6379
 

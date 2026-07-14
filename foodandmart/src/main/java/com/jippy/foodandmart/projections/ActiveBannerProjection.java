@@ -35,9 +35,15 @@ public interface ActiveBannerProjection {
     LocalDate getBannerToDate();
 
     // From OutletSubscriptionPlan
-    Integer[] getMealTypeTimingsIds();
+    Object getMealTypeTimingsIds();
 
     String getPriceModelType();
 
     BigDecimal getOfferAmount();
+
+    BigDecimal getRadiusInKms();
+
+    Double getLatitude();
+
+    Double getLongitude();
 }

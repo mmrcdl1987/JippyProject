@@ -7,7 +7,7 @@ import com.jippy.division.entity.DivCouponMappingOutletProduct;
 import com.jippy.division.entity.DivPriceDropMappingOutletProduct;
 import com.jippy.division.entity.DivPromotionDate;
 import com.jippy.division.entity.DivPromotionTime;
-import com.jippy.division.feignClient.DivFmClient;
+import com.jippy.division.feignclients.FMFeignClient;
 import com.jippy.division.mapper.DivCampaignMapper;
 import com.jippy.division.repositary.DivCouponMappingRepository;
 import com.jippy.division.repositary.DivPriceDropMappingRepository;
@@ -35,7 +35,7 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
     private final DivPriceDropMappingRepository priceDropRepository;
 
-    private final DivFmClient fmClient;
+    private final FMFeignClient fmClient;
 
     @Override
     public String createCampaign(DivCampaignRequestDto dto) {

@@ -81,7 +81,7 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
             boolean existingBannerSlot =
                     outletSubscriptionPlanRepository.findByBannerSlotDaysSubscriptionPlansAndMealTypes(
                             request.getBannerSlotDaysId(),request.getSubscriptionPlanId(),
-                            java.util.Arrays.asList(request.getMealTypeTimingsIds()));
+                            request.getMealTypeTimingsIds());
 
             if (existingBannerSlot) {
                 throw new IllegalArgumentException(
@@ -579,10 +579,53 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
         dto.setOfferAmount(
                 projection.getOfferAmount());
 
-        dto.setMealTypeTimings(
-                getMealTypeTimingDtos(
-                        projection.getMealTypeTimingsIds()));
+        dto.setRadiusInKms(projection.getRadiusInKms());
+
+        dto.setLatitude(projection.getLatitude());
+
+        dto.setLongitude(projection.getLongitude());
+
+        Integer[] mealIds = parsePostgresArray(projection.getMealTypeTimingsIds());
+        dto.setMealTypeTimingsIds(mealIds);
 
         return dto;
+    }
+
+    private Integer[] parsePostgresArray(Object dbValue) {
+        if (dbValue == null) return new Integer[0];
+
+        // If Spring Data already converted it to an Integer array
+        if (dbValue instanceof Integer[]) {
+            return (Integer[]) dbValue;
+        }
+
+        // Fallback: If it's a primitive int array for some reason
+        if (dbValue instanceof int[]) {
+            int[] primArray = (int[]) dbValue;
+            Integer[] result = new Integer[primArray.length];
+            for (int i = 0; i < primArray.length; i++) {
+                result[i] = primArray[i];
+            }
+            return result;
+        }
+
+        // Fallback: If it comes as a raw string format like "{1,2,3}"
+        String arrayStr = dbValue.toString();
+        if (arrayStr.equals("{}") || arrayStr.startsWith("[L")) {
+            return new Integer[0];
+        }
+
+        try {
+            String cleanStr = arrayStr.replace("{", "").replace("}", "");
+            String[] parts = cleanStr.split(",");
+            Integer[] result = new Integer[parts.length];
+            for (int i = 0; i < parts.length; i++) {
+                result[i] = Integer.parseInt(parts[i].trim());
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("Failed to parse array fallback string: " + arrayStr, e);
+            return new Integer[0];
+        }
     }
 }
