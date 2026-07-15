@@ -48,18 +48,17 @@ public class BannerCacheServiceImpl implements BannerCacheService {
         for (ActiveBannerResponseDto banner : banners) {
 
             if (banner.getMainBannerUrl() != null) {
-                System.out.println("=================================="+banner.getLatitude() +banner.getLongitude());
 
                 customerBanners.add(CustomerBannerMapper.toDto(banner, "MAIN", banner.getBannerSlot(), banner.getMainBannerUrl()));
             }
 
             if (banner.getBestRestaurantBannerUrl() != null) {
-                System.out.println("=================================="+banner.getLatitude() +banner.getLongitude());
+
                 customerBanners.add(CustomerBannerMapper.toDto(banner, "BEST_RESTAURANT", banner.getBestRestaurantSlot(), banner.getBestRestaurantBannerUrl()));
             }
 
             if (banner.getDealsBannerUrl() != null) {
-                System.out.println("=================================="+banner.getLatitude() +banner.getLongitude());
+
                 customerBanners.add(CustomerBannerMapper.toDto(banner, "DEALS", banner.getDealsSlot(), banner.getDealsBannerUrl()));
             }
         }
