@@ -10,10 +10,12 @@ import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 import com.jippy.foodandmart.repository.*;
+import com.jippy.foodandmart.service.IFmApprovalRequestService;
 import com.jippy.foodandmart.service.IFmMerchantService;
 import com.jippy.foodandmart.validation.FmFileParser;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -39,10 +41,12 @@ import java.util.Set;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FmMerchantServiceImpl implements IFmMerchantService {
 
     private final FmMerchantRepository merchantRepository;
-    private final FmMerchantKycRepository merchantKycRepository;
+//  private final FmMerchantKycRepository merchantKycRepository;
+    private final FmUserKycRepository userKycRepository;
     private final FmMerchantBankDetailsRepository bankDetailsRepository;
     private final FmUserRepository userRepository;
     private final Validator validator;
@@ -50,22 +54,24 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     private final FmRoleRepository roleRepository;
     private final FmRolePermissionsRepository rolePermissionsRepository;
     private final PasswordEncoder passwordEncoder;
+    private final IFmApprovalRequestService approvalRequestService;
     @Lazy
     @Autowired
     private IFmMerchantService self;
 
-    @Autowired
-    public FmMerchantServiceImpl(FmMerchantRepository merchantRepository, FmMerchantKycRepository merchantKycRepository, FmMerchantBankDetailsRepository bankDetailsRepository, FmUserRepository userRepository, FmEmployeeRepository employeeRepository, Validator validator, FmRoleRepository roleRepository, FmUserRolesRepository userRolesRepository, FmRolePermissionsRepository rolePermissionsRepository, PasswordEncoder passwordEncoder) {
-        this.merchantRepository = merchantRepository;
-        this.merchantKycRepository = merchantKycRepository;
-        this.bankDetailsRepository = bankDetailsRepository;
-        this.userRepository = userRepository;
-        this.validator = validator;
-        this.roleRepository = roleRepository;
-        this.userRolesRepository = userRolesRepository;
-        this.rolePermissionsRepository = rolePermissionsRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+//    @Autowired
+//    public FmMerchantServiceImpl(FmMerchantRepository merchantRepository, FmMerchantKycRepository merchantKycRepository, FmMerchantBankDetailsRepository bankDetailsRepository, FmUserRepository userRepository, FmEmployeeRepository employeeRepository, Validator validator, FmRoleRepository roleRepository, FmUserRolesRepository userRolesRepository, FmRolePermissionsRepository rolePermissionsRepository, PasswordEncoder passwordEncoder, IFmApprovalRequestService approvalRequestService) {
+//        this.merchantRepository = merchantRepository;
+//        this.merchantKycRepository = merchantKycRepository;
+//        this.bankDetailsRepository = bankDetailsRepository;
+//        this.userRepository = userRepository;
+//        this.validator = validator;
+//        this.roleRepository = roleRepository;
+//        this.userRolesRepository = userRolesRepository;
+//        this.rolePermissionsRepository = rolePermissionsRepository;
+//        this.passwordEncoder = passwordEncoder;
+//        this.approvalRequestService = approvalRequestService;
+//    }
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -101,6 +107,17 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         FmMerchant merchant = FmMerchantMapper.toEntity(dto);
         merchant = merchantRepository.save(merchant);
         log.info("[MERCHANT] Saved: merchantId={}, name={}", merchant.getMerchantId(), merchant.getMerchantName());
+
+        /**
+         * Create Approval Request for the newly created Merchant.
+         *
+         * Every new Merchant enters the approval workflow
+         * at Level 1 with PENDING status.
+         */
+        approvalRequestService.createApprovalRequest(
+                FmAppConstants.TYPE_MERCHANT,
+                merchant.getMerchantId(),
+                merchant.getMerchantId());
 
         saveKyc(dto, merchant);
         saveBankDetails(dto, merchant.getMerchantId());
@@ -172,19 +189,19 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
             throw new MerchantAlreadyExistsException("Email already registered: " + email);
         if (merchantRepository.existsByMerchantPhone(phone))
             throw new MerchantAlreadyExistsException("Phone already registered: " + phone);
-        if (pan != null && merchantKycRepository.existsByPanNumber(pan))
+        if (pan != null && userKycRepository.existsByPanNumber(pan))
             throw new MerchantAlreadyExistsException("PAN already registered: " + pan);
-        if (aadhaar != null && merchantKycRepository.existsByAadhaarNumber(aadhaar))
+        if (aadhaar != null && userKycRepository.existsByAadhaarNumber(aadhaar))
             throw new MerchantAlreadyExistsException("Aadhaar already registered: " + aadhaar);
-        if (fssai != null && merchantKycRepository.existsByFssaiNumber(fssai))
+        if (fssai != null && userKycRepository.existsByFssaiNumber(fssai))
             throw new MerchantAlreadyExistsException("FSSAI already registered: " + fssai);
         if (accountNumber != null && !accountNumber.isBlank() && bankDetailsRepository.existsByAccountNumber(accountNumber))
             throw new MerchantAlreadyExistsException("Account number already registered: " + accountNumber);
     }
 
     private void saveKyc(FmMerchantRequestDTO dto, FmMerchant merchant) {
-        FmMerchantKyc kyc = FmMerchantMapper.toKycEntity(dto, merchant);
-        merchantKycRepository.save(kyc);
+        FmUserKyc kyc = FmMerchantMapper.toKycEntity(dto, merchant);
+        userKycRepository.save(kyc);
         log.info("[KYC] Saved for merchantId={}", merchant.getMerchantId());
     }
 

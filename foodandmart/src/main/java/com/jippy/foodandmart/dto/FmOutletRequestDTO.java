@@ -54,6 +54,18 @@ public class FmOutletRequestDTO {
             message = "Alternate outlet phone must be a valid 10-digit Indian mobile number")
     private String alternateOutletPhone;
 
+    @Schema(description = "FSSAI License Number", example = "12345678901234")
+    @NotBlank(message = "FSSAI Number is required")
+    @Pattern(regexp = "^\\d{14}$",
+            message = "FSSAI Number must contain exactly 14 digits")
+    private String fssaiNumber;
+
+    @Schema(description = "GST Number", example = "36ABCDE1234F1Z5")
+    @NotBlank(message = "GST Number is required")
+    @Pattern(regexp = "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$",
+            message = "Invalid GST Number")
+    private String gstNumber;
+
 
     @Schema(description = "Username for outlet login", example = "friends_outlet")
     @NotBlank(message = "Username is required")

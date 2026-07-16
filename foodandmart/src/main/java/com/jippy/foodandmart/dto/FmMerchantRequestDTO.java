@@ -64,7 +64,7 @@ public class FmMerchantRequestDTO {
     @Pattern(regexp = "^[2-9]{1}[0-9]{11}$", message = "Aadhaar must be a valid 12-digit number")
     private String adhar;
 
-    @NotBlank(message = "FSSAI number is required")
+//    @NotBlank(message = "FSSAI number is required")
     @Pattern(regexp = "^\\d{14}$", message = "FSSAI must be a 14-digit number")
     private String fssai;
 

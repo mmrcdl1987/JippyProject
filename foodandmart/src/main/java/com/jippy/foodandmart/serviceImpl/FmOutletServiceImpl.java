@@ -15,6 +15,7 @@ import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmGoogleMapsService;
+import com.jippy.foodandmart.service.IFmApprovalRequestService;
 import com.jippy.foodandmart.service.IFmOutletService;
 import com.jippy.foodandmart.util.FmCredentialUtil;
 import jakarta.persistence.Convert;
@@ -71,6 +72,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmMerchantBankDetailsRepository merchantBankDetailsRepository;
     private final FmOutletDayRepository outletDayRepository;
     private final FmCityRepository cityRepository;
+    private final IFmApprovalRequestService approvalRequestService;
+    private final FmUserKycRepository userKycRepository;
+
 
 
     @Override
@@ -142,6 +146,18 @@ public class FmOutletServiceImpl implements IFmOutletService {
         outlet = outletRepository.save(outlet);
 
         log.info("Outlet saved successfully with outletId : {}", outlet.getOutletId());
+        /*
+         * Save Outlet KYC Details.
+         */
+        saveOutletKyc(dto, outlet.getOutletId());
+        /**
+         * Create Approval Request for the newly created Outlet.
+         *
+         * Every new Outlet enters the approval workflow
+         * at Level 1 with PENDING status.
+         */
+        approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_OUTLET,
+                outlet.getOutletId(), outlet.getOutletId());
         /*
          * Save Address using saveAddressUsingIds helper method
          */
@@ -289,6 +305,28 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
 
+    /**
+     * Saves Outlet KYC Details.
+     *
+     * Every newly created outlet stores its
+     * FSSAI and GST details in user_kyc table.
+     *
+     * @param dto Outlet Request DTO.
+     * @param outletId Newly created Outlet Id.
+     */
+    private void saveOutletKyc(FmOutletRequestDTO dto,
+                               Integer outletId) {
+
+        log.info("Saving Outlet KYC Details for Outlet Id: {}", outletId);
+
+        FmUserKyc kyc =
+                FmMerchantMapper.toOutletKycEntity(dto, outletId);
+
+        userKycRepository.save(kyc);
+
+        log.info("Outlet KYC Details saved successfully for Outlet Id: {}",
+                outletId);
+    }
     /**
      * Saves outlet bank details into user_bank_details table.
      * Every outlet should have its own bank account details.

@@ -55,7 +55,7 @@ public interface FmOutletMenuProjection {
 
     String getAreaName();
 
-    //    for product_online_pricing table
+    //    for product_online_pricing tables
     Integer productIdFromOnlinePricing();
     BigDecimal getOnlinePrice();
 
@@ -75,6 +75,13 @@ public interface FmOutletMenuProjection {
     Boolean getHasProductVariants();
     // Product is_available
     Boolean getProductAvailable();
+
+// for product variants
+    Integer getProductVariantId();
+
+    String getVariantName();
+
+    BigDecimal getVariantMerchantPrice();
 
 //    for outlet_days table
     Boolean getIsOpen();

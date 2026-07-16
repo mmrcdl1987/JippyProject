@@ -24,7 +24,7 @@ public class FmMerchantController {
     private final IFmMerchantService merchantService;
 
     /** POST /api/merchants — create a single merchant */
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value="/createMerchant",consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<FmApiResponse<FmMerchant>> createMerchant(
             @Valid @RequestBody FmMerchantRequestDTO dto) {
 

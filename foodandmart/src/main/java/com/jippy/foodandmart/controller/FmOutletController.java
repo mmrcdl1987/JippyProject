@@ -10,6 +10,7 @@ import com.jippy.foodandmart.service.IFmOutletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -74,10 +75,67 @@ public class FmOutletController {
                 body(FmApiResponse.success("Outlet created successfully", saved));
     }
 
-//    -------------------------------------------------------------------------------------------
+//    --------------- CREATE OUTLET WITH ADDRESS AND BANK DETAILS -----------------------------------------
     @PostMapping("/createOutlet")
     @Operation(summary = "Create Outlet",
             description = "Creates outlet along with address, user, operating days and bank details.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Outlet creation request",
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = FmOutletRequestDTO.class),
+                    examples = @ExampleObject(
+                            name = "Create Outlet Request",
+                            value = """
+                        {
+                          "outletName": "Pista House Restaurant",
+                          "merchantId": 50,
+                          "cuisineType": "Arabian",
+                          "outletPhone": "6305234695",
+                          "alternateOutletPhone": "6305234702",
+                          "outletEmail": "pistahouse@gmail.com",
+
+                          "username": "Pista House Restaurant",
+                          "password": "Pista House@123",
+
+                          "accountNumber": "999999999988",
+                          "ifscCode": "SBIN0001235",
+                          "bankName": "State Bank of India",
+                          "accountHolderName": "Nawabs Restaurant",
+
+                          "buildingNumber": "11-1-21",
+                          "road": "Main Road",
+                          "landmark": "Gachibowli",
+
+                          "stateId": 2,
+                          "cityId": 3,
+                          "areaId": 11,
+
+                          "latitude": "17.4940",
+                          "longitude": "78.3990",
+
+                          "operatingDays": [
+                            {
+                              "dayOfWeekId": 1,
+                              "isOpen": true,
+                              "openingTime": "09:00",
+                              "closingTime": "22:00"
+                            },
+                             {
+                              "dayOfWeekId": 2,
+                              "isOpen": true,
+                              "openingTime": "08:00",
+                              "closingTime": "21:00"
+                            }
+                          ],
+                       // Optional Feild Not Mandatory
+                           "updatedBy": 101
+                        }
+                       """
+                    )
+            )
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Outlet created successfully"),
             @ApiResponse(responseCode = "400", description = "Validation Failed"),
