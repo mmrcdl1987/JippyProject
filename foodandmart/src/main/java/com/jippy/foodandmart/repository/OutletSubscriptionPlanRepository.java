@@ -42,8 +42,8 @@ public interface OutletSubscriptionPlanRepository
     "ON sp.subscription_plan_id = osp.subscription_plan_id "+
     "JOIN jippy_fm.outlets o "+
     "ON o.outlet_id = osp.outlet_id "+
-    "JOIN jippy_fm.banner_slot_days bsd "+
-    "ON bsd.banner_slot_days_id = osp.banner_slot_days_id "+
+    "JOIN jippy_fm.week_slot_days bsd "+
+    "ON bsd.week_slot_days_id = osp.banner_slot_days_id "+
     "WHERE CURRENT_DATE "+
     "BETWEEN bsd.slot_start_date "+
     "AND bsd.slot_end_date "+
