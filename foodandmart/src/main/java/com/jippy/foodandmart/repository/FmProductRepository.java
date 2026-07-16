@@ -93,4 +93,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             Integer productId,
             @Param("status")
             String status);
+
+    Optional<FmProduct> findByProductIdAndIsActive(
+            Integer productId,
+            String isActive);
 }

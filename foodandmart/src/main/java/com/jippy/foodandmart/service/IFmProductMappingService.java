@@ -7,6 +7,4 @@ public interface IFmProductMappingService {
     FmMapToProductResult mapToProducts(FmMapToProductRequest req);
 
     FmMasterProductMappingResultDTO mapFromMasterByCategory(Integer outletCategoryId);
-
-    FmCreateMasterProductResponseDto createMasterProduct(FmCreateMasterProductRequestDto request);
 }

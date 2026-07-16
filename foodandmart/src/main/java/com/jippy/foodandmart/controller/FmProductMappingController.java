@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/fm/products")
+@RequestMapping("/api/fm/product-mappings")
 @RequiredArgsConstructor
 public class FmProductMappingController {
 
