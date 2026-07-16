@@ -8,11 +8,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -29,15 +27,15 @@ public class CoMerchantSettlementController {
      between start date and end date
      */
     @Operation(summary = "Fetch merchant settlement details between dates")
-    @PostMapping("/getProductDetailsForMerchantSettlement")
+    @GetMapping("/getProductDetailsForMerchantSettlement")
     public List<CoMerchantSettlementOutletDto> getProductDetailsForMerchantSettlement(
 
-            @Valid @RequestBody CoMerchantSettlementRequestDto dto) {
+            @RequestParam("startDate") LocalDate startDate,@RequestParam("endDate") LocalDate endDate) {
 
-        log.info("Received merchant settlement request from {} to {}", dto.getStartDate(), dto.getEndDate());
+        log.info("Received merchant settlement request from {} to {}",startDate, endDate);
 
         log.info("Date format validated as yyyy-MM-dd");
 
-        return coMerchantSettlementService.getProductDetailsForMerchantSettlement(dto);
+        return coMerchantSettlementService.getProductDetailsForMerchantSettlement(startDate,endDate);
     }
 }

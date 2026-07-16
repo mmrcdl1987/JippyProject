@@ -54,7 +54,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     private final FmRoleRepository roleRepository;
     private final FmRolePermissionsRepository rolePermissionsRepository;
     private final PasswordEncoder passwordEncoder;
-    private final IFmApprovalRequestService approvalRequestService;
+   // private final IFmApprovalRequestService approvalRequestService;
     @Lazy
     @Autowired
     private IFmMerchantService self;
@@ -114,10 +114,10 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
          * Every new Merchant enters the approval workflow
          * at Level 1 with PENDING status.
          */
-        approvalRequestService.createApprovalRequest(
-                FmAppConstants.TYPE_MERCHANT,
-                merchant.getMerchantId(),
-                merchant.getMerchantId());
+//        approvalRequestService.createApprovalRequest(
+//                FmAppConstants.TYPE_MERCHANT,
+//                merchant.getMerchantId(),
+//                merchant.getMerchantId());
 
         saveKyc(dto, merchant);
         saveBankDetails(dto, merchant.getMerchantId());

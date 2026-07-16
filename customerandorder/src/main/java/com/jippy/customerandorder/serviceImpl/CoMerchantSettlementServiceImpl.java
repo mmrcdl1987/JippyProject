@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.math3.analysis.function.Add;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,26 +37,26 @@ public class CoMerchantSettlementServiceImpl implements CoMerchantSettlementServ
     //     Fetch merchant settlement details between start date and end date
     @Override
     public List<CoMerchantSettlementOutletDto> getProductDetailsForMerchantSettlement
-    (CoMerchantSettlementRequestDto dto) {
+    (LocalDate startDate, LocalDate endDate) {
 
-        log.info("Started fetching merchant settlement details from {} to {}", dto.getStartDate(), dto.getEndDate());
+        log.info("Started fetching merchant settlement details from {} to {}", startDate,endDate);
 
 //         Validate request dates
-        validateDates(dto);
+        validateDates(startDate,endDate);
 
 
 //         Fetch delivered orders between dates start date and end date
         List<CoOrderSettlementProjection> orders =
-                coOrdersRepository.getProductDetailsForMerchantSettlement(dto.getStartDate(), dto.getEndDate());
+                coOrdersRepository.getProductDetailsForMerchantSettlement(startDate,endDate);
 
         log.info("Total delivered orders fetched : {}", orders.size());
 
 //         Throw exception if no orders found
         if (orders.isEmpty()) {
 
-            log.error("No delivered orders found between {} and {}", dto.getStartDate(), dto.getEndDate());
+            log.error("No delivered orders found between {} and {}", startDate, endDate);
 
-            throw new CoBadRequestException("No delivered orders found between " + dto.getStartDate() + " and " + dto.getEndDate());
+            throw new CoBadRequestException("No delivered orders found between " + startDate + " and " + endDate);
         }
 
 //         Store outlet wise settlements in map to avoid duplicate outlet details
@@ -156,10 +157,10 @@ public class CoMerchantSettlementServiceImpl implements CoMerchantSettlementServ
 
 
     //     Validate start date and end date
-    private void validateDates(CoMerchantSettlementRequestDto dto) {
+    private void validateDates(LocalDate startDate,LocalDate endDate) {
 
 //         Validate start date should not be greater than end date
-         if (dto.getStartDate().isAfter(dto.getEndDate())) {
+         if (startDate.isAfter(endDate)) {
 
             log.error("Start date is greater than end date");
 

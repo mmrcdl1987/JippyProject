@@ -1,6 +1,6 @@
 package com.jippy.foodandmart.service;
 
-import com.jippy.foodandmart.dto.FmApprovalRequestDTO;
+
 
 /**
  * Service interface for Approval Requests.
@@ -24,5 +24,5 @@ public interface IFmApprovalRequestService {
      */
     void createApprovalRequest(String entityType, Integer entityId, Integer createdBy);
 
-    void createApprovalRequest(FmApprovalRequestDTO requestDTO);
+   // void createApprovalRequest(FmApprovalRequestDTO requestDTO);
 }

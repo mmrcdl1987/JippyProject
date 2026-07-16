@@ -72,7 +72,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmMerchantBankDetailsRepository merchantBankDetailsRepository;
     private final FmOutletDayRepository outletDayRepository;
     private final FmCityRepository cityRepository;
-    private final IFmApprovalRequestService approvalRequestService;
+   // private final IFmApprovalRequestService approvalRequestService;
     private final FmUserKycRepository userKycRepository;
 
 
@@ -156,8 +156,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Every new Outlet enters the approval workflow
          * at Level 1 with PENDING status.
          */
-        approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_OUTLET,
-                outlet.getOutletId(), outlet.getOutletId());
+//        approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_OUTLET,
+//                outlet.getOutletId(), outlet.getOutletId());
         /*
          * Save Address using saveAddressUsingIds helper method
          */
