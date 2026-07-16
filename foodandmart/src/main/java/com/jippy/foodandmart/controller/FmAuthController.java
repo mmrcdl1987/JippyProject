@@ -1,3 +1,4 @@
+
 package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.*;
@@ -11,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/fm/auth")
+@RequestMapping("/api/fm/otp")
 @RequiredArgsConstructor
 @Slf4j
 public class FmAuthController {
@@ -20,9 +21,11 @@ public class FmAuthController {
 
     private final IFmAuthService authService;
 
-    /**
+
+/**
      * Send Signup OTP
      */
+
     @PostMapping("/send-signup-otp")
     public ResponseEntity<FmResponseDto> sendSignupOtp(
             @Valid @RequestBody FmSendOtpRequestDto request) {
@@ -37,9 +40,11 @@ public class FmAuthController {
         );
     }
 
-    /**
+
+/**
      * Verify Signup OTP
      */
+
     @PostMapping("/verify-signup-otp")
     public ResponseEntity<FmJwtTokenResponseDto> verifySignupOtp(
             @Valid @RequestBody FmVerifyOtpRequestDto request) {
@@ -49,9 +54,11 @@ public class FmAuthController {
         );
     }
 
-    /**
+
+/**
      * Merchant Signup
      */
+
     @PostMapping("/signup")
     public ResponseEntity<FmResponseDto> signupMerchant(
             @RequestHeader("Signup-Token") String signupToken,
@@ -61,9 +68,11 @@ public class FmAuthController {
                 .body(authService.signupMerchant(signupToken, request));
     }
 
-    /**
+
+/**
      * Send Create Outlet OTP
      */
+
     @PostMapping("/send-create-outlet-otp")
     public ResponseEntity<FmResponseDto> sendCreateOutletOtp(
             @Valid @RequestBody FmCreateOutletOtpRequestDto request) {
@@ -78,9 +87,11 @@ public class FmAuthController {
         );
     }
 
-    /**
+
+/**
      * Verify Create Outlet OTP
      */
+
     @PostMapping("/verify-create-outlet-otp")
     public ResponseEntity<FmResponseDto> verifyCreateOutletOtp(
             @Valid @RequestBody FmVerifyOtpRequestDto request) {
@@ -90,9 +101,11 @@ public class FmAuthController {
         );
     }
 
-    /**
+
+/**
      * Send Forgot Password OTP
      */
+
     @PostMapping("/send-forgot-password-otp")
     public ResponseEntity<FmResponseDto> sendForgotPasswordOtp(
             @Valid @RequestBody FmForgotPasswordRequestDto request) {
@@ -107,9 +120,11 @@ public class FmAuthController {
         );
     }
 
-    /**
+
+/**
      * Verify Forgot Password OTP
      */
+
     @PostMapping("/verify-forgot-password-otp")
     public ResponseEntity<FmResponseDto> verifyForgotPasswordOtp(
             @Valid @RequestBody FmVerifyOtpRequestDto request) {
@@ -119,9 +134,11 @@ public class FmAuthController {
         );
     }
 
-    /**
+
+/**
      * Reset Password
      */
+
     @PostMapping("/reset-password")
     public ResponseEntity<FmResponseDto> resetPassword(
             @Valid @RequestBody FmResetPasswordRequestDto request) {

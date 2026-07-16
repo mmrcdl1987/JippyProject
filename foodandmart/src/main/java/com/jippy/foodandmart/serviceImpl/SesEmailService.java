@@ -1,39 +1,30 @@
+
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.exception.EmailSendingException;
 import com.jippy.foodandmart.service.EmailService;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.services.ses.SesClient;
-import software.amazon.awssdk.services.ses.model.Body;
-import software.amazon.awssdk.services.ses.model.Content;
-import software.amazon.awssdk.services.ses.model.Destination;
-import software.amazon.awssdk.services.ses.model.Message;
-import software.amazon.awssdk.services.ses.model.SendEmailRequest;
+
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SesEmailService implements EmailService {
 
-    private final SesClient sesClient;
-
-    @Value("${aws.ses.from-email}")
-    private String fromEmail;
-
-    @Value("${aws.ses.from-name}")
-    private String fromName;
-
-    @Value("${application.name:Jippy}")
-    private String applicationName;
+   // private final SesClient sesClient;
+   private final JavaMailSender mailSender;
 
     @Override
     public void sendOtpEmail(String toEmail, String otp) {
         sendEmail(
                 toEmail,
-                applicationName + " - Email Verification OTP",
+                FmAppConstants.FROM_EMAIL_NAME + " - Email Verification OTP",
                 buildOtpTemplate(otp)
         );
     }
@@ -42,7 +33,7 @@ public class SesEmailService implements EmailService {
     public void sendWelcomeEmail(String toEmail, String merchantName) {
         sendEmail(
                 toEmail,
-                "Welcome to " + applicationName,
+                "Welcome to " + FmAppConstants.FROM_EMAIL_NAME,
                 buildWelcomeTemplate(merchantName)
         );
     }
@@ -51,48 +42,65 @@ public class SesEmailService implements EmailService {
     public void sendForgotPasswordOtp(String toEmail, String otp) {
         sendEmail(
                 toEmail,
-                applicationName + " - Password Reset OTP",
+                FmAppConstants.FROM_EMAIL_NAME + " - Password Reset OTP",
                 buildForgotPasswordTemplate(otp)
         );
     }
 
-    /**
+
+/**
      * Common Email Sender
      */
+
     private void sendEmail(String toEmail, String subject, String htmlBody) {
 
         try {
 
-            SendEmailRequest request = SendEmailRequest.builder()
-                    .source(fromName + " <" + fromEmail + ">")
-                    .destination(
-                            Destination.builder()
-                                    .toAddresses(toEmail)
-                                    .build()
-                    )
-                    .message(
-                            Message.builder()
-                                    .subject(
-                                            Content.builder()
-                                                    .charset("UTF-8")
-                                                    .data(subject)
-                                                    .build()
-                                    )
-                                    .body(
-                                            Body.builder()
-                                                    .html(
-                                                            Content.builder()
-                                                                    .charset("UTF-8")
-                                                                    .data(htmlBody)
-                                                                    .build()
-                                                    )
-                                                    .build()
-                                    )
-                                    .build()
-                    )
-                    .build();
+//            SendEmailRequest request = SendEmailRequest.builder()
+//                    .source(fromName + " <" + fromEmail + ">")
+//                    .destination(
+//                            Destination.builder()
+//                                    .toAddresses(toEmail)
+//                                    .build()
+//                    )
+//                    .message(
+//                            Message.builder()
+//                                    .subject(
+//                                            Content.builder()
+//                                                    .charset("UTF-8")
+//                                                    .data(subject)
+//                                                    .build()
+//                                    )
+//                                    .body(
+//                                            Body.builder()
+//                                                    .html(
+//                                                            Content.builder()
+//                                                                    .charset("UTF-8")
+//                                                                    .data(htmlBody)
+//                                                                    .build()
+//                                                    )
+//                                                    .build()
+//                                    )
+//                                    .build()
+//                    )
+//                    .build();
+//
+//        sesClient.sendEmail(request);
 
-            sesClient.sendEmail(request);
+            // 1. Create a MimeMessage instead of SimpleMailMessage
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+
+            // 2. Use MimeMessageHelper to configure the message features
+            // The boolean parameter 'true' indicates it is a multipart message (allows HTML/attachments)
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setFrom(FmAppConstants.FROM_EMAIL);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            // 4. Set the text content, making sure the second parameter is set to true
+            helper.setText(htmlBody, true);
+
+            mailSender.send(mimeMessage);
 
             log.info("Email sent successfully to {}", toEmail);
 
@@ -107,9 +115,11 @@ public class SesEmailService implements EmailService {
         }
     }
 
-    /**
+
+/**
      * OTP Email
      */
+
     private String buildOtpTemplate(String otp) {
 
         return """
@@ -140,9 +150,11 @@ public class SesEmailService implements EmailService {
                 """.formatted(otp);
     }
 
-    /**
+
+/**
      * Welcome Email
      */
+
     private String buildWelcomeTemplate(String merchantName) {
 
         return """
@@ -168,9 +180,11 @@ public class SesEmailService implements EmailService {
                 """.formatted(merchantName);
     }
 
-    /**
+
+/**
      * Forgot Password Email
      */
+
     private String buildForgotPasswordTemplate(String otp) {
 
         return """
