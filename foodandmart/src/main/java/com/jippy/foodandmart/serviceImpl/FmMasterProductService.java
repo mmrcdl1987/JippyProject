@@ -1,13 +1,13 @@
 package com.jippy.foodandmart.serviceImpl;
 
-import com.jippy.foodandmart.dto.FmCompareFileResponse;
-import com.jippy.foodandmart.dto.FmMasterProductRequest;
-import com.jippy.foodandmart.dto.FmMasterProductResponseDto;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.entity.FmMasterProduct;
+import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.FileProcessingException;
 import com.jippy.foodandmart.exception.MasterProductNotFoundException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
+import com.jippy.foodandmart.mapper.FmCreateMasterProductMapper;
 import com.jippy.foodandmart.mapper.FmMasterProductMapper;
 import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.repository.FmCategoryRepository;
@@ -34,6 +34,7 @@ public class FmMasterProductService {
     private final FileConverterService fileConverterService;
     private final FmCategoryRepository categoryRepository;
     private final FmMasterProductMapper masterProductMapper;
+    private final FmCreateMasterProductMapper mapper;
 
     // ── CREATE ────────────────────────────────────────────────────────────────
 
@@ -440,6 +441,49 @@ public class FmMasterProductService {
 
         return products.stream().map(masterProductMapper::toResponseDto).toList();
     }
+
+    public FmCreateMasterProductResponseDto createMasterProduct(
+            FmCreateMasterProductRequestDto request) {
+
+        log.info(
+                "CREATE_MASTER_PRODUCT_STARTED | categoryId={} | productName={}",
+                request.getCategoryId(),
+                request.getMasterProductName());
+
+        FmCreateMasterProductMapper.validate(request);
+
+        FmCategory category = categoryRepository
+                .findById(request.getCategoryId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Category not found with id : "
+                                        + request.getCategoryId()));
+
+        if (masterProductRepository
+                .existsByMasterProductNameIgnoreCaseAndCategoryId(
+                        request.getMasterProductName().trim(),
+                        request.getCategoryId())) {
+
+            throw new DuplicateResourceException(
+                    "Master Product already exists in this category.");
+        }
+
+        FmMasterProduct entity =
+                FmCreateMasterProductMapper.toEntity(
+                        request,
+                        category.getCategoryName(),
+                        1);
+
+        FmMasterProduct savedProduct =
+                masterProductRepository.save(entity);
+
+        log.info(
+                "CREATE_MASTER_PRODUCT_COMPLETED | masterProductId={}",
+                savedProduct.getMasterProductId());
+
+        return mapper.toResponseDto(savedProduct);
+    }
+
 
 
 }

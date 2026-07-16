@@ -140,4 +140,10 @@ public final class FmAppConstants {
             "Customer not found";
     public static final Double NEARBY_OUTLET_RADIUS_METERS = 5000.0;
 
+    public static final String FROM_EMAIL = "accounts@jippymart.in";
+
+    public static final String FROM_EMAIL_NAME = "Jippy";
+
+    public static final Integer EMAIL_OTP_EXPIRY_MINUTES = 10;
+
 }

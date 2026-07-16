@@ -3,7 +3,6 @@ package com.jippy.foodandmart.controller;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmMasterProduct;
 import com.jippy.foodandmart.serviceImpl.FmMasterProductService;
-import com.jippy.foodandmart.serviceImpl.FmProductMappingServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,9 +28,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FmMasterProductController {
 
-
     private final FmMasterProductService service;
-    private final FmProductMappingServiceImpl productMappingService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -138,7 +135,7 @@ public class FmMasterProductController {
                 request.getMasterProductName());
 
         FmCreateMasterProductResponseDto response =
-                productMappingService.createMasterProduct(request);
+                service.createMasterProduct(request);
 
         log.info("CREATE_MASTER_PRODUCT_API_COMPLETED | masterProductId={}",
                 response.getMasterProductId());
