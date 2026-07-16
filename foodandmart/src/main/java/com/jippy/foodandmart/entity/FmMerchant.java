@@ -52,10 +52,12 @@ public class FmMerchant {
     @Column(name = "profile_pic_url", length = 100)
     private String profilePicUrl;
 
-    @JsonIgnore
-    @OneToOne(mappedBy = "merchant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private FmMerchantKyc kyc;
+//--------------------------------------------------------------
+//    @JsonIgnore
+//    @OneToOne(mappedBy = "merchant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+//    private FmUserKyc kyc;
 
+//    ------------------------------------------------------------
 //    @ManyToOne
 //    //@JoinColumn(name = "bank_details_bank_id")
     //@JsonIgnore

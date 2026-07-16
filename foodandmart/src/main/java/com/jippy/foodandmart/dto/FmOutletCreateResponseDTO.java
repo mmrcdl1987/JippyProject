@@ -7,10 +7,10 @@ import java.util.List;
 
 /**
  * Response DTO returned after successful outlet creation.
- *
+ * <p>
  * This DTO contains all outlet details along with address,
  * bank details and operating days.
- *
+ * <p>
  * Note:
  * Password is always returned as masked (********)
  * for security reasons.
@@ -40,6 +40,15 @@ public class FmOutletCreateResponseDTO {
 
     @Schema(description = "Alternate outlet phone number", example = "9876543211")
     private String alternateOutletPhone;
+
+    //    -----------------UserKyc Table -----------------
+    @Schema(description = "Food Safety and Standards Authority of India (FSSAI)" +
+            " License Number of the outlet.", example = "12345678901234")
+    private String fssaiNumber;
+
+    @Schema(description = "Goods and Services Tax (GST) Identification" +
+            " Number (GSTIN) of the outlet.", example = "36ABCDE1234F1Z5")
+    private String gstNumber;
 
 //    --------------users Table----------------------
 
@@ -90,25 +99,24 @@ public class FmOutletCreateResponseDTO {
 
     // ---------------- LIST of Operating Days ----------------
 
-    @Schema(description = "Operating days and timings of the outlet",
-            example = """
-    [
-      {
-        "dayOfWeekId": 1,
-        "isOpen": true,
-        "openingTime": "09:00",
-        "closingTime": "22:00",
-        "slotType": "FULL_DAY"
-      },
-      {
-        "dayOfWeekId": 2,
-        "isOpen": true,
-        "openingTime": "09:00",
-        "closingTime": "22:00",
-        "slotType": "FULL_DAY"
-      }
-    ]
-    """)
+    @Schema(description = "Operating days and timings of the outlet", example = """
+            [
+              {
+                "dayOfWeekId": 1,
+                "isOpen": true,
+                "openingTime": "09:00",
+                "closingTime": "22:00",
+                "slotType": "FULL_DAY"
+              },
+              {
+                "dayOfWeekId": 2,
+                "isOpen": true,
+                "openingTime": "09:00",
+                "closingTime": "22:00",
+                "slotType": "FULL_DAY"
+              }
+            ]
+            """)
     private List<FmOutletDayDTO> operatingDays;
 
     // ---------------- Tracking ----------------

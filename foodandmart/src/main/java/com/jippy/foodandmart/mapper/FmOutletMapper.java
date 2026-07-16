@@ -380,6 +380,7 @@ public final class FmOutletMapper {
                             product.setProductName(row.getProductName());
                             product.setDescription(row.getDescription());
 
+
                             // Pricing logic
                             if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && row.getOnlinePrice() != null) {
                                 product.setPrice(row.getOnlinePrice());
@@ -392,16 +393,79 @@ public final class FmOutletMapper {
                             // Product availability from products.is_toggle
                             product.setIsAvailable(row.getProductAvailable());
                             product.setProductTimings(new ArrayList<>());
+                            product.setVariants(new ArrayList<>());
                             category.getProducts().add(product);
                         }
 
-                        // Map Product Timings
+                        /* -----------------------------------------------
+                         * Map Product Timings (Avoid Duplicate Timings)
+                         */
                         if (row.getStartTime() != null) {
-                            FmProductTimingDto pt = new FmProductTimingDto();
-                            pt.setDay(row.getProductDay());
-                            pt.setStartTime(row.getStartTime());
-                            pt.setEndTime(row.getEndTime());
-                            product.getProductTimings().add(pt);
+
+                            boolean timingExists = false;
+
+                            for (FmProductTimingDto existingTiming : product.getProductTimings()) {
+
+                                if (existingTiming.getDay().equals(row.getProductDay())
+                                        && existingTiming.getStartTime().equals(row.getStartTime())
+                                        && existingTiming.getEndTime().equals(row.getEndTime())) {
+
+                                    timingExists = true;
+                                    break;
+                                }
+                            }
+
+                            if (!timingExists) {
+
+                                FmProductTimingDto pt = new FmProductTimingDto();
+
+                                pt.setDay(row.getProductDay());
+                                pt.setStartTime(row.getStartTime());
+                                pt.setEndTime(row.getEndTime());
+
+                                product.getProductTimings().add(pt);
+                            }
+                        }
+//                        ------------------------------------------------------------------------
+                        /*
+                         * Map Product Variants.
+                         */
+                        if (row.getProductVariantId() != null) {
+
+                            boolean variantExists = false;
+
+                            for (FmProductVariantDTO existingVariant : product.getVariants()) {
+
+                                if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
+
+                                    variantExists = true;
+                                    break;
+                                }
+                            }
+
+                            if (!variantExists) {
+
+                                FmProductVariantDTO variant = new FmProductVariantDTO();
+
+                                variant.setVariantId(row.getProductVariantId());
+                                variant.setVariantName(row.getVariantName());
+
+                                /*
+                                 * Customer sees online price.
+                                 * Merchant sees merchant price.
+                                 */
+                                if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
+                                        && row.getOnlinePrice() != null) {
+
+                                    variant.setPrice(row.getOnlinePrice());
+
+                                } else {
+
+                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+                                }
+
+                                product.getVariants().add(variant);
+                            }
                         }
                     }
                 }
@@ -589,6 +653,8 @@ public final class FmOutletMapper {
         response.setOutletPhone(outlet.getOutletPhone());
         response.setOutletEmail(request.getOutletEmail());
         response.setAlternateOutletPhone(request.getAlternateOutletPhone());
+        response.setFssaiNumber(request.getFssaiNumber());
+        response.setGstNumber(request.getGstNumber());
         response.setUsername(request.getUsername());
         response.setUpdatedBy(request.getUpdatedBy());
 

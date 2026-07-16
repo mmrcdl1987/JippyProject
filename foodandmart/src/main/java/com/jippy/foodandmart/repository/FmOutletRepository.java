@@ -5,6 +5,7 @@ import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import com.jippy.foodandmart.projections.FmOutletSettlementProjection;
+import com.jippy.foodandmart.projections.FmPendingOutletApprovalProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -82,6 +83,11 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            p.is_veg,             -- jippy_fm.products
                            p.has_product_variants, -- jippy_fm.products
                            p.is_toggle AS product_available,       -- jippy_fm.products
+                           
+                           -- Product Variant Details (from product_variants table)
+                           pv.product_variant_options_id,
+                          --  pv.variant_name,
+                           pv.variant_price AS variant_merchant_price,
             
             
                            -- Outlet day-wise availability (from outlet_days table)
@@ -141,13 +147,15 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                        --JOIN jippy_fm.product_online_pricing pop
                             --ON p.product_id = pop.product_id
             
-            
                 -- for online pricing details 
                 --(get online price for each product by product_id and outlet_category_id)
                             LEFT JOIN jippy_fm.product_online_pricing pop
                                ON p.product_id = pop.product_id
                                AND p.outlet_category_id = pop.outlet_category_id
-            
+                               
+                  -- Fetch product variants
+                  LEFT JOIN jippy_fm.product_variant_options pv
+                         ON pv.product_id = p.product_id             
             
                        -- Left join outlet_days (get outlet timings per day)
                        LEFT JOIN jippy_fm.outlet_days od
@@ -469,4 +477,86 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                                               @Param("outletName") String outletName,
                                               @Param("areaId") Integer areaId);
 
-}
+
+// ---------------------------------FOR -APPROVALS-----------------------------------
+                            /* Fetch all pending outlets for the logged-in approver.
+                            *
+                            * Flow
+                            *
+                            * approval_settings
+                            *      ↓
+                            * employee
+                            *      ↓
+                            * employee address
+                            *      ↓
+                            * area
+                            *      ↓
+                            * outlet address
+                            *      ↓
+                            * outlets
+                            *
+                            * Conditions
+                            *
+                            * 1. approver_id must match.
+                            * 2. entity_type must match.
+                            * 3. Employee address should be EMPLOYEE.
+                            * 4. Outlet address should be OUTLET.
+                            * 5. Area Id should be same.
+                            * 6. Outlet must not be approved.
+                            * 7. Outlet should be created within last 24 hours.
+                            */
+@Query(value = """                         
+                         SELECT
+                         o.outlet_id              AS outletId,
+                         o.outlet_name            AS outletName,
+                         o.merchant_id            AS merchantId,
+                         o.cuisine_type           AS cuisineType,
+                         o.outlet_phone           AS outletPhone,
+                         o.outlet_email           AS outletEmail,
+                         o.is_approved            AS isApproved,
+                         o.created_at             AS createdAt
+                         
+                         FROM jippy_fm.approval_settings aps
+                         
+                         /* Verify Approver Employee */
+                         
+                         INNER JOIN jippy_fm.employees emp
+                         ON emp.employee_id = aps.approver_id
+                         
+                         /* Fetch Employee Address */
+                         
+                         INNER JOIN jippy_fm.address emp_addr
+                         ON emp_addr.jippy_address_id = emp.employee_id
+                         AND emp_addr.address_type='EMPLOYEE'
+                         
+                         /* Fetch all Outlet Addresses belonging to same Area */
+                         
+                         INNER JOIN jippy_fm.address outlet_addr
+                         ON outlet_addr.area_id = emp_addr.area_id
+                         AND outlet_addr.address_type='OUTLET'
+                         
+                         /* Fetch Outlets */
+                         INNER JOIN jippy_fm.outlets o
+                         ON o.outlet_id = outlet_addr.jippy_address_id
+                         
+                         WHERE
+                         
+                         aps.approver_id = :approverId
+                         
+                         AND aps.entity_type = :entityType
+                         
+                         AND aps.is_active = TRUE
+                         
+                         AND o.is_approved = FALSE
+                         
+                         AND o.created_at >= NOW() - INTERVAL '24 HOURS'
+                         
+                         ORDER BY o.created_at DESC""", nativeQuery = true)
+
+  List<FmPendingOutletApprovalProjection> getPendingOutletApprovalRequestsByEntityType(
+                                 @Param("approverId") Integer approverId,
+                                 @Param("entityType") String entityType);
+
+  }
+
+
