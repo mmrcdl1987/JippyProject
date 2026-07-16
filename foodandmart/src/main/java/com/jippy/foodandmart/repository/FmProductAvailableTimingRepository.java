@@ -10,4 +10,7 @@ import java.util.List;
 public interface FmProductAvailableTimingRepository extends JpaRepository<FmProductAvailableTiming, Integer> {
     List<FmProductAvailableTiming> findByProductId(Integer productId);
     void deleteByProductId(Integer productId);
+    List<FmProductAvailableTiming> findByProductIdOrderByDayOfWeekIdAsc(
+            Integer productId);
+    List<FmProductAvailableTiming> findByProductIdOrderByProductAvailableTimingIdAsc(Integer productId);
 }

@@ -15,6 +15,4 @@ public class FmProductVariantDTO {
     private BigDecimal merchantPrice;
     private BigDecimal price;
 
-
-
 }
