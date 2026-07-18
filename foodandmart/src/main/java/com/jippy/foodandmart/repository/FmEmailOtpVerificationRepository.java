@@ -72,4 +72,10 @@ public interface FmEmailOtpVerificationRepository extends JpaRepository<FmEmailO
             Integer entityId
     );
 
+
+    Optional<FmEmailOtpVerification> findTopByEntityIdAndPurposeOrderByCreatedAtDesc(
+            Integer entityId,
+            FmOtpPurpose purpose
+    );
+
 }

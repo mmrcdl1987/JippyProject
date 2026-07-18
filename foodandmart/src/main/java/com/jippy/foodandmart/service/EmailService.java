@@ -15,21 +15,21 @@ public interface EmailService {
      * @param otp Generated OTP
      */
     void sendOtpEmail(String toEmail, String otp);
+//
+//    /**
+//     * Send Welcome Email after successful registration.
+//     *
+//     * @param toEmail Merchant Email
+//     * @param merchantName Merchant Name
+//     */
+//    void sendWelcomeEmail(String toEmail, String merchantName);
 
-    /**
-     * Send Welcome Email after successful registration.
-     *
-     * @param toEmail Merchant Email
-     * @param merchantName Merchant Name
-     */
-    void sendWelcomeEmail(String toEmail, String merchantName);
-
-    /**
-     * Send Forgot Password OTP.
-     *
-     * @param toEmail Merchant Email
-     * @param otp OTP
-     */
-    void sendForgotPasswordOtp(String toEmail, String otp);
+//    /**
+//     * Send Forgot Password OTP.
+//     *
+//     * @param toEmail Merchant Email
+//     * @param otp OTP
+//     */
+//    void sendForgotPasswordOtp(String toEmail, String otp);
 
 }

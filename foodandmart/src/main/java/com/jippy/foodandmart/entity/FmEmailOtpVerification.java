@@ -77,6 +77,9 @@ public class FmEmailOtpVerification {
     @Column(name = "no_of_attempts", nullable = false)
     private Integer noOfAttempts;
 
+    @Column(name = "resend_count")
+    private Integer resendCount;
+
     @Column(name = "created_by")
     private Integer createdBy;
 
@@ -104,6 +107,10 @@ public class FmEmailOtpVerification {
 
         if (this.noOfAttempts == null) {
             this.noOfAttempts = 0;
+        }
+
+        if (this.resendCount == null) {
+            this.resendCount = 0;
         }
     }
 
