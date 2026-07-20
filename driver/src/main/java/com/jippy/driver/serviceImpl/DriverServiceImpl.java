@@ -72,7 +72,7 @@ public class DriverServiceImpl implements DriverService {
             userDto.setUsername(savedDriver.getEmail());
             userDto.setPassword(dto.getPassword());
             userDto.setUserId(savedDriver.getDriverId());
-            userDto.setUserType("DRIVER");
+            userDto.setUserType(DConstants.TYPE_DRIVER);
             log.info("Creating user in FM for driverId: {}, username: {}", savedDriver.getDriverId(), userDto.getUsername());
             fmFeignClient.createUser(userDto);
 
@@ -81,6 +81,13 @@ public class DriverServiceImpl implements DriverService {
         } catch (Exception e) {
             log.error("User creation failed in FM", e);
         }
+
+//        ----------------------------------------------------------------------
+        /** CALLING HELPER METHOD
+         * Create Approval Request in Food & Mart Microservice.
+         */
+          createApprovalRequest(savedDriver.getDriverId());
+//          -------------------------------------------------------------------
 
 //        // Fetch role
 //        FmRoles role = roleRepository.findByRoleName(DConstants.ROLE_DRIVER);
@@ -140,6 +147,37 @@ public class DriverServiceImpl implements DriverService {
 
         return mapToDriverDto;
     }
+//    ----------------------------------------------------------------------------------------------
+
+    /**------  HELPER METHOD - For Approval Request
+     * Creates an Approval Request in Food & Mart Microservice.
+     *
+     * Every newly created Driver enters the approval workflow
+     * at Level 1 with PENDING status.
+     *
+     * @param driverId Newly created Driver Id.
+     */
+    private void createApprovalRequest(Integer driverId) {
+
+        try {
+            DriverApprovalRequestDTO requestDTO = new DriverApprovalRequestDTO();
+
+            requestDTO.setEntityType(DConstants.TYPE_DRIVER);
+            requestDTO.setEntityId(driverId);
+            requestDTO.setCreatedBy(driverId);
+
+            log.info("Creating Approval Request for Driver Id: {}", driverId);
+
+            fmFeignClient.createApprovalRequest(requestDTO);
+
+            log.info("Approval Request created successfully for Driver Id: {}", driverId);
+
+        } catch (Exception ex) {
+
+            log.error("Failed to create Approval Request for Driver Id: {}", driverId, ex);
+        }
+    }
+//    ---------------------------------------------------------------------------------------------
 
     @Override
     @Transactional
@@ -725,4 +763,14 @@ public class DriverServiceImpl implements DriverService {
 
         return dto;
     }
+//    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
+    @Override
+    public FmDriverApprovalResponseDTO getDriverById(Integer driverId) {
+
+    Driver driver = driverRepository.findByDriverId(driverId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException("Driver not found with Id : " + driverId));
+
+    return DriverMapper.mapToDriverApprovalResponseDto(driver);
+}
 }

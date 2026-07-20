@@ -2,7 +2,11 @@ package com.jippy.foodandmart.service;
 
 //import com.jippy.foodandmart.dto.FmApprovalRequestDTO;
 
+import com.jippy.foodandmart.dto.FmApprovalRequestDTO;
+import com.jippy.foodandmart.dto.FmLevel1PendingApprovalResponseDTO;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Service interface for Approval Requests.
@@ -27,5 +31,8 @@ public interface IFmApprovalRequestService {
      */
     void createApprovalRequest(String entityType, Integer entityId, Integer createdBy);
 
-//    void createApprovalRequest(FmApprovalRequestDTO requestDTO);
+//    For Driver Microservice Through Feign Client
+    void createApprovalRequest(FmApprovalRequestDTO requestDTO);
+
+    List<FmLevel1PendingApprovalResponseDTO> getLevel1PendingApprovalRequests(Integer approverId);
 }

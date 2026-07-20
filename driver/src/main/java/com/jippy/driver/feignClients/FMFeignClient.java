@@ -38,6 +38,9 @@ public interface FMFeignClient {
     @PutMapping("/api/fm/merchants/updateMerchantProfilePic")
     ResponseEntity<DriverResponseDto> updateMerchantProfilePic(DriverMerchantDto driverMerchantDto);
 
+    @PostMapping("/api/fm/approval-requests/createApprovalRequest")
+    void createApprovalRequest(@RequestBody DriverApprovalRequestDTO requestDTO);
+
 
 
 }

@@ -6,6 +6,7 @@
     import com.jippy.driver.service.DriverService;
     import com.jippy.driver.serviceImpl.DriverLocationService;
     import io.swagger.v3.oas.annotations.Operation;
+    import io.swagger.v3.oas.annotations.responses.ApiResponse;
     import io.swagger.v3.oas.annotations.tags.Tag;
     import jakarta.validation.Valid;
     import lombok.RequiredArgsConstructor;
@@ -29,9 +30,18 @@
         private final DriverService driverService;
         private final DriverLocationService driverLocationService;
 
-        //    post driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
         @PostMapping("/postDriverDetails")
-        @Operation(summary = "Create Driver", description = "Creates driver, KYC, and address")
+        @Operation(
+                summary = "Create Driver",
+                description = "Creates a new Driver along with Driver KYC, Address, User Account, "
+                        + "Wallet and Approval Request. "
+                        + "The Driver is saved in the Driver Microservice, while the Address, "
+                        + "User Account and Approval Request are created in the Food & Mart "
+                        + "Microservice through Feign Client integration.")
+        @ApiResponse(responseCode = "200", description = "Driver created successfully.")
+        @ApiResponse(responseCode = "400", description = "Invalid Driver request.")
+        @ApiResponse(responseCode = "404", description = "Referenced resource not found.")
+        @ApiResponse(responseCode = "500", description = "Internal Server Error.")
         public ResponseEntity<DriverDto> postDriverDetails
         ( @Valid @RequestBody DriverDto dto) {
 
@@ -153,5 +163,28 @@
 
             return ResponseEntity.ok(driverService.findByEmail(email));
         }
+        //        --------------------------------------------------------------------------------------
 
+        /**
+         * ===========================================================
+         * Get Driver Details by Driver Id
+         * ===========================================================
+         *
+         * This API is used by the Food & Mart (FM) microservice
+         * during the Level-1 Approval process.
+         *
+         * It fetches complete Driver information including:
+         * 1. Driver Details
+         * 2. Driver KYC Details
+         * 3. Driver Address Details
+         *
+         * @param driverId Driver Id
+         * @return Driver Approval Response
+         */
+        @GetMapping("/getDriverById/{driverId}")
+        public ResponseEntity<FmDriverApprovalResponseDTO> getDriverById(
+                @PathVariable Integer driverId) {
+
+            return ResponseEntity.ok(driverService.getDriverById(driverId));
+        }
     }
