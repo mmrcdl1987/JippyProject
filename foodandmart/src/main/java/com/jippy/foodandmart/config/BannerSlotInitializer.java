@@ -21,7 +21,10 @@ public class BannerSlotInitializer implements ApplicationRunner {
 
         bannerSlotDayService.generateInitialFourMonths();
 
+        log.info("Generating Initial Settlement Weeks");
+
+        bannerSlotDayService.generateInitialSettlementWeeks();
+
         log.info("Banner Slot Initialization Completed");
     }
-
 }

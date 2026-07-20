@@ -44,58 +44,69 @@ public class FmProductServiceImpl implements FmProductService {
 
 
     private final FmDaysOfWeekRepository daysOfWeekRepository;
-
     @Override
+    @Transactional
     public FmMapToProductResult mapToProducts(FmMapToProduct request) {
 
-        log.info("Received product mapping request. OutletId={}, CategoryId={}, Products={}",
+        log.info(
+                "[PRODUCT-MAP] Product mapping initiated | outletId={} | categoryId={} | requestedProducts={}",
                 request.getOutletId(),
                 request.getCategoryId(),
                 request.getProducts() == null ? 0 : request.getProducts().size());
 
         if (request.getProducts() == null || request.getProducts().isEmpty()) {
 
+            log.warn("[PRODUCT-MAP] Product mapping failed | reason=Product list is empty");
+
             throw new IllegalArgumentException("Products are required.");
         }
 
         if (request.getOutletId() == null) {
+
+            log.warn("[PRODUCT-MAP] Product mapping failed | reason=Outlet Id is missing");
 
             throw new IllegalArgumentException("Outlet Id is required.");
         }
 
         if (request.getCategoryId() == null) {
 
+            log.warn("[PRODUCT-MAP] Product mapping failed | reason=Category Id is missing");
+
             throw new IllegalArgumentException("Category Id is required.");
         }
 
-        /*
-         * Find Existing Outlet Category or Create New
-         */
-        FmOutletCategory outletCategory = outletCategoryRepository
-                .findByOutletIdAndCategoryId(
-                        request.getOutletId(),
-                        request.getCategoryId())
-                .orElseGet(() -> {
+        FmOutletCategory outletCategory =
+                outletCategoryRepository
+                        .findByOutletIdAndCategoryId(
+                                request.getOutletId(),
+                                request.getCategoryId())
+                        .orElseGet(() -> {
 
-                    FmOutletCategory entity = new FmOutletCategory();
+                            log.info(
+                                    "[PRODUCT-MAP] Outlet category not found. Creating new mapping | outletId={} | categoryId={}",
+                                    request.getOutletId(),
+                                    request.getCategoryId());
 
-                    entity.setOutletId(request.getOutletId());
-                    entity.setCategoryId(request.getCategoryId());
-                    entity.setCreatedBy(SYSTEM_USER);
-                    entity.setUpdatedBy(SYSTEM_USER);
-                    entity.setIsToggle(true);
-                    entity.setIsActive("Y");
+                            FmOutletCategory entity = new FmOutletCategory();
 
-                    FmOutletCategory saved = outletCategoryRepository.save(entity);
+                            entity.setOutletId(request.getOutletId());
+                            entity.setCategoryId(request.getCategoryId());
+                            entity.setCreatedBy(SYSTEM_USER);
+                            entity.setUpdatedBy(SYSTEM_USER);
+                            entity.setIsToggle(true);
+                            entity.setIsActive("Y");
 
-                    log.info("Created Outlet Category. OutletCategoryId={}",
-                            saved.getOutletCategoryId());
+                            FmOutletCategory saved =
+                                    outletCategoryRepository.save(entity);
 
-                    return saved;
-                });
+                            log.info(
+                                    "[PRODUCT-MAP] Outlet category created successfully | outletCategoryId={}",
+                                    saved.getOutletCategoryId());
 
-        Integer resolvedOutletCategoryId =
-                outletCategory.getOutletCategoryId();
+                            return saved;
+                        });
+
+        Integer outletCategoryId = outletCategory.getOutletCategoryId();
 
         List<String> savedNames = new ArrayList<>();
         List<String> skippedNames = new ArrayList<>();
@@ -109,62 +120,83 @@ public class FmProductServiceImpl implements FmProductService {
 
             if (productName.isBlank()) {
 
+                log.warn("[PRODUCT-MAP] Skipping product | reason=Blank product name");
+
                 skippedNames.add("(blank)");
+
                 continue;
             }
 
             if (productRepository.existsByOutletCategoryIdAndProductNameIgnoreCase(
-                    resolvedOutletCategoryId,
+                    outletCategoryId,
                     productName)) {
 
+                log.warn(
+                        "[PRODUCT-MAP] Product already mapped | outletCategoryId={} | productName={}",
+                        outletCategoryId,
+                        productName);
+
                 skippedNames.add(productName + " (Already Exists)");
+
                 continue;
             }
 
-            String imageLink = null;
-            String photos = null;
-            String thumbnail = null;
-
             if (entry.getMasterProductId() == null) {
+
+                log.warn(
+                        "[PRODUCT-MAP] Product mapping failed | productName={} | reason=Master Product Id missing",
+                        productName);
 
                 throw new IllegalArgumentException("Master Product Id is required.");
             }
 
-            FmMasterProduct masterProduct = masterProductRepository
-                    .findById(entry.getMasterProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Master Product not found with id : "
-                                    + entry.getMasterProductId()));
+            FmMasterProduct masterProduct =
+                    masterProductRepository
+                            .findById(entry.getMasterProductId())
+                            .orElseThrow(() -> {
 
-            /*
-             * Validate that the selected master product belongs
-             * to the selected category.
-             */
-            if (!Objects.equals(masterProduct.getCategoryId(), request.getCategoryId())) {
+                                log.warn(
+                                        "[PRODUCT-MAP] Master product not found | masterProductId={}",
+                                        entry.getMasterProductId());
+
+                                return new ResourceNotFoundException(
+                                        "Master Product not found with id : "
+                                                + entry.getMasterProductId());
+                            });
+
+            if (!Objects.equals(
+                    masterProduct.getCategoryId(),
+                    request.getCategoryId())) {
+
+                log.warn(
+                        "[PRODUCT-MAP] Invalid master product category | masterProductId={} | expectedCategory={} | actualCategory={}",
+                        masterProduct.getMasterProductId(),
+                        request.getCategoryId(),
+                        masterProduct.getCategoryId());
 
                 throw new IllegalArgumentException(
                         "Selected Master Product does not belong to Category Id : "
                                 + request.getCategoryId());
             }
 
-            /*
-             * Copy Images
-             */
-            imageLink = masterProduct.getPhoto();
-            photos = masterProduct.getPhotos();
-            thumbnail = masterProduct.getThumbnail();
+            if (masterProduct.getPhoto() == null
+                    || masterProduct.getPhoto().isBlank()) {
 
-            if (imageLink == null || imageLink.isBlank()) {
+                log.warn(
+                        "[PRODUCT-MAP] Master product image missing | masterProductId={} | productName={}",
+                        masterProduct.getMasterProductId(),
+                        productName);
 
                 throw new IllegalArgumentException(
                         "Master Product image missing : " + productName);
             }
+
             boolean hasVariants =
                     Boolean.TRUE.equals(entry.getHasProductVariants());
 
             FmProduct product = new FmProduct();
 
-            product.setOutletCategoryId(resolvedOutletCategoryId);
+            product.setOutletCategoryId(outletCategoryId);
             product.setProductName(productName);
             product.setDescription(
                     entry.getDescription() == null
@@ -178,9 +210,9 @@ public class FmProductServiceImpl implements FmProductService {
 
             product.setHasProductVariants(hasVariants);
 
-            product.setImageLink(imageLink);
-            product.setPhotos(photos);
-            product.setThumbnail(thumbnail);
+            product.setImageLink(masterProduct.getPhoto());
+            product.setPhotos(masterProduct.getPhotos());
+            product.setThumbnail(masterProduct.getThumbnail());
 
             product.setCreatedBy(SYSTEM_USER);
             product.setUpdatedBy(SYSTEM_USER);
@@ -193,15 +225,11 @@ public class FmProductServiceImpl implements FmProductService {
 
                 BigDecimal requestPrice = entry.getMerchantPrice();
 
-                if (requestPrice != null
-                        && requestPrice.compareTo(BigDecimal.ZERO) > 0) {
-
-                    product.setMerchantPrice(requestPrice);
-
-                } else {
-
-                    product.setMerchantPrice(resolvePrice(productName));
-                }
+                product.setMerchantPrice(
+                        requestPrice != null
+                                && requestPrice.compareTo(BigDecimal.ZERO) > 0
+                                ? requestPrice
+                                : resolvePrice(productName));
             }
 
             FmProduct savedProduct =
@@ -218,18 +246,24 @@ public class FmProductServiceImpl implements FmProductService {
 
             savedNames.add(productName);
 
-            log.info("Product saved successfully. ProductId={}, Name={}",
+            log.info(
+                    "[PRODUCT-MAP] Product mapped successfully | productId={} | productName={}",
                     savedProduct.getProductId(),
                     savedProduct.getProductName());
         }
 
-        FmMapToProductResult response =
-                new FmMapToProductResult();
+        FmMapToProductResult response = new FmMapToProductResult();
 
         response.setSavedCount(savedNames.size());
         response.setSkippedCount(skippedNames.size());
         response.setSavedNames(savedNames);
         response.setSkippedNames(skippedNames);
+
+        log.info(
+                "[PRODUCT-MAP] Product mapping completed | outletCategoryId={} | saved={} | skipped={}",
+                outletCategoryId,
+                savedNames.size(),
+                skippedNames.size());
 
         return response;
     }
@@ -325,14 +359,19 @@ public class FmProductServiceImpl implements FmProductService {
     @Transactional(readOnly = true)
     public FmProductUpdateResponseDto getProductById(Integer productId) {
 
-        log.info("Fetching Product Details. ProductId={}", productId);
+        log.info("[PRODUCT] Fetch product details initiated | productId={}",
+                productId);
 
-        FmProduct product = productRepository.findByProductIdAndIsActive(productId, "Y").orElseThrow(() -> {
+        FmProduct product = productRepository
+                .findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> {
 
-            log.error("Product not found. ProductId={}", productId);
+                    log.warn("[PRODUCT] Product not found | productId={}",
+                            productId);
 
-            return new ResourceNotFoundException("Product not found with id : " + productId);
-        });
+                    return new ResourceNotFoundException(
+                            "Product not found with id : " + productId);
+                });
 
         FmProductUpdateResponseDto response = new FmProductUpdateResponseDto();
 
@@ -348,15 +387,18 @@ public class FmProductServiceImpl implements FmProductService {
         response.setThumbnail(product.getThumbnail());
 
         /*
-         * Load Product Timings
+         * Product Timings
          */
-        List<FmProductAvailableTiming> timings = productAvailableTimingRepository.findByProductIdOrderByDayOfWeekIdAsc(productId);
+        List<FmProductAvailableTiming> timings =
+                productAvailableTimingRepository
+                        .findByProductIdOrderByDayOfWeekIdAsc(productId);
 
         List<FmProductTimingResponseDto> timingDtos = new ArrayList<>();
 
         for (FmProductAvailableTiming timing : timings) {
 
-            FmProductTimingResponseDto dto = new FmProductTimingResponseDto();
+            FmProductTimingResponseDto dto =
+                    new FmProductTimingResponseDto();
 
             dto.setProductAvailableTimingId(
                     timing.getProductAvailableTimingId());
@@ -364,64 +406,124 @@ public class FmProductServiceImpl implements FmProductService {
             dto.setDayOfWeekId(
                     timing.getDayOfWeekId());
 
-            String dayName = daysOfWeekRepository.findById(timing.getDayOfWeekId()).map(FmDaysOfWeek::getDayName).orElse(null);
+            String dayName =
+                    daysOfWeekRepository.findById(timing.getDayOfWeekId())
+                            .map(FmDaysOfWeek::getDayName)
+                            .orElse(null);
 
             dto.setDayName(dayName);
 
-            dto.setStartTime(timing.getStartTime() == null ? null : timing.getStartTime().toString());
+            dto.setStartTime(
+                    timing.getStartTime() == null
+                            ? null
+                            : timing.getStartTime().toString());
 
-            dto.setEndTime(timing.getEndTime() == null ? null : timing.getEndTime().toString());
+            dto.setEndTime(
+                    timing.getEndTime() == null
+                            ? null
+                            : timing.getEndTime().toString());
 
             timingDtos.add(dto);
         }
 
         response.setTimings(timingDtos);
 
-        log.info("Loaded {} timings for ProductId={}", timingDtos.size(), productId);
+        log.info("[PRODUCT] Product timings loaded | productId={} | timingCount={}",
+                productId,
+                timingDtos.size());
 
-        List<FmProductVariantOption> variantOptions = productVariantOptionRepository.findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(productId);
+        /*
+         * Variant Groups
+         */
+        List<FmProductVariantOption> variantOptions =
+                productVariantOptionRepository
+                        .findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(productId);
 
-        Map<Integer, FmProductEditVariantGroupDto> groupMap = new LinkedHashMap<>();
+        Map<Integer, FmProductEditVariantGroupDto> groupMap =
+                new LinkedHashMap<>();
 
         for (FmProductVariantOption option : variantOptions) {
 
-            FmProductVariantGroupValue value = productVariantGroupValueRepository.findByProductVariantGroupValuesIdAndIsActiveTrue(option.getProductVariantGroupValuesId()).orElseThrow(() -> new ResourceNotFoundException("Variant Value not found : " + option.getProductVariantGroupValuesId()));
+            FmProductVariantGroupValue value =
+                    productVariantGroupValueRepository
+                            .findByProductVariantGroupValuesIdAndIsActiveTrue(
+                                    option.getProductVariantGroupValuesId())
+                            .orElseThrow(() -> {
 
-            FmProductVariantGroup group = productVariantGroupRepository.findByProductVariantGroupsIdAndIsActiveTrue(value.getProductVariantGroupsId()).orElseThrow(() -> new ResourceNotFoundException("Variant Group not found : " + value.getProductVariantGroupsId()));
+                                log.warn("[PRODUCT] Variant value not found | variantValueId={}",
+                                        option.getProductVariantGroupValuesId());
 
-            FmProductEditVariantGroupDto groupDto = groupMap.computeIfAbsent(group.getProductVariantGroupsId(), id -> {
+                                return new ResourceNotFoundException(
+                                        "Variant Value not found : "
+                                                + option.getProductVariantGroupValuesId());
+                            });
 
-                FmProductEditVariantGroupDto dto = new FmProductEditVariantGroupDto();
+            FmProductVariantGroup group =
+                    productVariantGroupRepository
+                            .findByProductVariantGroupsIdAndIsActiveTrue(
+                                    value.getProductVariantGroupsId())
+                            .orElseThrow(() -> {
 
-                dto.setProductVariantGroupsId(group.getProductVariantGroupsId());
-                dto.setGroupName(group.getGroupName());
-                dto.setSelectionType(group.getSelectionType());
-                dto.setMinSelection(group.getMinSelection());
-                dto.setMaxSelection(group.getMaxSelection());
-                dto.setDisplayOrder(group.getDisplayOrder());
-                dto.setOptions(new ArrayList<>());
+                                log.warn("[PRODUCT] Variant group not found | variantGroupId={}",
+                                        value.getProductVariantGroupsId());
 
-                return dto;
-            });
+                                return new ResourceNotFoundException(
+                                        "Variant Group not found : "
+                                                + value.getProductVariantGroupsId());
+                            });
 
-            FmProductEditVariantOptionDto optionDto = new FmProductEditVariantOptionDto();
+            FmProductEditVariantGroupDto groupDto =
+                    groupMap.computeIfAbsent(
+                            group.getProductVariantGroupsId(),
+                            id -> {
 
-            optionDto.setProductVariantOptionsId(option.getProductVariantOptionsId());
-            optionDto.setProductVariantGroupValuesId(option.getProductVariantGroupValuesId());
-            optionDto.setVariantName(value.getVariantName());
-            optionDto.setPriceType(option.getPriceType());
-            optionDto.setVariantPrice(option.getVariantPrice());
+                                FmProductEditVariantGroupDto dto =
+                                        new FmProductEditVariantGroupDto();
+
+                                dto.setProductVariantGroupsId(
+                                        group.getProductVariantGroupsId());
+                                dto.setGroupName(group.getGroupName());
+                                dto.setSelectionType(group.getSelectionType());
+                                dto.setMinSelection(group.getMinSelection());
+                                dto.setMaxSelection(group.getMaxSelection());
+                                dto.setDisplayOrder(group.getDisplayOrder());
+                                dto.setOptions(new ArrayList<>());
+
+                                return dto;
+                            });
+
+            FmProductEditVariantOptionDto optionDto =
+                    new FmProductEditVariantOptionDto();
+
+            optionDto.setProductVariantOptionsId(
+                    option.getProductVariantOptionsId());
+
+            optionDto.setProductVariantGroupValuesId(
+                    option.getProductVariantGroupValuesId());
+
+            optionDto.setVariantName(
+                    value.getVariantName());
+
+            optionDto.setPriceType(
+                    option.getPriceType());
+
+            optionDto.setVariantPrice(
+                    option.getVariantPrice());
 
             groupDto.getOptions().add(optionDto);
         }
 
-        response.setVariantGroups(new ArrayList<>(groupMap.values()));
+        response.setVariantGroups(
+                new ArrayList<>(groupMap.values()));
 
-        log.info("Loaded {} Variant Groups for ProductId={}", groupMap.size(), productId);
+        log.info("[PRODUCT] Product variant groups loaded | productId={} | groupCount={}",
+                productId,
+                groupMap.size());
+
+        log.info("[PRODUCT] Product details fetched successfully | productId={}",
+                productId);
 
         return response;
-
-
     }
 
     @Override

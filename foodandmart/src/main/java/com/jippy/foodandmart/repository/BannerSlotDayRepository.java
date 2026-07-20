@@ -12,4 +12,9 @@ public interface BannerSlotDayRepository extends JpaRepository<BannerSlotDay, In
     Optional<BannerSlotDay> findTopByOrderBySlotEndDateDesc();
     boolean existsByBannerSlotDaysId(Integer bannerSlotDaysId);
 
+    // Banner Slot
+    Optional<BannerSlotDay> findTopBySlotTypeOrderBySlotEndDateDesc(String slotType);
+
+    boolean existsBySlotType(String slotType);
+
 }

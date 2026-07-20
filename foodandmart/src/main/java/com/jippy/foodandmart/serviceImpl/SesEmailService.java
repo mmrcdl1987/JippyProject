@@ -29,23 +29,23 @@ public class SesEmailService implements EmailService {
         );
     }
 
-    @Override
-    public void sendWelcomeEmail(String toEmail, String merchantName) {
-        sendEmail(
-                toEmail,
-                "Welcome to " + FmAppConstants.FROM_EMAIL_NAME,
-                buildWelcomeTemplate(merchantName)
-        );
-    }
+//    @Override
+//    public void sendWelcomeEmail(String toEmail, String merchantName) {
+//        sendEmail(
+//                toEmail,
+//                "Welcome to " + FmAppConstants.FROM_EMAIL_NAME,
+//                buildWelcomeTemplate(merchantName)
+//        );
+//    }
 
-    @Override
-    public void sendForgotPasswordOtp(String toEmail, String otp) {
-        sendEmail(
-                toEmail,
-                FmAppConstants.FROM_EMAIL_NAME + " - Password Reset OTP",
-                buildForgotPasswordTemplate(otp)
-        );
-    }
+//    @Override
+//    public void sendForgotPasswordOtp(String toEmail, String otp) {
+//        sendEmail(
+//                toEmail,
+//                FmAppConstants.FROM_EMAIL_NAME + " - Password Reset OTP",
+//                buildForgotPasswordTemplate(otp)
+//        );
+//    }
 
 
 /**
@@ -180,37 +180,37 @@ public class SesEmailService implements EmailService {
                 """.formatted(merchantName);
     }
 
-
-/**
-     * Forgot Password Email
-     */
-
-    private String buildForgotPasswordTemplate(String otp) {
-
-        return """
-                <html>
-                <body style="font-family:Arial,sans-serif;padding:20px">
-
-                    <h2>Password Reset</h2>
-
-                    <p>Your OTP is</p>
-
-                    <h1 style="color:red">%s</h1>
-
-                    <p>
-                        OTP expires in <b>10 minutes</b>.
-                    </p>
-
-                    <p>
-                        Please do not share this OTP with anyone.
-                    </p>
-
-                    <br>
-
-                    <b>Team Jippy</b>
-
-                </body>
-                </html>
-                """.formatted(otp);
-    }
+//
+///**
+//     * Forgot Password Email
+//     */
+//
+//    private String buildForgotPasswordTemplate(String otp) {
+//
+//        return """
+//                <html>
+//                <body style="font-family:Arial,sans-serif;padding:20px">
+//
+//                    <h2>Password Reset</h2>
+//
+//                    <p>Your OTP is</p>
+//
+//                    <h1 style="color:red">%s</h1>
+//
+//                    <p>
+//                        OTP expires in <b>10 minutes</b>.
+//                    </p>
+//
+//                    <p>
+//                        Please do not share this OTP with anyone.
+//                    </p>
+//
+//                    <br>
+//
+//                    <b>Team Jippy</b>
+//
+//                </body>
+//                </html>
+//                """.formatted(otp);
+//    }
 }

@@ -1,6 +1,8 @@
 package com.jippy.foodandmart.service;
 
+//import com.jippy.foodandmart.dto.FmApprovalRequestDTO;
 
+import org.springframework.stereotype.Service;
 
 /**
  * Service interface for Approval Requests.
@@ -8,6 +10,7 @@ package com.jippy.foodandmart.service;
  * Responsible for creating Approval Requests
  * whenever a new Entity enters the Approval Workflow.
  */
+@Service
 public interface IFmApprovalRequestService {
 
     /**
@@ -24,5 +27,5 @@ public interface IFmApprovalRequestService {
      */
     void createApprovalRequest(String entityType, Integer entityId, Integer createdBy);
 
-   // void createApprovalRequest(FmApprovalRequestDTO requestDTO);
+//    void createApprovalRequest(FmApprovalRequestDTO requestDTO);
 }

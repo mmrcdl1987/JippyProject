@@ -6,7 +6,7 @@ public interface IFmOtpService {
 
     void sendSignupOtp(FmSendOtpRequestDto request);
 
-    FmJwtTokenResponseDto verifySignupOtp(
+    FmResponseDto verifySignupOtp(
             FmVerifyOtpRequestDto request
     );
 
@@ -17,12 +17,16 @@ public interface IFmOtpService {
     FmResponseDto verifyCreateOutletOtp(
             FmVerifyOtpRequestDto request
     );
+//
+//    void sendForgotPasswordOtp(
+//            FmForgotPasswordRequestDto request
+//    );
+//
+//    FmResponseDto verifyForgotPasswordOtp(
+//            FmVerifyOtpRequestDto request
+//    );
 
-    void sendForgotPasswordOtp(
-            FmForgotPasswordRequestDto request
-    );
+    void resendSignupOtp(FmSendOtpRequestDto request);
 
-    FmResponseDto verifyForgotPasswordOtp(
-            FmVerifyOtpRequestDto request
-    );
+    void resendCreateOutletOtp(FmCreateOutletOtpRequestDto request);
 }

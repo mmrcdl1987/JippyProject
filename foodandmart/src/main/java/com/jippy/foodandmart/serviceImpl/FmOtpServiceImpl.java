@@ -35,11 +35,8 @@ import java.util.Optional;
 @Slf4j
 public class FmOtpServiceImpl implements IFmOtpService {
 
+
     private final FmMerchantRepository merchantRepository;
-
-    private final FmOutletRepository outletRepository;
-
-    private final FmUserRepository userRepository;
 
     private final FmEmailOtpVerificationRepository otpRepository;
 
@@ -51,63 +48,80 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
     private final EmailService emailService;
 
-    private final JwtUtils jwtUtils;
+    public static final Integer EMAIL_OTP_EXPIRY_MINUTES = 10;
+
+    public static final Integer MAX_OTP_ATTEMPTS = 5;
+
+    public static final Integer MAX_RESEND_COUNT = 10;
 
     @Override
     @Transactional
     public void sendSignupOtp(FmSendOtpRequestDto request) {
 
-        log.info("Sending signup OTP to email: {}", request.getEmail());
+        log.info("[OTP-SIGNUP] Send OTP request initiated | email={} | mobile={}",
+                request.getEmail(),
+                request.getMobile());
 
-        // Validate merchant email
         if (merchantRepository.existsByMerchantEmail(request.getEmail())) {
-            throw new MerchantAlreadyExistsException("Merchant already exists with email : " + request.getEmail());
+
+            log.warn("[OTP-SIGNUP] Signup failed | Merchant already exists | email={}",
+                    request.getEmail());
+
+            throw new MerchantAlreadyExistsException(
+                    "Merchant already exists with email : " + request.getEmail());
         }
 
-        // Validate merchant mobile
         if (merchantRepository.existsByMerchantPhone(request.getMobile())) {
-            throw new MerchantAlreadyExistsException("Merchant already exists with mobile : " + request.getMobile());
+
+            log.warn("[OTP-SIGNUP] Signup failed | Merchant already exists | mobile={}",
+                    request.getMobile());
+
+            throw new MerchantAlreadyExistsException(
+                    "Merchant already exists with mobile : " + request.getMobile());
         }
 
-        // Generate OTP
         String otp = otpGenerator.generateOtp();
 
-        // BCrypt hash
         String otpHash = passwordEncoder.encode(otp);
 
-        // Save BCrypt hash in Redis
-        redisOtpService.saveOtpHash("SIGNUP:" + request.getEmail(), otpHash);
+        redisOtpService.saveOtpHash(
+                "SIGNUP:" + request.getEmail(),
+                otpHash
+        );
 
-        // Check existing pending OTP
-        Optional<FmEmailOtpVerification> optionalOtp = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(request.getEmail(), FmOtpPurpose.SIGNUP);
+        FmEmailOtpVerification otpVerification =
+                otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                                request.getEmail(),
+                                FmOtpPurpose.SIGNUP
+                        ).filter(verification -> verification.getStatus() == FmOtpStatus.PENDING)
+                        .orElse(new FmEmailOtpVerification());
 
-        FmEmailOtpVerification otpVerification;
-
-        if (optionalOtp.isPresent() && optionalOtp.get().getStatus() == FmOtpStatus.PENDING) {
-
-            otpVerification = optionalOtp.get();
-
-            otpVerification.setOtpHash(otpHash);
-            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
-            otpVerification.setNoOfAttempts(0);
-            otpVerification.setIsVerified(false);
-            otpVerification.setVerifiedAt(null);
-            otpVerification.setStatus(FmOtpStatus.PENDING);
-
-        } else {
-
-            otpVerification = new FmEmailOtpVerification();
+        if (otpVerification.getEmailOtpVerificationId() == null) {
 
             otpVerification.setEntityType(FmUserType.MERCHANT);
             otpVerification.setEmail(request.getEmail());
-            otpVerification.setOtpHash(otpHash);
             otpVerification.setPurpose(FmOtpPurpose.SIGNUP);
-            otpVerification.setStatus(FmOtpStatus.PENDING);
-            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
-            otpVerification.setIsVerified(false);
             otpVerification.setNoOfAttempts(0);
+            otpVerification.setResendCount(0);
 
+            log.info("[OTP-SIGNUP] Creating new OTP verification record | email={}",
+                    request.getEmail());
+
+        } else {
+
+            log.info("[OTP-SIGNUP] Existing pending OTP found. Refreshing OTP | email={}",
+                    request.getEmail());
+
+            otpVerification.setNoOfAttempts(0);
         }
+
+        otpVerification.setOtpHash(otpHash);
+        otpVerification.setStatus(FmOtpStatus.PENDING);
+        otpVerification.setIsVerified(false);
+        otpVerification.setVerifiedAt(null);
+        otpVerification.setExpiresAt(
+                LocalDateTime.now().plusMinutes(EMAIL_OTP_EXPIRY_MINUTES)
+        );
 
         otpRepository.save(otpVerification);
 
@@ -115,11 +129,10 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
             emailService.sendOtpEmail(request.getEmail(), otp);
 
-            log.info("Signup OTP sent successfully to {}", request.getEmail());
+            log.info("[OTP-SIGNUP] OTP sent successfully | email={}",
+                    request.getEmail());
 
         } catch (EmailSendingException ex) {
-
-            log.error("Failed to send signup OTP to {}", request.getEmail(), ex);
 
             redisOtpService.deleteOtp("SIGNUP:" + request.getEmail());
 
@@ -127,26 +140,47 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
             otpRepository.save(otpVerification);
 
+            log.error("[OTP-SIGNUP] Failed to send OTP | email={} | reason={}",
+                    request.getEmail(),
+                    ex.getMessage(),
+                    ex);
+
             throw ex;
         }
+
+        log.info("[OTP-SIGNUP] Send OTP request completed successfully | email={}",
+                request.getEmail());
     }
 
     @Override
     @Transactional
-    public FmJwtTokenResponseDto verifySignupOtp(FmVerifyOtpRequestDto request) {
+    public FmResponseDto verifySignupOtp(FmVerifyOtpRequestDto request) {
 
-        log.info("Verifying signup OTP for email: {}", request.getEmail());
+        log.info("[OTP-SIGNUP] OTP verification initiated | email={}",
+                request.getEmail());
 
-        // Fetch latest OTP audit record
-        FmEmailOtpVerification otpVerification = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(request.getEmail(), FmOtpPurpose.SIGNUP).orElseThrow(() -> new InvalidOtpException("OTP not found."));
+        FmEmailOtpVerification otpVerification =
+                otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                        request.getEmail(),
+                        FmOtpPurpose.SIGNUP
+                ).orElseThrow(() -> {
 
-        // Prevent reusing an already verified OTP
+                    log.warn("[OTP-SIGNUP] OTP verification failed | No OTP found | email={}",
+                            request.getEmail());
+
+                    return new InvalidOtpException("OTP not found. Please request a new OTP.");
+                });
+
         if (Boolean.TRUE.equals(otpVerification.getIsVerified())) {
-            throw new InvalidOtpException("OTP already verified.");
+
+            log.warn("[OTP-SIGNUP] OTP already verified | email={}",
+                    request.getEmail());
+
+            throw new InvalidOtpException("OTP has already been verified.");
         }
 
-        // Read OTP hash from Redis
-        String redisOtpHash = redisOtpService.getOtpHash("SIGNUP:" + request.getEmail());
+        String redisOtpHash =
+                redisOtpService.getOtpHash("SIGNUP:" + request.getEmail());
 
         if (redisOtpHash == null) {
 
@@ -155,20 +189,24 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
             redisOtpService.deleteOtp("SIGNUP:" + request.getEmail());
 
-            log.warn("OTP expired for email: {}", request.getEmail());
+            log.warn("[OTP-SIGNUP] OTP expired | email={}",
+                    request.getEmail());
 
-            throw new OtpExpiredException("OTP has expired.");
+            throw new OtpExpiredException(
+                    "OTP has expired. Please request a new OTP."
+            );
         }
 
-        // Verify OTP
-        boolean validOtp = passwordEncoder.matches(request.getOtp(), redisOtpHash);
+        boolean validOtp =
+                passwordEncoder.matches(request.getOtp(), redisOtpHash);
 
         if (!validOtp) {
 
             int attempts = otpVerification.getNoOfAttempts() + 1;
+
             otpVerification.setNoOfAttempts(attempts);
 
-            if (attempts >= 5) {
+            if (attempts >=MAX_OTP_ATTEMPTS) {
 
                 otpVerification.setStatus(FmOtpStatus.FAILED);
 
@@ -176,73 +214,95 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
                 redisOtpService.deleteOtp("SIGNUP:" + request.getEmail());
 
-                log.warn("Maximum OTP attempts exceeded for email: {}", request.getEmail());
+                log.warn("[OTP-SIGNUP] Maximum OTP verification attempts exceeded | email={} | attempts={}",
+                        request.getEmail(),
+                        attempts);
 
-                throw new InvalidOtpException("Maximum OTP attempts exceeded.");
+                throw new InvalidOtpException(
+                        "Maximum OTP verification attempts exceeded. Please request a new OTP."
+                );
             }
 
             otpRepository.save(otpVerification);
 
-            log.warn("Invalid OTP entered for email: {}. Attempt: {}", request.getEmail(), attempts);
+            log.warn("[OTP-SIGNUP] Invalid OTP entered | email={} | attempt={}",
+                    request.getEmail(),
+                    attempts);
 
             throw new InvalidOtpException("Invalid OTP.");
         }
 
-        // Mark OTP as verified
         otpVerification.setIsVerified(true);
         otpVerification.setVerifiedAt(LocalDateTime.now());
         otpVerification.setStatus(FmOtpStatus.VERIFIED);
 
         otpRepository.save(otpVerification);
 
-        // Remove OTP from Redis
         redisOtpService.deleteOtp("SIGNUP:" + request.getEmail());
 
-        // Generate Signup JWT (15 minutes)
-        String signupToken = jwtUtils.generateSignupToken(request.getEmail(), FmOtpPurpose.SIGNUP);
+        log.info("[OTP-SIGNUP] OTP verified successfully | email={}",
+                request.getEmail());
 
-        log.info("Signup OTP verified successfully for email: {}", request.getEmail());
-
-        return new FmJwtTokenResponseDto(signupToken, "OTP verified successfully.");
+        return new FmResponseDto(
+                "SUCCESS",
+                "OTP verified successfully."
+        );
     }
-
     @Override
     @Transactional
     public void sendCreateOutletOtp(FmCreateOutletOtpRequestDto request) {
 
-        log.info("Sending create outlet OTP for merchantId: {}", request.getMerchantId());
+        log.info("[OTP-OUTLET] Send OTP request initiated | merchantId={}",
+                request.getMerchantId());
 
-        // Fetch Merchant
-        FmMerchant merchant = merchantRepository.findById(request.getMerchantId()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found with id : " + request.getMerchantId()));
+        FmMerchant merchant = merchantRepository.findById(request.getMerchantId())
+                .orElseThrow(() -> {
+
+                    log.warn("[OTP-OUTLET] Merchant not found | merchantId={}",
+                            request.getMerchantId());
+
+                    return new ResourceNotFoundException(
+                            "Merchant not found with id : " + request.getMerchantId());
+                });
 
         String email = merchant.getMerchantEmail();
 
-        // Generate OTP
         String otp = otpGenerator.generateOtp();
 
-        // BCrypt Hash
         String otpHash = passwordEncoder.encode(otp);
 
-        // Save OTP Hash in Redis
         redisOtpService.saveOtpHash("CREATE_OUTLET:" + email, otpHash);
 
-        // Check existing pending OTP
-        Optional<FmEmailOtpVerification> optionalOtp = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(email, FmOtpPurpose.CREATE_OUTLET);
+        Optional<FmEmailOtpVerification> optionalOtp =
+                otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                        email,
+                        FmOtpPurpose.CREATE_OUTLET);
 
         FmEmailOtpVerification otpVerification;
 
-        if (optionalOtp.isPresent() && optionalOtp.get().getStatus() == FmOtpStatus.PENDING) {
+        if (optionalOtp.isPresent()
+                && optionalOtp.get().getStatus() == FmOtpStatus.PENDING) {
 
             otpVerification = optionalOtp.get();
 
+            log.info("[OTP-OUTLET] Existing pending OTP found. Refreshing OTP | merchantId={} | email={}",
+                    merchant.getMerchantId(),
+                    email);
+
             otpVerification.setOtpHash(otpHash);
-            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+            otpVerification.setExpiresAt(
+                    LocalDateTime.now()
+                            .plusMinutes(EMAIL_OTP_EXPIRY_MINUTES));
             otpVerification.setNoOfAttempts(0);
             otpVerification.setIsVerified(false);
             otpVerification.setVerifiedAt(null);
             otpVerification.setStatus(FmOtpStatus.PENDING);
 
         } else {
+
+            log.info("[OTP-OUTLET] Creating new OTP verification record | merchantId={} | email={}",
+                    merchant.getMerchantId(),
+                    email);
 
             otpVerification = new FmEmailOtpVerification();
 
@@ -252,10 +312,12 @@ public class FmOtpServiceImpl implements IFmOtpService {
             otpVerification.setOtpHash(otpHash);
             otpVerification.setPurpose(FmOtpPurpose.CREATE_OUTLET);
             otpVerification.setStatus(FmOtpStatus.PENDING);
-            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+            otpVerification.setExpiresAt(
+                    LocalDateTime.now()
+                            .plusMinutes(EMAIL_OTP_EXPIRY_MINUTES));
             otpVerification.setIsVerified(false);
             otpVerification.setNoOfAttempts(0);
-
+            otpVerification.setResendCount(0);
         }
 
         otpRepository.save(otpVerification);
@@ -264,11 +326,11 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
             emailService.sendOtpEmail(email, otp);
 
-            log.info("Create outlet OTP sent successfully to {}", email);
+            log.info("[OTP-OUTLET] OTP sent successfully | merchantId={} | email={}",
+                    merchant.getMerchantId(),
+                    email);
 
         } catch (EmailSendingException ex) {
-
-            log.error("Failed to send create outlet OTP to {}", email, ex);
 
             redisOtpService.deleteOtp("CREATE_OUTLET:" + email);
 
@@ -276,8 +338,18 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
             otpRepository.save(otpVerification);
 
+            log.error("[OTP-OUTLET] Failed to send OTP | merchantId={} | email={} | reason={}",
+                    merchant.getMerchantId(),
+                    email,
+                    ex.getMessage(),
+                    ex);
+
             throw ex;
         }
+
+        log.info("[OTP-OUTLET] Send OTP request completed successfully | merchantId={} | email={}",
+                merchant.getMerchantId(),
+                email);
     }
 
 
@@ -285,48 +357,98 @@ public class FmOtpServiceImpl implements IFmOtpService {
     @Transactional
     public FmResponseDto verifyCreateOutletOtp(FmVerifyOtpRequestDto request) {
 
-        log.info("Verifying create outlet OTP for email: {}", request.getEmail());
+        log.info("[OTP-OUTLET] OTP verification initiated | email={}",
+                request.getEmail());
 
-        merchantRepository.findByMerchantEmail(request.getEmail()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found with email : " + request.getEmail()));
+        merchantRepository.findByMerchantEmail(request.getEmail())
+                .orElseThrow(() -> {
 
-        FmEmailOtpVerification otpVerification = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(request.getEmail(), FmOtpPurpose.CREATE_OUTLET).orElseThrow(() -> new InvalidOtpException("OTP not found."));
+                    log.warn("[OTP-OUTLET] Merchant not found | email={}",
+                            request.getEmail());
+
+                    return new ResourceNotFoundException(
+                            "Merchant not found with email : " + request.getEmail());
+                });
+
+        FmEmailOtpVerification otpVerification =
+                otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                                request.getEmail(),
+                                FmOtpPurpose.CREATE_OUTLET)
+                        .orElseThrow(() -> {
+
+                            log.warn("[OTP-OUTLET] OTP verification failed | No OTP found | email={}",
+                                    request.getEmail());
+
+                            return new InvalidOtpException(
+                                    "OTP not found. Please request a new OTP.");
+                        });
 
         if (otpVerification.getStatus() == FmOtpStatus.CONSUMED) {
-            throw new InvalidOtpException("OTP already consumed.");
+
+            log.warn("[OTP-OUTLET] OTP already consumed | email={}",
+                    request.getEmail());
+
+            throw new InvalidOtpException(
+                    "OTP has already been consumed.");
         }
 
         if (otpVerification.getStatus() == FmOtpStatus.VERIFIED) {
-            throw new InvalidOtpException("OTP already verified.");
+
+            log.warn("[OTP-OUTLET] OTP already verified | email={}",
+                    request.getEmail());
+
+            throw new InvalidOtpException(
+                    "OTP has already been verified.");
         }
 
-        String redisOtpHash = redisOtpService.getOtpHash("CREATE_OUTLET:" + request.getEmail());
+        String redisOtpHash =
+                redisOtpService.getOtpHash("CREATE_OUTLET:" + request.getEmail());
 
         if (redisOtpHash == null) {
 
             otpVerification.setStatus(FmOtpStatus.EXPIRED);
+
             otpRepository.save(otpVerification);
 
             redisOtpService.deleteOtp("CREATE_OUTLET:" + request.getEmail());
 
-            throw new OtpExpiredException("OTP has expired.");
+            log.warn("[OTP-OUTLET] OTP expired | email={}",
+                    request.getEmail());
+
+            throw new OtpExpiredException(
+                    "OTP has expired. Please request a new OTP.");
         }
 
-        if (!passwordEncoder.matches(request.getOtp(), redisOtpHash)) {
+        boolean validOtp =
+                passwordEncoder.matches(request.getOtp(), redisOtpHash);
+
+        if (!validOtp) {
 
             int attempts = otpVerification.getNoOfAttempts() + 1;
+
             otpVerification.setNoOfAttempts(attempts);
 
-            if (attempts >= 5) {
+            if (attempts >= MAX_OTP_ATTEMPTS) {
 
                 otpVerification.setStatus(FmOtpStatus.FAILED);
+
                 otpRepository.save(otpVerification);
 
                 redisOtpService.deleteOtp("CREATE_OUTLET:" + request.getEmail());
 
-                throw new InvalidOtpException("Maximum OTP attempts exceeded.");
+                log.warn("[OTP-OUTLET] Maximum OTP verification attempts exceeded | email={} | attempts={}",
+                        request.getEmail(),
+                        attempts);
+
+                throw new InvalidOtpException(
+                        "Maximum OTP verification attempts exceeded. Please request a new OTP.");
             }
 
             otpRepository.save(otpVerification);
+
+            log.warn("[OTP-OUTLET] Invalid OTP entered | email={} | attempt={}",
+                    request.getEmail(),
+                    attempts);
 
             throw new InvalidOtpException("Invalid OTP.");
         }
@@ -339,161 +461,354 @@ public class FmOtpServiceImpl implements IFmOtpService {
 
         redisOtpService.deleteOtp("CREATE_OUTLET:" + request.getEmail());
 
-        log.info("Create outlet OTP verified successfully for email: {}", request.getEmail());
+        log.info("[OTP-OUTLET] OTP verified successfully | email={}",
+                request.getEmail());
 
-        return new FmResponseDto("SUCCESS", "OTP verified successfully.");
+        return new FmResponseDto(
+                "SUCCESS",
+                "OTP verified successfully."
+        );
+    }
+    @Override
+    @Transactional
+    public void resendSignupOtp(FmSendOtpRequestDto request) {
+
+        log.info("[OTP-SIGNUP] Resend OTP request initiated | email={}",
+                request.getEmail());
+
+        FmEmailOtpVerification otpVerification =
+                otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                        request.getEmail(),
+                        FmOtpPurpose.SIGNUP
+                ).orElseThrow(() -> {
+
+                    log.warn("[OTP-SIGNUP] Resend OTP failed | No OTP found | email={}",
+                            request.getEmail());
+
+                    return new InvalidOtpException(
+                            "No OTP found. Please request a new OTP.");
+                });
+
+        if (otpVerification.getResendCount() >= MAX_RESEND_COUNT) {
+
+            log.warn("[OTP-SIGNUP] Maximum resend limit exceeded | email={} | resendCount={}",
+                    request.getEmail(),
+                    otpVerification.getResendCount());
+
+            throw new InvalidOtpException(
+                    "Maximum resend limit reached. Please try again later.");
+        }
+
+        otpVerification.setResendCount(
+                otpVerification.getResendCount() + 1);
+
+        otpRepository.save(otpVerification);
+
+        generateAndSendSignupOtp(request, otpVerification);
+
+        log.info("[OTP-SIGNUP] OTP resent successfully | email={} | resendCount={}",
+                request.getEmail(),
+                otpVerification.getResendCount());
     }
 
     @Override
     @Transactional
-    public void sendForgotPasswordOtp(FmForgotPasswordRequestDto request) {
+    public void resendCreateOutletOtp(FmCreateOutletOtpRequestDto request) {
 
-        log.info("Sending forgot password OTP for username: {}", request.getUsername());
+        log.info("[OTP-OUTLET] Resend OTP request initiated | merchantId={}",
+                request.getMerchantId());
 
-        // Find user
-        FmUser user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new ResourceNotFoundException("User not found with username : " + request.getUsername()));
+        FmMerchant merchant = merchantRepository.findById(request.getMerchantId())
+                .orElseThrow(() -> {
 
-        String email;
+                    log.warn("[OTP-OUTLET] Merchant not found | merchantId={}",
+                            request.getMerchantId());
 
-        if (FmUserType.MERCHANT.name().equals(user.getUserType())) {
+                    return new ResourceNotFoundException("Merchant not found.");
+                });
 
-            FmMerchant merchant = merchantRepository.findById(user.getUserId()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+        FmEmailOtpVerification otpVerification =
+                otpRepository.findTopByEntityTypeAndEntityIdAndPurposeOrderByCreatedAtDesc(
+                        FmUserType.MERCHANT,
+                        merchant.getMerchantId(),
+                        FmOtpPurpose.CREATE_OUTLET
+                ).orElseThrow(() -> {
 
-            email = merchant.getMerchantEmail();
+                    log.warn("[OTP-OUTLET] Resend OTP failed | No OTP found | merchantId={}",
+                            merchant.getMerchantId());
 
-        } else if (FmUserType.OUTLET.name().equals(user.getUserType())) {
+                    return new InvalidOtpException(
+                            "No OTP found. Please request a new OTP.");
+                });
 
-            FmOutlet outlet = outletRepository.findById(user.getUserId()).orElseThrow(() -> new ResourceNotFoundException("Outlet not found."));
+        if (otpVerification.getResendCount() >= MAX_RESEND_COUNT) {
 
-            FmMerchant merchant = merchantRepository.findById(outlet.getMerchantId()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+            log.warn("[OTP-OUTLET] Maximum resend limit exceeded | merchantId={} | resendCount={}",
+                    merchant.getMerchantId(),
+                    otpVerification.getResendCount());
 
-            email = merchant.getMerchantEmail();
-
-        } else {
-
-            throw new ResourceNotFoundException("Forgot password is not supported for user type : " + user.getUserType());
+            throw new InvalidOtpException(
+                    "Maximum resend limit reached. Please try again later.");
         }
 
-        // Generate OTP
+        otpVerification.setResendCount(
+                otpVerification.getResendCount() + 1);
+
+        otpRepository.save(otpVerification);
+
+        generateAndSendCreateOutletOtp(
+                merchant,
+                otpVerification);
+
+        log.info("[OTP-OUTLET] OTP resent successfully | merchantId={} | resendCount={}",
+                merchant.getMerchantId(),
+                otpVerification.getResendCount());
+    }
+
+    private void generateAndSendSignupOtp(
+            FmSendOtpRequestDto request,
+            FmEmailOtpVerification otpVerification) {
+
         String otp = otpGenerator.generateOtp();
 
-        // BCrypt hash
         String otpHash = passwordEncoder.encode(otp);
 
-        // Save in Redis
-        redisOtpService.saveOtpHash("FORGOT_PASSWORD:" + email, otpHash);
+        redisOtpService.saveOtpHash(
+                "SIGNUP:" + request.getEmail(),
+                otpHash);
 
-        Optional<FmEmailOtpVerification> optionalOtp = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(email, FmOtpPurpose.FORGOT_PASSWORD);
-
-        FmEmailOtpVerification otpVerification;
-
-        if (optionalOtp.isPresent() && optionalOtp.get().getStatus() == FmOtpStatus.PENDING) {
-
-            otpVerification = optionalOtp.get();
-
-            otpVerification.setOtpHash(otpHash);
-            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
-            otpVerification.setNoOfAttempts(0);
-            otpVerification.setIsVerified(false);
-            otpVerification.setVerifiedAt(null);
-            otpVerification.setStatus(FmOtpStatus.PENDING);
-
-        } else {
-
-            otpVerification = new FmEmailOtpVerification();
-
-            otpVerification.setEntityId(user.getUserId());
-            otpVerification.setEntityType(FmUserType.valueOf(user.getUserType()));
-            otpVerification.setEmail(email);
-            otpVerification.setOtpHash(otpHash);
-            otpVerification.setPurpose(FmOtpPurpose.FORGOT_PASSWORD);
-            otpVerification.setStatus(FmOtpStatus.PENDING);
-            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
-            otpVerification.setIsVerified(false);
-            otpVerification.setNoOfAttempts(0);
-        }
+        otpVerification.setOtpHash(otpHash);
+        otpVerification.setStatus(FmOtpStatus.PENDING);
+        otpVerification.setIsVerified(false);
+        otpVerification.setVerifiedAt(null);
+        otpVerification.setExpiresAt(
+                LocalDateTime.now()
+                        .plusMinutes(EMAIL_OTP_EXPIRY_MINUTES));
 
         otpRepository.save(otpVerification);
 
         try {
 
-            emailService.sendForgotPasswordOtp(email, otp);
+            emailService.sendOtpEmail(request.getEmail(), otp);
 
-            log.info("Forgot password OTP sent successfully to {}", email);
+            log.info("[OTP-SIGNUP] OTP email sent successfully | email={}",
+                    request.getEmail());
 
         } catch (EmailSendingException ex) {
 
-            log.error("Failed to send forgot password OTP to {}", email, ex);
+            redisOtpService.deleteOtp("SIGNUP:" + request.getEmail());
 
-            redisOtpService.deleteOtp("FORGOT_PASSWORD:" + email);
+            otpVerification.setStatus(FmOtpStatus.FAILED);
+            otpRepository.save(otpVerification);
+
+            log.error("[OTP-SIGNUP] Failed to send OTP | email={} | reason={}",
+                    request.getEmail(),
+                    ex.getMessage(),
+                    ex);
+
+            throw ex;
+        }
+    }
+    private void generateAndSendCreateOutletOtp(
+            FmMerchant merchant,
+            FmEmailOtpVerification otpVerification) {
+
+        String otp = otpGenerator.generateOtp();
+
+        String otpHash = passwordEncoder.encode(otp);
+
+        redisOtpService.saveOtpHash(
+                "CREATE_OUTLET:" + merchant.getMerchantEmail(),
+                otpHash);
+
+        otpVerification.setOtpHash(otpHash);
+        otpVerification.setStatus(FmOtpStatus.PENDING);
+        otpVerification.setIsVerified(false);
+        otpVerification.setVerifiedAt(null);
+        otpVerification.setExpiresAt(
+                LocalDateTime.now()
+                        .plusMinutes(EMAIL_OTP_EXPIRY_MINUTES));
+
+        otpRepository.save(otpVerification);
+
+        try {
+
+            emailService.sendOtpEmail(
+                    merchant.getMerchantEmail(),
+                    otp);
+
+            log.info("[OTP-OUTLET] OTP email sent successfully | merchantId={} | email={}",
+                    merchant.getMerchantId(),
+                    merchant.getMerchantEmail());
+
+        } catch (EmailSendingException ex) {
+
+            redisOtpService.deleteOtp(
+                    "CREATE_OUTLET:" + merchant.getMerchantEmail());
 
             otpVerification.setStatus(FmOtpStatus.FAILED);
 
             otpRepository.save(otpVerification);
 
+            log.error("[OTP-OUTLET] Failed to send OTP | merchantId={} | email={} | reason={}",
+                    merchant.getMerchantId(),
+                    merchant.getMerchantEmail(),
+                    ex.getMessage(),
+                    ex);
+
             throw ex;
         }
     }
 
-    @Override
-    @Transactional
-    public FmResponseDto verifyForgotPasswordOtp(FmVerifyOtpRequestDto request) {
+//    @Transactional
+//    public void sendForgotPasswordOtp(FmForgotPasswordRequestDto request) {
+//
+//        log.info("Sending forgot password OTP for username: {}", request.getUsername());
+//
+//        // Find user
+//        FmUser user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new ResourceNotFoundException("User not found with username : " + request.getUsername()));
+//
+//        String email;
+//
+//        if (FmUserType.MERCHANT.name().equals(user.getUserType())) {
+//
+//            FmMerchant merchant = merchantRepository.findById(user.getUserId()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+//
+//            email = merchant.getMerchantEmail();
+//
+//        } else if (FmUserType.OUTLET.name().equals(user.getUserType())) {
+//
+//            FmOutlet outlet = outletRepository.findById(user.getUserId()).orElseThrow(() -> new ResourceNotFoundException("Outlet not found."));
+//
+//            FmMerchant merchant = merchantRepository.findById(outlet.getMerchantId()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+//
+//            email = merchant.getMerchantEmail();
+//
+//        } else {
+//
+//            throw new ResourceNotFoundException("Forgot password is not supported for user type : " + user.getUserType());
+//        }
+//
+//        // Generate OTP
+//        String otp = otpGenerator.generateOtp();
+//
+//        // BCrypt hash
+//        String otpHash = passwordEncoder.encode(otp);
+//
+//        // Save in Redis
+//        redisOtpService.saveOtpHash("FORGOT_PASSWORD:" + email, otpHash);
+//
+//        Optional<FmEmailOtpVerification> optionalOtp = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(email, FmOtpPurpose.FORGOT_PASSWORD);
+//
+//        FmEmailOtpVerification otpVerification;
+//
+//        if (optionalOtp.isPresent() && optionalOtp.get().getStatus() == FmOtpStatus.PENDING) {
+//
+//            otpVerification = optionalOtp.get();
+//
+//            otpVerification.setOtpHash(otpHash);
+//            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+//            otpVerification.setNoOfAttempts(0);
+//            otpVerification.setIsVerified(false);
+//            otpVerification.setVerifiedAt(null);
+//            otpVerification.setStatus(FmOtpStatus.PENDING);
+//
+//        } else {
+//
+//            otpVerification = new FmEmailOtpVerification();
+//
+//            otpVerification.setEntityId(user.getUserId());
+//            otpVerification.setEntityType(FmUserType.valueOf(user.getUserType()));
+//            otpVerification.setEmail(email);
+//            otpVerification.setOtpHash(otpHash);
+//            otpVerification.setPurpose(FmOtpPurpose.FORGOT_PASSWORD);
+//            otpVerification.setStatus(FmOtpStatus.PENDING);
+//            otpVerification.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+//            otpVerification.setIsVerified(false);
+//            otpVerification.setNoOfAttempts(0);
+//        }
+//
+//        otpRepository.save(otpVerification);
+//
+//        try {
+//
+//            emailService.sendForgotPasswordOtp(email, otp);
+//
+//            log.info("Forgot password OTP sent successfully to {}", email);
+//
+//        } catch (EmailSendingException ex) {
+//
+//            log.error("Failed to send forgot password OTP to {}", email, ex);
+//
+//            redisOtpService.deleteOtp("FORGOT_PASSWORD:" + email);
+//
+//            otpVerification.setStatus(FmOtpStatus.FAILED);
+//
+//            otpRepository.save(otpVerification);
+//
+//            throw ex;
+//        }
+//    }
 
-        log.info("Verifying forgot password OTP for email: {}", request.getEmail());
-
-        FmEmailOtpVerification otpVerification = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(request.getEmail(), FmOtpPurpose.FORGOT_PASSWORD).orElseThrow(() -> new InvalidOtpException("OTP not found."));
-
-        if (otpVerification.getStatus() == FmOtpStatus.CONSUMED) {
-            throw new InvalidOtpException("OTP already consumed.");
-        }
-
-        if (otpVerification.getStatus() == FmOtpStatus.VERIFIED) {
-            throw new InvalidOtpException("OTP already verified.");
-        }
-
-        String redisOtpHash = redisOtpService.getOtpHash("FORGOT_PASSWORD:" + request.getEmail());
-
-        if (redisOtpHash == null) {
-
-            otpVerification.setStatus(FmOtpStatus.EXPIRED);
-            otpRepository.save(otpVerification);
-
-            redisOtpService.deleteOtp("FORGOT_PASSWORD:" + request.getEmail());
-
-            throw new OtpExpiredException("OTP has expired.");
-        }
-
-        if (!passwordEncoder.matches(request.getOtp(), redisOtpHash)) {
-
-            int attempts = otpVerification.getNoOfAttempts() + 1;
-            otpVerification.setNoOfAttempts(attempts);
-
-            if (attempts >= 5) {
-
-                otpVerification.setStatus(FmOtpStatus.FAILED);
-                otpRepository.save(otpVerification);
-
-                redisOtpService.deleteOtp("FORGOT_PASSWORD:" + request.getEmail());
-
-                throw new InvalidOtpException("Maximum OTP attempts exceeded.");
-            }
-
-            otpRepository.save(otpVerification);
-
-            throw new InvalidOtpException("Invalid OTP.");
-        }
-
-        otpVerification.setIsVerified(true);
-        otpVerification.setVerifiedAt(LocalDateTime.now());
-        otpVerification.setStatus(FmOtpStatus.VERIFIED);
-
-        otpRepository.save(otpVerification);
-
-        redisOtpService.deleteOtp("FORGOT_PASSWORD:" + request.getEmail());
-
-        log.info("Forgot password OTP verified successfully for email: {}", request.getEmail());
-
-        return new FmResponseDto("SUCCESS", "OTP verified successfully.");
-    }
+//
+//    @Transactional
+//    public FmResponseDto verifyForgotPasswordOtp(FmVerifyOtpRequestDto request) {
+//
+//        log.info("Verifying forgot password OTP for email: {}", request.getEmail());
+//
+//        FmEmailOtpVerification otpVerification = otpRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(request.getEmail(), FmOtpPurpose.FORGOT_PASSWORD).orElseThrow(() -> new InvalidOtpException("OTP not found."));
+//
+//        if (otpVerification.getStatus() == FmOtpStatus.CONSUMED) {
+//            throw new InvalidOtpException("OTP already consumed.");
+//        }
+//
+//        if (otpVerification.getStatus() == FmOtpStatus.VERIFIED) {
+//            throw new InvalidOtpException("OTP already verified.");
+//        }
+//
+//        String redisOtpHash = redisOtpService.getOtpHash("FORGOT_PASSWORD:" + request.getEmail());
+//
+//        if (redisOtpHash == null) {
+//
+//            otpVerification.setStatus(FmOtpStatus.EXPIRED);
+//            otpRepository.save(otpVerification);
+//
+//            redisOtpService.deleteOtp("FORGOT_PASSWORD:" + request.getEmail());
+//
+//            throw new OtpExpiredException("OTP has expired.");
+//        }
+//
+//        if (!passwordEncoder.matches(request.getOtp(), redisOtpHash)) {
+//
+//            int attempts = otpVerification.getNoOfAttempts() + 1;
+//            otpVerification.setNoOfAttempts(attempts);
+//
+//            if (attempts >= 5) {
+//
+//                otpVerification.setStatus(FmOtpStatus.FAILED);
+//                otpRepository.save(otpVerification);
+//
+//                redisOtpService.deleteOtp("FORGOT_PASSWORD:" + request.getEmail());
+//
+//                throw new InvalidOtpException("Maximum OTP attempts exceeded.");
+//            }
+//
+//            otpRepository.save(otpVerification);
+//
+//            throw new InvalidOtpException("Invalid OTP.");
+//        }
+//
+//        otpVerification.setIsVerified(true);
+//        otpVerification.setVerifiedAt(LocalDateTime.now());
+//        otpVerification.setStatus(FmOtpStatus.VERIFIED);
+//
+//        otpRepository.save(otpVerification);
+//
+//        redisOtpService.deleteOtp("FORGOT_PASSWORD:" + request.getEmail());
+//
+//        log.info("Forgot password OTP verified successfully for email: {}", request.getEmail());
+//
+//        return new FmResponseDto("SUCCESS", "OTP verified successfully.");
+//    }
 
 }

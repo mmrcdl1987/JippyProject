@@ -126,38 +126,45 @@ public class GlobalExceptionHandler {
                 .body(FmApiResponse.error(ex.getMessage()));
     }
 
-    @ExceptionHandler(EmailSendingException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleEmailSendingException(
-            EmailSendingException ex) {
-
-        log.error("Email sending failed: {}", ex.getMessage(), ex);
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(FmApiResponse.error(ex.getMessage()));
-    }
     @ExceptionHandler(InvalidOtpException.class)
     public ResponseEntity<FmApiResponse<Void>> handleInvalidOtpException(
             InvalidOtpException ex) {
 
-        log.warn("Invalid OTP: {}", ex.getMessage());
+        log.warn("[OTP] Invalid OTP validation failed | reason={}",
+                ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(FmApiResponse.error(ex.getMessage()));
     }
+
     @ExceptionHandler(OtpExpiredException.class)
     public ResponseEntity<FmApiResponse<Void>> handleOtpExpiredException(
             OtpExpiredException ex) {
 
-        log.warn("OTP expired: {}", ex.getMessage());
+        log.warn("[OTP] OTP expired | reason={}",
+                ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(FmApiResponse.error(ex.getMessage()));
     }
+
+    @ExceptionHandler(EmailSendingException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleEmailSendingException(
+            EmailSendingException ex) {
+
+        log.error("[EMAIL] Email sending failed | reason={}",
+                ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<FmApiResponse<Void>> handleInvalidTokenException(
             InvalidTokenException ex) {
 
-        log.warn("Invalid token: {}", ex.getMessage());
+        log.warn("[TOKEN] Invalid or expired token | reason={}",
+                ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(FmApiResponse.error(ex.getMessage()));

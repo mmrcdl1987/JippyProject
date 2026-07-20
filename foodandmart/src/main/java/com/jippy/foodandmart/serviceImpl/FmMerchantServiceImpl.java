@@ -45,7 +45,6 @@ import java.util.Set;
 public class FmMerchantServiceImpl implements IFmMerchantService {
 
     private final FmMerchantRepository merchantRepository;
-//  private final FmMerchantKycRepository merchantKycRepository;
     private final FmUserKycRepository userKycRepository;
     private final FmMerchantBankDetailsRepository bankDetailsRepository;
     private final FmUserRepository userRepository;
@@ -58,22 +57,6 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     @Lazy
     @Autowired
     private IFmMerchantService self;
-
-//    @Autowired
-//    public FmMerchantServiceImpl(FmMerchantRepository merchantRepository, FmMerchantKycRepository merchantKycRepository, FmMerchantBankDetailsRepository bankDetailsRepository, FmUserRepository userRepository, FmEmployeeRepository employeeRepository, Validator validator, FmRoleRepository roleRepository, FmUserRolesRepository userRolesRepository, FmRolePermissionsRepository rolePermissionsRepository, PasswordEncoder passwordEncoder, IFmApprovalRequestService approvalRequestService) {
-//        this.merchantRepository = merchantRepository;
-//        this.merchantKycRepository = merchantKycRepository;
-//        this.bankDetailsRepository = bankDetailsRepository;
-//        this.userRepository = userRepository;
-//        this.validator = validator;
-//        this.roleRepository = roleRepository;
-//        this.userRolesRepository = userRolesRepository;
-//        this.rolePermissionsRepository = rolePermissionsRepository;
-//        this.passwordEncoder = passwordEncoder;
-//        this.approvalRequestService = approvalRequestService;
-//    }
-
-    // ── Queries ───────────────────────────────────────────────────────────────
 
     @Override
     public List<FmMerchant> getAllMerchants() {
@@ -231,7 +214,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         }
 
         String encodedPassword =
-                passwordEncoder.encode(dto.getPassword());
+                    passwordEncoder.encode(dto.getPassword());
 
         FmUser user =
                 FmMerchantMapper.toUserEntity(
