@@ -6,10 +6,19 @@ import java.util.List;
 
 public interface BannerSlotDayService {
 
+    // ================= Banner Slot =================
+
     void generateInitialFourMonths();
 
     void maintainBannerSlots();
 
-    List<BannerSlotDayResponseDto> getAllSlots();
+    // ================= Settlement Week =================
 
+    void generateInitialSettlementWeeks();
+
+    void maintainSettlementWeeks();
+
+    // ================= Common =================
+
+    List<BannerSlotDayResponseDto> getAllSlots();
 }
