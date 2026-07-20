@@ -28,4 +28,17 @@ public interface DriverService {
     String saveOrUpdateProfilePic(@Valid UploadProfilePicDto uploadProfilePicDto);
 
     DriverDto findByEmail(String email);
+
+    /**
+     * ===========================================================
+     * Fetch Driver Details by Driver Id
+     * ===========================================================
+     *
+     * Retrieves complete Driver information required for
+     * the FM Approval workflow.
+     *
+     * @param driverId Driver Id
+     * @return Driver Approval Response
+     */
+    FmDriverApprovalResponseDTO getDriverById(Integer driverId);
 }

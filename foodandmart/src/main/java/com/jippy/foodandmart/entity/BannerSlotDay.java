@@ -36,6 +36,8 @@ public class BannerSlotDay {
     @Column(name = "updated_by")
     private Integer updatedBy;
 
+//    @Column(name = "week_name")
+//    private String weekName;
 
     @Column(name = "slot_type")
     private String slotType;

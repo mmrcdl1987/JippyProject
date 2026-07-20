@@ -11,4 +11,6 @@ import java.util.Optional;
 @Repository
 public interface DriverRepository extends JpaRepository<Driver, Integer> {
     Optional<Driver> findByEmailIgnoreCase(String email);
+
+    Optional<Driver> findByDriverId(Integer driverId);
 }

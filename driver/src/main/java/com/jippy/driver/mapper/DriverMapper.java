@@ -417,4 +417,45 @@ public class DriverMapper {
         return history;
     }
 
+    /**
+     * Convert Driver entity to FM Driver Approval Response DTO.
+     * Used by the FM service during the Level-1 approval process.
+     */
+    public static FmDriverApprovalResponseDTO mapToDriverApprovalResponseDto(Driver driver) {
+
+        if (driver == null) {
+            throw new DriverBadRequestException("Driver entity must not be null");
+        }
+
+        FmDriverApprovalResponseDTO dto = new FmDriverApprovalResponseDTO();
+
+        // Driver Details
+        dto.setDriverId(driver.getDriverId());
+        dto.setFirstName(driver.getFirstName());
+        dto.setLastName(driver.getLastName());
+        dto.setPhoneNumber(driver.getPhoneNumber());
+        dto.setEmail(driver.getEmail());
+        dto.setProfilePicUrl(driver.getProfilePicUrl());
+
+        // Nominee Details
+        dto.setNomineeName(driver.getNomineeName());
+        dto.setNomineePhoneNumber(driver.getNomineePhoneNumber());
+        dto.setNomineeVerified(driver.getIsNomineeVerified());
+
+        // Family Member Details
+        dto.setFamilyMemberName(driver.getFamilyMemberName());
+        dto.setFamilyMemberPhoneNumber(driver.getFamilyMemberPhoneNumber());
+        dto.setFamilyMemberVerified(driver.getIsFamilyMemberVerified());
+
+        // Driver KYC Details
+        if (driver.getDriverKyc() != null) {
+            dto.setDriverKycId(driver.getDriverKyc().getDriverKycId());
+            dto.setAadhaarNumber(driver.getDriverKyc().getAadharNumber());
+            dto.setDrivingLicenseNumber(driver.getDriverKyc().getDrivingLicenseNumber());
+            dto.setRcCopy(driver.getDriverKyc().getRcCopy());
+        }
+
+        return dto;
+    }
+
 }

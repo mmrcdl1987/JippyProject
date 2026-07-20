@@ -1,6 +1,11 @@
 package com.jippy.foodandmart.mapper;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
+import com.jippy.foodandmart.dto.FmCreateEmployeeRequestDTO;
+import com.jippy.foodandmart.dto.FmCreateEmployeeResponseDTO;
 import com.jippy.foodandmart.entity.FmEmployee;
+import com.jippy.foodandmart.entity.FmOutletAddress;
+import com.jippy.foodandmart.entity.FmUser;
 
 import java.time.LocalDateTime;
 
@@ -51,4 +56,108 @@ public final class FmEmployeeMapper {
         entity.setCreatedBy(createdBy);
         return entity;
     }
+
+//    -----------------------------CREATE EMPLOYEE ----------------------------------------------------
+    public static FmEmployee toEmployeeEntity(FmCreateEmployeeRequestDTO dto) {
+
+        FmEmployee entity = new FmEmployee();
+
+        entity.setEmployeeName(safe(dto.getEmployeeName()));
+
+        entity.setEmail(safe(dto.getEmail()).toLowerCase());
+
+        entity.setMobileNumber(safe(dto.getMobileNumber()));
+
+        entity.setIsActive("Y");
+
+        entity.setCreatedAt(LocalDateTime.now());
+
+        entity.setCreatedBy(dto.getCreatedBy());
+
+        return entity;
+    }
+    public static FmUser toEmployeeUserEntity(FmCreateEmployeeRequestDTO dto,
+                                              Integer employeeId) {
+
+        FmUser user = new FmUser();
+
+        user.setUsername(safe(dto.getUsername()));
+
+        user.setUserId(employeeId);
+
+        user.setUserType(FmAppConstants.TYPE_EMPLOYEE);
+
+        user.setIsActive("Y");
+
+        return user;
+    }
+
+    public static FmOutletAddress toEmployeeAddressEntity(FmCreateEmployeeRequestDTO dto,
+                                                          Integer employeeId) {
+
+        FmOutletAddress address = new FmOutletAddress();
+
+        address.setJippyAddressId(employeeId);
+
+        address.setBuildingNumber(safe(dto.getBuildingNumber()));
+
+        address.setRoad(safe(dto.getRoad()));
+
+        address.setLandmark(safe(dto.getLandmark()));
+
+        address.setStateId(dto.getStateId());
+
+        address.setCityId(dto.getCityId());
+
+        address.setAreaId(dto.getAreaId());
+
+        address.setAddressType(FmAppConstants.TYPE_EMPLOYEE);
+
+        return address;
+    }
+    public static FmCreateEmployeeResponseDTO toCreateEmployeeResponseDto
+            (FmCreateEmployeeRequestDTO request,
+            FmEmployee employee) {
+
+        FmCreateEmployeeResponseDTO response = new FmCreateEmployeeResponseDTO();
+
+        response.setEmployeeId(employee.getEmployeeId());
+
+        response.setEmployeeName(employee.getEmployeeName());
+
+        response.setEmail(employee.getEmail());
+
+        response.setMobileNumber(employee.getMobileNumber());
+
+        response.setUsername(safe(request.getUsername()));
+
+//        password is masked
+        response.setPassword("********");
+
+        response.setBuildingNumber(safe(request.getBuildingNumber()));
+
+        response.setRoad(request.getRoad());
+
+        response.setLandmark(request.getLandmark());
+
+        response.setStateId(request.getStateId());
+
+        response.setCityId(request.getCityId());
+
+        response.setAreaId(request.getAreaId());
+
+        response.setCreatedBy(request.getCreatedBy());
+
+        response.setIsActive(employee.getIsActive());
+
+        return response;
+    }
+
+    //    Helper method for trim() trimming the Strings
+    private static String safe(String value) {
+
+        return value != null ? value.trim() : "";
+    }
+
+
 }

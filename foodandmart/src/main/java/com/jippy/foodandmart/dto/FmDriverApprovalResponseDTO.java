@@ -1,0 +1,54 @@
+package com.jippy.foodandmart.dto;
+
+import lombok.Data;
+
+@Data
+public class FmDriverApprovalResponseDTO {
+    /*==========================================================
+     = Driver Details
+     ==========================================================*/
+
+    private Integer driverId;
+
+    private String firstName;
+
+    private String lastName;
+
+    private String phoneNumber;
+
+    private String email;
+
+    private String profilePicUrl;
+
+    /*==========================================================
+     = Nominee Details
+     ==========================================================*/
+
+    private String nomineeName;
+
+    private String nomineePhoneNumber;
+
+    private Boolean nomineeVerified;
+
+    /*==========================================================
+     = Family Member Details
+     ==========================================================*/
+
+    private String familyMemberName;
+
+    private String familyMemberPhoneNumber;
+
+    private Boolean familyMemberVerified;
+
+    /*==========================================================
+     = Driver KYC Details
+     ==========================================================*/
+
+    private Integer driverKycId;
+
+    private String aadhaarNumber;
+
+    private String drivingLicenseNumber;
+
+    private String rcCopy;
+}

@@ -6,10 +6,23 @@ public final class FmAppConstants {
     private FmAppConstants() {
     }
 
+    // -------------------- Approval Request --------------------
+
+    public static final String APPROVAL_LEVEL_1 = "Level 1";
+
+    public static final String APPROVAL_STATUS_PENDING = "PENDING";
+    /**
+     * Workflow Types for Approval Process.
+     */
+    public static final String WORKFLOW_TYPE_CASCADE = "CASCADE";
+    public static final String WORKFLOW_TYPE_PARALLEL = "PARALLEL";
+
+//    ------------------------ROLES-------------------------------------
     public static final String ROLE_OUTLET = "ROLE_OUTLET";
     public static final String ROLE_MERCHANT = "ROLE_MERCHANT";
     public static final String ROLE_DRIVER = "ROLE_DRIVER";
     public static final String ROLE_CUSTOMER = "ROLE_CUSTOMER";
+
 //-------------------Forget Password ---------------------------------------
     public static final String FORGOT_PASSWORD_OTP="FORGOT_PASSWORD_OTP_";
     // ───────────────── STATUS CODES ─────────────────
@@ -35,6 +48,7 @@ public final class FmAppConstants {
     public static final String TYPE_DRIVER = "DRIVER";
     public static final String TYPE_CUSTOMER = "CUSTOMER";
     public static final String TYPE_PRODUCT = "PRODUCT";
+    public static final String TYPE_EMPLOYEE ="EMPLOYEE";
 
     // ── Role IDs ──────────────────────────────────────────────────────────────
     public static final int ROLE_ID_OUTLET = 2;
