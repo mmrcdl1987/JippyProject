@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.iservice;
 
+import com.jippy.customerandorder.dto.CoOrderDto;
 import com.jippy.customerandorder.dto.CoPlaceOrderRequestDto;
 import com.jippy.customerandorder.dto.CoPlaceOrderResponseDto;
 
@@ -13,4 +14,7 @@ public interface IOrderService {
 
      Integer getRecentOutlet(Integer customerId);
 
+    CoOrderDto getOrder(String orderId);
+
+    void updateOrderStatus(CoOrderDto orderDto);
 }

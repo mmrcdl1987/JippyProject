@@ -64,5 +64,20 @@ springdoc:
     # Forces the microservice to expose its docs at /api/fm/v3/api-docs
     path: /api/div/v3/api-docs
 
+razorpay:
+  key-id: ${RAZOR_KEY_ID}
+  key-secret: ${RAZOR_KEY_SECRET}
+  webhook-secret: YourWebhookSecretHere
 
+paytm:
+  mid: ${PAYTM_MID}
+  merchantKey: ${PAYTM_MERCHANT_KEY}
+  website: "DEFAULT"
+  channel-id: "WAP"
+  industry-type: "Retail"
+  initiate-txn-url: "https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction?mid="
+  #initiate_txn_url: "https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction?mid="
+  callback-url: "https://securestage.paytmpayments.co/api/div/payment/callback/{orderId}"
+  refund-url: "https://securegw-stage.paytm.in/refund/api/v1/asyncRefund"
+  refund-status-url: "https://securegw-stage.paytm.in/v2/refund/status"
 

@@ -4,6 +4,7 @@ import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoMealSubscription;
 import com.jippy.customerandorder.entity.CoOrder;
+import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
 import com.jippy.customerandorder.exception.OrderException;
 import com.jippy.customerandorder.iservice.IOrderService;
 import com.jippy.customerandorder.mapper.COEventMapper;
@@ -16,6 +17,7 @@ import com.jippy.customerandorder.repository.MealSubscriptionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -103,17 +105,26 @@ public class COOrderService implements IOrderService {
 
         order.setOrderId(orderId);
 
-        orderRepository.save(order);
+        CoOrder savedOrder = orderRepository.save(order);
 
         saveOrderItems(dto.getItems(), orderId);
 
-        priceRepository.save(orderMapper.mapToPrice(dto, orderId));
+        CoOrderPriceBreakup savedOrderPriceBreakUp = priceRepository.save(orderMapper.mapToPrice(dto, orderId));
+        CoPlaceOrderRequestDto updatedDto = new CoPlaceOrderRequestDto();
+
+        updatedDto.setOrderId(savedOrder.getOrderId());
+        updatedDto.setOrderTotalAmount(savedOrderPriceBreakUp.getOrderTotalAmount());
+        updatedDto.setOutletId(savedOrder.getOutletId());
+        updatedDto.setCustomerId(savedOrder.getCustomerId());
+        updatedDto.setOrderType(savedOrder.getOrderType());
+        updatedDto.setOrderStatus(savedOrder.getOrderStatus());
+        updatedDto.setPaymentModeId(savedOrder.getPaymentModeId());
 
         publishOrderEvent(order);
 
         log.info("SERVICE_END | PROCESS_NORMAL_ORDER_SUCCESS | orderId={}", orderId);
 
-        return buildResponse(COConstants.MSG_ORDER_CREATED, null, List.of(orderId), dto);
+        return buildResponse(COConstants.MSG_ORDER_CREATED, null, List.of(orderId), updatedDto);
     }
 
     private CoPlaceOrderResponseDto processRecurringOrders(CoPlaceOrderRequestDto dto) {
@@ -420,6 +431,15 @@ public class COOrderService implements IOrderService {
 
         response.setCreatedAt(LocalDateTime.now());
 
+        if(dto.getOrderType().equals("NORMAL")){
+            response.setOrderTotalAmount(dto.getOrderTotalAmount());
+            response.setOrderId(dto.getOrderId());
+            response.setOutletId(dto.getOutletId());
+            response.setPaymentModeId(dto.getPaymentModeId());
+            response.setOrderStatus(dto.getOrderStatus());
+            response.setCustomerId(dto.getCustomerId());
+        }
+
         return response;
     }
 
@@ -491,4 +511,43 @@ public class COOrderService implements IOrderService {
         return outlet;
 
     }
+
+    @Override
+    public CoOrderDto getOrder(String orderId) {
+
+        log.info("SERVICE_START | GET_ORDER | orderId={}", orderId);
+
+        CoOrder order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        CoOrderDto dto = new CoOrderDto();
+
+        dto.setOrderId(order.getOrderId());
+
+        dto.setDriverId(order.getDriverId());
+
+        dto.setOrderStatus(order.getOrderStatus());
+
+        dto.setPaymentModeId(order.getPaymentModeId());
+
+        dto.setOutletId(order.getOutletId());
+
+        return  dto;
+    }
+
+    @Override
+    public void updateOrderStatus(CoOrderDto orderDto) {
+
+        log.info("SERVICE_START | UPDATE_ORDER_STATUS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
+
+        CoOrder order = orderRepository.findById(orderDto.getOrderId()).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        order.setOrderStatus(orderDto.getOrderStatus());
+        order.setUpdatedAt(LocalDateTime.now());
+
+        orderRepository.save(order);
+
+        log.info("SERVICE_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
+    }
+
+
 }

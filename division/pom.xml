@@ -30,6 +30,12 @@
 		<java.version>17</java.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
 	</properties>
+    <repositories>
+        <repository>
+            <id>paytm-libs-release</id>
+            <url>https://artifactorypg.paytm.in/artifactory/libs-release</url>
+        </repository>
+    </repositories>
 	<dependencies>
 		<!--		for Gmail Integration-->
 		<dependency>
@@ -113,6 +119,21 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.12.5</version>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.razorpay</groupId>
+            <artifactId>razorpay-java</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
+        <dependency>
+            <groupId>com.paytm.pg</groupId>
+            <artifactId>paytm-checksum</artifactId>
+            <version>1.2.1</version>
         </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

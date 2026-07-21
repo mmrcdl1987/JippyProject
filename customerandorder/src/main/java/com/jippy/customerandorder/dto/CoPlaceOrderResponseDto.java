@@ -2,6 +2,7 @@ package com.jippy.customerandorder.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -41,4 +42,17 @@ public class CoPlaceOrderResponseDto {
      * RESPONSE CREATED TIME
      */
     private LocalDateTime createdAt;
+
+    private String orderId;
+
+    private BigDecimal orderTotalAmount;
+
+    private String orderStatus;
+
+    private Integer paymentModeId;
+
+    private Integer outletId;
+
+    private Integer customerId;
+
 }

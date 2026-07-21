@@ -168,14 +168,15 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             }
         }
 
-        CoCustomer customer = customerRepository.findById(joinGroupMembersDto.getCustomerId())
-                .orElseThrow(() -> {
-                        log.error("Customer not found with id: {}", joinGroupMembersDto.getCustomerId());
-                         return new CoBadRequestException("Customer not found with id: "
-                        + joinGroupMembersDto.getCustomerId());
-                });
+        Optional<CoCustomer> customer = customerRepository.findById(joinGroupMembersDto.getCustomerId());
+              if(customer.isEmpty()){
+                  log.error("Customer not found with id: {}", joinGroupMembersDto.getCustomerId());
+                  return ResponseEntity.ok(new CoResponseDto("200",
+                          "Customer not found with id: "+joinGroupMembersDto.getCustomerId()));
+              }
+
         GroupOrderMembers groupOrderMembersEntity = GroupOrderMapper.toGroupOrderMembersEntity
-                (joinGroupMembersDto, groupOrderInvitation, customer);
+                (joinGroupMembersDto, groupOrderInvitation, customer.get());
 
         groupOrderMemberRepository.save(groupOrderMembersEntity);
 
@@ -189,7 +190,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         eventPayload.setEventType("MEMBER_JOINED");
         eventPayload.setGroupOrdersInvitationId(groupOrderInvitation.getGroupOrdersInvitationId());
         eventPayload.setCustomerId(joinGroupMembersDto.getCustomerId());
-        eventPayload.setCustomerName(customer.getFirstName());
+        eventPayload.setCustomerName(customer.get().getFirstName());
         eventPayload.setDeliveryAddressId(joinGroupMembersDto.getDeliveryAddressId());
 
         // 3. Publish to Kafka Topic asynchronous broker pipeline
@@ -206,7 +207,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
         return ResponseEntity.ok(new CoResponseDto("200", "Customer with ID: "+joinGroupMembersDto.getCustomerId()
                 + " successfully joined group order with code "+ joinGroupMembersDto.getInvitationCode()+
-                " GroupOrderMembers ID: "+groupOrderMembersEntity.getGroupOrderMembersId()));
+                " GroupOrderMembers ID: "+groupOrderMembersEntity.getGroupOrdersInvitation().getGroupOrdersInvitationId()));
 
     }
 
