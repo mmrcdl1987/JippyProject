@@ -4,16 +4,20 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoOrderSettingsRequestDto;
 import com.jippy.customerandorder.dto.CoOrderSettingsResponseDto;
+import com.jippy.customerandorder.dto.CoPaymentModesDto;
 import com.jippy.customerandorder.entity.CoOrderSettings;
+import com.jippy.customerandorder.entity.CoPaymentModes;
 import com.jippy.customerandorder.exception.CoOrderSettingsException;
 import com.jippy.customerandorder.iservice.IOrderSettingsService;
 import com.jippy.customerandorder.mapper.CoOrderSettingsMapper;
 import com.jippy.customerandorder.repository.CoOrderSettingsRepository;
+import com.jippy.customerandorder.repository.CoPaymentModeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +27,8 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
     private final CoOrderSettingsRepository coOrderSettingsRepository;
 
     private final CoOrderSettingsMapper orderSettingsMapper;
+
+    private final CoPaymentModeRepository coPaymentModeRepository;
 
     @Override
     public CoOrderSettingsResponseDto saveOrUpdate(CoOrderSettingsRequestDto requestDto) {
@@ -209,4 +215,28 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
 
         return response;
     }
+
+    @Override
+    public CoPaymentModesDto getPaymentModeById(Integer paymentModeId) {
+
+        log.info("GET PAYMENT MODE BY ID SERVICE START | paymentModeId={}", paymentModeId);
+
+       Optional<CoPaymentModes> coPaymentModes = coPaymentModeRepository.findById(paymentModeId);
+      if(!coPaymentModes.isPresent()) {
+            log.error("PAYMENT MODE NOT FOUND | paymentModeId={}", paymentModeId);
+           // return new CoOrderSettingsException("Payment mode not found with id: " + paymentModeId);
+        }
+
+        CoPaymentModesDto paymentModesDto = new CoPaymentModesDto();
+
+        if (coPaymentModes.isEmpty()) {
+            return paymentModesDto;
+        }
+        paymentModesDto.setPaymentMode(coPaymentModes.get().getPaymentMode());
+        paymentModesDto.setPaymentModeId(coPaymentModes.get().getPaymentModeId());
+        return  paymentModesDto;
+
+    }
+
+
 }

@@ -1,15 +1,23 @@
-package com.jippy.customerandorder.dto;
+package com.jippy.division.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class CoPlaceOrderRequestDto {
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true) // Ignores any extra fields the order service sends back
+public class DivPlaceOrderRequestDto {
+
+    private String orderId;
 
     @NotNull(message = "Outlet id is required")
     private Integer outletId;
@@ -87,12 +95,12 @@ public class CoPlaceOrderRequestDto {
     /*
      * RECURRING
      */
-    private List<CoOrderItemDto> items;
+    private List<DivOrderItemsDto> items;
 
     /*
      * CUSTOM PLAN
      */
-    private List<CoScheduledOrderDto> scheduledOrders;
+    private List<DivScheduledOrderDto> scheduledOrders;
 
     private Integer createdBy;
 
@@ -102,7 +110,4 @@ public class CoPlaceOrderRequestDto {
     // used only in group orders
     private Integer groupOrderInvitationId;
 
-    private String orderId;
-
-    private String orderStatus;
 }

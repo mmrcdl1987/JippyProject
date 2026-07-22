@@ -45,6 +45,9 @@ public class CoOrderPriceBreakup {
     @Column(name = "order_total_amount", nullable = false)
     private BigDecimal orderTotalAmount;
 
+   /* @Column(name = "wallet_amount", nullable = false)
+    private BigDecimal walletAmount;*/
+
     @Column(name = "coupon_discount")
     private BigDecimal couponDiscount;
 
@@ -59,4 +62,16 @@ public class CoOrderPriceBreakup {
 
     @Column(name = "updated_by")
     private Integer updatedBy;
+
+    @Column(name = "pick_up_distance_in_kms")
+    private BigDecimal pickUpDistanceKms;
+
+    @Column(name = "delivery_distance_in_kms")
+    private BigDecimal deliveryDistanceKms;
+
+    @Column(name = "pick_up_charges")
+    private BigDecimal pickUpCharges;
+
+    @Column(name = "deliver_charges")
+    private BigDecimal deliveryCharges;
 }

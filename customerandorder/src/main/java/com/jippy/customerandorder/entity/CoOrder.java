@@ -75,4 +75,6 @@ public class CoOrder {
 
     @Column(name = "group_order_invitation_id")
     private Integer groupOrderInvitationId;
+
+
 }

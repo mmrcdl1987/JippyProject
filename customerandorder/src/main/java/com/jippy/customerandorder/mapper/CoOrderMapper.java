@@ -43,7 +43,7 @@ public class CoOrderMapper {
 
         order.setScheduledDeliveryDateTime(requestDto.getScheduledDeliveryDateTime());
 
-        order.setDistanceKms(requestDto.getDistanceKms() == null ? null : requestDto.getDistanceKms().doubleValue());
+        order.setDistanceKms(requestDto.getDeliveryDistanceKms().doubleValue());
 
         order.setCreatedAt(LocalDateTime.now());
 
@@ -124,6 +124,14 @@ public class CoOrderMapper {
         breakup.setCouponDiscount(defaultValue(requestDto.getCouponDiscount()));
 
         breakup.setCreatedAt(LocalDateTime.now());
+
+        breakup.setPickUpDistanceKms(requestDto.getPickUpDistanceKms());
+
+        breakup.setDeliveryDistanceKms(requestDto.getDeliveryDistanceKms());
+
+        breakup.setPickUpCharges(requestDto.getPickUpCharges());
+
+        breakup.setDeliveryCharges(requestDto.getDeliveryCharges());
 
         log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", orderId);
 

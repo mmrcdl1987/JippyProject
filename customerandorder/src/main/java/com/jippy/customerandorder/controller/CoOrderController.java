@@ -146,20 +146,7 @@ public class CoOrderController {
     @GetMapping("/orders")
     public CoOrderDto getOrder(@RequestParam String orderId) {
 
-        CoOrder order = coOrderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-
-        CoOrderDto dto = new CoOrderDto();
-
-        dto.setOrderId(order.getOrderId());
-
-        dto.setDriverId(order.getDriverId());
-
-        dto.setOrderStatus(order.getOrderStatus());
-
-        dto.setPaymentModeId(order.getPaymentModeId());
-
-        dto.setOutletId(order.getOutletId());
-
+        CoOrderDto dto = orderService.getOrder(orderId);
         return dto;
     }
 
@@ -179,6 +166,18 @@ public class CoOrderController {
         log.info("Fetching recent outlet for customerId={}", customerId);
 
         return orderService.getRecentOutlet(customerId);
+    }
+
+    @PutMapping("/updateOrderStatus")
+    public ResponseEntity<String> updateOrderStatus(@RequestBody CoOrderDto orderDto) {
+
+        log.info("API_START | UPDATE_ORDER_STATUS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
+
+        orderService.updateOrderStatus(orderDto);
+
+        log.info("API_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={}", orderDto.getOrderId());
+
+        return ResponseEntity.ok("Order status updated successfully");
     }
 
 }

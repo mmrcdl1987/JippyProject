@@ -178,6 +178,56 @@ CREATE TABLE IF NOT EXISTS jippy_division.email_templates(
     CONSTRAINT email_templates_pkey PRIMARY KEY (template_id)
 );
 
+CREATE TABLE IF NOT EXISTS jippy_division.payment_transactions (
+    payment_transactions_id UUID NOT NULL DEFAULT gen_random_uuid(),
+    application_order_id CHARACTER VARYING(30) NOT NULL,
+    payment_method_type CHARACTER VARYING(30) NOT NULL,        -- 'RAZORPAY', 'PAYTM', etc.
+
+    -- Gateway Reference IDs (Must be nullable to support multi-gateway coexistence)
+    gateway_order_id  CHARACTER VARYING(255),                             -- Holds Razorpay Order ID (Null for Paytm)
+    gateway_payment_id  CHARACTER VARYING(255),                           -- Holds Razorpay Payment ID or Paytm TXNID
+    gateway_signature  CHARACTER VARYING(512),                            -- Holds Razorpay Signature or Paytm CHECKSUMHASH
+
+    payment_status  CHARACTER VARYING(50) DEFAULT 'PENDING',               -- PENDING, SUCCESS, FAILED, REFUNDED
+    amount integer NOT NULL,                                        -- Stored in Paise/Lowest denomination (Integer)
+    currency  CHARACTER VARYING(10) DEFAULT 'INR',
+
+    -- Banking Reconciliation Data (Phase 3 Webhook)
+    txn_rrn  CHARACTER VARYING(100),                                       -- Razorpay rrn / Paytm BANKTXNID
+    bank_auth_code  CHARACTER VARYING(50),                                 -- Razorpay bank_auth_code / Paytm RESPCODE
+    bank_name  CHARACTER VARYING(100),                                     -- e.g., 'HDFC', 'SBI', 'VALET'
+
+    -- Metadata and Debugging Logs
+    gateway_raw_response TEXT,                                  -- Stores raw JSON dump from webhooks for audit trails
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone,
+
+    CONSTRAINT payment_transactions_pkey PRIMARY KEY (payment_transactions_id)
+);
+
+-- Indexes for lightning-fast lookups during Webhooks
+CREATE INDEX IF NOT EXISTS idx_payment_app_order ON jippy_division.payment_transactions(application_order_id);
+CREATE INDEX IF NOT EXISTS idx_payment_gateway_pay_id ON jippy_division.payment_transactions(gateway_payment_id);
+
+
+CREATE TABLE  jippy_division.refund_transactions(
+    refund_transactions_id UUID NOT NULL DEFAULT gen_random_uuid(),
+    application_order_id character varying(30) NOT NULL,
+    payment_transactions_id UUID NOT NULL,
+    gateway_refund_id character varying(100) UNIQUE,                    -- Returned by Razorpay API
+    amount_in_paise integer NOT NULL,
+    refund_status character varying(30) NOT NULL DEFAULT 'PENDING',
+    reason TEXT NOT NULL,
+    bank_arn character varying(30),
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone,
+    CONSTRAINT refund_transactions_pkey PRIMARY KEY (refund_transactions_id),
+    CONSTRAINT fk_transaction FOREIGN KEY (payment_transactions_id)
+        REFERENCES jippy_division.payment_transactions (payment_transactions_id)
+        ON UPDATE NO ACTION
+         ON DELETE NO ACTION
+);
+
 
 INSERT INTO jippy_division.price_model(
 	price_model_id, price_model_name, created_at, created_by)
