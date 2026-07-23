@@ -140,15 +140,34 @@ public class OtpServiceImpl implements OtpService {
             validateOtpFormat(request.getOtp());
 
             String redisKey = getRedisKey(customer.getCustomerId());
-            OtpCacheDto cache = (OtpCacheDto) redisTemplate.opsForValue().get(redisKey);
 
-            if (cache == null) {
-                log.warn("OTP_SERVICE | VERIFY_OTP | cacheMissing | markingOtpUsed");
+            Boolean exists = redisTemplate.hasKey(redisKey);
+            Long ttl = redisTemplate.getExpire(redisKey);
+            Object redisObject = redisTemplate.opsForValue().get(redisKey);
+
+            log.info("OTP_SERVICE | VERIFY_OTP | redisKey={}", redisKey);
+            log.info("OTP_SERVICE | VERIFY_OTP | redisExists={}", exists);
+            log.info("OTP_SERVICE | VERIFY_OTP | redisTTL={}", ttl);
+            log.info("OTP_SERVICE | VERIFY_OTP | redisObject={}", redisObject);
+
+            if (redisObject == null) {
+
+                log.error(
+                        "OTP_SERVICE | VERIFY_OTP | REDIS_CACHE_MISSING | customerId={} | otpId={} | expiresAt={}",
+                        customer.getCustomerId(),
+                        customerOtp.getCustomerOtpId(),
+                        customerOtp.getExpiresAt());
+
                 customerOtp.setIsUsed(true);
                 customerOtp.setUpdatedAt(LocalDateTime.now());
                 customerOtpRepository.saveAndFlush(customerOtp);
+
                 throw new OtpExpiredException("OTP expired");
             }
+
+            OtpCacheDto cache = (OtpCacheDto) redisObject;
+
+            validateOtpCache(cache);
             validateOtpCache(cache);
 
             if (customer.getCustomerId().longValue() != cache.getCustomerId()) {
@@ -323,15 +342,27 @@ public class OtpServiceImpl implements OtpService {
         OtpCacheDto cache = new OtpCacheDto();
 
         cache.setCustomerId(customer.getCustomerId().longValue());
-
         cache.setOtpHash(otpHash);
-
         cache.setRetryCount(0);
-
         cache.setResendCount(resendCount);
 
-        redisTemplate.opsForValue().set(getRedisKey(customer.getCustomerId()), cache, Duration.ofMinutes(OTP_EXPIRY_MINUTES));
+        String key = getRedisKey(customer.getCustomerId());
+
+        redisTemplate.opsForValue().set(
+                key,
+                cache,
+                Duration.ofMinutes(OTP_EXPIRY_MINUTES));
+
+        Boolean exists = redisTemplate.hasKey(key);
+        Long ttl = redisTemplate.getExpire(key);
+        Object value = redisTemplate.opsForValue().get(key);
+
+        log.info("OTP_SERVICE | REDIS_SAVE | key={}", key);
+        log.info("OTP_SERVICE | REDIS_SAVE | exists={}", exists);
+        log.info("OTP_SERVICE | REDIS_SAVE | ttl={}", ttl);
+        log.info("OTP_SERVICE | REDIS_SAVE | value={}", value);
     }
+
 
     private CustomerOtp saveOtpTransaction(CoCustomer customer, String otpHash, Integer resendCount) {
 

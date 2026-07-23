@@ -41,10 +41,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(FmApiResponse.error(ex.getMessage()));
     }
 
-    @ExceptionHandler({MerchantAlreadyExistsException.class, DuplicateResourceException.class, IllegalStateException.class})
+    @ExceptionHandler({
+            MerchantAlreadyExistsException.class,
+            DuplicateResourceException.class,
+            PromotionPlanTypeAlreadyExistsException.class,
+            PromotionPlanAlreadyExistsException.class,
+            IllegalStateException.class
+    })
     public ResponseEntity<FmApiResponse<Void>> handleConflict(Exception ex) {
+
         log.warn("Conflict/Duplicate data: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(FmApiResponse.error(ex.getMessage()));
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(FmApiResponse.error(ex.getMessage()));
     }
 
     // --- Specific Business Logic Exceptions ---
@@ -167,6 +176,18 @@ public class GlobalExceptionHandler {
                 ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
+    @ExceptionHandler({
+            InvalidPromotionDateException.class,
+            InvalidPromotionAmountException.class,
+            InvalidPromotionItemException.class
+    })
+    public ResponseEntity<FmApiResponse<Void>> handlePromotionValidation(Exception ex) {
+
+        log.warn("[PROMOTION] Validation failed | reason={}", ex.getMessage());
+
+        return ResponseEntity.badRequest()
                 .body(FmApiResponse.error(ex.getMessage()));
     }
 }

@@ -1,22 +1,17 @@
 
 package com.jippy.foodandmart.serviceImpl;
-import com.jippy.foodandmart.Enum.FmOtpPurpose;
-import com.jippy.foodandmart.Enum.FmOtpStatus;
-import com.jippy.foodandmart.Enum.FmUserType;
+import com.jippy.foodandmart.enums.FmOtpPurpose;
+import com.jippy.foodandmart.enums.FmOtpStatus;
+import com.jippy.foodandmart.enums.FmUserType;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmEmailOtpVerification;
 import com.jippy.foodandmart.entity.FmMerchant;
-import com.jippy.foodandmart.entity.FmOutlet;
-import com.jippy.foodandmart.entity.FmUser;
 import com.jippy.foodandmart.exception.InvalidOtpException;
 import com.jippy.foodandmart.exception.MerchantAlreadyExistsException;
 import com.jippy.foodandmart.exception.OtpExpiredException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.repository.FmEmailOtpVerificationRepository;
 import com.jippy.foodandmart.repository.FmMerchantRepository;
-import com.jippy.foodandmart.repository.FmOutletRepository;
-import com.jippy.foodandmart.repository.FmUserRepository;
-import com.jippy.foodandmart.security.JwtUtils;
 import com.jippy.foodandmart.service.EmailService;
 import com.jippy.foodandmart.service.IFmOtpService;
 import com.jippy.foodandmart.util.OtpGenerator;

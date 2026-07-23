@@ -1,8 +1,8 @@
 package com.jippy.foodandmart.entity;
 
-import com.jippy.foodandmart.Enum.FmOtpPurpose;
-import com.jippy.foodandmart.Enum.FmOtpStatus;
-import com.jippy.foodandmart.Enum.FmUserType;
+import com.jippy.foodandmart.enums.FmOtpPurpose;
+import com.jippy.foodandmart.enums.FmOtpStatus;
+import com.jippy.foodandmart.enums.FmUserType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

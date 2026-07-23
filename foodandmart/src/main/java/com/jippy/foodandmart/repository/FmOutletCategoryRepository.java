@@ -49,4 +49,8 @@ public interface FmOutletCategoryRepository extends JpaRepository<FmOutletCatego
             Integer outletCategoryId,
             @Param("status")
             String status);
+
+    boolean existsByOutletCategoryIdAndOutletId(
+            Integer outletCategoryId,
+            Integer outletId);
 }

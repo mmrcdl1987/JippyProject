@@ -1,8 +1,8 @@
 package com.jippy.foodandmart.repository;
 
-import com.jippy.foodandmart.Enum.FmOtpPurpose;
-import com.jippy.foodandmart.Enum.FmOtpStatus;
-import com.jippy.foodandmart.Enum.FmUserType;
+import com.jippy.foodandmart.enums.FmOtpPurpose;
+import com.jippy.foodandmart.enums.FmOtpStatus;
+import com.jippy.foodandmart.enums.FmUserType;
 import com.jippy.foodandmart.entity.FmEmailOtpVerification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

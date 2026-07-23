@@ -97,4 +97,16 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     Optional<FmProduct> findByProductIdAndIsActive(
             Integer productId,
             String isActive);
-}
+
+        @Query("""
+            SELECT CASE WHEN COUNT(p) > 0 THEN TRUE ELSE FALSE END
+            FROM FmProduct p
+            JOIN FmOutletCategory oc
+                ON p.outletCategoryId = oc.outletCategoryId
+            WHERE p.productId = :productId
+              AND oc.outletId = :outletId
+            """)
+        boolean existsByProductIdAndOutletId(
+                @Param("productId") Integer productId,
+                @Param("outletId") Integer outletId);
+    }
