@@ -1,6 +1,6 @@
 package com.jippy.foodandmart.serviceImpl;
 
-import com.jippy.foodandmart.Enum.FmUserType;
+import com.jippy.foodandmart.enums.FmUserType;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmEmployee;

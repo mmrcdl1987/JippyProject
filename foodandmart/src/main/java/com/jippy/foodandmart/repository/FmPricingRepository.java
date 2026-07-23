@@ -82,4 +82,6 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
     Optional<BigDecimal> findOnlinePriceByProductIdAndOutletCategoryId(
             @Param("productId") Integer productId,
             @Param("outletCategoryId") Integer outletCategoryId);
+
+
 }

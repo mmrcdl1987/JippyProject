@@ -1,5 +1,5 @@
 package com.jippy.foodandmart.security;
-import com.jippy.foodandmart.Enum.FmOtpPurpose;
+import com.jippy.foodandmart.enums.FmOtpPurpose;
 import com.jippy.foodandmart.entity.FmUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

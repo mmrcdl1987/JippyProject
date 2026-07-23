@@ -1,4 +1,4 @@
-package com.jippy.foodandmart.Enum;
+package com.jippy.foodandmart.enums;
 
 public enum FmUserType {
 
