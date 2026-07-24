@@ -187,4 +187,40 @@
 
             return ResponseEntity.ok(driverService.getDriverById(driverId));
         }
+
+        @GetMapping("/getZonesByType")
+        public ResponseEntity<List<DriverZoneResponseDto>> getZonesByType(@RequestParam(value = "zoneType") String zoneType) {
+
+            List<DriverZoneResponseDto> zones = driverService.getZonesByType(zoneType);
+
+            return ResponseEntity.status(HttpStatus.OK).body(zones);
+        }
+
+        @GetMapping("/findCommunityById")
+        public ResponseEntity<DriverZoneResponseDto> findCommunityById(@RequestParam(value = "communityId") Integer communityId) {
+
+            DriverZoneResponseDto zones = driverService.findCommunityById(communityId);
+
+            return ResponseEntity.status(HttpStatus.OK).body(zones);
+        }
+
+        @GetMapping("/findCustomerInCommunity")
+        public ResponseEntity<Integer> findCustomerInCommunity(@RequestParam Double latitude,
+                @RequestParam Double longitude) {
+
+            Integer status = driverService.findCustomerInCommunity(latitude,longitude);
+
+            return ResponseEntity.status(HttpStatus.OK).body(status);
+        }
+
+        @GetMapping("/checkCustomerAddressWithCommunity")
+        public ResponseEntity<Integer> checkCustomerAddressWithCommunity(@RequestParam Double latitude,
+                @RequestParam Double longitude,@RequestParam Integer communityId) {
+
+            Integer status = driverService.checkCustomerAddressWithCommunity(latitude,longitude,communityId);
+
+            return ResponseEntity.status(HttpStatus.OK).body(status);
+        }
+
+
     }

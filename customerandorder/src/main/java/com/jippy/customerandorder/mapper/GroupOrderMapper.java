@@ -15,15 +15,31 @@ public class GroupOrderMapper {
 
         GroupOrderInvitation groupOrderInvitation = new GroupOrderInvitation();
 
-        groupOrderInvitation.setCustomer(customer);
+        //groupOrderInvitation.setHostCustomerId(customer.getCustomerId());
         groupOrderInvitation.setOutletId(groupCreationDto.getOutletId());
         groupOrderInvitation.setOrderClosingTimeInMinutes(groupCreationDto.getOrderCloseDurationInMinutes());
-        groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_INVITATION_CREATED);
         groupOrderInvitation.setMaxMembers(groupCreationDto.getMaxMembers());
         groupOrderInvitation.setPaymentResponsibility(groupCreationDto.getPaymentResponsibility());
         groupOrderInvitation.setCreatedAt(LocalDateTime.now());
         groupOrderInvitation.setCreatedBy(customer.getCustomerId());
         groupOrderInvitation.setInvitationCode(groupInvitationLink);
+        groupOrderInvitation.setOrderType(groupCreationDto.getOrderType());
+
+        if(groupCreationDto.getOrderType().equals(COConstants.GROUP_ORDER_ORDER_TYPE) ){
+
+            groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_INVITATION_ACTIVE);
+            groupOrderInvitation.setHostCustomerId(groupCreationDto.getHostCustomerId());
+
+        } else if(groupCreationDto.getOrderType().equals(COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE)){
+
+            groupOrderInvitation.setCommunityId(groupCreationDto.getCommunityId());
+            groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_INVITATION_ACTIVE);
+            groupOrderInvitation.setHostCustomerId(groupCreationDto.getHostCustomerId());
+
+        }else {
+            groupOrderInvitation.setCommunityEventId(groupCreationDto.getCommunityEventId());
+            groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_INVITATION_CREATED);
+        }
 
         return groupOrderInvitation;
     }
@@ -33,7 +49,7 @@ public class GroupOrderMapper {
         GroupOrderInvitationDto groupOrderInvitationDto = new GroupOrderInvitationDto();
 
         groupOrderInvitationDto.setGroupOrdersInvitationId(savedGroupOrderInvitation.getGroupOrdersInvitationId());
-        groupOrderInvitationDto.setHostCustomerId(savedGroupOrderInvitation.getCustomer().getCustomerId());
+        groupOrderInvitationDto.setHostCustomerId(savedGroupOrderInvitation.getHostCustomerId());
         groupOrderInvitationDto.setOutletId(savedGroupOrderInvitation.getOutletId());
         groupOrderInvitationDto.setOrderCloseDurationInMinutes(savedGroupOrderInvitation.getOrderClosingTimeInMinutes());
         groupOrderInvitationDto.setMaxMembers(savedGroupOrderInvitation.getMaxMembers());

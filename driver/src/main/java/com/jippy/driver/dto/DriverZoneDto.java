@@ -13,6 +13,7 @@ public class DriverZoneDto {
     // List 1: MultiPolygon -> List 2: Individual Polygons -> List 3: Rings -> CoordinateDTO
     private List<List<List<CoordinateDTO>>> boundary;
     private Integer createdBy;
+    private String zoneType;
 
     @Data
     public static class CoordinateDTO {

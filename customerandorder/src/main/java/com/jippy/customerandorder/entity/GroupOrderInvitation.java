@@ -17,9 +17,7 @@ public class GroupOrderInvitation {
     @GeneratedValue(strategy =  GenerationType.IDENTITY)
     private Integer groupOrdersInvitationId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "host_customer_id", referencedColumnName = "customer_id", nullable = false)
-    private CoCustomer customer;
+    private Integer hostCustomerId;
     private Integer outletId;
     private String invitationCode;
     private String status;
@@ -46,11 +44,17 @@ public class GroupOrderInvitation {
     @OneToMany(mappedBy = "groupOrders", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<GroupCartItems> cartItems;
 
+    private String orderType;
+
+    private Integer communityEventId;
+
+    private Integer communityId;
+
     @Override
     public String toString() {
         return "GroupOrderInvitation{" +
                 "groupOrdersInvitationId=" + groupOrdersInvitationId +
-                ", customer=" + customer +
+                ", hostCustomerId=" + hostCustomerId +
                 ", outletId=" + outletId +
                 ", invitationCode='" + invitationCode + '\'' +
                 ", status='" + status + '\'' +

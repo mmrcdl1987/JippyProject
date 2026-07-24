@@ -62,7 +62,9 @@ public class COOrderService implements IOrderService {
              * NORMAL ORDER
              */
             if (COConstants.ORDER_TYPE_NORMAL.equalsIgnoreCase(dto.getOrderType()) ||
-                    COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType())) {
+                    COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType()) ||
+                    COConstants.COMMUNITY_ORDER_ORDER_TYPE.equals(dto.getOrderType())||
+                    COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE.equals(dto.getOrderType())) {
 
                 return processNormalOrder(dto);
             }

@@ -2,6 +2,7 @@ package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.iservice.GroupOrderService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,15 @@ public class GroupOrderController {
 
     // CREATE Group Order Invitation
     @PostMapping("/createGroupOrderInvitation")
+    @Operation(summary = "Create Group Order Invitation", description = """
+          hostCustomerId: 111,
+          outletId: 101,
+          orderCloseDurationInMinutes: 30,
+          paymentResponsibility: HOST,
+          maxMembers: 5,
+          createdBy: 111,
+          orderType : GROUP_ORDER or COMMUNITY_GROUP_ORDER
+          """)
     public ResponseEntity<?>  createGroupOrderInvitation(@Valid @RequestBody GroupOrderInvitationDto
                                                                                  groupCreationDto) {
 
@@ -27,6 +37,17 @@ public class GroupOrderController {
     }
 
     @PostMapping("/joinGroupMembers")
+    @Operation(summary = "Same API is used to join members in community and join members in Group order", description = """
+           For Community Order when joining 1st customer to event ex: {
+                                     "groupOrdersInvitationId": 81,
+                                     "customerId": 103,
+                                     "deliveryAddressId" : 29,
+                                      "isDropped" : false,
+                                     "createdBy": 102
+                                   },
+           For Community Order when joining other customers no need of delivery addressId we will use first customer delivery address Id. 
+           For Group Order or Community group order delivery address id is mandatory in joining members
+          """)
     public ResponseEntity<CoResponseDto>  joinGroupMembers(@Valid @RequestBody
                             JoinGroupMembersDto joinGroupMembersDto) {
 
@@ -47,7 +68,7 @@ public class GroupOrderController {
 
     @PostMapping("/groupOrderCheckOut")
     public ResponseEntity<GroupOrderCheckoutDto>  groupOrderCheckOut(@RequestParam Integer groupOrdersInvitationId,
-            @RequestParam Integer hostCustomerId,@RequestParam(required = false) Double couponDiscount,
+            @RequestParam(required = false) Integer hostCustomerId,@RequestParam(required = false) Double couponDiscount,
             @RequestParam(required = false) Double deliveryTip) {
 
          log.info("Group order checkout request received for groupOrdersInvitationId: {} and customerId: {}",

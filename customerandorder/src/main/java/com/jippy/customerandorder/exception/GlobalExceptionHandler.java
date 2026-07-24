@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.exception;
 
 import com.jippy.customerandorder.dto.CoErrorResponseDto;
+import com.jippy.customerandorder.dto.CoResponseDto;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -129,5 +130,11 @@ public class GlobalExceptionHandler {
 //
 //        return error;
 //    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<CoResponseDto> handleRuntimeException(RuntimeException ex) {
+        CoResponseDto response = new CoResponseDto("500", "An unexpected error occurred: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
 
 }

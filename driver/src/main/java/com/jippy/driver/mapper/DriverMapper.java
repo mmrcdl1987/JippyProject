@@ -144,6 +144,7 @@ public class DriverMapper {
         zone.setBoundary(multiPolygon);
         zone.setCreatedAt(LocalDateTime.now());
         zone.setCreatedBy(zoneDto.getCreatedBy());
+        zone.setZoneType(zoneDto.getZoneType());
         return zone;
     }
 

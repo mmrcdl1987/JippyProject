@@ -43,4 +43,7 @@
         // User who updated record
         @Column(name = "updated_by")
         private Integer updatedBy;
+
+        @Column(name = "zone_type")
+        private String zoneType;
     }

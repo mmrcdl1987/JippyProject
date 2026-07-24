@@ -41,4 +41,10 @@ public class GroupOrderInvitationDto {
 
     private Integer createdBy;
 
+    private String orderType;
+
+    private Integer communityEventId;
+
+    private Integer communityId;
+
 }

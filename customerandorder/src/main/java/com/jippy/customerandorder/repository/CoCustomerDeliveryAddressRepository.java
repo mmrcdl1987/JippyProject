@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoCustomerDeliveryAddress;
+import com.jippy.customerandorder.projection.CustomerDeliveryAddressProjection;
 import com.jippy.customerandorder.projection.CustomerLocationProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,5 +26,14 @@ public interface CoCustomerDeliveryAddressRepository extends JpaRepository<CoCus
     //    to get all the delivery addresses of a customer based on the customer id
     List<CoCustomerDeliveryAddress> findByCustomerId(Integer customerId);
 
+    @Query(value = """
+            SELECT da.customer_address_id as customerAddressId, da.customer_id as customerId,
+             da.door_no as doorNo, da.building_name as buildingName, da.lane_no as laneNo, da.area as area,
+                ST_Y(location::geometry) AS latitude,
+                ST_X(location::geometry) AS longitude
+            FROM jippy_customer_and_order.customer_delivery_addresses da
+            WHERE customer_address_id = :deliveryAddressId
+            """, nativeQuery = true)
+    CustomerDeliveryAddressProjection findByDeliveryAddressId(@Param("deliveryAddressId") Integer deliveryAddressId);
 
 }

@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CoGroupOrderMemberRepository extends JpaRepository<GroupOrderMembers, Integer> {
@@ -30,11 +31,19 @@ public interface CoGroupOrderMemberRepository extends JpaRepository<GroupOrderMe
             " AND is_dropped = false", nativeQuery = true)
     List<GroupOrderMembers> getDeliveryAddressesByGroupOrderInvitationId(Integer groupOrdersInvitationId);
 
-    GroupOrderMembers findByCustomer(CoCustomer customer);
+    //GroupOrderMembers findByCustomer(CoCustomer customer);
 
     @Query(value = "SELECT * FROM jippy_customer_and_order.group_order_members  WHERE " +
             "group_orders_invitation_id = :goInvitationId AND order_placed = :orderPlaced " +
             "AND is_dropped=:isDropped",nativeQuery = true)
     List<GroupOrderMembers> findByGOInvitationIdAndOrderPlaced(@Param("goInvitationId") Integer goInvitationId,
             @Param("orderPlaced") Boolean orderPlaced, @Param("isDropped") Boolean isDropped);
+
+    @Query(value = "SELECT * FROM jippy_customer_and_order.group_order_members  WHERE " +
+            "group_orders_invitation_id = :groupOrdersInvitationId order by group_order_members_id asc limit 1",nativeQuery = true)
+    Optional<GroupOrderMembers> getMembersByGroupOrdersInvitationId(@Param("groupOrdersInvitationId") Integer groupOrdersInvitationId);
+
+    GroupOrderMembers findByCustomerAndGroupOrdersInvitation(CoCustomer customer, GroupOrderInvitation groupOrderInvitation);
+
+   // GroupOrderMembers findByCustomerAndCommunityEventId(CoCustomer customer, Integer communityEventId);
 }

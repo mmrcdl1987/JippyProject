@@ -44,5 +44,12 @@ public class RedisGroupExpiryListener implements MessageListener {
                 }
             });
         }
+        //Community Group Order Activation ---
+        if (expiredKey.startsWith("event:activate:invitation:")) {
+            Integer invitationId = Integer.parseInt(expiredKey.replace("event:activate:invitation:", ""));
+            log.info("Flipping Group Order Invitation ID {} status to ACTIVE", invitationId);
+
+            groupOrderInvitationRepository.updateStatusToActive(invitationId);
+        }
     }
 }

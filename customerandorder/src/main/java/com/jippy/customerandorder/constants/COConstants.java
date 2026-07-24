@@ -137,7 +137,9 @@ public class COConstants {
 
     public static final String DRIVER_NOT_AT_CUSTOMER_LOCATION = "Driver not at customer location";
 
-    public static final String GROUP_ORDER_INVITATION_CREATED = "ACTIVE";
+    public static final String GROUP_ORDER_INVITATION_ACTIVE = "ACTIVE";
+
+    public static final String GROUP_ORDER_INVITATION_CREATED = "CREATED";
 
     public static final String GROUP_ORDER_INVITATION_EXPIRED = "EXPIRED";
 
@@ -152,6 +154,18 @@ public class COConstants {
     public static final String GROUP_ORDER_STATUS_EXPIRED = "EXPIRED";
 
     public static final String GROUP_ORDER_ORDER_TYPE = "GROUP_ORDER";
+
+    public static final String COMMUNITY_ORDER_ORDER_TYPE = "COMMUNITY_ORDER";
+
+    public static final String COMMUNITY_GROUP_ORDER_ORDER_TYPE = "COMMUNITY_GROUP_ORDER";
+
+    public static final String ZONE_TYPE_COMMUNITY = "COMMUNITY";
+
+    public  static  final String JOIN_COMMUNITY_TYPE = "JOIN";
+
+    public  static  final String DROP_COMMUNITY_TYPE = "DROP";
+
+    public static final String COMMUNITY_ORDER_PAYMENT_TYPE = "INDIVIDUAL";
 
     }
 

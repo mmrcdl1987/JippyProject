@@ -14,10 +14,10 @@ public class JoinGroupMembersDto {
     @NotNull(message = "Customer ID cannot be null")
     private Integer customerId;
 
-    @NotNull(message = "Delivery Address ID cannot be null")
+   // @NotNull(message = "Delivery Address ID cannot be null")
     private Integer deliveryAddressId;
 
-    @NotNull(message = "Invitation code cannot be null")
+   // @NotNull(message = "Invitation code cannot be null")
     private String invitationCode;
 
     private LocalDateTime createdAt;

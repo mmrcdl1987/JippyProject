@@ -22,6 +22,12 @@ public class FeignClientConfig {
                 if (username != null) requestTemplate.header("X-Auth-User", username);
                 if (roles != null) requestTemplate.header("X-Auth-Roles", roles);
             }
+            else {
+                // Background Scheduler Flow (No HTTP Request context exists)
+                // Pass hardcoded credentials identifying this call as the SYSTEM
+                requestTemplate.header("X-Auth-User", "SYSTEM_SCHEDULER");
+                requestTemplate.header("X-Auth-Roles", "ROLE_INTERNAL_SYSTEM");
+            }
         };
     }
 }

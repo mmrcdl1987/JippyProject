@@ -1,6 +1,7 @@
 package com.jippy.driver.serviceImpl;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
@@ -30,6 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -50,6 +52,7 @@ public class DriverServiceImpl implements DriverService {
     private final DriverLocationService driverLocationService;
     private final S3ImageService s3ImageService;
     private final GeometryFactory geometryFactory = new GeometryFactory();
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -519,6 +522,7 @@ public class DriverServiceImpl implements DriverService {
                 zoneToUpdate.setBoundary(multiPolygon);
                 zoneToUpdate.setUpdatedAt(LocalDateTime.now());
                 zoneToUpdate.setUpdatedBy(zoneDto.getCreatedBy());
+                zoneToUpdate.setZoneType(zoneDto.getZoneType());
                 zoneRepository.save(zoneToUpdate);
                 return "Zone:" + zoneToUpdate.getZoneName() + " updated successfully!";
             }
@@ -772,5 +776,68 @@ public class DriverServiceImpl implements DriverService {
                     new ResourceNotFoundException("Driver not found with Id : " + driverId));
 
     return DriverMapper.mapToDriverApprovalResponseDto(driver);
-}
+    }
+
+    @Override
+    public List<DriverZoneResponseDto> getZonesByType(String zoneType) {
+        List<Map<String, Object>> rawRows = zoneRepository.findZonesByType(zoneType.toUpperCase());
+        List<DriverZoneResponseDto> responseList = new ArrayList<>();
+
+        for (Map<String, Object> row : rawRows) {
+            try {
+                Integer id = (Integer) row.get("zone_id");
+                String name = (String) row.get("zone_name");
+                String type = (String) row.get("zone_type");
+                String geoJsonStr = (String) row.get("boundary_json");
+
+                // Convert stringified GeoJSON from PostGIS into a real JSON Node object
+                var boundaryNode = objectMapper.readTree(geoJsonStr);
+
+                responseList.add(new DriverZoneResponseDto(id, name, type, boundaryNode));
+            } catch (Exception e) {
+                // Log exception (e.g., JSON parsing failure)
+                throw new RuntimeException("Failed to parse spatial boundary data", e);
+            }
+        }
+        return responseList;
+    }
+
+    @Override
+    public DriverZoneResponseDto findCommunityById(Integer communityId) {
+
+        Optional<DriverZone> driverZone = zoneRepository.findByZoneIdAndZoneType(communityId, DConstants.COMMUNITY_TYPE);
+        DriverZoneResponseDto driverZoneResponseDto = new DriverZoneResponseDto();
+
+        if (driverZone.isPresent()) {
+            driverZoneResponseDto.setZoneId(driverZone.get().getZoneId());
+            driverZoneResponseDto.setZoneType(driverZone.get().getZoneType());
+            driverZoneResponseDto.setZoneName(driverZone.get().getZoneName());
+
+            return driverZoneResponseDto;
+        }
+        return driverZoneResponseDto;
+    }
+
+    @Override
+    public Integer findCustomerInCommunity(Double latitude, Double longitude) {
+
+        Optional<DriverZone> driverZone = zoneRepository.findCustomerInCommunity(latitude,longitude);
+        if (driverZone.isPresent()) {
+
+            return driverZone.get().getZoneId();
+        }
+        return 0;
+    }
+
+    @Override
+    public Integer checkCustomerAddressWithCommunity(Double latitude, Double longitude,Integer communityId) {
+
+        Optional<DriverZone> driverZone = zoneRepository.checkCustomerAddressWithCommunity(latitude,longitude,communityId);
+        if (driverZone.isPresent()) {
+
+            return driverZone.get().getZoneId();
+        }
+        return 0;
+    }
+
 }

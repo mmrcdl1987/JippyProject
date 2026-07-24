@@ -14,6 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,6 +54,15 @@ public class DriverJwtAuthenticationFilter extends OncePerRequestFilter {
 
             // Set the security context for the rest of this request
             SecurityContextHolder.getContext().setAuthentication(authToken);
+        }
+        // Check if this is the background system scheduler calling
+        if ("SYSTEM_SCHEDULER".equals(username)) {
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_INTERNAL_SYSTEM"))
+            );
+            SecurityContextHolder.getContext().setAuthentication(auth);
         }
 
         filterChain.doFilter(request, response);

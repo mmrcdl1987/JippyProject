@@ -59,4 +59,6 @@ public class DConstants {
     public static final String MSG_ORDER_SETTINGS_NOT_FOUND = "Order settings not found";
     public static final String MSG_ORDER_SETTINGS_UPDATED = "Order settings updated successfully";
     public static final String MSG_ORDER_SETTINGS_CREATED = "Order settings created successfully";
+
+    public static final String COMMUNITY_TYPE = "COMMUNITY";
 }
