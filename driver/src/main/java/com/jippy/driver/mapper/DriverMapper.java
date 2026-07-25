@@ -45,6 +45,7 @@ public class DriverMapper {
         driver.setIsFamilyMemberVerified(dto.getIsFamilyMemberVerified());
         driver.setCreatedAt(LocalDateTime.now());
         driver.setCreatedBy(1);
+        driver.setIsApproved(DConstants.STATUS_FALSE);
 
         // Create KYC object from DTO
         DriverKyc driverKyc = mapToDriverKycEntity(dto);

@@ -96,7 +96,7 @@ public class FmApprovalRequestController {
             @ApiResponse(responseCode = "400", description = "Invalid Approver Id.")
             @ApiResponse(responseCode = "404", description = "Approval Settings or Pending Requests not found.")
             @ApiResponse(responseCode = "500", description = "Internal Server Error.")
-    @GetMapping("/getLevel1PendingApprovalRequestsByApproverId/{approverId}")
+    @GetMapping("/getPendingLevelApprovalRequestsByApproverId/{approverId}")
     public ResponseEntity<List<FmLevel1PendingApprovalResponseDTO>>getLevel1PendingApprovalRequests(
             @Parameter(description = "Approver User Id", example = "1", required = true)
             @PathVariable

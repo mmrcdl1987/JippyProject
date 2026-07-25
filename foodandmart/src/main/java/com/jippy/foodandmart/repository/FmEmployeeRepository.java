@@ -8,7 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface FmEmployeeRepository extends JpaRepository<FmEmployee, Integer> {
-
     /**
      * Find employee by email.
       */
