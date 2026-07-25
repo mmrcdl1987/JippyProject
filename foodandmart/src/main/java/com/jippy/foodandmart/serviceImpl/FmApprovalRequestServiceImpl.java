@@ -238,7 +238,9 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
     }
 
 
+/*
 // 4. HELPER METHOD
+*/
     private void processApprovalRequest(FmApprovalSettings approvalSettings,
                                         List<FmLevel1PendingApprovalResponseDTO> responseList) {
 
@@ -248,25 +250,25 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
 
         log.info("Processing Entity Type : {}, Approval Level : {}", entityType, approvalLevel);
 
-        if (!FmAppConstants.APPROVAL_LEVEL_1.equalsIgnoreCase(approvalLevel)) {
-
-            log.info("Skipping Unsupported Approval Level : {}", approvalLevel);
-
-            return;
-        }
+//        if (!FmAppConstants.APPROVAL_LEVEL_1.equalsIgnoreCase(approvalLevel)) {
+//
+//            log.info("Skipping Unsupported Approval Level : {}", approvalLevel);
+//
+//            return;
+//        }
 
         switch (entityType) {
 
             case FmAppConstants.TYPE_OUTLET:
-                processOutletRequests(approvalLevel, responseList);
+                processOutletRequests(approvalSettings, responseList);
                 break;
 
             case FmAppConstants.TYPE_MERCHANT:
-                processMerchantRequests(approvalLevel, responseList);
+                processMerchantRequests(approvalSettings, responseList);
                 break;
 
             case FmAppConstants.TYPE_DRIVER:
-                processDriverRequests(approvalLevel, responseList);
+                processDriverRequests(approvalSettings, responseList);
                 break;
 
             default:
@@ -274,80 +276,290 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
         }
     }
 
-// 5. HELPER METHOD
-    private void processOutletRequests(String approvalLevel, List<FmLevel1PendingApprovalResponseDTO> responseList) {
 
-        log.info("Fetching Pending Outlet Approval Requests.");
+    /** 5. HELPER METHOD
+     * Processes Pending OUTLET Approval Requests
+     * assigned to the current Approver.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Request must be PENDING.
+     * 2. Request current level must match the configured Approval Level.
+     * 3. Request Entity Type must be OUTLET.
+     * 4. The logged-in Approver must not have already approved
+     *    the same Outlet at the same Approval Level.
+     * 5. Approval by another parallel Approver must not hide
+     *    the request from the current Approver.
+     *
+     * @param approvalSettings Approval configuration of the current Approver
+     * @param responseList     Final Pending Approval Response List
+     */
+    private void processOutletRequests(
+            FmApprovalSettings approvalSettings,
+            List<FmLevel1PendingApprovalResponseDTO> responseList) {
+
+        //----------------------------------------------------------
+        // Extract Approval Configuration
+        //----------------------------------------------------------
+
+        String entityType = approvalSettings.getEntityType();
+
+        String approvalLevel = approvalSettings.getApprovalLevel();
+
+        Integer approverId = approvalSettings.getApproverId();
+
+        String workflowType = approvalSettings.getWorkflowType();
+
+        log.info("Processing Pending OUTLET Approval Requests. " +
+                        "Entity Type : {}, Approval Level : {}, " +
+                        "Approver Id : {}, Workflow Type : {}",
+                entityType,
+                approvalLevel,
+                approverId,
+                workflowType);
+
+        //----------------------------------------------------------
+        // Fetch Pending OUTLET Requests
+        //
+        // Repository excludes requests already APPROVED
+        // by this same Approver at this same Level.
+        //----------------------------------------------------------
 
         List<FmOutletLevel1PendingApprovalProjection> outletList =
-                approvalRequestRepository.getOutletLevel1PendingRequests(approvalLevel);
+                approvalRequestRepository.getOutletLevel1PendingRequests(
+                                approvalLevel,
+                                approverId);
+
+        //----------------------------------------------------------
+        // No Pending Requests Found
+        //----------------------------------------------------------
 
         if (outletList.isEmpty()) {
 
-            log.info("No Pending Outlet Approval Requests Found.");
+            log.info("No Pending OUTLET Approval Requests found " + "for Approver Id : {}",
+                    approverId);
 
             return;
         }
 
-        log.info("Total Pending Outlet Requests : {}", outletList.size());
+        //----------------------------------------------------------
+        // Convert Projection to Response DTO
+        //----------------------------------------------------------
 
         for (FmOutletLevel1PendingApprovalProjection outlet : outletList) {
 
             responseList.add(FmApprovalRequestMapper.toOutletResponse(outlet));
         }
 
-        log.info("Completed Processing Outlet Approval Requests.");
+        log.info("Completed Processing OUTLET Approval Requests. " +
+                        "Approver Id : {}, Total Requests : {}", approverId, outletList.size());
     }
 
-    // 6. HELPER METHOD
-    private void processMerchantRequests(String approvalLevel, List<FmLevel1PendingApprovalResponseDTO> responseList) {
 
-        log.info("Fetching Pending Merchant Approval Requests.");
+    /**  6. HELPER METHOD
+     * Processes Pending MERCHANT Approval Requests
+     * for the configured Approver.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Request must be in PENDING status.
+     * 2. Current Level must match the configured Approval Level.
+     * 3. If the current Approver already approved the same
+     *    Merchant at the same Approval Level, the request
+     *    must not be shown again to that Approver.
+     * 4. Approval by another parallel Approver must not
+     *    hide the request from the current Approver.
+     *
+     * @param approvalSettings Approval configuration of the current Approver
+     * @param responseList     Final Pending Approval Response List
+     */
+    private void processMerchantRequests(
+            FmApprovalSettings approvalSettings,
+            List<FmLevel1PendingApprovalResponseDTO> responseList) {
+
+        //----------------------------------------------------------
+        // Extract Approval Configuration
+        //----------------------------------------------------------
+
+        String approvalLevel =
+                approvalSettings.getApprovalLevel();
+
+        Integer approverId =
+                approvalSettings.getApproverId();
+
+        log.info(
+                "Fetching Pending MERCHANT Approval Requests. " +
+                        "Approval Level : {}, Approver Id : {}",
+                approvalLevel,
+                approverId);
+
+        //----------------------------------------------------------
+        // Fetch Pending MERCHANT Approval Requests
+        //
+        // Requests already APPROVED by this same Approver
+        // for the same Merchant and Level will be excluded
+        // by the repository query.
+        //----------------------------------------------------------
 
         List<FmMerchantLevel1PendingApprovalProjection> merchantList =
-                approvalRequestRepository.getMerchantLevel1PendingRequests(approvalLevel);
+                approvalRequestRepository.getMerchantLevel1PendingRequests(
+                        approvalLevel,
+                        approverId);
+
+        //----------------------------------------------------------
+        // No Pending Requests Found
+        //----------------------------------------------------------
 
         if (merchantList.isEmpty()) {
 
-            log.info("No Pending Merchant Approval Requests Found.");
+            log.info(
+                    "No Pending MERCHANT Approval Requests Found. " +
+                            "Approver Id : {}",
+                    approverId);
 
             return;
         }
 
-        log.info("Total Pending Merchant Requests : {}", merchantList.size());
+        log.info(
+                "Total Pending MERCHANT Requests : {} for Approver Id : {}",
+                merchantList.size(),
+                approverId);
+
+        //----------------------------------------------------------
+        // Convert Projection to Response DTO
+        //----------------------------------------------------------
 
         for (FmMerchantLevel1PendingApprovalProjection merchant : merchantList) {
 
-            responseList.add(FmApprovalRequestMapper.toMerchantResponse(merchant));
+            responseList.add(
+                    FmApprovalRequestMapper.toMerchantResponse(merchant));
         }
 
-        log.info("Completed Processing Merchant Approval Requests.");
+        //----------------------------------------------------------
+        // Processing Completed
+        //----------------------------------------------------------
+
+        log.info(
+                "Completed Processing MERCHANT Approval Requests. " +
+                        "Approver Id : {}",
+                approverId);
     }
 
-    // 7. HELPER METHOD
+    /** 7. HELPER METHOD
+     * Processes Pending DRIVER Approval Requests
+     * for the configured Approver.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Request must be in PENDING status.
+     * 2. Current Level must match the configured Approval Level.
+     * 3. If the current Approver already approved the same
+     *    Driver at the same Approval Level, the request
+     *    must not be shown again to that Approver.
+     * 4. Approval by another parallel Approver must not
+     *    hide the request from the current Approver.
+     *
+     * @param approvalSettings Approval configuration of the current Approver
+     * @param responseList     Final Pending Approval Response List
+     */
     private void processDriverRequests(
-            String approvalLevel, List<FmLevel1PendingApprovalResponseDTO> responseList) {
+            FmApprovalSettings approvalSettings,
+            List<FmLevel1PendingApprovalResponseDTO> responseList) {
 
-        // Fetch all pending Driver approval requests
+        //----------------------------------------------------------
+        // Extract Approval Configuration
+        //----------------------------------------------------------
+
+        String approvalLevel =
+                approvalSettings.getApprovalLevel();
+
+        Integer approverId =
+                approvalSettings.getApproverId();
+
+        log.info(
+                "Fetching Pending DRIVER Approval Requests. " +
+                        "Approval Level : {}, Approver Id : {}",
+                approvalLevel,
+                approverId);
+
+        //----------------------------------------------------------
+        // Fetch Pending DRIVER Approval Requests
+        //
+        // Requests already APPROVED by this same Approver
+        // for the same Driver and Level will be excluded
+        // by the repository query.
+        //----------------------------------------------------------
+
         List<FmDriverLevel1PendingApprovalProjection> driverRequests =
-                approvalRequestRepository.getDriverLevel1PendingRequests(approvalLevel);
+                approvalRequestRepository.getDriverLevel1PendingRequests(
+                        approvalLevel,
+                        approverId);
+
+        //----------------------------------------------------------
+        // No Pending Requests Found
+        //----------------------------------------------------------
+
+        if (driverRequests.isEmpty()) {
+
+            log.info(
+                    "No Pending DRIVER Approval Requests Found. " +
+                            "Approver Id : {}",
+                    approverId);
+
+            return;
+        }
+
+        log.info(
+                "Total Pending DRIVER Requests : {} for Approver Id : {}",
+                driverRequests.size(),
+                approverId);
+
+        //----------------------------------------------------------
+        // Process each Pending DRIVER Request
+        //----------------------------------------------------------
 
         for (FmDriverLevel1PendingApprovalProjection projection : driverRequests) {
 
-            // Fetch Driver details from Driver Microservice
+            //------------------------------------------------------
+            // Fetch Driver Details from Driver Microservice
+            //------------------------------------------------------
+
             FmDriverApprovalResponseDTO driverResponse =
-                    driverFeignClient.getDriverById(projection.getDriverId());
+                    driverFeignClient.getDriverById(
+                            projection.getDriverId());
 
-            // Fetch Driver Address from FM database
+            //------------------------------------------------------
+            // Fetch Driver Address from FM Database
+            //------------------------------------------------------
+
             FmDriverAddressProjection address =
-                    approvalRequestRepository.getDriverAddress(projection.getDriverId());
+                    approvalRequestRepository.getDriverAddress(
+                            projection.getDriverId());
 
-            responseList.add(FmApprovalRequestMapper.toDriverResponse(
+            //------------------------------------------------------
+            // Convert Driver Details to Response DTO
+            //------------------------------------------------------
+
+            responseList.add(
+                    FmApprovalRequestMapper.toDriverResponse(
                             projection,
                             driverResponse,
-                            address)
-            );
-
+                            address));
         }
+
+        //----------------------------------------------------------
+        // Processing Completed
+        //----------------------------------------------------------
+
+        log.info(
+                "Completed Processing DRIVER Approval Requests. " +
+                        "Approver Id : {}",
+                approverId);
     }
+
 }
+
+

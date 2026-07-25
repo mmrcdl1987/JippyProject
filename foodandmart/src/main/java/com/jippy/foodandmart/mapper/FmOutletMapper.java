@@ -186,7 +186,8 @@ public final class FmOutletMapper {
         outlet.setOutletPhone(dto.getOutletPhone().trim());
         outlet.setOutletEmail(dto.getOutletEmail());
         outlet.setAlternateOutletPhone(dto.getAlternateOutletPhone());
-        outlet.setIsActive("Y");
+        outlet.setIsActive(FmAppConstants.FLAG_YES);
+        outlet.setIsApproved(FmAppConstants.STATUS_FALSE);
         outlet.setUpdatedBy(dto.getUpdatedBy());
 
         return outlet;

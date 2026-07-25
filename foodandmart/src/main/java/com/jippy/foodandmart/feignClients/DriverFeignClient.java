@@ -22,4 +22,10 @@ public interface DriverFeignClient {
 //
     @GetMapping("/api/driver/getDriverById/{driverId}")
     FmDriverApprovalResponseDTO getDriverById(@PathVariable Integer driverId);
+        /**
+         * Calls Driver Service and approves the driver.
+         */
+        @PutMapping("/api/driver/approve/{driverId}")
+        void approveDriver(@PathVariable Integer driverId);
+
     }

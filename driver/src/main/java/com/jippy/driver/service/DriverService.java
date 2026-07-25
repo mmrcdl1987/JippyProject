@@ -13,6 +13,13 @@ public interface DriverService {
 
     DriverDto getDriverDetails(Integer driverId);
 
+    /**
+     * Approves the driver.
+     *
+     * @param driverId Driver Id
+     */
+    void approveDriver(Integer driverId);
+
     String createZones(DriverZoneDto zoneDto);
 
     DriverDto updateDriverDetails(Integer driverId, DriverDto dto);

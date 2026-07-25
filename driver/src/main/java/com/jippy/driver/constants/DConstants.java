@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public class DConstants {
 
     private DConstants(){}
+    public static final Boolean STATUS_FALSE = false;
     public static final String STATUS_200 = "200";
     public static final String STATUS_400 = "400";
     public static final String STATUS_500 = "500";
