@@ -5,13 +5,16 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
 @Table(name = "driver", schema = "jippy_driver")
-@Data
+@Getter
+@Setter
 public class Driver {
 
     @Id
@@ -67,6 +70,12 @@ private String nomineeName;
 
     @Column(name = "updated_by")
     private Integer updatedBy;
+    /**
+     * Indicates whether the Driver has been approved.
+     * Default value is FALSE.
+     */
+    @Column(name = "is_approved")
+    private Boolean isApproved;
 
     // One-to-One mapping with KYC
     @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL)

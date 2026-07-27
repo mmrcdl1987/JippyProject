@@ -218,7 +218,7 @@ public class FmUsersServiceImpl implements IFmUsersService {
     @Override
     public List<FmUserResponseDto> getAllUsers() {
 
-        List<FmUser> users = usersRepo.findByUserType("EMPLOYEE");
+        List<FmUser> users = usersRepo.findByUserType(FmAppConstants.TYPE_EMPLOYEE);
 
         return users.stream().map(user -> {
 
@@ -288,5 +288,74 @@ public class FmUsersServiceImpl implements IFmUsersService {
 
             throw ex;
         }
+    }
+//    ------------USED FOR APPROVALS--------------------------
+    /**
+     * Activates the User based on Entity Type and Entity Id.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Entity Type must be OUTLET, MERCHANT or DRIVER.
+     * 2. User must exist for the given Entity Id and Entity Type.
+     * 3. User Status will be updated from N to Y.
+     * 4. Updated By will contain the Approver Id.
+     *
+     * @param entityType Entity Type
+     * @param entityId   Entity Id
+     * @param approverId Approver Id
+     */
+    @Override
+    public void activateUser(
+            String entityType,
+            Integer entityId,
+            Integer approverId) {
+
+        log.info(
+                "Started User Activation. Entity Type : {}, Entity Id : {}, Approver Id : {}",
+                entityType,
+                entityId,
+                approverId);
+
+        //----------------------------------------------------------
+        // Validate Supported Entity Type
+        //----------------------------------------------------------
+
+        if (!FmAppConstants.TYPE_OUTLET.equalsIgnoreCase(entityType)
+                && !FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(entityType)
+                && !FmAppConstants.TYPE_DRIVER.equalsIgnoreCase(entityType)) {
+
+            log.error(
+                    "Unsupported Entity Type for User Activation : {}",
+                    entityType);
+
+            throw new IllegalArgumentException(
+                    FmAppConstants.MSG_UNSUPPORTED_ENTITY_TYPE + entityType);
+        }
+
+        //----------------------------------------------------------
+        // Activate User
+        //----------------------------------------------------------
+
+        int updatedRows = usersRepo.activateUser(entityId, entityType, approverId);
+
+        //----------------------------------------------------------
+        // Validate Update
+        //----------------------------------------------------------
+
+        if (updatedRows == 0) {
+
+            log.warn("No User found for activation. Entity Type : {}, Entity Id : {}",
+                    entityType, entityId);
+
+            return;
+        }
+
+        //----------------------------------------------------------
+        // User Activated Successfully
+        //----------------------------------------------------------
+
+        log.info("User Activated Successfully. Entity Type : {}, Entity Id : {}, Updated By : {}",
+                entityType, entityId, approverId);
     }
 }

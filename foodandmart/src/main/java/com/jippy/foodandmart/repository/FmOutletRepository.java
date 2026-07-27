@@ -22,13 +22,13 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
 
     boolean existsByOutletPhone(String phone);
 
- boolean existsByOutletEmail(String outletEmail);
+    boolean existsByOutletEmail(String outletEmail);
 
- boolean existsByMerchantIdAndOutletName(Integer merchantId, String outletName);
+    boolean existsByMerchantIdAndOutletName(Integer merchantId, String outletName);
 
     List<FmOutlet> findByMerchantId(Integer merchantId);
 
-   // for finding the email in te outlet table
+    // for finding the email in te outlet table
     Optional<FmOutlet> findByOutletEmailIgnoreCase(String outletEmail);
 
     @Query(value = """
@@ -45,13 +45,13 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            ST_Y(o.outlet_location::geometry) AS latitude,
                            ST_X(o.outlet_location::geometry) AS longitude,
                            o.is_toggle AS outlet_available,     -- jippy_fm.outlets
-           
+            
                            -- Outlet bank details (from user_bank_details table)
                            ubd.account_number,
                            ubd.ifsc_code,
                            ubd.bank_name,
                            ubd.account_holder_name,
-                           
+            
                            -- Outlet address details (from address table)
                            a.building_number,
                            a.road,
@@ -63,7 +63,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            a.area_id,
                            ar.area_name,
             
-           
+            
                            --- online pricing details (from product_online_pricing table)
                            --product_id from product_online_pricing table 
                            pop.product_id AS pop_id,          -- jippy_fm.product_online_pricing
@@ -83,7 +83,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                            p.is_veg,             -- jippy_fm.products
                            p.has_product_variants, -- jippy_fm.products
                            p.is_toggle AS product_available,       -- jippy_fm.products
-                           
+            
                            -- Product Variant Details (from product_variants table)
                            pv.product_variant_options_id,
                           --  pv.variant_name,
@@ -108,29 +108,29 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             
                        -- Start from outlet (main table: jippy_fm.outlets)
                        FROM jippy_fm.outlets o
-                       
+            
                        -- Fetch outlet bank details
                        LEFT JOIN jippy_fm.user_bank_details ubd
                               ON ubd.recipient_id = o.outlet_id
                              AND ubd.user_type = 'OUTLET'
-                             
+            
                        -- Fetch outlet address
                        LEFT JOIN jippy_fm.address a
                               ON a.jippy_address_id = o.outlet_id
                              AND a.address_type = 'OUTLET'
-      
+            
                        -- Fetch state details
                        LEFT JOIN jippy_fm.state st
                               ON st.state_id = a.state_id
-      
+            
                        -- Fetch city details
                        LEFT JOIN jippy_fm.city ct
                               ON ct.city_id = a.city_id
-      
+            
                        -- Fetch area details
                        LEFT JOIN jippy_fm.area ar
                               ON ar.area_id = a.area_id
-           
+            
                        -- Join outlet_categories (maps outlet to categories)
                        JOIN jippy_fm.outlet_categories oc
                            ON o.outlet_id = oc.outlet_id
@@ -152,7 +152,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                             LEFT JOIN jippy_fm.product_online_pricing pop
                                ON p.product_id = pop.product_id
                                AND p.outlet_category_id = pop.outlet_category_id
-                               
+            
                   -- Fetch product variants
                   LEFT JOIN jippy_fm.product_variant_options pv
                          ON pv.product_id = p.product_id             
@@ -374,7 +374,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             
             """, nativeQuery = true)
     List<Object[]> findCustomerNearbyOutlets(@Param("customerLat") double customerLat,
-            @Param("customerLng") double customerLng,@Param("categoryId") Integer categoryId);
+                                             @Param("customerLng") double customerLng, @Param("categoryId") Integer categoryId);
 
 
     @Query(value = """
@@ -444,119 +444,131 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                     LIMIT 1
             """, nativeQuery = true)
     FmOutletSettlementProjection getOutletDetailsAndAreaAddressForSettlement(@Param("outletId") Integer outletId);
- @Query(value = """
-        SELECT o.*
-        FROM jippy_fm.outlets o
 
-        JOIN jippy_fm.address a
-        ON o.outlet_id = a.jippy_address_id
+    @Query(value = """
+            SELECT o.*
+            FROM jippy_fm.outlets o
+            
+            JOIN jippy_fm.address a
+            ON o.outlet_id = a.jippy_address_id
+            
+            WHERE a.area_id = :areaId
+            AND o.is_active = 'Y'
+            AND o.is_approved = true
+            """,
+            nativeQuery = true)
+    List<FmOutlet> getOutletsByAreaId(Integer areaId);
 
-        WHERE a.area_id = :areaId
-        AND o.is_active = 'Y'
-        AND o.is_approved = true
-        """,
-         nativeQuery = true)
- List<FmOutlet> getOutletsByAreaId(Integer areaId);
 
-
- // this query checks if an outlet with the same name already exists for the given merchant and area,
+    // this query checks if an outlet with the same name already exists for the given merchant and area,
 // ignoring case and whitespace differences. It returns true if such an outlet exists, otherwise false.
- @Query(value = """
-    SELECT EXISTS (
-        SELECT 1
-        FROM jippy_fm.outlets o
-        JOIN jippy_fm.address a
-          ON o.outlet_id = a.jippy_address_id
-         AND a.address_type = 'OUTLET'
-        WHERE o.merchant_id = :merchantId
-          AND LOWER(TRIM(o.outlet_name)) = LOWER(TRIM(:outletName))
-          AND a.area_id = :areaId
-    )
-    """, nativeQuery = true)
- boolean existsByMerchantAndOutletNameAndArea(@Param("merchantId") Integer merchantId,
-                                              @Param("outletName") String outletName,
-                                              @Param("areaId") Integer areaId);
+    @Query(value = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM jippy_fm.outlets o
+                JOIN jippy_fm.address a
+                  ON o.outlet_id = a.jippy_address_id
+                 AND a.address_type = 'OUTLET'
+                WHERE o.merchant_id = :merchantId
+                  AND LOWER(TRIM(o.outlet_name)) = LOWER(TRIM(:outletName))
+                  AND a.area_id = :areaId
+            )
+            """, nativeQuery = true)
+    boolean existsByMerchantAndOutletNameAndArea(@Param("merchantId") Integer merchantId,
+                                                 @Param("outletName") String outletName,
+                                                 @Param("areaId") Integer areaId);
 
 
-// ---------------------------------FOR -APPROVALS-----------------------------------
-                            /* Fetch all pending outlets for the logged-in approver.
-                            *
-                            * Flow
-                            *
-                            * approval_settings
-                            *      ↓
-                            * employee
-                            *      ↓
-                            * employee address
-                            *      ↓
-                            * area
-                            *      ↓
-                            * outlet address
-                            *      ↓
-                            * outlets
-                            *
-                            * Conditions
-                            *
-                            * 1. approver_id must match.
-                            * 2. entity_type must match.
-                            * 3. Employee address should be EMPLOYEE.
-                            * 4. Outlet address should be OUTLET.
-                            * 5. Area Id should be same.
-                            * 6. Outlet must not be approved.
-                            * 7. Outlet should be created within last 24 hours.
-                            */
-@Query(value = """                         
-                         SELECT
-                         o.outlet_id              AS outletId,
-                         o.outlet_name            AS outletName,
-                         o.merchant_id            AS merchantId,
-                         o.cuisine_type           AS cuisineType,
-                         o.outlet_phone           AS outletPhone,
-                         o.outlet_email           AS outletEmail,
-                         o.is_approved            AS isApproved,
-                         o.created_at             AS createdAt
-                         
-                         FROM jippy_fm.approval_settings aps
-                         
-                         /* Verify Approver Employee */
-                         
-                         INNER JOIN jippy_fm.employees emp
-                         ON emp.employee_id = aps.approver_id
-                         
-                         /* Fetch Employee Address */
-                         
-                         INNER JOIN jippy_fm.address emp_addr
-                         ON emp_addr.jippy_address_id = emp.employee_id
-                         AND emp_addr.address_type='EMPLOYEE'
-                         
-                         /* Fetch all Outlet Addresses belonging to same Area */
-                         
-                         INNER JOIN jippy_fm.address outlet_addr
-                         ON outlet_addr.area_id = emp_addr.area_id
-                         AND outlet_addr.address_type='OUTLET'
-                         
-                         /* Fetch Outlets */
-                         INNER JOIN jippy_fm.outlets o
-                         ON o.outlet_id = outlet_addr.jippy_address_id
-                         
-                         WHERE
-                         
-                         aps.approver_id = :approverId
-                         
-                         AND aps.entity_type = :entityType
-                         
-                         AND aps.is_active = TRUE
-                         
-                         AND o.is_approved = FALSE
-                         
-                         AND o.created_at >= NOW() - INTERVAL '24 HOURS'
-                         
-                         ORDER BY o.created_at DESC""", nativeQuery = true)
+    // ---------------------------------FOR -APPROVALS-----------------------------------
+    /* Fetch all pending outlets for the logged-in approver.
+     *
+     * Flow
+     *
+     * approval_settings
+     *      ↓
+     * employee
+     *      ↓
+     * employee address
+     *      ↓
+     * area
+     *      ↓
+     * outlet address
+     *      ↓
+     * outlets
+     *
+     * Conditions
+     *
+     * 1. approver_id must match.
+     * 2. entity_type must match.
+     * 3. Employee address should be EMPLOYEE.
+     * 4. Outlet address should be OUTLET.
+     * 5. Area Id should be same.
+     * 6. Outlet must not be approved.
+     * 7. Outlet should be created within last 24 hours.
+     */
+    @Query(value = """                         
+            SELECT
+            o.outlet_id              AS outletId,
+            o.outlet_name            AS outletName,
+            o.merchant_id            AS merchantId,
+            o.cuisine_type           AS cuisineType,
+            o.outlet_phone           AS outletPhone,
+            o.outlet_email           AS outletEmail,
+            o.is_approved            AS isApproved,
+            o.created_at             AS createdAt
+            
+            FROM jippy_fm.approval_settings aps
+            
+            /* Verify Approver Employee */
+            
+            INNER JOIN jippy_fm.employees emp
+            ON emp.employee_id = aps.approver_id
+            
+            /* Fetch Employee Address */
+            
+            INNER JOIN jippy_fm.address emp_addr
+            ON emp_addr.jippy_address_id = emp.employee_id
+            AND emp_addr.address_type='EMPLOYEE'
+            
+            /* Fetch all Outlet Addresses belonging to same Area */
+            
+            INNER JOIN jippy_fm.address outlet_addr
+            ON outlet_addr.area_id = emp_addr.area_id
+            AND outlet_addr.address_type='OUTLET'
+            
+            /* Fetch Outlets */
+            INNER JOIN jippy_fm.outlets o
+            ON o.outlet_id = outlet_addr.jippy_address_id
+            
+            WHERE
+            
+            aps.approver_id = :approverId
+            
+            AND aps.entity_type = :entityType
+            
+            AND aps.is_active = TRUE
+            
+            AND o.is_approved = FALSE
+            
+            AND o.created_at >= NOW() - INTERVAL '24 HOURS'
+            
+            ORDER BY o.created_at DESC""", nativeQuery = true)
+    List<FmPendingOutletApprovalProjection> getPendingOutletApprovalRequestsByEntityType(
+            @Param("approverId") Integer approverId,
+            @Param("entityType") String entityType);
 
-  List<FmPendingOutletApprovalProjection> getPendingOutletApprovalRequestsByEntityType(
-                                 @Param("approverId") Integer approverId,
-                                 @Param("entityType") String entityType);
+    /**
+     * Approve Outlet.
+     */
+    @Modifying
+    @Query("""
+            UPDATE FmOutlet
+            SET isApproved = true
+            WHERE outletId = :outletId
+            """)
+    int approveOutlet(
+            @Param("outletId") Integer outletId);
 
-  }
+}
 
 

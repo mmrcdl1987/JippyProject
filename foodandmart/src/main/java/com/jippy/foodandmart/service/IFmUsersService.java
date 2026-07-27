@@ -9,6 +9,26 @@ import com.jippy.foodandmart.entity.FmUser;
 import java.util.List;
 
 public interface IFmUsersService {
+
+    /**
+     * Activates the User after successful Entity Approval.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Supports OUTLET, MERCHANT and DRIVER.
+     * 2. Finds the User using Entity Id and Entity Type.
+     * 3. Changes User Status from N to Y.
+     * 4. Stores the Approver Id in updated_by.
+     *
+     * @param entityType Entity Type
+     * @param entityId   Entity Id
+     * @param approverId Approver Id
+     */
+    void activateUser(
+            String entityType,
+            Integer entityId,
+            Integer approverId);
     // -------------------------------
     // DEACTIVATE DRIVER
     // -------------------------------

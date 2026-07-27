@@ -204,6 +204,29 @@ public class DriverServiceImpl implements DriverService {
         return DriverMapper.mapToDriverDto(driver, address);
     }
 
+    /**
+     * Approves the driver.
+     */
+    @Override
+    public void approveDriver(Integer driverId) {
+
+        log.info("Started Driver Approval. Driver Id : {}", driverId);
+
+        // Validate Driver
+        if (!driverRepository.existsById(driverId)) {
+
+            log.error("Driver Not Found. Driver Id : {}", driverId);
+
+            throw new ResourceNotFoundException(
+                    "Driver Not Found : " + driverId);
+        }
+
+        // Update approval status
+        driverRepository.approveDriver(driverId);
+
+        log.info("Driver Approval Completed Successfully. Driver Id : {}", driverId);
+    }
+
     //    updating driver details, only editable fields (not phone, email, or KYC)
 //    and address details through feign client
     @Override

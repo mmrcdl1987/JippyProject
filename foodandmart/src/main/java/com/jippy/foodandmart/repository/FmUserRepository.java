@@ -3,6 +3,9 @@ package com.jippy.foodandmart.repository;
 import com.jippy.foodandmart.entity.FmUser;
 import org.apache.catalina.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,5 +31,29 @@ public interface FmUserRepository extends JpaRepository<FmUser, Integer> {
 
     Optional<FmUser> findByUsersId(Integer usersId);
 
+
+    /**
+     * Activates the User for the given Entity ID and Entity Type.
+     *
+     * Example:
+     *
+     * entityId   = 226
+     * entityType = OUTLET
+     *
+     * Updates:
+     * is_active = Y
+     */
+    @Modifying
+    @Query(value = """
+        UPDATE jippy_fm.users
+        SET is_active = 'Y',
+            updated_at = CURRENT_TIMESTAMP,
+            updated_by = :updatedBy
+        WHERE user_id = :entityId
+          AND UPPER(user_type) = UPPER(:entityType)
+        """, nativeQuery = true)
+    int activateUser(@Param("entityId") Integer entityId,
+            @Param("entityType") String entityType,
+            @Param("updatedBy") Integer updatedBy);
     List<FmUser> findByUserType(String userType);
 }

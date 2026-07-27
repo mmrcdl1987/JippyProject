@@ -5,12 +5,44 @@ public final class FmAppConstants {
 
     private FmAppConstants() {
     }
+    public static final Boolean STATUS_FALSE = false;
+
 
     // -------------------- Approval Request --------------------
 
     public static final String APPROVAL_LEVEL_1 = "Level 1";
+    public static final String APPROVAL_LEVEL_2 = "Level 2";
+    public static final String APPROVAL_LEVEL_3 = "Level 3";
+    public static final String APPROVAL_STATUS_AUTO_APPROVED = "AUTO_APPROVED";
+    public static final Integer SYSTEM_APPROVER_ID = 0;
 
     public static final String APPROVAL_STATUS_PENDING = "PENDING";
+    public static final String APPROVAL_STATUS_APPROVED = "APPROVED";
+    public static final String APPROVAL_STATUS_REJECTED = "REJECTED";
+
+//  -------------------------Response messages------------------------------
+public static final String MSG_APPROVAL_REQUEST_UPDATED =
+        "Approval Requests Updated Successfully.";
+    public static final String MSG_REJECTED_REASON_REQUIRED =
+            "Rejected Reason is mandatory when Status is REJECTED.";
+
+    public static final String MSG_REJECTED_REASON_NOT_ALLOWED =
+            "Rejected Reason must be empty when Status is APPROVED.";
+
+    public static final String MSG_APPROVER_NOT_FOUND =
+            "Approver Not Found : ";
+
+    public static final String MSG_APPROVAL_REQUEST_NOT_FOUND =
+            "Approval Request IDs not found : ";
+
+    public static final String MSG_DUPLICATE_APPROVAL_REQUEST =
+            "Duplicate Approval Request ID Found : ";
+
+    public static final String MSG_UNSUPPORTED_ENTITY_TYPE =
+            "Unsupported Entity Type : ";
+    public static final String MSG_APPROVAL_REQUEST_UPDATED_SUCCESS =
+            "Approval Requests Updated Successfully.";
+//    ---------------------------------------------------------------------------------------
     /**
      * Workflow Types for Approval Process.
      */
@@ -66,10 +98,6 @@ public final class FmAppConstants {
 
     // ── Address Type ─────────────────────────────────────────────────────────
     public static final String ADDRESS_TYPE_OUTLET = "OUTLET";
-
-    // ── Menu Copy Status ──────────────────────────────────────────────────────
-    public static final String COPY_STATUS_SUCCESS = "SUCCESS";
-    public static final String COPY_STATUS_FAILED = "FAILED";
 
     public static final String UN_APPROVED = "NOT_APPROVED";
 

@@ -122,7 +122,8 @@ public final class FmMerchantMapper {
         merchant.setMerchantBusinessType(dto.getOutletType());
         merchant.setIsActive(FmAppConstants.FLAG_YES);
         merchant.setStatus(FmAppConstants.STATUS_PENDING);
-        merchant.setIsApproved(Boolean.valueOf(FmAppConstants.UN_APPROVED));
+//        merchant.setIsApproved(Boolean.valueOf(FmAppConstants.UN_APPROVED));
+        merchant.setIsApproved(FmAppConstants.STATUS_FALSE);
         merchant.setCreatedAt(LocalDateTime.now());
         return merchant;
     }
@@ -247,7 +248,7 @@ public final class FmMerchantMapper {
         user.setPassword(password);
         user.setUserId(merchantId);
         user.setUserType(userType);
-        user.setIsActive(FmAppConstants.FLAG_YES);
+        user.setIsActive(FmAppConstants.FLAG_NO);
         return user;
     }
 
