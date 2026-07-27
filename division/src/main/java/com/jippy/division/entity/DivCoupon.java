@@ -3,32 +3,33 @@ package com.jippy.division.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "coupons" ,schema = "jippy_division")
+@Table(name = "coupons", schema = "jippy_division")
 @Data
 public class DivCoupon {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "coupon_id")
-    private  Integer couponId;
+    private Integer couponId;
 
-    @Column(name = "coupon_code")
+    @Column(name = "coupon_code", nullable = false)
     private String couponCode;
 
-    @Column(name = "application_type")
+    @Column(name = "application_type", nullable = false)
     private Integer applicationType;
 
-    @Column(name = "price_model_id")
+    @Column(name = "price_model_id", nullable = false)
     private Integer priceModelId;
 
     @Column(name = "min_order_value")
-    private Double minOrderValue;
+    private BigDecimal minOrderValue;
 
-    @Column(name = "discount_value")
-    private Double discountValue;
+    @Column(name = "discount_value", nullable = false)
+    private BigDecimal discountValue;
 
     @Column(name = "payment_method")
     private Integer paymentMethod;
@@ -45,16 +46,18 @@ public class DivCoupon {
     @Column(name = "end_time")
     private LocalDateTime endTime;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "created_by", updatable = false)
+    private Integer createdBy;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "created_by")
-    private Integer createdBy;
-
     @Column(name = "updated_by")
     private Integer updatedBy;
 
+    @Column(name = "user_type")
+    private String userType;
 }

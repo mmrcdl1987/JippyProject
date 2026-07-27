@@ -1,85 +1,115 @@
 package com.jippy.division.mapper;
 
-import com.jippy.division.dto.DivPriceModelDto;
 import com.jippy.division.dto.DivCouponRequestDto;
 import com.jippy.division.dto.DivCouponResponseDto;
+import com.jippy.division.dto.DivPriceModelDto;
 import com.jippy.division.entity.DivCoupon;
 import com.jippy.division.entity.DivPriceModel;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DivCouponMapper {
 
-
-    public static DivCoupon toEntity(DivCoupon divCoupon, DivCouponRequestDto divCouponRequestDto) {
-
-        if(divCouponRequestDto.getCouponCode() != null){
-            divCoupon.setCouponCode(divCouponRequestDto.getCouponCode());
-        }
-        if(divCouponRequestDto.getApplicationType() != null){
-            divCoupon.setApplicationType(divCouponRequestDto.getApplicationType());
-        }
-        if(divCouponRequestDto.getPriceModelId() != null){
-            divCoupon.setPriceModelId(divCouponRequestDto.getPriceModelId());
-        }
-        if(divCouponRequestDto.getDiscountValue() != null){
-            divCoupon.setDiscountValue(divCouponRequestDto.getDiscountValue());
-        }
-
-        if(divCouponRequestDto.getPaymentMode() != null){
-            divCoupon.setPaymentMethod(divCouponRequestDto.getPaymentMode());
-        }
-        if(divCouponRequestDto.getDiscountValue() != null){
-            divCoupon.setMinOrderValue(divCouponRequestDto.getMinOrderValue());
-        }
-        if(divCouponRequestDto.getStartDate() != null){
-            divCoupon.setStartTime(divCouponRequestDto.getStartDate());
-        }
-        if(divCouponRequestDto.getEndDate() != null){
-            divCoupon.setEndTime(divCouponRequestDto.getEndDate());
-        }
-        if(divCouponRequestDto.getUsageLimitPerUser() != null){
-            divCoupon.setUsageLimitPerUser(divCouponRequestDto.getUsageLimitPerUser());
-        }
-        if(divCouponRequestDto.getCreatedBy() != null){
-            divCoupon.setCreatedBy(divCouponRequestDto.getCreatedBy());
-        }
-
-        divCoupon.setIsActive(true);
-        divCoupon.setCreatedAt(LocalDateTime.now());
-
-        return divCoupon;
+    private DivCouponMapper() {
     }
 
-    // ENTITY → DTO
-    public static DivCouponResponseDto toDTO(DivCoupon divCoupon) {
+    public static DivCoupon toEntity(DivCoupon coupon, DivCouponRequestDto dto) {
 
-        if (divCoupon == null) return null;
+        if (dto.getCouponCode() != null) {
+            coupon.setCouponCode(dto.getCouponCode());
+        }
 
-        DivCouponResponseDto divCouponResponseDto = new DivCouponResponseDto();
+        if (dto.getApplicationType() != null) {
+            coupon.setApplicationType(dto.getApplicationType());
+        }
 
-        divCouponResponseDto.setId(divCoupon.getCouponId());
-        divCouponResponseDto.setCode(divCoupon.getCouponCode());
-        divCouponResponseDto.setType(divCoupon.getApplicationType());
-        divCouponResponseDto.setDiscountValue(divCoupon.getDiscountValue());
-        divCouponResponseDto.setIsActive(divCoupon.getIsActive());
+        if (dto.getPriceModelId() != null) {
+            coupon.setPriceModelId(dto.getPriceModelId());
+        }
 
-        return divCouponResponseDto;
+        if (dto.getMinOrderValue() != null) {
+            coupon.setMinOrderValue(dto.getMinOrderValue());
+        }
+
+        if (dto.getDiscountValue() != null) {
+            coupon.setDiscountValue(dto.getDiscountValue());
+        }
+
+        if (dto.getPaymentMethod() != null) {
+            coupon.setPaymentMethod(dto.getPaymentMethod());
+        }
+
+        if (dto.getUsageLimitPerUser() != null) {
+            coupon.setUsageLimitPerUser(dto.getUsageLimitPerUser());
+        }
+
+        if (dto.getStartDate() != null) {
+            coupon.setStartTime(dto.getStartDate());
+        }
+
+        if (dto.getEndDate() != null) {
+            coupon.setEndTime(dto.getEndDate());
+        }
+
+        if (dto.getUserType() != null) {
+            coupon.setUserType(dto.getUserType());
+        }
+
+        return coupon;
     }
 
-    public static List<DivPriceModelDto> topriceDto(List<DivPriceModel> priceModelList) {
+    public static DivCouponResponseDto toDto(DivCoupon coupon) {
 
-        List<DivPriceModelDto> priceModelDtoList = new ArrayList<>();
-        for(DivPriceModel priceModel:priceModelList){
-            DivPriceModelDto priceModelDto = new DivPriceModelDto();
-            priceModelDto.setPriceModelId(priceModel.getPriceModelId());
-            priceModelDto.setPriceModelName(priceModel.getPriceModelName());
-            priceModelDto.setCreatedBy(priceModel.getCreatedBy());
-            priceModelDto.setCreatedAt(priceModel.getCreatedAt());
-            priceModelDtoList.add(priceModelDto);
+        if (coupon == null) {
+            return null;
         }
-        return priceModelDtoList;
+
+        DivCouponResponseDto dto = new DivCouponResponseDto();
+
+        dto.setCouponId(coupon.getCouponId());
+        dto.setCouponCode(coupon.getCouponCode());
+        dto.setApplicationType(coupon.getApplicationType());
+        dto.setPriceModelId(coupon.getPriceModelId());
+        dto.setMinOrderValue(coupon.getMinOrderValue());
+        dto.setDiscountValue(coupon.getDiscountValue());
+        dto.setPaymentMethod(coupon.getPaymentMethod());
+        dto.setUsageLimitPerUser(coupon.getUsageLimitPerUser());
+        dto.setIsActive(coupon.getIsActive());
+        dto.setStartTime(coupon.getStartTime());
+        dto.setEndTime(coupon.getEndTime());
+        dto.setUserType(coupon.getUserType());
+
+        return dto;
+    }
+
+    public static List<DivCouponResponseDto> toDtoList(List<DivCoupon> coupons) {
+
+        List<DivCouponResponseDto> dtoList = new ArrayList<>();
+
+        for (DivCoupon coupon : coupons) {
+            dtoList.add(toDto(coupon));
+        }
+
+        return dtoList;
+    }
+
+    public static List<DivPriceModelDto> toPriceModelDto(List<DivPriceModel> priceModels) {
+
+        List<DivPriceModelDto> dtoList = new ArrayList<>();
+
+        for (DivPriceModel model : priceModels) {
+
+            DivPriceModelDto dto = new DivPriceModelDto();
+
+            dto.setPriceModelId(model.getPriceModelId());
+            dto.setPriceModelName(model.getPriceModelName());
+            dto.setCreatedBy(model.getCreatedBy());
+            dto.setCreatedAt(model.getCreatedAt());
+
+            dtoList.add(dto);
+        }
+
+        return dtoList;
     }
 }

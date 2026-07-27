@@ -50,18 +50,24 @@ public class DivCouponController {
     /**
      * API to update existing coupon
      */
-    @PutMapping("/{id}")
-    public ResponseEntity<DivResponseDto> updateCoupon(@Valid @RequestBody DivCouponRequestDto divCouponRequestDto) {
+    @PutMapping("/{couponId}")
+    public ResponseEntity<DivResponseDto> updateCoupon(
+            @PathVariable Integer couponId,
+            @Valid @RequestBody DivCouponRequestDto divCouponRequestDto) {
 
-        logger.info("API updateCoupon initiated id={}",divCouponRequestDto.getCouponId());
+        divCouponRequestDto.setCouponId(couponId);
+
+        logger.info("API updateCoupon initiated. CouponId={}", couponId);
 
         couponService.updateCoupon(divCouponRequestDto);
 
-        logger.info("API updateCoupon success id={}", divCouponRequestDto.getCouponId());
+        logger.info("API updateCoupon completed successfully. CouponId={}", couponId);
 
-        return ResponseEntity.ok(new DivResponseDto(DivAppConstants.STATUS_200, "Coupon updated successfully"));
+        return ResponseEntity.ok(
+                new DivResponseDto(
+                        DivAppConstants.STATUS_200,
+                        "Coupon updated successfully"));
     }
-
     /**
      * API to disable coupon
      */
@@ -97,18 +103,25 @@ public class DivCouponController {
      * API to fetch all coupons
      */
 
-    @GetMapping
-    public ResponseEntity<List<DivCouponResponseDto>> getAllCoupons(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+    @GetMapping("/{couponId}")
+    public ResponseEntity<DivCouponResponseDto> getCouponById(
+            @PathVariable Integer couponId) {
 
-        logger.info("API getAllCoupons initiated");
+        logger.info("API getCouponById initiated. CouponId={}", couponId);
 
-        List<DivCouponResponseDto> coupons = couponService.getAllCoupons(page, size);
+        DivCouponResponseDto coupon = couponService.getCouponById(couponId);
 
-        logger.info("API getAllCoupons success, count={}", coupons.size());
+        logger.info("API getCouponById completed successfully. CouponId={}", couponId);
 
-        return ResponseEntity.ok(coupons);
+        return ResponseEntity.ok(coupon);
+    }
+
+    @GetMapping("/welcome")
+    public ResponseEntity<List<DivCouponResponseDto>> getActiveWelcomeCoupons() {
+
+        return ResponseEntity.ok(
+                couponService.getActiveWelcomeCoupons());
+
     }
 
 

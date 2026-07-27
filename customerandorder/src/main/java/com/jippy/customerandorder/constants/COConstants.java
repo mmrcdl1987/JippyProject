@@ -154,6 +154,7 @@ public class COConstants {
     public static final String GROUP_ORDER_STATUS_EXPIRED = "EXPIRED";
 
     public static final String GROUP_ORDER_ORDER_TYPE = "GROUP_ORDER";
+    public static final String ORDER_STATUS_DELIVERED = "DELIVERED";
 
     public static final String COMMUNITY_ORDER_ORDER_TYPE = "COMMUNITY_ORDER";
 
