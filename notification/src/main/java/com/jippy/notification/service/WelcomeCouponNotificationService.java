@@ -4,7 +4,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.jippy.notification.dto.WelcomeCouponNotificationEvent;
-import com.jippy.notification.entity.DeviceToken;
+import com.jippy.notification.entity.NDeviceToken;
 import com.jippy.notification.entity.Notification;
 import com.jippy.notification.entity.OrderNotificationStatus;
 import com.jippy.notification.exception.NotificationException;
@@ -46,7 +46,7 @@ public class WelcomeCouponNotificationService {
 
             validateEvent(event);
 
-            DeviceToken deviceToken = deviceTokenRepository
+            NDeviceToken deviceToken = deviceTokenRepository
                     .findByUserIdAndUserType(event.getCustomerId(), CUSTOMER)
                     .orElseThrow(() ->
                             new NotificationException("Device token not found"));
@@ -136,7 +136,7 @@ public class WelcomeCouponNotificationService {
         }
     }
 
-    private void sendFirebaseNotification(DeviceToken deviceToken,
+    private void sendFirebaseNotification(NDeviceToken deviceToken,
                                           Notification notification,
                                           WelcomeCouponNotificationEvent event) {
 

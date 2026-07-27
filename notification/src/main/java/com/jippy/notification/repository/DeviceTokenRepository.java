@@ -1,6 +1,6 @@
 package com.jippy.notification.repository;
 
-import com.jippy.notification.entity.DeviceToken;
+import com.jippy.notification.entity.NDeviceToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,22 +9,28 @@ import java.util.Optional;
 
 @Repository
 public interface DeviceTokenRepository
-        extends JpaRepository<DeviceToken, Integer> {
+        extends JpaRepository<NDeviceToken, Integer> {
 
-    Optional<DeviceToken> findByUserIdAndUserType(
+    Optional<NDeviceToken> findByUserIdAndUserType(
             Integer userId,
             String userType
     );
 
-    List<DeviceToken> findAllByUserIdAndUserType(
+    List<NDeviceToken> findAllByUserIdAndUserType(
             Integer userId,
             String userType
     );
 
-    Optional<DeviceToken> findByFcmToken(String fcmToken);
+    Optional<NDeviceToken> findByFcmToken(String fcmToken);
 
     void deleteByUserIdAndUserType(
             Integer userId,
             String userType
     );
+    Optional<NDeviceToken> findByUserIdAndUserTypeAndDeviceType(
+            Integer userId,
+            String userType,
+            String deviceType
+    );
+
 }
