@@ -1,9 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
-import com.jippy.foodandmart.dto.FmApprovalRequestDTO;
-import com.jippy.foodandmart.dto.FmDriverApprovalResponseDTO;
-import com.jippy.foodandmart.dto.FmLevel1PendingApprovalResponseDTO;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmApprovalRequest;
 import com.jippy.foodandmart.entity.FmApprovalSettings;
 import com.jippy.foodandmart.entity.FmManagerAreas;
@@ -11,10 +9,7 @@ import com.jippy.foodandmart.entity.FmOutletAddress;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DriverFeignClient;
 import com.jippy.foodandmart.mapper.FmApprovalRequestMapper;
-import com.jippy.foodandmart.projections.FmDriverAddressProjection;
-import com.jippy.foodandmart.projections.FmDriverLevel1PendingApprovalProjection;
-import com.jippy.foodandmart.projections.FmMerchantLevel1PendingApprovalProjection;
-import com.jippy.foodandmart.projections.FmOutletLevel1PendingApprovalProjection;
+import com.jippy.foodandmart.projections.*;
 import com.jippy.foodandmart.repository.FmApprovalRequestRepository;
 import com.jippy.foodandmart.repository.FmApprovalSettingsRepository;
 import com.jippy.foodandmart.repository.FmManagerAreasRepository;
@@ -24,7 +19,9 @@ import jakarta.persistence.criteria.From;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -182,7 +179,144 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
 
         return responseList;
     }
-//--------------------------------------------------------------------------------------------
+
+    /**
+     * Changes an Approval Request from REJECTED status
+     * back to PENDING status.
+     *
+     * <p>
+     * Processing Flow:
+     *
+     * 1. Find Approval Request using Approval Request Id.
+     * 2. Throw ResourceNotFoundException if request does not exist.
+     * 3. Validate that current status is REJECTED.
+     * 4. Reject the operation when status is not REJECTED.
+     * 5. Change status from REJECTED to PENDING.
+     * 6. Keep Entity Type, Entity Id and Current Level unchanged.
+     * 7. Update audit information.
+     * 8. Save the Approval Request.
+     * 9. Return updated Approval Request information.
+     *
+     * @param requestDTO Request containing Approval Request Id and Updated By
+     * @return Updated Approval Request details
+     */
+    @Override
+    @Transactional
+    public FmRejectedApprovalToPendingResponseDTO updateRejectedApprovalsToPending(
+            FmRejectedApprovalToPendingRequestDTO requestDTO) {
+
+        log.info(
+                "Started updating Rejected Approval Request to PENDING. " +
+                        "Approval Request Id : {}, Updated By : {}",
+                requestDTO.getApprovalRequestId(),
+                requestDTO.getUpdatedBy());
+
+        //----------------------------------------------------------
+        // Step 1: Fetch Approval Request
+        //----------------------------------------------------------
+
+        FmApprovalRequest approvalRequest =
+                approvalRequestRepository
+                        .findById(requestDTO.getApprovalRequestId())
+                        .orElseThrow(() -> {
+
+                            log.warn(
+                                    "Approval Request not found. Approval Request Id : {}",
+                                    requestDTO.getApprovalRequestId());
+
+                            return new ResourceNotFoundException(
+                                    "Approval Request not found with Id : "
+                                            + requestDTO.getApprovalRequestId());
+                        });
+
+        log.debug(
+                "Approval Request found. Id : {}, Entity Type : {}, " +
+                        "Entity Id : {}, Current Level : {}, Status : {}",
+                approvalRequest.getApprovalRequestId(),
+                approvalRequest.getEntityType(),
+                approvalRequest.getEntityId(),
+                approvalRequest.getCurrentLevel(),
+                approvalRequest.getStatus());
+
+        //----------------------------------------------------------
+        // Step 2: Validate Current Status
+        //
+        // Business Rule:
+        // Only REJECTED Approval Requests are allowed to
+        // move back to PENDING.
+        //----------------------------------------------------------
+
+        if (!FmAppConstants.APPROVAL_STATUS_REJECTED
+                .equalsIgnoreCase(approvalRequest.getStatus())) {
+
+            log.warn(
+                    "Approval Request cannot be changed to PENDING because " +
+                            "current status is not REJECTED. " +
+                            "Approval Request Id : {}, Current Status : {}",
+                    approvalRequest.getApprovalRequestId(),
+                    approvalRequest.getStatus());
+
+            throw new IllegalArgumentException(
+                    "Only REJECTED Approval Requests can be updated to PENDING. "
+                            + "Approval Request Id : "
+                            + approvalRequest.getApprovalRequestId()
+                            + ", Current Status : "
+                            + approvalRequest.getStatus());
+        }
+
+        //----------------------------------------------------------
+        // Step 3: Change REJECTED → PENDING
+        //
+        // IMPORTANT:
+        // Current Level must NOT be changed.
+        // Entity Type must NOT be changed.
+        // Entity Id must NOT be changed.
+        //----------------------------------------------------------
+
+        approvalRequest.setStatus(FmAppConstants.APPROVAL_STATUS_PENDING);
+
+        //----------------------------------------------------------
+        // Step 4: Update Audit Information
+        //----------------------------------------------------------
+
+        approvalRequest.setUpdatedAt(LocalDateTime.now());
+
+        approvalRequest.setUpdatedBy(requestDTO.getUpdatedBy());
+
+        //----------------------------------------------------------
+        // Step 5: Save Updated Approval Request
+        //----------------------------------------------------------
+
+        approvalRequest = approvalRequestRepository.save(approvalRequest);
+
+        log.info(
+                "Rejected Approval Request successfully updated to PENDING. " +
+                        "Approval Request Id : {}, Entity Type : {}, " +
+                        "Entity Id : {}, Current Level : {}, Status : {}, " +
+                        "Updated By : {}",
+                approvalRequest.getApprovalRequestId(),
+                approvalRequest.getEntityType(),
+                approvalRequest.getEntityId(),
+                approvalRequest.getCurrentLevel(),
+                approvalRequest.getStatus(),
+                approvalRequest.getUpdatedBy());
+
+        //----------------------------------------------------------
+        // Step 6: Convert Entity → Response DTO
+        //----------------------------------------------------------
+
+        FmRejectedApprovalToPendingResponseDTO response =
+                FmApprovalRequestMapper.mapToRejectedApprovalToPendingResponse(
+                                approvalRequest);
+
+        //----------------------------------------------------------
+        // Step 7: Return Response
+        //----------------------------------------------------------
+
+        return response;
+    }
+
+ //--------------------------------------------------------------------------------------------
 //-------------------------------HELPER METHODS -----------------------------------------------
 //--------------------------------------------------------------------------------------------
 
@@ -389,8 +523,7 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
         Integer approverId =
                 approvalSettings.getApproverId();
 
-        log.info(
-                "Fetching Pending MERCHANT Approval Requests. " +
+        log.info("Fetching Pending MERCHANT Approval Requests. " +
                         "Approval Level : {}, Approver Id : {}",
                 approvalLevel,
                 approverId);
@@ -504,16 +637,13 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
 
         if (driverRequests.isEmpty()) {
 
-            log.info(
-                    "No Pending DRIVER Approval Requests Found. " +
-                            "Approver Id : {}",
+            log.info("No Pending DRIVER Approval Requests Found. " + "Approver Id : {}",
                     approverId);
 
             return;
         }
 
-        log.info(
-                "Total Pending DRIVER Requests : {} for Approver Id : {}",
+        log.info("Total Pending DRIVER Requests : {} for Approver Id : {}",
                 driverRequests.size(),
                 approverId);
 
@@ -559,7 +689,146 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
                         "Approver Id : {}",
                 approverId);
     }
+//===============================================================================================
+    /**
+     * Fetches all rejected approvals.
+     *
+     * <p>
+     * Processing Flow:
+     *
+     * 1. Fetch all REJECTED Approval Transactions.
+     * 2. Fetch corresponding Approval Request.
+     * 3. OUTLET details are obtained from FM database.
+     * 4. MERCHANT details are obtained from FM database.
+     * 5. DRIVER details are obtained from Driver Microservice.
+     * 6. Convert each record into common response format.
+     *
+     * @return List of rejected approval responses
+     */
+    @Override
+    public List<FmRejectedApprovalResponseDTO> getAllRejectedApprovals() {
 
+        log.info("Started fetching all Rejected Approval Requests.");
+
+        //----------------------------------------------------------
+        // Fetch Rejected Approval Records
+        //----------------------------------------------------------
+
+        List<FmRejectedApprovalProjection> rejectedApprovals =
+                approvalRequestRepository.getAllRejectedApprovals();
+
+        //----------------------------------------------------------
+        // No Rejected Approvals Found
+        //----------------------------------------------------------
+
+        if (rejectedApprovals.isEmpty()) {
+
+            log.info("No Rejected Approval Requests found.");
+
+            return new ArrayList<>();
+        }
+
+        log.info("Total Rejected Approval Requests found : {}",
+                rejectedApprovals.size());
+
+        //----------------------------------------------------------
+        // Prepare Response
+        //----------------------------------------------------------
+
+        List<FmRejectedApprovalResponseDTO> responseList = new ArrayList<>();
+
+        //----------------------------------------------------------
+        // Process Each Rejected Approval
+        //----------------------------------------------------------
+
+        for (FmRejectedApprovalProjection projection : rejectedApprovals) {
+
+            log.debug("Processing Rejected Approval. Transaction Id : {}, " +
+                            "Entity Type : {}, Entity Id : {}, Level : {}",
+                    projection.getApprovalTransactionsId(),
+                    projection.getEntityType(),
+                    projection.getEntityId(),
+                    projection.getApprovalLevel());
+
+            //------------------------------------------------------
+            // Convert Projection → Response DTO
+            //------------------------------------------------------
+
+            FmRejectedApprovalResponseDTO response =
+                    FmApprovalRequestMapper.toRejectedApprovalResponse(
+                            projection);
+
+            //------------------------------------------------------
+            // DRIVER
+            //
+            // Driver belongs to Driver Microservice.
+            // Therefore fetch Driver details through Feign.
+            //------------------------------------------------------
+
+            if (FmAppConstants.TYPE_DRIVER.equalsIgnoreCase(
+                    projection.getEntityType())) {
+
+                log.debug("Fetching Driver Details from Driver Service. Driver Id : {}",
+                        projection.getEntityId());
+
+                FmDriverApprovalResponseDTO driver = driverFeignClient.getDriverById(
+                                projection.getEntityId());
+
+                //--------------------------------------------------
+                // Populate Driver Details
+                //
+                // Use your actual Driver DTO getter names here.
+                //--------------------------------------------------
+
+                if (driver != null) {
+                    //----------------------------------------------------------
+                    // Prepare Driver Full Name
+                    //----------------------------------------------------------
+
+                    String firstName = driver.getFirstName() != null
+                                    ? driver.getFirstName() : "";
+
+                    String lastName = driver.getLastName() != null
+                                    ? driver.getLastName() : "";
+
+                    String driverName = (firstName + " " + lastName).trim();
+
+
+                    /*
+                     * Replace these getter names if your existing
+                     * FmDriverApprovalResponseDTO uses different names.
+                     */
+
+                    response.setEntityName(driverName);
+
+                    response.setEmail(driver.getEmail());
+
+                    response.setPhone(driver.getPhoneNumber());
+
+                    response.setProfilePicUrl(driver.getProfilePicUrl());
+
+                    response.setApproved(driver.getIsApproved());
+                }
+
+                log.debug("Driver Details fetched successfully. Driver Id : {}",
+                        projection.getEntityId());
+            }
+            //------------------------------------------------------
+            // Add Response
+            //------------------------------------------------------
+
+            responseList.add(response);
+        }
+
+        //----------------------------------------------------------
+        // Completed
+        //----------------------------------------------------------
+
+        log.info("Completed fetching Rejected Approval Requests. Total Records : {}",
+                responseList.size());
+
+        return responseList;
+    }
 }
 
 

@@ -51,5 +51,16 @@ public class FmDriverApprovalResponseDTO {
     private String drivingLicenseNumber;
 
     private String rcCopy;
+    /*==========================================================
+     = Driver Approval Status
+     ==========================================================*/
+
+    /**
+     * Indicates whether the Driver is approved.
+     *
+     * false = Not Approved
+     * true  = Approved
+     */
+    private Boolean isApproved;
 
 }

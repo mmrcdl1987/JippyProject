@@ -2,8 +2,7 @@ package com.jippy.foodandmart.service;
 
 //import com.jippy.foodandmart.dto.FmApprovalRequestDTO;
 
-import com.jippy.foodandmart.dto.FmApprovalRequestDTO;
-import com.jippy.foodandmart.dto.FmLevel1PendingApprovalResponseDTO;
+import com.jippy.foodandmart.dto.*;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,4 +34,32 @@ public interface IFmApprovalRequestService {
     void createApprovalRequest(FmApprovalRequestDTO requestDTO);
 
     List<FmLevel1PendingApprovalResponseDTO> getLevel1PendingApprovalRequests(Integer approverId);
+
+    /**
+     * Fetches all rejected approval requests along with
+     * their respective entity basic details.
+     *
+     * @return List of rejected approval details
+     */
+    List<FmRejectedApprovalResponseDTO> getAllRejectedApprovals();
+
+    /**
+     * Changes an Approval Request from REJECTED status
+     * back to PENDING status.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Approval Request must exist.
+     * 2. Current status must be REJECTED.
+     * 3. Only REJECTED requests can be changed to PENDING.
+     * 4. Current Approval Level remains unchanged.
+     * 5. Entity Type and Entity Id remain unchanged.
+     * 6. Updated At and Updated By are updated for auditing.
+     *
+     * @param requestDTO Rejected Approval Update Request
+     * @return Updated Approval Request details
+     */
+    FmRejectedApprovalToPendingResponseDTO updateRejectedApprovalsToPending(
+            FmRejectedApprovalToPendingRequestDTO requestDTO);
 }

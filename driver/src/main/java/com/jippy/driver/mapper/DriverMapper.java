@@ -438,6 +438,8 @@ public class DriverMapper {
         dto.setPhoneNumber(driver.getPhoneNumber());
         dto.setEmail(driver.getEmail());
         dto.setProfilePicUrl(driver.getProfilePicUrl());
+        // Driver Approval Status
+        dto.setIsApproved(driver.getIsApproved());
 
         // Nominee Details
         dto.setNomineeName(driver.getNomineeName());
