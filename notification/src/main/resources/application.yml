@@ -6,18 +6,15 @@ spring:
     name: notification
 
   datasource:
-    url: jdbc:postgresql://187.127.156.147:5434/n_db
+    url: jdbc:postgresql://187.127.156.147:5434/n_db?options=-c%20timezone=Asia/Kolkata
     username: n_user
     password: n_password
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        time_zone: Asia/Calcutta
-        default_schema: jippy_notification
+      ddl-auto: none
+
     show-sql: true
 
   kafka:
