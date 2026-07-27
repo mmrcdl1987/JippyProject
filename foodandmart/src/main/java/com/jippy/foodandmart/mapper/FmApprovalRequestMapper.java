@@ -3,17 +3,16 @@ package com.jippy.foodandmart.mapper;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmDriverApprovalResponseDTO;
 import com.jippy.foodandmart.dto.FmLevel1PendingApprovalResponseDTO;
+import com.jippy.foodandmart.dto.FmRejectedApprovalResponseDTO;
+import com.jippy.foodandmart.dto.FmRejectedApprovalToPendingResponseDTO;
 import com.jippy.foodandmart.entity.*;
-import com.jippy.foodandmart.projections.FmDriverAddressProjection;
-import com.jippy.foodandmart.projections.FmDriverLevel1PendingApprovalProjection;
-import com.jippy.foodandmart.projections.FmMerchantLevel1PendingApprovalProjection;
-import com.jippy.foodandmart.projections.FmOutletLevel1PendingApprovalProjection;
+import com.jippy.foodandmart.projections.*;
 
 import java.time.LocalDateTime;
 
 /**
  * Mapper class for Approval Requests.
- *
+ * <p>
  * Converts Approval Request data into
  * Approval Request Entity.
  */
@@ -22,19 +21,18 @@ public class FmApprovalRequestMapper {
     /**
      * Converts the given details into an
      * Approval Request entity.
-     *
+     * <p>
      * Business Rules:
      * 1. Current Level is always Level 1.
      * 2. Status is always PENDING.
      * 3. Created Time is the current system time.
      *
      * @param entityType MERCHANT / OUTLET / DRIVER
-     * @param entityId Merchant Id / Outlet Id / Driver Id
-     * @param createdBy Logged-in User Id
+     * @param entityId   Merchant Id / Outlet Id / Driver Id
+     * @param createdBy  Logged-in User Id
      * @return Approval Request Entity
      */
-    public static FmApprovalRequest toEntity(String entityType, Integer entityId,
-            Integer createdBy) {
+    public static FmApprovalRequest toEntity(String entityType, Integer entityId, Integer createdBy) {
 
         FmApprovalRequest entity = new FmApprovalRequest();
 
@@ -52,48 +50,46 @@ public class FmApprovalRequestMapper {
         return entity;
     }
 
-//    -------------------------------------------------------------------------------------------------
-public static FmLevel1PendingApprovalResponseDTO
-toOutletResponse(FmOutletLevel1PendingApprovalProjection outlet) {
+    //    -------------------------------------------------------------------------------------------------
+    public static FmLevel1PendingApprovalResponseDTO toOutletResponse(FmOutletLevel1PendingApprovalProjection outlet) {
 
-    FmLevel1PendingApprovalResponseDTO dto = new FmLevel1PendingApprovalResponseDTO();
+        FmLevel1PendingApprovalResponseDTO dto = new FmLevel1PendingApprovalResponseDTO();
 
-    dto.setApprovalRequestId(outlet.getApprovalRequestId());
-    dto.setEntityType(outlet.getEntityType());
-    dto.setEntityId(outlet.getEntityId());
-    dto.setCurrentLevel(outlet.getCurrentLevel());
-    dto.setStatus(outlet.getStatus());
+        dto.setApprovalRequestId(outlet.getApprovalRequestId());
+        dto.setEntityType(outlet.getEntityType());
+        dto.setEntityId(outlet.getEntityId());
+        dto.setCurrentLevel(outlet.getCurrentLevel());
+        dto.setStatus(outlet.getStatus());
 
-    dto.setOutletId(outlet.getOutletId());
-    dto.setOutletName(outlet.getOutletName());
-    dto.setMerchantName(outlet.getMerchantName());
-    dto.setCuisineType(outlet.getCuisineType());
-    dto.setOutletPhone(outlet.getOutletPhone());
-    dto.setOutletEmail(outlet.getOutletEmail());
-    dto.setOutletApproved(outlet.getOutletApproved());
+        dto.setOutletId(outlet.getOutletId());
+        dto.setOutletName(outlet.getOutletName());
+        dto.setMerchantName(outlet.getMerchantName());
+        dto.setCuisineType(outlet.getCuisineType());
+        dto.setOutletPhone(outlet.getOutletPhone());
+        dto.setOutletEmail(outlet.getOutletEmail());
+        dto.setOutletApproved(outlet.getOutletApproved());
 //converting from location to lattitude and longitude
-    dto.setLatitude(outlet.getLatitude());
-    dto.setLongitude(outlet.getLongitude());
+        dto.setLatitude(outlet.getLatitude());
+        dto.setLongitude(outlet.getLongitude());
 
 //    from user_kyc
-    dto.setFssaiNumber(outlet.getFssaiNumber());
-    dto.setGstNumber(outlet.getGstNumber());
+        dto.setFssaiNumber(outlet.getFssaiNumber());
+        dto.setGstNumber(outlet.getGstNumber());
 
 //    from address table
-    dto.setAddressId(outlet.getAddressId());
-    dto.setBuildingNumber(outlet.getBuildingNumber());
-    dto.setRoad(outlet.getRoad());
-    dto.setLandmark(outlet.getLandmark());
-    dto.setStateName(outlet.getStateName());
-    dto.setCityName(outlet.getCityName());
-    dto.setAreaName(outlet.getAreaName());
+        dto.setAddressId(outlet.getAddressId());
+        dto.setBuildingNumber(outlet.getBuildingNumber());
+        dto.setRoad(outlet.getRoad());
+        dto.setLandmark(outlet.getLandmark());
+        dto.setStateName(outlet.getStateName());
+        dto.setCityName(outlet.getCityName());
+        dto.setAreaName(outlet.getAreaName());
 
 
-    return dto;
-}
+        return dto;
+    }
 
-    public static FmLevel1PendingApprovalResponseDTO toMerchantResponse
-            (FmMerchantLevel1PendingApprovalProjection merchant) {
+    public static FmLevel1PendingApprovalResponseDTO toMerchantResponse(FmMerchantLevel1PendingApprovalProjection merchant) {
 
         FmLevel1PendingApprovalResponseDTO dto = new FmLevel1PendingApprovalResponseDTO();
 
@@ -130,10 +126,7 @@ toOutletResponse(FmOutletLevel1PendingApprovalProjection outlet) {
      * Driver Address to Final Approval Response DTO
      * ===========================================================
      */
-    public static FmLevel1PendingApprovalResponseDTO toDriverResponse(
-            FmDriverLevel1PendingApprovalProjection projection,
-            FmDriverApprovalResponseDTO driverResponse,
-            FmDriverAddressProjection address){
+    public static FmLevel1PendingApprovalResponseDTO toDriverResponse(FmDriverLevel1PendingApprovalProjection projection, FmDriverApprovalResponseDTO driverResponse, FmDriverAddressProjection address) {
         FmLevel1PendingApprovalResponseDTO dto = new FmLevel1PendingApprovalResponseDTO();
 
     /*==========================================================
@@ -187,5 +180,115 @@ toOutletResponse(FmOutletLevel1PendingApprovalProjection outlet) {
             dto.setCityName(address.getCityName());
             dto.setAreaName(address.getAreaName());
         }
-        return  dto;
-}}
+        return dto;
+    }
+
+    /**
+     * Converts Rejected Approval Projection into Response DTO.
+     *
+     * <p>
+     * OUTLET and MERCHANT basic details are already fetched
+     * through the database query.
+     * <p>
+     * DRIVER details are populated later using Driver Microservice.
+     *
+     * @param projection Rejected Approval Projection
+     * @return Rejected Approval Response DTO
+     */
+    public static FmRejectedApprovalResponseDTO toRejectedApprovalResponse(FmRejectedApprovalProjection projection) {
+
+        FmRejectedApprovalResponseDTO response = new FmRejectedApprovalResponseDTO();
+
+        //----------------------------------------------------------
+        // Approval Transaction Details
+        //----------------------------------------------------------
+
+        response.setApprovalTransactionsId(projection.getApprovalTransactionsId());
+
+        response.setEntityType(projection.getEntityType());
+
+        response.setEntityId(projection.getEntityId());
+
+        response.setApprovalLevel(projection.getApprovalLevel());
+
+        response.setStatus(projection.getStatus());
+
+        response.setRejectedReason(projection.getRejectedReason());
+
+        //----------------------------------------------------------
+        // Approval Request
+        //----------------------------------------------------------
+
+        response.setApprovalRequestId(projection.getApprovalRequestId());
+
+        //----------------------------------------------------------
+        // Entity Details
+        //----------------------------------------------------------
+
+        response.setEntityName(projection.getEntityName());
+
+        response.setEmail(projection.getEmail());
+
+        response.setPhone(projection.getPhone());
+
+        response.setAlternatePhone(projection.getAlternatePhone());
+
+        response.setProfilePicUrl(projection.getProfilePicUrl());
+
+        response.setApproved(projection.getApproved());
+
+        //----------------------------------------------------------
+        // Rejection Audit Details
+        //----------------------------------------------------------
+
+        response.setRejectedBy(projection.getRejectedBy());
+
+        response.setRejectedAt(projection.getRejectedAt());
+
+        return response;
+    }
+//
+
+    /**
+     * Converts an Approval Request Entity into
+     * Rejected Approval To Pending Response DTO.
+     *
+     * @param entity Updated Approval Request Entity
+     * @return Updated Approval Request Response
+     */
+    public static FmRejectedApprovalToPendingResponseDTO
+                mapToRejectedApprovalToPendingResponse(FmApprovalRequest entity) {
+
+        FmRejectedApprovalToPendingResponseDTO response = new FmRejectedApprovalToPendingResponseDTO();
+
+        //----------------------------------------------------------
+        // Approval Request Details
+        //----------------------------------------------------------
+
+        response.setApprovalRequestId(entity.getApprovalRequestId());
+
+        response.setEntityType(entity.getEntityType());
+
+        response.setEntityId(entity.getEntityId());
+
+        response.setCurrentLevel(entity.getCurrentLevel());
+
+        response.setStatus(entity.getStatus());
+
+        //----------------------------------------------------------
+        // Audit Information
+        //----------------------------------------------------------
+
+        response.setUpdatedBy(entity.getUpdatedBy());
+
+        response.setUpdatedAt(entity.getUpdatedAt());
+
+        //----------------------------------------------------------
+        // Success Message
+        //----------------------------------------------------------
+
+        response.setMessage("Rejected Approval Request updated to PENDING successfully.");
+
+        return response;
+    }
+}

@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-
 import java.util.List;
 
 /**
@@ -642,4 +641,193 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
                       )) / 3600 >= s.time_to_escalate_in_hours
             """, nativeQuery = true)
     List<FmPendingApprovalProjection> findPendingRequestsForAutoApproval();
+//    ------------------------------------------------------------------------------
+    /**
+     * Fetches all REJECTED Approval Transactions along with
+     * their corresponding Approval Request and basic entity details.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Only Approval Transactions having status = REJECTED are fetched.
+     *
+     * 2. Approval Transaction is mapped to Approval Request using:
+     *    Entity Type + Entity Id + Approval Level.
+     *
+     * 3. For OUTLET:
+     *    entity_id represents outlets.outlet_id.
+     *
+     * 4. For MERCHANT:
+     *    entity_id represents merchants.merchant_id.
+     *
+     * 5. DRIVER basic information is fetched separately from
+     *    Driver Microservice because Driver belongs to another service.
+     *
+     * @return List of rejected approval records
+     */
+    @Query(value = """
+
+        /*==========================================================
+         = Fetch Rejected Approval Transactions
+         ==========================================================*/
+
+        SELECT
+
+            /*------------------------------------------------------
+             Approval Transaction Details
+             ------------------------------------------------------*/
+
+            at.approval_transactions_id AS approvalTransactionsId,
+            at.entity_type              AS entityType,
+            at.entity_id                AS entityId,
+            at.approval_level           AS approvalLevel,
+            at.status                   AS status,
+            at.rejected_reason          AS rejectedReason,
+
+            /* Rejected approval audit information */
+            at.approved_by              AS rejectedBy,
+            at.approved_at              AS rejectedAt,
+
+            /*------------------------------------------------------
+             Approval Request Details
+             ------------------------------------------------------*/
+
+            ar.approval_request_id      AS approvalRequestId,
+
+            /*------------------------------------------------------
+             Entity Name
+             ------------------------------------------------------*/
+
+            CASE
+                WHEN at.entity_type = 'OUTLET'
+                    THEN o.outlet_name
+
+                WHEN at.entity_type = 'MERCHANT'
+                    THEN m.merchant_name
+
+                ELSE NULL
+            END                         AS entityName,
+
+            /*------------------------------------------------------
+             Entity Email
+             ------------------------------------------------------*/
+
+            CASE
+                WHEN at.entity_type = 'OUTLET'
+                    THEN o.outlet_email
+
+                WHEN at.entity_type = 'MERCHANT'
+                    THEN m.merchant_email
+
+                ELSE NULL
+            END                         AS email,
+
+            /*------------------------------------------------------
+             Entity Phone
+             ------------------------------------------------------*/
+
+            CASE
+                WHEN at.entity_type = 'OUTLET'
+                    THEN o.outlet_phone
+
+                WHEN at.entity_type = 'MERCHANT'
+                    THEN m.merchant_phone
+
+                ELSE NULL
+            END                         AS phone,
+
+            /*------------------------------------------------------
+             Alternate Phone
+             Only applicable for OUTLET
+             ------------------------------------------------------*/
+
+            CASE
+                WHEN at.entity_type = 'OUTLET'
+                    THEN o.alternate_outlet_phone
+
+                ELSE NULL
+            END                         AS alternatePhone,
+
+            /*------------------------------------------------------
+             Profile / Image URL
+             ------------------------------------------------------*/
+
+            CASE
+                WHEN at.entity_type = 'OUTLET'
+                    THEN o.outlet_pic_url
+
+                WHEN at.entity_type = 'MERCHANT'
+                    THEN m.profile_pic_url
+
+                ELSE NULL
+            END                         AS profilePicUrl,
+
+            /*------------------------------------------------------
+             Entity Approval Status
+             ------------------------------------------------------*/
+
+            CASE
+                WHEN at.entity_type = 'OUTLET'
+                    THEN o.is_approved
+
+                WHEN at.entity_type = 'MERCHANT'
+                    THEN m.is_approved
+
+                ELSE NULL
+            END                         AS approved
+
+        /*==========================================================
+         = Approval Transactions
+         ==========================================================*/
+
+        FROM jippy_fm.approval_transactions at
+
+        /*==========================================================
+         = Join Approval Request
+         =
+         = Transaction table does NOT contain approval_request_id.
+         = Therefore matching is done using:
+         =
+         = Entity Type + Entity Id + Approval Level
+         ==========================================================*/
+
+        INNER JOIN jippy_fm.approval_requests ar
+                ON UPPER(ar.entity_type) = UPPER(at.entity_type)
+               AND ar.entity_id = at.entity_id
+               AND ar.current_level = at.approval_level
+
+        /*==========================================================
+         = Join Outlet
+         =
+         = Join executes only when Entity Type = OUTLET
+         ==========================================================*/
+
+        LEFT JOIN jippy_fm.outlets o
+               ON at.entity_type = 'OUTLET'
+              AND at.entity_id = o.outlet_id
+
+        /*==========================================================
+         = Join Merchant
+         =
+         = Join executes only when Entity Type = MERCHANT
+         ==========================================================*/
+
+        LEFT JOIN jippy_fm.merchants m
+               ON at.entity_type = 'MERCHANT'
+              AND at.entity_id = m.merchant_id
+
+        /*==========================================================
+         = Fetch Rejected Transactions Only
+         ==========================================================*/
+
+        WHERE UPPER(ar.status) = 'REJECTED'
+
+        /*==========================================================
+         = Latest Rejections First
+         ==========================================================*/
+
+        ORDER BY at.approved_at DESC
+
+        """, nativeQuery = true)
+    List<FmRejectedApprovalProjection> getAllRejectedApprovals();
 }
