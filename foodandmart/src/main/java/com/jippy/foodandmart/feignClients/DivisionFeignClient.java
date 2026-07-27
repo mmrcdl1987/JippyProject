@@ -13,7 +13,7 @@ import java.util.List;
 @FeignClient(name = "division")
 public interface DivisionFeignClient {
 
-   @GetMapping("/api/coupons/getPriceModels")
+   @GetMapping("/api/div/coupons/getPriceModels")
     public ResponseEntity<List<FmDivPriceModelDto>> getPriceModels();
 
     @PostMapping("/api/div/email/sendOtp")

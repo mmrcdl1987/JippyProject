@@ -1,4 +1,4 @@
-package com.jippy.division.dto;
+package com.jippy.customerandorder.dto;
 
 import lombok.Data;
 
@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-public class DivCouponResponseDto {
+public class WelcomeCouponDto {
 
     private Integer couponId;
 

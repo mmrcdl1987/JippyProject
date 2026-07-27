@@ -7,7 +7,12 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface NotificationRepository extends JpaRepository<Notification,Integer> {
+public interface NotificationRepository extends JpaRepository<Notification, Integer> {
 
     Optional<Notification> findByRoleAndSubject(String role, String subject);
+
+    Optional<Notification> findByRoleAndSubjectAndIsActiveTrue(
+            String role,
+            String subject
+    );
 }

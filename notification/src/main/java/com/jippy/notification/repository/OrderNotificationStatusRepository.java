@@ -10,34 +10,39 @@ import java.util.Optional;
 public interface OrderNotificationStatusRepository
         extends JpaRepository<OrderNotificationStatus, Integer> {
 
-    /*
-     * FETCH LATEST STATUS
-     */
     Optional<OrderNotificationStatus>
     findTopByOrderIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
             String orderId,
             Integer notificationRecipientId
     );
 
-    /*
-     * OLD DUPLICATE CHECK
-     * KEEP IF USED ELSEWHERE
-     */
     boolean existsByOrderIdAndNotificationRecipientId(
             String orderId,
             Integer notificationRecipientId
     );
 
-    /*
-     * NEW DUPLICATE CHECK
-     * SAME ORDER CAN HAVE:
-     * CREATED
-     * TODAY REMINDER
-     * ONE HOUR REMINDER
-     */
     boolean existsByOrderIdAndNotificationRecipientIdAndNotificationId(
             String orderId,
             Integer notificationRecipientId,
             Integer notificationId
+    );
+
+    /**
+     * Generic notification duplicate check.
+     */
+    boolean existsByReferenceTypeAndReferenceIdAndNotificationRecipientId(
+            String referenceType,
+            Integer referenceId,
+            Integer notificationRecipientId
+    );
+
+    /**
+     * Latest notification for a reference.
+     */
+    Optional<OrderNotificationStatus>
+    findTopByReferenceTypeAndReferenceIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
+            String referenceType,
+            Integer referenceId,
+            Integer notificationRecipientId
     );
 }

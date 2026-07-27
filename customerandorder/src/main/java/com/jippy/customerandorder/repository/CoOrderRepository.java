@@ -303,6 +303,9 @@ Optional<CoOrder> findByOrderIdAndDriverId(
 
 
     Optional<CoOrder> findByOrderIdAndCustomerId(String orderId, Integer customerId);
-
     List<CoOrder> findByGroupOrderInvitationIdAndCustomerId(Integer goInvitationId, Integer customerId);
+
+    boolean existsByCustomerIdAndOrderStatus(
+            Integer customerId,
+            String orderStatus);
 }
