@@ -20,7 +20,7 @@ public class GroupOrderMembers {
     private GroupOrderInvitation groupOrdersInvitation;
 
     // Many member slots can point to different unique Customers
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", referencedColumnName = "customer_id", nullable = false)
     private CoCustomer customer;
 

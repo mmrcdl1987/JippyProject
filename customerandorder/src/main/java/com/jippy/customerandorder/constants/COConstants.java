@@ -168,5 +168,16 @@ public class COConstants {
 
     public static final String COMMUNITY_ORDER_PAYMENT_TYPE = "INDIVIDUAL";
 
-    }
+    public static final String WEB_SOCKET_END_POINT = "/ws-group-order";
+
+    public static final String WEB_SOCKET_TOPIC = "/topic";
+
+    public static final String ACTION_QUANTITY_UPDATED = "QUANTITY_UPDATED";
+
+    public static final String ACTION_ITEM_ADDED = "ITEM_ADDED";
+
+    public static final String ACTION_ITEM_REMOVED = "ITEM_REMOVED";
+
+
+}
 
