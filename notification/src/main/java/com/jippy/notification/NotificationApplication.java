@@ -11,9 +11,8 @@ public class NotificationApplication {
 
 	public static void main(String[] args) {
 
-//		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Kolkata"));
-//
-//		MetricsProperties.System.out.println("JVM TimeZone : " + TimeZone.getDefault().getID());
+        // MUST BE BEFORE SpringApplication.run()
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Kolkata"));
 
 		SpringApplication.run(NotificationApplication.class, args);
 	}

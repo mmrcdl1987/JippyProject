@@ -5,7 +5,6 @@ import com.jippy.division.constants.DivAppConstants;
 import com.jippy.division.dto.*;
 import com.jippy.division.entity.OrderRefund;
 import com.jippy.division.entity.PaymentTransaction;
-import com.jippy.division.feignclients.CoFeignClient;
 import com.jippy.division.mapper.DivPaymentMapper;
 import com.jippy.division.repositary.OrderRefundRepository;
 import com.jippy.division.repositary.TransactionRepository;
@@ -78,7 +77,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
             return response;
         }
         if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_PAYTM)){
-              response = initiatePaytmPayment(placeOrderRequestDto);
+            response = initiatePaytmPayment(placeOrderRequestDto);
             return response;
         }
         return response;
@@ -173,7 +172,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-           log.error("Payment signature verification failed for Razorpay Order ID: {}. Error: {}", request.getRzpOrderId(), e.getMessage());
+            log.error("Payment signature verification failed for Razorpay Order ID: {}. Error: {}", request.getRzpOrderId(), e.getMessage());
         }
         return false;
     }
@@ -205,7 +204,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
 
         String response = "";
         if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_RAZOR_PAY)){
-           response= initiateRazorPayRefund(orderId,tx,reason,orderDto);
+            response= initiateRazorPayRefund(orderId,tx,reason,orderDto);
             return response;
         }
         if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_PAYTM)){
@@ -269,18 +268,18 @@ public class DivPaymentServiceImpl implements DivPaymentService {
                 // A. Update the OrderRefund table details
                 if ("TXN_SUCCESS".equals(resultStatus)) {
                     orderRefund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
-                   // tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
+                    // tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
                     orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
                 } else {
                     orderRefund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED); // Bank processing is asynchronous
-                   // tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
+                    // tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
                     orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
                 }
 
                 orderRefund.setGatewayRefundId(paytmRefundId); // Storing Paytm's refundId in your generalized column
                 refundRepository.save(orderRefund);
 
-               // transactionRepository.save(tx);
+                // transactionRepository.save(tx);
 
                 coFeignClient.updateOrderStatus(orderDto);
 
