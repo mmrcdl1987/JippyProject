@@ -80,7 +80,6 @@ public class FmSubscriptionPlanServiceImpl implements IFmSubscriptionPlanService
     }
 
     @Override
-    @Transactional(readOnly = true)
     public SubscriptionPlanResponseDto getById(Integer subscriptionPlanId) {
 
         String operationId = System.nanoTime() + "";
@@ -116,7 +115,6 @@ public class FmSubscriptionPlanServiceImpl implements IFmSubscriptionPlanService
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<SubscriptionPlanResponseDto> getAll() {
 
         String operationId = System.nanoTime() + "";

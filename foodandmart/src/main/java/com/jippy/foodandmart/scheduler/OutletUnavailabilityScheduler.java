@@ -43,7 +43,7 @@ public class OutletUnavailabilityScheduler {
      * Testing Cron
      * Every 30 seconds
      */
-   // @Scheduled(cron = "*/30 * * * * *")
+    // @Scheduled(cron = "*/30 * * * * *")
     @Transactional
     public void restoreAvailability() {
 

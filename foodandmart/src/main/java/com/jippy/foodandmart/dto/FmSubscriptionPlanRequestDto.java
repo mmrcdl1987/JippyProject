@@ -46,5 +46,6 @@ public class FmSubscriptionPlanRequestDto {
     private Integer areaId;
 
     @NotNull(message = "User Id is required")
+
     private Integer userId;
 }
