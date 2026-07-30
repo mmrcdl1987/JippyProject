@@ -211,8 +211,8 @@ public class FmProductServiceImpl implements FmProductService {
             product.setHasProductVariants(hasVariants);
 
             product.setImageLink(masterProduct.getPhoto());
-            product.setPhotos(masterProduct.getPhotos());
-            product.setThumbnail(masterProduct.getThumbnail());
+//            product.setPhotos(masterProduct.getPhotos());
+//            product.setThumbnail(masterProduct.getThumbnail());
 
             product.setCreatedBy(SYSTEM_USER);
             product.setUpdatedBy(SYSTEM_USER);
@@ -383,8 +383,8 @@ public class FmProductServiceImpl implements FmProductService {
         response.setHasProductVariants(product.getHasProductVariants());
         response.setMerchantPrice(product.getMerchantPrice());
         response.setImageLink(product.getImageLink());
-        response.setPhotos(product.getPhotos());
-        response.setThumbnail(product.getThumbnail());
+//        response.setPhotos(product.getPhotos());
+//        response.setThumbnail(product.getThumbnail());
 
         /*
          * Product Timings
@@ -548,8 +548,8 @@ public class FmProductServiceImpl implements FmProductService {
         product.setHasProductVariants(hasVariants);
 
         product.setImageLink(request.getImageLink());
-        product.setPhotos(request.getPhotos());
-        product.setThumbnail(request.getThumbnail());
+//        product.setPhotos(request.getPhotos());
+//        product.setThumbnail(request.getThumbnail());
         product.setUpdatedBy(1);
 
         if (hasVariants) {

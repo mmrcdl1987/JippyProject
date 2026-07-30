@@ -376,7 +376,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
             // Set prices (Usually pulled via a Product/Menu Service)
             newCartItem.setOnlineUnitPrice(groupCartItemsDto.getOnlineUnitPrice());
-            newCartItem.setMerchantUnitPrice(groupCartItemsDto.getMerchantUnitPrice());
+           // newCartItem.setMerchantUnitPrice(groupCartItemsDto.getMerchantUnitPrice());
 
             newCartItem.setCreatedAt(LocalDateTime.now());
             newCartItem.setUpdatedAt(LocalDateTime.now());

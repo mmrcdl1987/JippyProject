@@ -156,8 +156,8 @@ public class FmProductMappingServiceImpl implements IFmProductMappingService {
             product.setIsVeg(entry.getIsVeg() == null ? Boolean.TRUE : entry.getIsVeg());
             product.setHasProductVariants(hasVariants);
             product.setImageLink(imageLink);
-            product.setPhotos(photos);
-            product.setThumbnail(thumbnail);
+//            product.setPhotos(photos);
+//            product.setThumbnail(thumbnail);
             // Use the price explicitly sent from the frontend (per-item or default).
             // Fall back to the CSV-derived static map only when nothing was provided.
             BigDecimal requestPrice = entry.getMerchantPrice();
@@ -263,8 +263,8 @@ public class FmProductMappingServiceImpl implements IFmProductMappingService {
             product.setHasProductVariants(hasVariants);
             // Copy images from master product -> outlet product
             product.setImageLink(mp.getPhoto());
-            product.setPhotos(mp.getPhotos());
-            product.setThumbnail(mp.getThumbnail());
+//            product.setPhotos(mp.getPhotos());
+//            product.setThumbnail(mp.getThumbnail());
             FmProduct saved = productRepository.save(product);
 
             // Parse the JSON options field and create a ProductVariant row per option
