@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+
+import java.math.BigDecimal;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,7 +19,7 @@ public class FmOutletDto {
     private Integer merchantId;
     private String cuisineType;
     private String outletPhone;
-    private Double radius;
+    private BigDecimal radius;
     private String subscriptionStatus;
     private String promotionStatus;
     private Double review;

@@ -46,7 +46,8 @@ public class GlobalExceptionHandler {
             DuplicateResourceException.class,
             PromotionPlanTypeAlreadyExistsException.class,
             PromotionPlanAlreadyExistsException.class,
-            IllegalStateException.class
+            IllegalStateException.class,
+            BadRequestException.class
     })
     public ResponseEntity<FmApiResponse<Void>> handleConflict(Exception ex) {
 
@@ -190,4 +191,5 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(FmApiResponse.error(ex.getMessage()));
     }
+
 }

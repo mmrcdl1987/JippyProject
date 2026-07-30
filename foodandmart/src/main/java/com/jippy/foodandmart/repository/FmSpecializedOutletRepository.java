@@ -29,10 +29,63 @@ AND o.is_active = 'Y'
         fetchSpecializedOutletsByAreaId(
                 @Param("areaId") Integer areaId
         );
+//        @Query(value = """
+//SELECT
+//    o.outlet_id AS outletId,
+//    o.outlet_name AS outletName,
+//
+//    ST_Distance(
+//        o.outlet_location,
+//        ST_SetSRID(
+//            ST_MakePoint(
+//                :longitude,
+//                :latitude
+//            ),
+//            4326
+//        )::geography
+//    ) / 1000 AS distanceInKm
+//
+//FROM jippy_fm.specialized_outlets so
+//
+//JOIN jippy_fm.outlets o
+//ON so.outlet_id = o.outlet_id
+//
+//WHERE o.is_active = 'Y'
+//AND o.is_approved = true
+//AND o.outlet_location IS NOT NULL
+//
+//AND ST_Distance(
+//        o.outlet_location,
+//        ST_SetSRID(
+//            ST_MakePoint(
+//                :longitude,
+//                :latitude
+//            ),
+//            4326
+//        )::geography
+//    ) <= :radius
+//
+//GROUP BY
+//    o.outlet_id,
+//    o.outlet_name,
+//    o.outlet_location
+//
+//ORDER BY distanceInKm=
+//""", nativeQuery = true)
+//        List<FmNearbyOutletProjection>
+//        fetchNearbySpecializedOutlets(
+//                @Param("latitude") Double latitude,
+//                @Param("longitude") Double longitude,
+//                @Param("radius") Double radius);
+
         @Query(value = """
 SELECT
-    o.outlet_id AS outletId,
-    o.outlet_name AS outletName,
+    o.outlet_id      AS outletId,
+    o.outlet_name    AS outletName,
+    o.merchant_id    AS merchantId,
+    o.cuisine_type   AS cuisineType,
+    o.outlet_phone   AS outletPhone,
+    o.radius         AS radius,
 
     ST_Distance(
         o.outlet_location,
@@ -48,13 +101,13 @@ SELECT
 FROM jippy_fm.specialized_outlets so
 
 JOIN jippy_fm.outlets o
-ON so.outlet_id = o.outlet_id
+    ON so.outlet_id = o.outlet_id
 
 WHERE o.is_active = 'Y'
-AND o.is_approved = true
-AND o.outlet_location IS NOT NULL
+  AND o.is_approved = true
+  AND o.outlet_location IS NOT NULL
 
-AND ST_Distance(
+  AND ST_Distance(
         o.outlet_location,
         ST_SetSRID(
             ST_MakePoint(
@@ -68,12 +121,15 @@ AND ST_Distance(
 GROUP BY
     o.outlet_id,
     o.outlet_name,
+    o.merchant_id,
+    o.cuisine_type,
+    o.outlet_phone,
+    o.radius,
     o.outlet_location
 
-ORDER BY distanceInKm
+ORDER BY distanceInKm ASC
 """, nativeQuery = true)
-        List<FmNearbyOutletProjection>
-        fetchNearbySpecializedOutlets(
+        List<FmNearbyOutletProjection> fetchNearbySpecializedOutlets(
                 @Param("latitude") Double latitude,
                 @Param("longitude") Double longitude,
                 @Param("radius") Double radius);
