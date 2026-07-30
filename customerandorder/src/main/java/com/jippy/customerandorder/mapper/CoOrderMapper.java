@@ -43,7 +43,7 @@ public class CoOrderMapper {
 
         order.setScheduledDeliveryDateTime(requestDto.getScheduledDeliveryDateTime());
 
-        order.setDistanceKms(requestDto.getDeliveryDistanceKms().doubleValue());
+        order.setDistanceKms(requestDto.getDeliveryDistanceKms()!= null ?requestDto.getDeliveryDistanceKms().doubleValue():0);
 
         order.setCreatedAt(LocalDateTime.now());
 

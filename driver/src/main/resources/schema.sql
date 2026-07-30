@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS jippy_driver.driver_delivery_charge_settings(
     delivery_kms_range_from NUMERIC(10, 2) NOT NULL,
     delivery_kms_range_to NUMERIC(10, 2) NOT NULL,
     unit_price_per_deliver_km NUMERIC(10, 2) NOT NULL,
+    area_id integer NOT NULL,
     --num_of_orders integer NOT NULL,
     -- incentives_amount NUMERIC(10, 2) NOT NULL,
     created_at timestamp without time zone,
