@@ -21,8 +21,7 @@ public class CoGroupCartItemsDto {
     @NotNull(message = "Quantity cannot be null")
     private Integer quantity;
 
-    @NotNull(message = "Merchant Unit Price cannot be null")
-    private BigDecimal merchantUnitPrice;
+   // private BigDecimal merchantUnitPrice;
 
     @NotNull(message = "Online Unit Price cannot be null")
     private BigDecimal onlineUnitPrice;

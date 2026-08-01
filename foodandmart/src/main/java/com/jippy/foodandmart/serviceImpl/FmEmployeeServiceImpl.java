@@ -1,4 +1,4 @@
-package com.jippy.foodandmart.serviceimpl;
+package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmCreateEmployeeRequestDTO;

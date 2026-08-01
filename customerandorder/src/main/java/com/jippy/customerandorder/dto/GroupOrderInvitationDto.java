@@ -47,4 +47,8 @@ public class GroupOrderInvitationDto {
 
     private Integer communityId;
 
+    private String  webSocketEndPoint;
+
+    private String webSocketTopic;
+
 }

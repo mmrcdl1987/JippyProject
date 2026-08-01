@@ -357,8 +357,8 @@ public class FmPricingServiceImpl implements IPricingService {
         dto.setIsVeg(product.getIsVeg());
         dto.setHasProductVariants(product.getHasProductVariants());
         dto.setImageLink(product.getImageLink());
-        dto.setPhotos(product.getPhotos());
-        dto.setThumbnail(product.getThumbnail());
+//        dto.setPhotos(product.getPhotos());
+//        dto.setThumbnail(product.getThumbnail());
 
         log.info("SERVICE_SUCCESS | GET_PRODUCT_BY_OUTLET | productId={} | outletId={} | onlinePrice={}", productId, outletId, pricing.getOnlinePrice());
 

@@ -15,4 +15,7 @@ public interface FmOutletAddressRepository extends JpaRepository<FmOutletAddress
     Optional<FmOutletAddress> findByJippyAddressIdAndAddressType(
             Integer jippyAddressId,
             String addressType);
+
+    boolean existsByJippyAddressIdAndAddressType(Integer jippyAddressId, String addressType);
+
 }

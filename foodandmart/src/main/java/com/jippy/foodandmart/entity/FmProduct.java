@@ -52,10 +52,10 @@ public class FmProduct {
     private BigDecimal rating;
     //-------------------------------------
 
-    @Column(name = "photos", columnDefinition = "TEXT")
-    private String photos;
-    @Column(name = "thumbnail", columnDefinition = "TEXT")
-    private String thumbnail;
+//    @Column(name = "photos", columnDefinition = "TEXT")
+//    private String photos;
+//    @Column(name = "thumbnail", columnDefinition = "TEXT")
+//    private String thumbnail;
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     @Column(name = "created_by")

@@ -737,7 +737,7 @@ public class FmOutletController {
 
     // End Points for getting address data from FM_Microservice to CO_Microservice
     @PostMapping("/saveAddressDetails")
-    public ResponseEntity<FmAddressRequestDto> saveAddressDetails(@RequestBody FmAddressRequestDto fmAddressRequestDto) {
+    public ResponseEntity<FmAddressRequestDto> saveAddressDetails(@Valid @RequestBody FmAddressRequestDto fmAddressRequestDto) {
         FmAddressRequestDto savedAddress = outletService.saveAddressDetails(fmAddressRequestDto);
         return ResponseEntity.ok(savedAddress);
     }

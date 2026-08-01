@@ -151,10 +151,13 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.commons.configuration.PropertyConverter.toBigDecimal;
 
 /**
  * Static utility class for converting between Entities, DTOs, and Projections
@@ -584,7 +587,7 @@ public final class FmOutletMapper {
         dto.setMerchantId(toInt(row[2]));
         dto.setCuisineType(row[3] != null ? row[3].toString() : null);
         dto.setOutletPhone(row[4] != null ? row[4].toString() : null);
-        dto.setRadius(toDouble(row[5]));
+        dto.setRadius(toBigDecimal(row[5]));
         dto.setReview(toDouble(row[6]));
         dto.setSubscriptionStatus(row[7] != null ? row[7].toString() : null);
         dto.setPromotionStatus(row[8] != null ? row[8].toString() : null);
@@ -760,5 +763,17 @@ public final class FmOutletMapper {
         day.setClosingTime(dto.getClosingTime());
 
         return day;
+    }
+    private static BigDecimal toBigDecimal(Object o) {
+
+        if (o == null) {
+            return null;
+        }
+
+        if (o instanceof BigDecimal) {
+            return (BigDecimal) o;
+        }
+
+        return new BigDecimal(o.toString());
     }
 }

@@ -13,7 +13,7 @@ public class WelcomeCouponScheduler {
 
     private final WelcomeCouponSchedulerService welcomeCouponSchedulerService;
 
-    @Scheduled(cron = "*/30 * * * * ?")
+    //@Scheduled(cron = "*/30 * * * * ?")
 //        @Scheduled(cron = "0 0 10 * * ?")
 //@Scheduled(cron = "0 */3 * * * ?")
     public void processWelcomeCoupons() {

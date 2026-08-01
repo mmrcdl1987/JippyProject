@@ -19,6 +19,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
     private  final CoOrderRepository orderRepository;
     private final CoCustomerCommunityRepository customerCommunityRepository;
     private final CoCustomerDeliveryAddressRepository customerDeliveryAddressRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private static final String TOPIC = "group-order-events";
 
@@ -182,7 +184,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
                 });
 
         return ResponseEntity.ok(new CoResponseDto("200", "Customer with ID: "+joinGroupMembersDto.getCustomerId()
-                + " successfully joined group order with code "+ joinGroupMembersDto.getInvitationCode()));
+                + " successfully joined group order with id "+ joinGroupMembersDto.getGroupOrdersInvitationId()));
 
     }
 
@@ -301,6 +303,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         return  null;
     }
 
+    @Transactional
     @Override
     public ResponseEntity<CoResponseDto> addItemsToGroupCart(CoGroupCartItemsDto groupCartItemsDto) {
 
@@ -341,9 +344,27 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         if (existingCartItem.isPresent()) {
             // If the item already exists in their basket, update the quantity
             GroupCartItems cartItem = existingCartItem.get();
-            cartItem.setQuantity(cartItem.getQuantity() + groupCartItemsDto.getQuantity());
+
+            if(groupCartItemsDto.getQuantity() == 0){
+                groupCartItemsRepository.delete(cartItem);
+                sendWebSocketEvent(cartItem,groupOrderInvitation,COConstants.ACTION_ITEM_REMOVED);
+
+                log.info("Customer with ID {} successfully removed Product ID {} from group cart for invitation ID {}.",
+                        groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
+
+                return ResponseEntity.ok(new CoResponseDto("200", "Item successfully removed from the group cart!"));
+            }
+
+            cartItem.setQuantity(groupCartItemsDto.getQuantity());
             cartItem.setUpdatedAt(LocalDateTime.now());
             groupCartItemsRepository.save(cartItem);
+
+            sendWebSocketEvent(cartItem,groupOrderInvitation,COConstants.ACTION_QUANTITY_UPDATED);
+
+            log.info("Customer with ID {} successfully updated quantity with Product ID {} to group cart for invitation ID {}.",
+                    groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
+
+            return ResponseEntity.ok(new CoResponseDto("200", "Item qunatity successfully updated to the group cart!"));
 
         } else {
             // If it's a completely new dish being added
@@ -355,18 +376,43 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
             // Set prices (Usually pulled via a Product/Menu Service)
             newCartItem.setOnlineUnitPrice(groupCartItemsDto.getOnlineUnitPrice());
-            newCartItem.setMerchantUnitPrice(groupCartItemsDto.getMerchantUnitPrice());
+           // newCartItem.setMerchantUnitPrice(groupCartItemsDto.getMerchantUnitPrice());
 
             newCartItem.setCreatedAt(LocalDateTime.now());
             newCartItem.setUpdatedAt(LocalDateTime.now());
 
             groupCartItemsRepository.save(newCartItem);
-        }
-        log.info("Customer with ID {} successfully added/updated item with Product ID {} to group cart for invitation ID {}.",
-                groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
 
-        return ResponseEntity.ok(new CoResponseDto("200", "Item successfully added to the group cart!"));
-        // Note: After saving, you can trigger a Kafka event or Firebase Push Notification
+            sendWebSocketEvent(newCartItem,groupOrderInvitation,COConstants.ACTION_ITEM_ADDED);
+
+            log.info("Customer with ID {} successfully added/updated item with Product ID {} to group cart for invitation ID {}.",
+                    groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
+
+            return ResponseEntity.ok(new CoResponseDto("200", "Item successfully added to the group cart!"));
+        }
+
+    }
+
+    private void sendWebSocketEvent(GroupCartItems cartItem, GroupOrderInvitation groupOrderInvitation, String action) {
+
+        CoFmProductDto productDto = fmFeignClient.getSettlementProductById(cartItem.getProductId());
+
+        // 2. Build update event payload
+        CartUpdateEventDto event = new CartUpdateEventDto(
+                action,
+                groupOrderInvitation.getGroupOrdersInvitationId(),
+                cartItem.getCustomer().getCustomerId(),
+                cartItem.getCustomer().getFirstName() + " " +cartItem.getCustomer().getLastName(),
+                productDto.getProductName(),
+                cartItem.getQuantity(),
+                cartItem.getOnlineUnitPrice()
+        );
+
+        // 3. Broadcast to all subscribers of this specific group invitation
+        String destination = "/topic/group-order/" + groupOrderInvitation.getGroupOrdersInvitationId();
+        log.info("Broadcasting cart update to channel: {}", destination);
+
+        messagingTemplate.convertAndSend(destination, event);
     }
 
     @Override

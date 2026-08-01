@@ -3,10 +3,7 @@ package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.entity.FmMasterProduct;
-import com.jippy.foodandmart.exception.DuplicateResourceException;
-import com.jippy.foodandmart.exception.FileProcessingException;
-import com.jippy.foodandmart.exception.MasterProductNotFoundException;
-import com.jippy.foodandmart.exception.ResourceNotFoundException;
+import com.jippy.foodandmart.exception.*;
 import com.jippy.foodandmart.mapper.FmCreateMasterProductMapper;
 import com.jippy.foodandmart.mapper.FmMasterProductMapper;
 import com.jippy.foodandmart.mapper.FmProductMapper;
@@ -441,49 +438,88 @@ public class FmMasterProductService {
 
         return products.stream().map(masterProductMapper::toResponseDto).toList();
     }
-
+    @Transactional
     public FmCreateMasterProductResponseDto createMasterProduct(
             FmCreateMasterProductRequestDto request) {
 
-        log.info(
-                "CREATE_MASTER_PRODUCT_STARTED | categoryId={} | productName={}",
+        log.info("CREATE_MASTER_PRODUCT_STARTED | categoryId={} | productName={}",
                 request.getCategoryId(),
                 request.getMasterProductName());
 
+        // Step 1 : Common Validation
+
         FmCreateMasterProductMapper.validate(request);
 
+        // Step 2 : Trim Request Fields
+
+        request.setMasterProductName(request.getMasterProductName().trim());
+
+        if (request.getDescription() != null) {
+            request.setDescription(request.getDescription().trim());
+        }
+
+        if (request.getShortDescription() != null) {
+            request.setShortDescription(request.getShortDescription().trim());
+        }
+
+        if (request.getFoodType() != null) {
+            request.setFoodType(request.getFoodType().trim().toUpperCase());
+        }
+
+        if (request.getCuisineType() != null) {
+            request.setCuisineType(request.getCuisineType().trim());
+        }
+
+        // Step 3 : Validate Category
         FmCategory category = categoryRepository
                 .findById(request.getCategoryId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Category not found with id : "
-                                        + request.getCategoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Category not found with id : " + request.getCategoryId()));
+
+        // ------------------------------------------------------
+        // Step 4 : Validate Food Type & Veg Flag
+        // ------------------------------------------------------
+
+        if (request.getFoodType() != null) {
+
+            if (request.getIsVeg()
+                    && !"VEG".equalsIgnoreCase(request.getFoodType())) {
+
+                throw new BadRequestException(
+                        "Veg products must have food type as VEG.");
+            }
+
+            if (!request.getIsVeg()
+                    && "VEG".equalsIgnoreCase(request.getFoodType())) {
+
+                throw new BadRequestException(
+                        "Non Veg products cannot have food type as VEG.");
+            }
+        }
+
+        // Step 5 : Duplicate Validation
 
         if (masterProductRepository
                 .existsByMasterProductNameIgnoreCaseAndCategoryId(
-                        request.getMasterProductName().trim(),
+                        request.getMasterProductName(),
                         request.getCategoryId())) {
 
             throw new DuplicateResourceException(
                     "Master Product already exists in this category.");
         }
 
-        FmMasterProduct entity =
-                FmCreateMasterProductMapper.toEntity(
-                        request,
-                        category.getCategoryName(),
-                        1);
+        // Step 6 : Convert DTO -> Entit
+        FmMasterProduct entity = FmCreateMasterProductMapper.toEntity(
+                request,
+                category.getCategoryName(),
+                1);
+        // Step 7 : Save
+        FmMasterProduct savedProduct = masterProductRepository.save(entity);
 
-        FmMasterProduct savedProduct =
-                masterProductRepository.save(entity);
-
-        log.info(
-                "CREATE_MASTER_PRODUCT_COMPLETED | masterProductId={}",
+        log.info("CREATE_MASTER_PRODUCT_COMPLETED | masterProductId={}",
                 savedProduct.getMasterProductId());
 
         return mapper.toResponseDto(savedProduct);
     }
-
-
 
 }

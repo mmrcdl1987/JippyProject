@@ -277,8 +277,8 @@ public class FmMenuServiceImpl implements IFmMenuService {
             if (opts.isCopyPrices())  ex.setMerchantPrice(src.getMerchantPrice());
             if (opts.isCopyImages())  {
                 ex.setImageLink(src.getImageLink());
-                ex.setPhotos(src.getPhotos());
-                ex.setThumbnail(src.getThumbnail());
+//                ex.setPhotos(src.getPhotos());
+//                ex.setThumbnail(src.getThumbnail());
             }
             return productRepository.save(ex).getProductId();
         }
@@ -292,8 +292,8 @@ public class FmMenuServiceImpl implements IFmMenuService {
         clone.setHasProductVariants(src.getHasProductVariants());
         clone.setMerchantPrice(opts.isCopyPrices() ? src.getMerchantPrice() : java.math.BigDecimal.ZERO);
         clone.setImageLink(opts.isCopyImages() ? src.getImageLink() : null);
-        clone.setPhotos(opts.isCopyImages() ? src.getPhotos() : null);
-        clone.setThumbnail(opts.isCopyImages() ? src.getThumbnail() : null);
+//        clone.setPhotos(opts.isCopyImages() ? src.getPhotos() : null);
+//        clone.setThumbnail(opts.isCopyImages() ? src.getThumbnail() : null);
         return productRepository.save(clone).getProductId();
     }
 

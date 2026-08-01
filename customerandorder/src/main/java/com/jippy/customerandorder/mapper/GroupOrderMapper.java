@@ -58,6 +58,11 @@ public class GroupOrderMapper {
         groupOrderInvitationDto.setInvitationCode(savedGroupOrderInvitation.getInvitationCode());
         groupOrderInvitationDto.setCreatedAt(savedGroupOrderInvitation.getCreatedAt());
         groupOrderInvitationDto.setCreatedBy(savedGroupOrderInvitation.getCreatedBy());
+        groupOrderInvitationDto.setOrderType(savedGroupOrderInvitation.getOrderType());
+
+        // Construct the dynamic topic channel
+        groupOrderInvitationDto.setWebSocketEndPoint(COConstants.WEB_SOCKET_END_POINT);
+        groupOrderInvitationDto.setWebSocketTopic(COConstants.WEB_SOCKET_TOPIC+"/group-order/" + savedGroupOrderInvitation.getGroupOrdersInvitationId());
 
         return groupOrderInvitationDto;
     }

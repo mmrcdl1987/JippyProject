@@ -151,8 +151,8 @@ public  class FmProductMapper {
             dto.setIsVeg(product.getIsVeg());
             dto.setHasProductVariants(product.getHasProductVariants());
             dto.setImageLink(product.getImageLink());
-            dto.setPhotos(product.getPhotos());
-            dto.setThumbnail(product.getThumbnail());
+//            dto.setPhotos(product.getPhotos());
+//            dto.setThumbnail(product.getThumbnail());
 
         /*
          * PRODUCT ACTIVE STATUS

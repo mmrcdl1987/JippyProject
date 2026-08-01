@@ -405,13 +405,30 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FmOutletSummaryDTO> getOutletsByMerchantId(Integer merchantId) {
-        List<FmOutlet> outlets = outletRepository.findByMerchantId(merchantId);
-        List<FmOutletSummaryDTO> result = new ArrayList<>();
-        for (FmOutlet o : outlets) {
-            FmOutletAddress addr = addressRepository.findByJippyAddressId(o.getOutletId()).orElse(null);
-            result.add(FmOutletSummaryDTO.from(o, 0, addr));
+
+        log.info("Fetching outlets for merchantId: {}", merchantId);
+
+        if (merchantId == null || merchantId <= 0) {
+            throw new IllegalArgumentException("merchantId must be greater than 0");
         }
+
+        List<FmOutlet> outlets = outletRepository.findByMerchantId(merchantId);
+
+        List<FmOutletSummaryDTO> result = new ArrayList<>();
+
+        for (FmOutlet outlet : outlets) {
+
+            FmOutletAddress address = addressRepository
+                    .findByJippyAddressId(outlet.getOutletId())
+                    .orElse(null);
+
+            result.add(FmOutletSummaryDTO.from(outlet, 0, address));
+        }
+
+        log.info("Fetched {} outlets for merchantId={}", result.size(), merchantId);
+
         return result;
     }
 
@@ -1169,12 +1186,26 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     @Transactional
     public FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto) {
-        FmOutletAddress address = FmOutletMapper.toAddressEntity(fmAddressRequestDto);
-        FmOutletAddress fmAddress = addressRepository.save(address);
-        FmAddressRequestDto responseDto = FmOutletMapper.toAddressRequestDto(fmAddress);
-        log.info("address saved for driver ID  ={}", address.getAddressId());
 
-        return fmAddressRequestDto;
+        boolean exists = addressRepository.existsByJippyAddressIdAndAddressType(
+                fmAddressRequestDto.getJippyAddressId(),
+                fmAddressRequestDto.getAddressType());
+
+        if (exists) {
+            throw new DuplicateResourceException(
+                    String.format("%s address already exists for Jippy Address Id %d",
+                            fmAddressRequestDto.getAddressType(),
+                            fmAddressRequestDto.getJippyAddressId()));
+        }
+
+        FmOutletAddress address = FmOutletMapper.toAddressEntity(fmAddressRequestDto);
+
+        FmOutletAddress savedAddress = addressRepository.save(address);
+
+        log.info("Address saved successfully with addressId={}",
+                savedAddress.getAddressId());
+
+        return FmOutletMapper.toAddressRequestDto(savedAddress);
     }
 
 
