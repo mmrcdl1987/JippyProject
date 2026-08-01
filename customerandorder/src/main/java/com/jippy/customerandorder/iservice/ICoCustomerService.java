@@ -29,4 +29,6 @@ public interface ICoCustomerService {
     CoCustomerWalletResponseDto getCustomerWallet(Integer customerId);
 
     List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId);
+    List<CoProfileIncompleteCustomer> getProfileIncompleteCustomers();
+
 }

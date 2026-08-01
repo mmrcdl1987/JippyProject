@@ -1,5 +1,7 @@
 package com.jippy.notification.service;
 
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.Message;
 import com.jippy.notification.constants.NConstants;
 import com.jippy.notification.dto.NOrderEvent;
 import com.jippy.notification.entity.Notification;
@@ -141,5 +143,121 @@ public class NotificationService {
         }
 
         return "ORDER_CREATED";
+    }
+    public Notification getNotificationTemplate(String role, String subject) {
+
+        return notificationRepository
+                .findByRoleAndSubject(role, subject)
+                .orElseThrow(() ->
+                        new NotificationException("Notification template not found"));
+    }
+    @Transactional
+    public OrderNotificationStatus saveNotificationStatus(
+            Integer notificationId,
+            Integer recipientId,
+            String recipientType,
+            Integer referenceId,
+            String referenceType,
+            Integer deviceTokenId) {
+
+        OrderNotificationStatus status = OrderNotificationStatus.builder()
+                .notificationId(notificationId)
+                .notificationRecipientId(recipientId)
+                .recipientType(recipientType)
+                .referenceId(referenceId)
+                .referenceType(referenceType)
+                .deviceTokenId(deviceTokenId)
+                .notificationStatus(false)
+                .createdAt(LocalDateTime.now())
+                .createdBy(1)
+                .build();
+
+        return statusRepository.save(status);
+    }
+    @Transactional
+    public void markAsSent(
+            String referenceType,
+            Integer referenceId,
+            Integer recipientId,
+            String firebaseMessageId) {
+
+        log.info("SERVICE_START | MARK_NOTIFICATION_SENT | referenceType={} | referenceId={} | recipientId={}",
+                referenceType,
+                referenceId,
+                recipientId);
+
+        OrderNotificationStatus status = statusRepository
+                .findTopByReferenceTypeAndReferenceIdAndNotificationRecipientIdOrderByOrderNotificationStatusIdDesc(
+                        referenceType,
+                        referenceId,
+                        recipientId)
+                .orElseThrow(() -> {
+
+                    log.error("NOTIFICATION_STATUS_NOT_FOUND | referenceType={} | referenceId={}",
+                            referenceType,
+                            referenceId);
+
+                    return new NotificationException("Notification status not found");
+                });
+
+        status.setNotificationStatus(true);
+
+        status.setFirebaseMessageId(firebaseMessageId);
+
+        status.setSentAt(LocalDateTime.now());
+
+        status.setUpdatedAt(LocalDateTime.now());
+
+        status.setUpdatedBy(1);
+
+        statusRepository.save(status);
+
+        log.info("SERVICE_END | MARK_NOTIFICATION_SENT_SUCCESS | referenceId={}", referenceId);
+    }
+    @Transactional
+    public String sendNotification(
+            String token,
+            String title,
+            String body) {
+
+        try {
+
+            Message message = Message.builder()
+                    .setToken(token)
+                    .setNotification(
+                            com.google.firebase.messaging.Notification.builder()
+                                    .setTitle(title)
+                                    .setBody(body)
+                                    .build())
+                    .build();
+
+            String firebaseMessageId = FirebaseMessaging
+                    .getInstance()
+                    .send(message);
+
+            log.info("NOTIFICATION_SENT | firebaseMessageId={}", firebaseMessageId);
+
+            return firebaseMessageId;
+
+        } catch (Exception ex) {
+
+            log.error("NOTIFICATION_SEND_FAILED", ex);
+
+            throw new NotificationException("Unable to send notification");
+        }
+    }
+    public Notification getNotificationTemplateByType(
+            String role,
+            String notificationType) {
+
+        log.info("Fetching notification template | role={} | notificationType={}",
+                role, notificationType);
+
+        return notificationRepository
+                .findByRoleAndNotificationTypeAndIsActiveTrue(role, notificationType)
+                .orElseThrow(() ->
+                        new NotificationException(
+                                "Notification template not found for type : "
+                                        + notificationType));
     }
 }

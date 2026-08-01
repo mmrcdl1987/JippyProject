@@ -61,5 +61,34 @@ public class MealTimeService {
                     }
                 });
     }
+    /**
+     * Returns the current active meal type.
+     */
+    public MealTypeTiming getCurrentMealType() {
+
+        if (timingsCache.isEmpty()) {
+            return null;
+        }
+
+        LocalTime now = LocalTime.now();
+
+        return timingsCache.stream()
+                .filter(t -> {
+
+                    if (t.getFromTime().isBefore(t.getToTime())) {
+
+                        return !now.isBefore(t.getFromTime())
+                                && !now.isAfter(t.getToTime());
+
+                    } else {
+
+                        return !now.isBefore(t.getFromTime())
+                                || !now.isAfter(t.getToTime());
+                    }
+
+                })
+                .findFirst()
+                .orElse(null);
+    }
 
 }

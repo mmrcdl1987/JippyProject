@@ -88,4 +88,7 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/areas")
     List<FmAreaDto> getAllAreas();
 
+    @GetMapping("/api/fm/meal-reminder/current-meal-type")
+    CoCurrentMealTypeResponse getCurrentMealType();
+
 }

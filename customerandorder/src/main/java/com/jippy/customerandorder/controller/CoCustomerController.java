@@ -220,4 +220,14 @@ public class CoCustomerController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/profile-incomplete")
+    public ResponseEntity<List<CoProfileIncompleteCustomer>> getProfileIncompleteCustomers() {
+
+        log.info("Received request to fetch customers with incomplete profiles.");
+
+        List<CoProfileIncompleteCustomer> customers =
+                customerService.getProfileIncompleteCustomers();
+
+        return ResponseEntity.ok(customers);
+    }
 }

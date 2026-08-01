@@ -1,8 +1,10 @@
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoCustomerCart;
+import com.jippy.customerandorder.projection.CoCartReminderProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,4 +19,17 @@ public interface CoCustomerCartRepository extends JpaRepository<CoCustomerCart, 
 
     @Transactional
     void deleteByCustomerId(Integer customerId);
+
+    @Query(value = """
+            SELECT
+                cc.customer_id AS customerId,
+                SUM(cc.total_price) AS cartTotal,
+                MAX(COALESCE(cc.updated_at, cc.created_at)) AS lastUpdated
+            FROM jippy_customer_and_order.customer_cart cc
+            GROUP BY cc.customer_id
+            HAVING
+                MAX(COALESCE(cc.updated_at, cc.created_at))
+                <= NOW() - INTERVAL '30 minutes'
+            """, nativeQuery = true)
+    List<CoCartReminderProjection> findEligibleCartReminders();
 }

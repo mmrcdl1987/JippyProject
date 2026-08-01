@@ -37,3 +37,11 @@ notification/src/main/resources/jippy-firebase-key.json
 
 # JVM crash logs
 notification/hs_err_pid*.log
+
+# Log files
+*.log
+*.log.gz
+
+# Generated log directories
+LOG_DIR_IS_UNDEFINED/
+**/LOG_DIR_IS_UNDEFINED/
