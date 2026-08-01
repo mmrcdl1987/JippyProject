@@ -178,6 +178,10 @@ public class COConstants {
 
     public static final String ACTION_ITEM_REMOVED = "ITEM_REMOVED";
 
+    public static final BigDecimal HIGH_VALUE_CART_LIMIT = BigDecimal.valueOf(500);
 
-}
+    public static final String ITEM_ADDED_NOT_ORDERED = "ITEM_ADDED_NOT_ORDERED";
+
+    public static final String HIGH_VALUE_CART = "HIGH_VALUE_CART";
+    }
 

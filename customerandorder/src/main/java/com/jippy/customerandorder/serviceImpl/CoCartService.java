@@ -1,14 +1,13 @@
 package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
-import com.jippy.customerandorder.dto.CoCartItemResponseDto;
-import com.jippy.customerandorder.dto.CoCartResponseDto;
-import com.jippy.customerandorder.dto.CoCartUpdateRequestDto;
-import com.jippy.customerandorder.dto.FmProductDetailResponseDto;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomerCart;
 import com.jippy.customerandorder.exception.CartException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICartService;
+import com.jippy.customerandorder.producer.CoCartReminderKafkaProducer;
+import com.jippy.customerandorder.projection.CoCartReminderProjection;
 import com.jippy.customerandorder.repository.CoCustomerCartRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +28,8 @@ public class CoCartService implements ICartService {
     private final CoCustomerCartRepository cartRepository;
 
     private final FMFeignClient fmFeignClient;
+
+    private final CoCartReminderKafkaProducer cartReminderKafkaProducer;
 
     @Override
     public String saveOrUpdateCart(CoCartUpdateRequestDto dto) {
@@ -275,5 +276,71 @@ public class CoCartService implements ICartService {
     private BigDecimal defaultValue(BigDecimal value) {
 
         return value == null ? BigDecimal.ZERO : value;
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<CoCartReminderDto> getCartReminderCustomers() {
+
+        log.info("SERVICE_START | GET_CART_REMINDERS");
+
+        List<CoCartReminderProjection> reminders =
+                cartRepository.findEligibleCartReminders();
+
+        List<CoCartReminderDto> response = new ArrayList<>();
+
+        for (CoCartReminderProjection cart : reminders) {
+
+            String notificationSubject =
+                    cart.getCartTotal().compareTo(COConstants.HIGH_VALUE_CART_LIMIT) > 0
+                            ? COConstants.HIGH_VALUE_CART
+                            : COConstants.ITEM_ADDED_NOT_ORDERED;
+
+            CoCartReminderDto dto = CoCartReminderDto.builder()
+                    .customerId(cart.getCustomerId())
+                    .cartTotal(cart.getCartTotal())
+                    .lastUpdated(cart.getLastUpdated())
+                    .notificationSubject(notificationSubject)
+                    .build();
+
+            response.add(dto);
+        }
+
+        log.info("SERVICE_END | GET_CART_REMINDERS | count={}", response.size());
+
+        return response;
+    }
+    @Override
+    public void processCartReminders() {
+
+        log.info("SERVICE_START | PROCESS_CART_REMINDERS");
+
+        List<CoCartReminderDto> reminders = getCartReminderCustomers();
+
+        if (reminders == null || reminders.isEmpty()) {
+
+            log.info("No abandoned carts found.");
+
+            return;
+        }
+
+        log.info("Total abandoned carts : {}", reminders.size());
+
+        for (CoCartReminderDto reminder : reminders) {
+
+            try {
+
+                log.info("Publishing Cart Reminder for Customer : {}",
+                        reminder.getCustomerId());
+
+                cartReminderKafkaProducer.sendCartReminder(reminder);
+
+            } catch (Exception ex) {
+
+                log.error("Failed to publish cart reminder for customer {}",
+                        reminder.getCustomerId(), ex);
+            }
+        }
+
+        log.info("SERVICE_END | PROCESS_CART_REMINDERS");
     }
 }

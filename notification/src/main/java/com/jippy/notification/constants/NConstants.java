@@ -26,7 +26,18 @@ public class NConstants {
     public static final String NOTIFICATION_TYPE_CREATED = "SCHEDULED_ORDER_CREATED";
     public static final String NOTIFICATION_TYPE_TODAY = "SCHEDULED_ORDER_TODAY";
     public static final String NOTIFICATION_TYPE_ONE_HOUR = "SCHEDULED_ORDER_1_HOUR_BEFORE";
+    public static final String SUBJECT_PROFILE_INCOMPLETE = "PROFILE_INCOMPLETE";
+    public static final String REFERENCE_TYPE_CUSTOMER = "CUSTOMER";
 
+    public static final String REFERENCE_TYPE_CART = "CART";
+
+    public static final String NOTIFICATION_STATUS_PENDING = "PENDING";
+
+    public static final String NOTIFICATION_STATUS_SENT = "SENT";
+
+    public static final String MEAL_REMINDER = "MEAL_REMINDER";
+
+    public static final String REFERENCE_TYPE_MEAL_REMINDER = "MEAL_REMINDER";
     private NConstants() {
     }
 

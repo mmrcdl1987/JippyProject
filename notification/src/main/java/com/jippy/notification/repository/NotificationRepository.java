@@ -15,4 +15,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
             String role,
             String subject
     );
+    Optional<Notification> findByRoleAndNotificationTypeAndIsActiveTrue(
+            String role,
+            String notificationType
+    );
 }

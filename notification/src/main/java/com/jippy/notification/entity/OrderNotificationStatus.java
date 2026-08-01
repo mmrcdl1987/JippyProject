@@ -24,7 +24,7 @@ public class OrderNotificationStatus {
     private Integer orderNotificationStatusId;
 
     @Column(name = "order_id", length = 50)
-    private String orderId;
+        private String orderId;
 
     @Column(name = "reference_id")
     private Integer referenceId;

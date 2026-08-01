@@ -18,6 +18,7 @@ import com.jippy.customerandorder.exception.CoBadRequestException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -672,6 +673,34 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                 response.size());
 
         return response;
+    }
+    @Override
+    public List<CoProfileIncompleteCustomer> getProfileIncompleteCustomers() {
+
+        log.info("Fetching customers with incomplete profile.");
+
+        List<CoCustomer> customers = customerRepository.findProfileIncompleteCustomers();
+
+        List<CoProfileIncompleteCustomer> responseList = new ArrayList<>();
+
+        for (CoCustomer customer : customers) {
+
+            CoProfileIncompleteCustomer response = new CoProfileIncompleteCustomer();
+
+            response.setCustomerId(customer.getCustomerId());
+            response.setFirstName(customer.getFirstName());
+            response.setLastName(customer.getLastName());
+            response.setPhoneNumber(customer.getPhoneNumber());
+            response.setEmail(customer.getEmail());
+
+
+
+            responseList.add(response);
+        }
+
+        log.info("Total incomplete profile customers found: {}", responseList.size());
+
+        return responseList;
     }
 
 }

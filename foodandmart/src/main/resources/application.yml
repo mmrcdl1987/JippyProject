@@ -19,6 +19,7 @@ spring:
       password: "${REDIS_PASSWORD:jippy-redis@574}"
       timeout: 6000ms
 
+
   datasource:
     url: jdbc:postgresql://187.127.156.147:5431/fm_db
     username: fm_user
