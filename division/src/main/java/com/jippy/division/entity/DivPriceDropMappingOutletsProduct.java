@@ -7,22 +7,15 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name =
-                "price_drop_mapping_outlets_products",
-        schema = "jippy_division")
+@Table(name = "price_drop_mapping_outlets_products", schema = "jippy_division")
 @Getter
 @Setter
-public class DivPriceDropMappingOutletProduct {
+public class DivPriceDropMappingOutletsProduct {
 
     @Id
-    @GeneratedValue(strategy =
-            GenerationType.IDENTITY)
-    @Column(
-            name =
-                    "price_drop_mapping_outlets_products_id")
-    private Integer
-            priceDropMappingOutletsProductsId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "price_drop_mapping_outlets_products_id")
+    private Integer priceDropMappingOutletsProductsId;
 
     @Column(name = "price_drop_value")
     private Double priceDropValue;
@@ -33,11 +26,14 @@ public class DivPriceDropMappingOutletProduct {
     @Column(name = "product_id")
     private Integer productId;
 
-    @Column(name = "area_id")
-    private Integer areaId;
+    @Column(name = "location_id")
+    private Integer locationId;
 
-    @Column(name = "promotion_time_id")
-    private Integer promotionTimeId;
+    @Column(name = "location_type")
+    private String locationType;
+
+    @Column(name = "promotion_date_id")
+    private Integer promotionDateId;
 
     @Column(name = "price_model_id")
     private Integer priceModelId;

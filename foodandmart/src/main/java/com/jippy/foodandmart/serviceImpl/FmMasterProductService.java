@@ -36,7 +36,7 @@ public class FmMasterProductService {
     // ── CREATE ────────────────────────────────────────────────────────────────
 
     public FmMasterProduct save(FmMasterProductRequest req) {
-        FmMasterProductMapper.validate(req);
+        FmMasterProductMapper.validateForCreate(req);
         FmMasterProduct entity = FmMasterProductMapper.toEntity(req);
         FmMasterProduct saved = masterProductRepository.save(entity);
         log.info("[MASTER] Saved id={} name={}", saved.getMasterProductId(), saved.getMasterProductName());
@@ -77,8 +77,7 @@ public class FmMasterProductService {
 
     @Transactional(readOnly = true)
     public FmMasterProduct getById(Integer id) {
-        return masterProductRepository.findById(id)
-                .orElseThrow(() -> new MasterProductNotFoundException(id));
+        return masterProductRepository.findById(id).orElseThrow(() -> new MasterProductNotFoundException(id));
     }
 
     @Transactional(readOnly = true)
@@ -96,20 +95,24 @@ public class FmMasterProductService {
     // ── UPDATE ────────────────────────────────────────────────────────────────
 
     public FmMasterProduct update(Integer id, FmMasterProductRequest req) {
-        FmMasterProductMapper.validate(req);
-        FmMasterProduct existing = masterProductRepository.findById(id)
-                .orElseThrow(() -> new MasterProductNotFoundException(id));
+
+        FmMasterProduct existing = masterProductRepository.findById(id).orElseThrow(() -> new MasterProductNotFoundException(id));
+
+        FmMasterProductMapper.validateForUpdate(req);
+
         FmMasterProductMapper.updateEntity(existing, req);
+
         FmMasterProduct saved = masterProductRepository.save(existing);
+
         log.info("[MASTER] Updated id={}", saved.getMasterProductId());
+
         return saved;
     }
 
     // ── DELETE ────────────────────────────────────────────────────────────────
 
     public void delete(Integer id) {
-        if (!masterProductRepository.existsById(id))
-            throw new MasterProductNotFoundException(id);
+        if (!masterProductRepository.existsById(id)) throw new MasterProductNotFoundException(id);
         masterProductRepository.deleteById(id);
         log.info("[MASTER] Deleted id={}", id);
     }
@@ -117,15 +120,13 @@ public class FmMasterProductService {
     // ── PHOTO UPLOAD ──────────────────────────────────────────────────────────
 
     public String updatePhoto(Integer id, MultipartFile photo) {
-        if (photo == null || photo.isEmpty())
-            throw new IllegalArgumentException("Photo file cannot be empty.");
+        if (photo == null || photo.isEmpty()) throw new IllegalArgumentException("Photo file cannot be empty.");
         FmMasterProductMapper.validatePhoto(photo.getContentType(), photo.getSize());
         try {
             byte[] bytes = photo.getBytes();
             String base64 = Base64.getEncoder().encodeToString(bytes);
             String uri = "data:" + photo.getContentType() + ";base64," + base64;
-            FmMasterProduct mp = masterProductRepository.findById(id)
-                    .orElseThrow(() -> new MasterProductNotFoundException(id));
+            FmMasterProduct mp = masterProductRepository.findById(id).orElseThrow(() -> new MasterProductNotFoundException(id));
             mp.setPhoto(uri);
             masterProductRepository.save(mp);
             log.info("[MASTER] Photo saved id={}", id);
@@ -139,13 +140,60 @@ public class FmMasterProductService {
 
     // ── FILE COMPARE ──────────────────────────────────────────────────────────
 
+    //    public FmCompareFileResponse compareFileWithDB(MultipartFile file) {
+//        if (file == null || file.isEmpty())
+//            throw new IllegalArgumentException("File is null or empty.");
+//        if (file.getSize() > 10 * 1024 * 1024L)
+//            throw new IllegalArgumentException("File exceeds 10 MB size limit.");
+//
+//        byte[] fileBytes;
+//        try {
+//            fileBytes = file.getBytes();
+//        } catch (Exception e) {
+//            throw new FileProcessingException("Failed to read file bytes: " + e.getMessage(), e);
+//        }
+//
+//        InputStream csvStream = fileConverterService.convertToCsvFromBytes(fileBytes, file.getOriginalFilename());
+//        List<FmMasterProduct> parsed = parseCsv(csvStream);
+//
+//        if (parsed.isEmpty())
+//            return new FmCompareFileResponse(List.of(), List.of(), 0, 0, 0, 0);
+//
+//        List<FmMasterProduct> db = masterProductRepository.findAllByOrderByMasterProductIdAsc();
+//        Map<String, FmMasterProduct> dbLookup = new HashMap<>();
+//        for (FmMasterProduct d : db) {
+//            if (d.getMasterProductName() != null)
+//                dbLookup.put(norm(d.getMasterProductName()), d);
+//        }
+//
+//        List<FmCompareFileResponse.CompareItem> dupes = new ArrayList<>();
+//        List<FmCompareFileResponse.CompareItem> newOnes = new ArrayList<>();
+//        int skipped = 0;
+//
+//        for (FmMasterProduct fp : parsed) {
+//            if (fp.getMasterProductName() == null || fp.getMasterProductName().isBlank()) {
+//                skipped++;
+//                continue;
+//            }
+//            FmMasterProduct dbMatch = dbLookup.get(norm(fp.getMasterProductName()));
+//            if (dbMatch != null) {
+//                dupes.add(toCompareItem(dbMatch.getMasterProductId(), dbMatch, fp.getCsvMerchantPrice(), fp.getCsvTiming(), fp.getCsvDayOfWeek()));
+//            } else {
+//                newOnes.add(toCompareItem(null, fp, fp.getCsvMerchantPrice(), fp.getCsvTiming(), fp.getCsvDayOfWeek()));
+//            }
+//        }
+//
+//        log.info("[MASTER] Compare: dup={} new={} skipped={}", dupes.size(), newOnes.size(), skipped);
+//        return new FmCompareFileResponse(dupes, newOnes, parsed.size(), dupes.size(), newOnes.size(), skipped);
+//    }
     public FmCompareFileResponse compareFileWithDB(MultipartFile file) {
-        if (file == null || file.isEmpty())
-            throw new IllegalArgumentException("File is null or empty.");
-        if (file.getSize() > 10 * 1024 * 1024L)
-            throw new IllegalArgumentException("File exceeds 10 MB size limit.");
+
+        if (file == null || file.isEmpty()) throw new IllegalArgumentException("File is null or empty.");
+
+        if (file.getSize() > 10 * 1024 * 1024L) throw new IllegalArgumentException("File exceeds 10 MB size limit.");
 
         byte[] fileBytes;
+
         try {
             fileBytes = file.getBytes();
         } catch (Exception e) {
@@ -153,36 +201,57 @@ public class FmMasterProductService {
         }
 
         InputStream csvStream = fileConverterService.convertToCsvFromBytes(fileBytes, file.getOriginalFilename());
+
         List<FmMasterProduct> parsed = parseCsv(csvStream);
 
-        if (parsed.isEmpty())
+        if (parsed.isEmpty()) {
             return new FmCompareFileResponse(List.of(), List.of(), 0, 0, 0, 0);
+        }
 
+        // Load all master products from DB
         List<FmMasterProduct> db = masterProductRepository.findAllByOrderByMasterProductIdAsc();
+
+        // Lookup using Product Name + Category Name
         Map<String, FmMasterProduct> dbLookup = new HashMap<>();
+
         for (FmMasterProduct d : db) {
-            if (d.getMasterProductName() != null)
-                dbLookup.put(norm(d.getMasterProductName()), d);
+
+            if (d.getMasterProductName() != null && d.getCategoryName() != null) {
+
+                String key = norm(d.getMasterProductName()) + "|" + norm(d.getCategoryName());
+
+                dbLookup.put(key, d);
+            }
         }
 
         List<FmCompareFileResponse.CompareItem> dupes = new ArrayList<>();
         List<FmCompareFileResponse.CompareItem> newOnes = new ArrayList<>();
+
         int skipped = 0;
 
         for (FmMasterProduct fp : parsed) {
+
             if (fp.getMasterProductName() == null || fp.getMasterProductName().isBlank()) {
                 skipped++;
                 continue;
             }
-            FmMasterProduct dbMatch = dbLookup.get(norm(fp.getMasterProductName()));
+
+            String key = norm(fp.getMasterProductName()) + "|" + norm(fp.getCategoryName());
+
+            FmMasterProduct dbMatch = dbLookup.get(key);
+
             if (dbMatch != null) {
+
                 dupes.add(toCompareItem(dbMatch.getMasterProductId(), dbMatch, fp.getCsvMerchantPrice(), fp.getCsvTiming(), fp.getCsvDayOfWeek()));
+
             } else {
+
                 newOnes.add(toCompareItem(null, fp, fp.getCsvMerchantPrice(), fp.getCsvTiming(), fp.getCsvDayOfWeek()));
             }
         }
 
         log.info("[MASTER] Compare: dup={} new={} skipped={}", dupes.size(), newOnes.size(), skipped);
+
         return new FmCompareFileResponse(dupes, newOnes, parsed.size(), dupes.size(), newOnes.size(), skipped);
     }
 
@@ -190,32 +259,7 @@ public class FmMasterProductService {
 
     private FmCompareFileResponse.CompareItem toCompareItem(Integer id, FmMasterProduct mp, Double csvPrice, String csvTiming, String csvDayOfWeek) {
         log.info("[MASTER] toCompareItem: product='{}' id={} csvPrice={} csvTiming={} csvDayOfWeek={}", mp.getMasterProductName(), id, csvPrice, csvTiming, csvDayOfWeek);
-        return new FmCompareFileResponse.CompareItem(
-                id,
-                mp.getMasterProductName(),
-                mp.getVeg(),
-                mp.getNonVeg(),
-                mp.getCategoryId(),
-                mp.getCategoryName(),
-                mp.getSubCategoryId(),
-                mp.getSubCategoryName(),
-                mp.getDescription(),
-                mp.getShortDescription(),
-                mp.getPhoto(),
-                mp.getPhotos(),
-                mp.getThumbnail(),
-                mp.getFoodType(),
-                mp.getCuisineType(),
-                mp.getHasOptions(),
-                mp.getOptionsEnabled(),
-                mp.getOptions(),
-                mp.getCalories(),
-                mp.getProtein(),
-                mp.getFats(),
-                mp.getCarbs(),
-                mp.getGrams(),
-                mp.getPublish(),
-                csvPrice,     // merchant_price from uploaded CSV file
+        return new FmCompareFileResponse.CompareItem(id, mp.getMasterProductName(), mp.getVeg(), mp.getNonVeg(), mp.getCategoryId(), mp.getCategoryName(), mp.getSubCategoryId(), mp.getSubCategoryName(), mp.getDescription(), mp.getShortDescription(), mp.getPhoto(), mp.getPhotos(), mp.getThumbnail(), mp.getFoodType(), mp.getCuisineType(), mp.getHasOptions(), mp.getOptionsEnabled(), mp.getOptions(), mp.getCalories(), mp.getProtein(), mp.getFats(), mp.getCarbs(), mp.getGrams(), mp.getPublish(), csvPrice,     // merchant_price from uploaded CSV file
                 csvTiming,    // availability timing from uploaded CSV file
                 csvDayOfWeek  // day-of-week name from uploaded CSV file
         );
@@ -230,15 +274,7 @@ public class FmMasterProductService {
         try (CSVReader r = new CSVReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
             String[] row;
             boolean header = true;
-            int nameIdx = -1, descIdx = -1, shortDescIdx = -1,
-                    vegIdx = -1, nonVegIdx = -1,
-                    categoryIdIdx = -1, categoryNameIdx = -1,
-                    photoIdx = -1, photosIdx = -1, thumbnailIdx = -1,
-                    foodTypeIdx = -1, cuisineTypeIdx = -1,
-                    hasOptionsIdx = -1, optionsEnabledIdx = -1,
-                    optionsIdx = -1, publishIdx = -1,
-                    caloriesIdx = -1, proteinsIdx = -1, fatsIdx = -1,
-                    carbsIdx = -1, gramsIdx = -1,priceIdx=-1, timingIdx=-1, dayOfWeekIdx=-1;
+            int nameIdx = -1, descIdx = -1, shortDescIdx = -1, vegIdx = -1, nonVegIdx = -1, categoryIdIdx = -1, categoryNameIdx = -1, photoIdx = -1, photosIdx = -1, thumbnailIdx = -1, foodTypeIdx = -1, cuisineTypeIdx = -1, hasOptionsIdx = -1, optionsEnabledIdx = -1, optionsIdx = -1, publishIdx = -1, caloriesIdx = -1, proteinsIdx = -1, fatsIdx = -1, carbsIdx = -1, gramsIdx = -1, priceIdx = -1, timingIdx = -1, dayOfWeekIdx = -1;
 
 
             while ((row = r.readNext()) != null) {
@@ -254,9 +290,8 @@ public class FmMasterProductService {
                         if ("veg".equals(h)) vegIdx = i;
                         if ("nonveg".equals(h) || "non_veg".equals(h)) nonVegIdx = i;
                         if ("categoryid".equals(h) || "category_id".equals(h)) categoryIdIdx = i;
-                        if ("categoryname".equals(h) || "category_name".equals(h)
-                                || "category".equals(h) || "categorytitle".equals(h)
-                                || "category_title".equals(h)) categoryNameIdx = i;
+                        if ("categoryname".equals(h) || "category_name".equals(h) || "category".equals(h) || "categorytitle".equals(h) || "category_title".equals(h))
+                            categoryNameIdx = i;
                         if ("photo".equals(h)) photoIdx = i;
                         if ("photos".equals(h)) photosIdx = i;
                         if ("thumbnail".equals(h)) thumbnailIdx = i;
@@ -274,21 +309,17 @@ public class FmMasterProductService {
                         // Fuzzy price column detection: match any header that contains
                         // "price"/"pric", "mrp", or contains "merchant"/"merchat" —
                         // covers common user typos such as "merchat_pricce".
-                        if (h.contains("price") || h.contains("pric") || h.equals("mrp")
-                                || h.contains("merchant") || h.contains("merchat")) {
+                        if (h.contains("price") || h.contains("pric") || h.equals("mrp") || h.contains("merchant") || h.contains("merchat")) {
                             priceIdx = i;
                             log.info("[MASTER] Price column detected at index {}: '{}'", i, h);
                         }
                         // Timing column: match "timing","time","avail","avelabule" — covers typos.
-                        if (h.contains("timing") || h.contains("time") || h.contains("avail")
-                                || h.contains("avelabule")) {
+                        if (h.contains("timing") || h.contains("time") || h.contains("avail") || h.contains("avelabule")) {
                             timingIdx = i;
                             log.info("[MASTER] Timing column detected at index {}: '{}'", i, h);
                         }
                         // Day-of-week column: match "dayofaweek","daysofaweek","daysofweek","weekday"
-                        if (h.contains("dayofaweek") || h.contains("daysofaweek")
-                                || h.contains("daysofweek") || h.contains("weekday")
-                                || h.equals("day") || h.equals("days")) {
+                        if (h.contains("dayofaweek") || h.contains("daysofaweek") || h.contains("daysofweek") || h.contains("weekday") || h.equals("day") || h.equals("days")) {
                             dayOfWeekIdx = i;
                             log.info("[MASTER] DayOfWeek column detected at index {}: '{}'", i, h);
                         }
@@ -332,8 +363,7 @@ public class FmMasterProductService {
                     try {
                         if (!cleanPrice.isBlank()) csvPrice = Double.parseDouble(cleanPrice);
                     } catch (NumberFormatException ignored) {
-                        log.warn("[MASTER] Could not parse price rawPrice='{}' cleanPrice='{}' for product='{}'",
-                                rawPrice, cleanPrice, mp.getMasterProductName());
+                        log.warn("[MASTER] Could not parse price rawPrice='{}' cleanPrice='{}' for product='{}'", rawPrice, cleanPrice, mp.getMasterProductName());
                     }
                 }
                 log.info("[MASTER] Product='{}' priceIdx={} rawPrice='{}' csvPrice={}", mp.getMasterProductName(), priceIdx, rawPrice, csvPrice);
@@ -386,12 +416,11 @@ public class FmMasterProductService {
 
     private Integer resolveOrCreateCategoryId(String catName) {
         if (catName == null || catName.isBlank()) return null;
-        FmCategory cat = categoryRepository.findByCategoryNameIgnoreCase(catName.trim())
-                .orElseGet(() -> {
-                    FmCategory newCat = new FmCategory();
-                    newCat.setCategoryName(catName.trim());
-                    return categoryRepository.save(newCat);
-                });
+        FmCategory cat = categoryRepository.findByCategoryNameIgnoreCase(catName.trim()).orElseGet(() -> {
+            FmCategory newCat = new FmCategory();
+            newCat.setCategoryName(catName.trim());
+            return categoryRepository.save(newCat);
+        });
         return cat.getCategoryId();
     }
 
@@ -416,8 +445,7 @@ public class FmMasterProductService {
 
     private String norm(String v) {
         if (v == null) return "";
-        return v.replace("\"", "").replace("\r", "").replace("\n", "")
-                .trim().toLowerCase().replaceAll("\\s+", " ");
+        return v.replace("\"", "").replace("\r", "").replace("\n", "").trim().toLowerCase().replaceAll("\\s+", " ");
     }
 
 
@@ -438,13 +466,11 @@ public class FmMasterProductService {
 
         return products.stream().map(masterProductMapper::toResponseDto).toList();
     }
-    @Transactional
-    public FmCreateMasterProductResponseDto createMasterProduct(
-            FmCreateMasterProductRequestDto request) {
 
-        log.info("CREATE_MASTER_PRODUCT_STARTED | categoryId={} | productName={}",
-                request.getCategoryId(),
-                request.getMasterProductName());
+    @Transactional
+    public FmCreateMasterProductResponseDto createMasterProduct(FmCreateMasterProductRequestDto request) {
+
+        log.info("CREATE_MASTER_PRODUCT_STARTED | categoryId={} | productName={}", request.getCategoryId(), request.getMasterProductName());
 
         // Step 1 : Common Validation
 
@@ -471,10 +497,7 @@ public class FmMasterProductService {
         }
 
         // Step 3 : Validate Category
-        FmCategory category = categoryRepository
-                .findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Category not found with id : " + request.getCategoryId()));
+        FmCategory category = categoryRepository.findById(request.getCategoryId()).orElseThrow(() -> new ResourceNotFoundException("Category not found with id : " + request.getCategoryId()));
 
         // ------------------------------------------------------
         // Step 4 : Validate Food Type & Veg Flag
@@ -482,42 +505,30 @@ public class FmMasterProductService {
 
         if (request.getFoodType() != null) {
 
-            if (request.getIsVeg()
-                    && !"VEG".equalsIgnoreCase(request.getFoodType())) {
+            if (request.getIsVeg() && !"VEG".equalsIgnoreCase(request.getFoodType())) {
 
-                throw new BadRequestException(
-                        "Veg products must have food type as VEG.");
+                throw new BadRequestException("Veg products must have food type as VEG.");
             }
 
-            if (!request.getIsVeg()
-                    && "VEG".equalsIgnoreCase(request.getFoodType())) {
+            if (!request.getIsVeg() && "VEG".equalsIgnoreCase(request.getFoodType())) {
 
-                throw new BadRequestException(
-                        "Non Veg products cannot have food type as VEG.");
+                throw new BadRequestException("Non Veg products cannot have food type as VEG.");
             }
         }
 
         // Step 5 : Duplicate Validation
 
-        if (masterProductRepository
-                .existsByMasterProductNameIgnoreCaseAndCategoryId(
-                        request.getMasterProductName(),
-                        request.getCategoryId())) {
+        if (masterProductRepository.existsByMasterProductNameIgnoreCaseAndCategoryId(request.getMasterProductName(), request.getCategoryId())) {
 
-            throw new DuplicateResourceException(
-                    "Master Product already exists in this category.");
+            throw new DuplicateResourceException("Master Product already exists in this category.");
         }
 
         // Step 6 : Convert DTO -> Entit
-        FmMasterProduct entity = FmCreateMasterProductMapper.toEntity(
-                request,
-                category.getCategoryName(),
-                1);
+        FmMasterProduct entity = FmCreateMasterProductMapper.toEntity(request, category.getCategoryName(), 1);
         // Step 7 : Save
         FmMasterProduct savedProduct = masterProductRepository.save(entity);
 
-        log.info("CREATE_MASTER_PRODUCT_COMPLETED | masterProductId={}",
-                savedProduct.getMasterProductId());
+        log.info("CREATE_MASTER_PRODUCT_COMPLETED | masterProductId={}", savedProduct.getMasterProductId());
 
         return mapper.toResponseDto(savedProduct);
     }
