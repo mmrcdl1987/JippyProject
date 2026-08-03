@@ -48,6 +48,10 @@ public class FmProduct {
     @Column(name = "image_link")
     private String imageLink;
 
+    @Column(name = "is_image_desc_updated", nullable = false)
+    @Builder.Default
+    private Boolean isImageDescUpdated = Boolean.FALSE;
+
     @Column(name = "rating")
     private BigDecimal rating;
     //-------------------------------------

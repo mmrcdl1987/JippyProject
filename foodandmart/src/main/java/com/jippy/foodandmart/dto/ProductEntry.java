@@ -35,10 +35,6 @@ public class ProductEntry {
 
     private String imageLink;
 
-    private String photos;
-
-    private String thumbnail;
-
     private String csvTiming;
 
     private String csvDayOfWeek;

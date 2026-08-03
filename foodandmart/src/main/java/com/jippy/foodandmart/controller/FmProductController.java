@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/fm/products")
 @RequiredArgsConstructor
-public class FmProductController {
+public class    FmProductController {
 
     private final FmProductService productMappingService;
 
