@@ -191,5 +191,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(FmApiResponse.error(ex.getMessage()));
     }
+    @ExceptionHandler(ProductContentException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleProductContentException(
+            ProductContentException ex) {
+
+        log.error("[PRODUCT CONTENT] {}", ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
 
 }
