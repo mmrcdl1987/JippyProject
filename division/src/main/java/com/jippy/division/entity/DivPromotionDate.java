@@ -23,9 +23,6 @@ public class DivPromotionDate {
     @Column(name = "promotion_to_date")
     private LocalDateTime promotionToDate;
 
-    @Column(name = "no_of_slots")
-    private Integer noOfSlots;
-
     @Column(name = "meal_type_slot_id")
     private Integer mealTypeSlotId;
 

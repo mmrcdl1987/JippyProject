@@ -17,11 +17,15 @@ public class DivCampaignRequestDto {
 
     private Double priceDropValue;
 
+    // STATE / CITY / AREA
+    private Integer locationId;
+
+    // STATE / CITY / AREA
+    private String locationType;
+
     private List<Integer> outletIds;
 
     private List<Integer> productIds;
-
-    private Integer areaId;
 
     private String promotionFromDate;
 
@@ -29,5 +33,6 @@ public class DivCampaignRequestDto {
 
     private Integer createdBy;
 
-    private List<DivCampaignSlotDto> slots;
+
+    private Integer mealTypeSlotId;
 }

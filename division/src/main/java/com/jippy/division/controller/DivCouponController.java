@@ -136,78 +136,19 @@ public class DivCouponController {
      * CREATE CAMPAIGN
      */
     @PostMapping("/campaign/create")
-    public ResponseEntity<DivResponseDto> createCampaign(@RequestBody DivCampaignRequestDto dto) {
+    public ResponseEntity<DivResponseDto> createCampaign(
+            @RequestBody DivCampaignRequestDto dto) {
 
-        logger.info("API createCampaign initiated");
-
-        // CAMPAIGN TYPE REQUIRED
-
-        if (dto.getCampainType() == null || dto.getCampainType().isBlank()) {
-
-            throw new RuntimeException("campainType is required");
-        }
-
-        // COUPON VALIDATION
-
-        if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
-
-            if (dto.getCouponId() == null) {
-
-                throw new RuntimeException("couponId is required " + "for COUPON campaign");
-            }
-        }
-
-        // PRICE DROP VALIDATION
-
-        if ("PRICE_DROP".equalsIgnoreCase(dto.getCampainType())) {
-
-            // PRICE MODEL REQUIRED
-
-            if (dto.getPriceModelId() == null) {
-
-                throw new RuntimeException("priceModelId is required");
-            }
-
-            // ONLY 1 OR 2
-
-            if (!(dto.getPriceModelId() == 1 || dto.getPriceModelId() == 2)) {
-
-                throw new RuntimeException("priceModelId must be " + "1 (FLAT) or 2 (PERCENTAGE)");
-            }
-
-            // FLAT VALIDATION
-
-            if (dto.getPriceModelId() == 1 && dto.getPriceDropValue() == null) {
-
-                throw new RuntimeException("priceDropValue required " + "for FLAT");
-            }
-        }
-
-        // OUTLET VALIDATION
-
-        if (dto.getOutletIds() == null || dto.getOutletIds().isEmpty()) {
-
-            throw new RuntimeException("outletIds required");
-        }
-
-
-//        if (dto.getProductIds() == null || dto.getProductIds().isEmpty()) {
-//
-//            throw new RuntimeException("productIds required");
-//        }
-
-        // SLOT VALIDATION
-
-        if (dto.getSlots() == null || dto.getSlots().isEmpty()) {
-
-            throw new RuntimeException("slots required");
-        }
+        logger.info("Campaign Create API Started");
 
         String response = divCampaignService.createCampaign(dto);
 
-        logger.info("Campaign created successfully");
+        logger.info("Campaign Create API Completed");
 
-        return ResponseEntity.ok(new DivResponseDto(DivAppConstants.STATUS_200, response));
+        return ResponseEntity.ok(
+                new DivResponseDto(
+                        DivAppConstants.STATUS_200,
+                        response));
     }
 
     // FILE: controller/DivCouponController.java
@@ -219,6 +160,15 @@ public class DivCouponController {
         List<DivOutletDto> outlets = divCampaignService.getAvailableOutlets(areaId);
 
         return ResponseEntity.ok(outlets);
+    }
+    @PostMapping("/available-meal-slots")
+    public ResponseEntity<List<AvailableMealSlotResponseDto>> getAvailableMealSlots(
+            @RequestBody AvailableMealSlotRequestDto request) {
+
+        logger.info("Fetching available meal slots");
+
+        return ResponseEntity.ok(
+                divCampaignService.getAvailableMealSlots(request));
     }
 
 }

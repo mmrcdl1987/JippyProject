@@ -18,6 +18,16 @@ public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct
 
     boolean existsByMasterProductNameIgnoreCaseAndCategoryId(String name, Integer categoryId);
 
+    // NEW
+    boolean existsByMasterProductNameIgnoreCaseAndCategoryNameIgnoreCase(
+            String masterProductName,
+            String categoryName);
+
+    // NEW
+    Optional<FmMasterProduct> findByMasterProductNameIgnoreCaseAndCategoryNameIgnoreCase(
+            String masterProductName,
+            String categoryName);
+
     @Query("""
             SELECT p FROM FmMasterProduct p WHERE
             LOWER(p.masterProductName) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -57,6 +67,4 @@ public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct
     Optional<FmMasterProduct> findByMasterProductNameIgnoreCaseAndCategoryId(
             String masterProductName,
             Integer categoryId);
-
 }
-

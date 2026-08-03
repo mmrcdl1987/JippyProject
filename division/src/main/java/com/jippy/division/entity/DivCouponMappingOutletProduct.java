@@ -26,11 +26,14 @@ public class DivCouponMappingOutletProduct {
     @Column(name = "product_id")
     private Integer productId;
 
-    @Column(name = "area_id")
-    private Integer areaId;
+    @Column(name = "location_id")
+    private Integer locationId;
 
-    @Column(name = "promotion_time_id")
-    private Integer promotionTimeId;
+    @Column(name = "location_type")
+    private String locationType;
+
+    @Column(name = "promotion_date_id")
+    private Integer promotionDateId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
