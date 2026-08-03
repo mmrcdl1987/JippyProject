@@ -1,5 +1,10 @@
 package com.jippy.foodandmart.service;
 
+import com.jippy.foodandmart.dto.SchedulerSummaryDto;
+
+import java.io.File;
+import java.util.List;
+
 /**
  * Common Email Service interface.
  *
@@ -31,5 +36,10 @@ public interface EmailService {
 //     * @param otp OTP
 //     */
 //    void sendForgotPasswordOtp(String toEmail, String otp);
+
+    void sendMissingProductsEmail(
+            SchedulerSummaryDto summary,
+            File csvFile);
+
 
 }

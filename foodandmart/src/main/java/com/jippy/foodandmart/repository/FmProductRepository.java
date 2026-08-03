@@ -2,12 +2,13 @@ package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProduct;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -109,4 +110,11 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
         boolean existsByProductIdAndOutletId(
                 @Param("productId") Integer productId,
                 @Param("outletId") Integer outletId);
-    }
+
+    /**
+     * Fetch all products whose image and description are not updated.
+     */
+    Page<FmProduct> findByIsImageDescUpdatedFalse(Pageable pageable);
+}
+
+
