@@ -28,7 +28,7 @@ public class CoJwtAuthenticationFilter extends OncePerRequestFilter {
         log.info("Checking bypass in filter for path: {}", path);
 
         // Returns true if it's a documentation path, completely skipping this filter
-        return path != null && (path.contains("v3/api-docs") || path.contains("swagger-ui") || path.contains("/auth/login"));
+        return path != null && (path.contains("v3/api-docs") || path.contains("swagger-ui") || path.contains("/auth/login") || path.startsWith("/ws-group-order"));
     }
 
     @Override

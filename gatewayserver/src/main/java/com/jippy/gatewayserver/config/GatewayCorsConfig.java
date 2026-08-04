@@ -30,7 +30,7 @@ public class GatewayCorsConfig {
         ));
 
         // Allow the exact origin Swagger is running on
-        //config.addAllowedOriginPattern("*");
+        config.addAllowedOriginPattern("*");
         config.addAllowedMethod("*"); // Allow GET, POST, PUT, DELETE, OPTIONS
         config.addAllowedHeader("*"); // Allow all authentication headers
         config.setAllowCredentials(true);

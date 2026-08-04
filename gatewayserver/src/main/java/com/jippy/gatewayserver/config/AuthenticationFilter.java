@@ -25,7 +25,8 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             "/v3/api-docs",
             "/swagger-ui",
             "/webjars",
-            "/swagger-ui.html"
+            "/swagger-ui.html",
+            "/ws-group-order/**"
     );
 
     public AuthenticationFilter() {
@@ -45,6 +46,13 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
             // For react UI -- gateway  CRITICAL CORS FIX: Pass through all HTTP OPTIONS (Preflight) requests safely
             if (org.springframework.http.HttpMethod.OPTIONS.equals(request.getMethod())) {
+                return chain.filter(exchange);
+            }
+
+            // 2. CRITICAL WEBSOCKET FIX: Skip HTTP token check for WebSocket Handshake upgrades
+            String upgradeHeader = request.getHeaders().getFirst(HttpHeaders.UPGRADE);
+            if ("websocket".equalsIgnoreCase(upgradeHeader)) {
+                log.info("GATEWAY: WebSocket Upgrade request detected for path: {}. Bypassing HTTP JWT validation.", request.getPath());
                 return chain.filter(exchange);
             }
 

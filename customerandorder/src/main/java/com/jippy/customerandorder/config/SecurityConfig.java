@@ -33,6 +33,10 @@ public class SecurityConfig {
 
                         // 2. ADD THIS: Allow Health Checks
                         .requestMatchers("/actuator/**").permitAll()
+                       .requestMatchers("/ws-group-order","/ws-group-order/**").permitAll() // Allow initial TCP upgrade
+
+                        // 2. MUST cover all subpaths (/ws-group-order, /ws-group-order/info, /ws-group-order/topic/**)
+                       // .requestMatchers("/ws-group-order/**").permitAll()
 
                         .requestMatchers("/api/co/**").authenticated()
                         .anyRequest().authenticated()

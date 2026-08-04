@@ -142,6 +142,13 @@ eureka:
     service-url:
       defaultZone: http://eureka-admin:eureka-admin123@localhost:8070/eureka/
 
+aws:
+  s3:
+    bucket-name: jippys3bucket
+    region: ap-south-2
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
 springdoc:
   api-docs:
     path: /api/co/v3/api-docs

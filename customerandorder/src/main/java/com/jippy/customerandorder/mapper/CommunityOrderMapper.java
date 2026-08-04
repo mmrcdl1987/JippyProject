@@ -2,11 +2,14 @@ package com.jippy.customerandorder.mapper;
 
 import com.jippy.customerandorder.dto.CoAddOrDropMembersFromCommunityDto;
 import com.jippy.customerandorder.dto.CoCommunityEventsDto;
+import com.jippy.customerandorder.dto.CommunityDto;
+import com.jippy.customerandorder.entity.CoCommunity;
 import com.jippy.customerandorder.entity.CoCommunityEvents;
 import com.jippy.customerandorder.entity.CoCustomerCommunities;
+import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Polygon;
 
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 
 public class CommunityOrderMapper {
 
@@ -43,5 +46,25 @@ public class CommunityOrderMapper {
         customerCommunities.setCreatedBy(addOrDropMembersFromCommunityDto.getCustomerId());
 
         return customerCommunities;
+    }
+
+    public static CoCommunity mapToCommunityEntity(CoCommunity communityToUpdate, CommunityDto communityDto, Polygon polygon) {
+
+        CoCommunity community = new CoCommunity();
+
+        if(communityDto.getCommunityId() != null) {
+            community.setCommunityId(communityDto.getCommunityId());
+            community.setUpdatedAt(LocalDateTime.now());
+            community.setUpdatedBy(communityDto.getUpdatedBy());
+        }
+        community.setCommunityName(communityDto.getCommunityName());
+        community.setCommunityAreaId(communityDto.getCommunityAreaId());
+        community.setBoundary(polygon);
+        community.setAboutCommunity(communityDto.getAboutCommunity());
+        community.setEstablishedYear(communityDto.getEstablishedYear());
+        community.setCreatedBy(communityDto.getCreatedBy());
+        community.setCreatedAt(LocalDateTime.now());
+
+        return community;
     }
 }
