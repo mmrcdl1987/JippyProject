@@ -6,10 +6,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -25,9 +27,14 @@ public class GlobalExceptionHandler {
 
     // Handle CartException specifically
     @ExceptionHandler(CartException.class)
-    public ResponseEntity<DriverErrorResponseDto> handleCartException(CartException ex, HttpServletRequest request) {
+    public ResponseEntity<DriverErrorResponseDto> handleCartException
+    (CartException ex, HttpServletRequest request) {
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DriverErrorResponseDto(request.getRequestURI(), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new DriverErrorResponseDto(request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
     }
 
 
@@ -38,41 +45,51 @@ public class GlobalExceptionHandler {
     }
 
     // GENERIC EXCEPTION
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception ex, HttpServletRequest request) {
 
-        ex.printStackTrace();
-
-        Map<String, Object> error = new HashMap<>();
-
-        error.put("apiPath", request.getRequestURI());
-        error.put("errorCode", "INTERNAL_SERVER_ERROR");
-        error.put("errorMessage", ex.getMessage());
-        error.put("errorTime", LocalDateTime.now());
-
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
 
     @ExceptionHandler(DriverZoneException.class)
-    public ResponseEntity<Map<String, String>> handleZoneException(DriverZoneException ex) {
+    public ResponseEntity<DriverErrorResponseDto> handleZoneException(
+            DriverZoneException ex,
+            HttpServletRequest request) {
 
-        Map<String, String> error = new HashMap<>();
-        error.put("message", ex.getMessage());
+        log.error("Zone exception: {}", ex.getMessage());
 
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new DriverErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
     }
 
+    /**
+     * Handles Driver Business exceptions.
+     * Returns HTTP 400 Bad Request.
+     */
     @ExceptionHandler(DriverBusinessException.class)
-    public ResponseEntity<?> handleBusinessException(DriverBusinessException ex) {
-        return ResponseEntity.badRequest().body(ex.getMessage());
+    public ResponseEntity<DriverErrorResponseDto> handleBusinessException(
+            DriverBusinessException ex,
+            HttpServletRequest request) {
+
+        log.error("Business exception: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new DriverErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
     }
 
     @ExceptionHandler(ImageValidationException.class)
-    public ResponseEntity<DriverErrorResponseDto> handleImageValidationException(ImageValidationException ex, HttpServletRequest request) {
+    public ResponseEntity<DriverErrorResponseDto> handleImageValidationException
+            (ImageValidationException ex, HttpServletRequest request) {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new DriverErrorResponseDto(request.getRequestURI(),
-                        HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()));
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
     }
 
     /**
@@ -103,6 +120,70 @@ public class GlobalExceptionHandler {
         response.put("errorTime", LocalDateTime.now());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<DriverErrorResponseDto> handleHttpMessageNotReadable
+            (HttpMessageNotReadableException ex, HttpServletRequest request) {
+
+        log.warn("Invalid request body received: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body
+                (new DriverErrorResponseDto(request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        "Invalid request data type or malformed JSON.",
+                        LocalDateTime.now()));
+    }
+    /**
+     * Handles Resource Not Found exceptions.
+     * Returns HTTP 404 when requested resource is not available.
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<DriverErrorResponseDto> handleResourceNotFoundException(
+            ResourceNotFoundException ex,
+            HttpServletRequest request) {
+
+        log.error("Resource not found: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new DriverErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.NOT_FOUND,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
+    }
+    /**
+     * Handles invalid request parameter datatype.
+     * Example:
+     * GET /getDriverDetails?driverId=abc
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<DriverErrorResponseDto> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+
+        log.error("Invalid request parameter: {}", ex.getName());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new DriverErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        "Invalid value for parameter : " + ex.getName(),
+                        LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleException(Exception ex, HttpServletRequest request) {
+
+        log.error("Unexpected exception occurred", ex);
+        Map<String, Object> error = new HashMap<>();
+
+        error.put("apiPath", request.getRequestURI());
+        error.put("errorCode", "INTERNAL_SERVER_ERROR");
+        error.put("errorMessage", ex.getMessage());
+        error.put("errorTime", LocalDateTime.now());
+
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 

@@ -29,7 +29,8 @@ public class DriverSettingsController {
     private final DriverIncentiveSettingsService incentiveSettingsService;
 
     @PostMapping
-    public ResponseEntity<DriverDeliveryChargeSettingsResponseDto> createDriverDeliveryChargeSetting(@Valid @RequestBody DriverDeliveryChargeSettingsRequestDto requestDto) {
+    public ResponseEntity<DriverDeliveryChargeSettingsResponseDto> createDriverDeliveryChargeSetting
+            (@Valid @RequestBody DriverDeliveryChargeSettingsRequestDto requestDto) {
 
         log.info("API START: POST /api/v1/driver-delivery-charge-settings | pickUpRange={}-{}, deliveryRange={}-{}", requestDto.getPickUpKmsRangeFrom(), requestDto.getPickUpKmsRangeTo(), requestDto.getDeliveryKmsRangeFrom(), requestDto.getDeliveryKmsRangeTo());
 
@@ -57,7 +58,7 @@ public class DriverSettingsController {
     @GetMapping("/getDriverIncentiveHistory")
     @Operation(summary = "Get Driver Incentive History"
             ,description = "Get incentive history for a driver based on filter" +
-            " (daily, weekly, monthly, ALL) filter value can be daily, weekly, monthly or " +
+            " (currentMonth, ALL) filter value can be monthly or " +
             "ALL ex:filter=all/currentMonth")
     public Page<DriverIncentiveHistoryResponseDto >getDriverIncentiveHistory
             (@RequestParam Integer driverId, @RequestParam String filter,
@@ -65,7 +66,7 @@ public class DriverSettingsController {
              @RequestParam(defaultValue = "2") int size) {
         log.info("Get Driver Incentive History request | driverId={}, filter={}", driverId, filter);
 
-        log.info("to get incentive details filter value can be daily, weekly, monthly or ALL");
+        log.info("to get incentive details filter value can be monthly or ALL");
         return incentiveSettingsService.getDriverIncentiveHistory(driverId, filter,page,
                 size);
     }

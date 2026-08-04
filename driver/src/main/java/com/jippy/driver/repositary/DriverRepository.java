@@ -17,6 +17,11 @@ public interface DriverRepository extends JpaRepository<Driver, Integer> {
     Optional<Driver> findByEmailIgnoreCase(String email);
 
     Optional<Driver> findByDriverId(Integer driverId);
+    // Check whether the phone number already exists
+    boolean existsByPhoneNumber(String phoneNumber);
+
+    // Check whether the email already exists
+    boolean existsByEmail(String email);
 
     /**
      * Updates driver approval status.

@@ -56,12 +56,25 @@ public class FmMerchantSettlementServiceImpl implements FmMerchantSettlementServ
         FmOutletSettlementProjection outlet =
                 fmOutletsRepository.getOutletDetailsAndAreaAddressForSettlement(outletId);
 
+        log.info(
+                "Projection -> outletId={}, outletName={}, outletPhone={}, areaId={}, areaName={}",
+                outlet.getOutletId(),
+                outlet.getOutletName(),
+                outlet.getOutletPhone(),
+                outlet.getAreaId(),
+                outlet.getAreaName());
+
         if (outlet == null) {
             throw new ResourceNotFoundException(
                     "Outlet details not found for outlet id : " + outletId);
         }
 
-        return FmMerchantSettlementMapper.toOutletAndAddressAreaResponseDto(outlet);
+        FmOutletsResponseDto dto =
+                FmMerchantSettlementMapper.toOutletAndAddressAreaResponseDto(outlet);
+
+        log.info("Mapped DTO : {}", dto);
+
+        return dto;
     }
 
 //     Fetch area details using area id, this area id

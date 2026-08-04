@@ -7,7 +7,7 @@ public interface DriverOrderHistoryProjection {
 
     Integer getDriverId();
 
-    Integer getOrderId();
+    String getOrderId();
 
     BigDecimal getPickUpDistanceInKms();
 

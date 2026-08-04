@@ -1,9 +1,12 @@
 package com.jippy.driver.serviceImpl;
 
+import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.DriverIncentiveDetailDto;
 import com.jippy.driver.dto.DriverIncentiveSettlementResponseDto;
 import com.jippy.driver.dto.DriverOrderSettlementDto;
 import com.jippy.driver.dto.DriverSettlementResponseDto;
+import com.jippy.driver.exception.DriverBadRequestException;
+import com.jippy.driver.exception.ResourceNotFoundException;
 import com.jippy.driver.mapper.DriverSettlementMapper;
 import com.jippy.driver.projection.DriverIncentiveDetailProjection;
 import com.jippy.driver.projection.DriverIncentiveSettlementProjection;
@@ -14,7 +17,7 @@ import com.jippy.driver.repositary.DriverOrderRepository;
 import com.jippy.driver.service.DriverSettlementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.errors.ResourceNotFoundException;
+
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -96,6 +99,10 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
 
         log.info("Fetching driver incentive settlements for filter : {}", filter);
 
+        if (!DConstants.current_Month.equalsIgnoreCase(filter)) {
+            throw new DriverBadRequestException(
+                    "Invalid filter. Supported value is currentMonth.");
+        }
 //        this fetches previous month incentive settlements for all drivers.
 //        We calculate the start and end dates for the previous month,
         LocalDate startDate = LocalDate.now().minusMonths(1).withDayOfMonth(1);

@@ -23,7 +23,8 @@ public class DriverChargeController {
     // DRIVER PAYOUT CALCULATION
     @PostMapping("/driver-charge/calculate")
     @Operation(summary = "Calculate Driver Charge", description = "Calculate pickup and delivery charge for driver payout")
-    public ResponseEntity<DriverChargeCalculationResponseDto> calculateDriverCharge(@Valid @RequestBody DriverChargeCalculationRequestDto requestDto) {
+    public ResponseEntity<DriverChargeCalculationResponseDto>
+    calculateDriverCharge(@Valid @RequestBody DriverChargeCalculationRequestDto requestDto) {
 
         log.info("API_START | CALCULATE_DRIVER_CHARGE");
 

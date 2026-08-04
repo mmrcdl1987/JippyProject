@@ -205,14 +205,22 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                     o.outlet_name AS outletName,
                     o.outlet_phone AS outletPhone,
                     o.is_approved AS isApproved,
+                    
+                    -- check if the merchant is approved or not 
+                    m.is_approved AS merchantApproved,
+            
             
                     -- Location details (may be NULL if address not present)
                     s.state_name AS stateName,
                     c.city_name AS cityName,
                     a.area_name AS areaName
             
-                -- Main source table: outlets
-                FROM jippy_fm.outlets o
+                --from merchants table 
+              FROM jippy_fm.merchants m
+              
+              --from outlets table 
+              LEFT JOIN jippy_fm.outlets o
+                  ON m.merchant_id = o.merchant_id
             
                 -- Map outlet to address (JOIN ensures all outlets are returned even if address is missing)
                  LEFT JOIN jippy_fm.address addr
@@ -231,8 +239,9 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                  LEFT JOIN jippy_fm.area a
                     ON addr.area_id = a.area_id
             
-                -- Filter outlets by merchant
-                WHERE o.merchant_id = :merchantId --for Api response @query
+            -- Return all outlets for merchant
+               WHERE m.merchant_id = :merchantId --for Api response @query
+            
                  --WHERE o.merchant_id = :1 -- for postgres SQL testing used
             """, nativeQuery = true)
     List<FmOutletByMerchantProjection> getOutletsByMerchantId(@Param("merchantId") Integer merchantId);
@@ -443,7 +452,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             ORDER BY a.address_id DESC
                     LIMIT 1
             """, nativeQuery = true)
-    FmOutletSettlementProjection getOutletDetailsAndAreaAddressForSettlement(@Param("outletId") Integer outletId);
+    FmOutletSettlementProjection getOutletDetailsAndAreaAddressForSettlement
+            (@Param("outletId") Integer outletId);
 
     @Query(value = """
             SELECT o.*

@@ -59,8 +59,8 @@ public interface FMFeignClient {
     /*
      Fetch outlet details using outlet id
      */
-    @GetMapping("/api/fm/outlets/getOutletById/{id}")
-    CoFmOutletDto getOutletById(@PathVariable("id") Integer outletId);
+    @GetMapping("/api/fm/settlement/outlet")
+    CoFmOutletDto getOutletById(@RequestParam("outletId") Integer outletId);
 
     /**
      *

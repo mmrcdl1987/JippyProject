@@ -9,9 +9,11 @@ import com.jippy.customerandorder.projection.CustomerLocationProjection;
 import com.jippy.customerandorder.repository.CoCustomerDeliveryAddressRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,6 +23,7 @@ import java.util.List;
 @RequestMapping("/api/co/customers")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class CoCustomerController {
 
     private final ICoCustomerService customerService;
@@ -144,13 +147,18 @@ public class CoCustomerController {
 
     //    get list of all the delivery addresses of a customer based on the customer id
     @GetMapping("/getCustomerDeliveryAddresses")
-    @Operation(summary = "Get Customer Delivery Addresses", description = "Fetches all delivery addresses associated with the given customerId. " + "ex input is customerId=123. The API retrieves the list of delivery addresses for" + " the specified customer from the database and returns them as a list of CoCustomerDeliveryAddressResponseDto objects. " + "Each object in the response contains details about a delivery address, including customerAddressId, customerId," + " latitude, longitude, doorNo, buildingName, laneNo, area, and city. If no addresses are found for the provided customerId, an empty list is returned.")
-    public ResponseEntity<List<CoCustomerDeliveryAddressResponseDto>> getCustomerDeliveryAddresses(@RequestParam Integer customerId) {
+    @Operation(summary = "Get Customer Delivery Addresses",
+            description = "Fetches all delivery addresses associated with the given customerId. " + "ex input is customerId=123. The API retrieves the list of delivery addresses for" + " the specified customer from the database and returns them as a list of CoCustomerDeliveryAddressResponseDto objects. " + "Each object in the response contains details about a delivery address, including customerAddressId, customerId," + " latitude, longitude, doorNo, buildingName, laneNo, area, and city. If no addresses are found for the provided customerId, an empty list is returned.")
+    public ResponseEntity<List<CoCustomerDeliveryAddressResponseDto>>
+    getCustomerDeliveryAddresses(
+            @Positive(message = "Customer Id must be greater than zero")
+            @RequestParam Integer customerId) {
 
         log.info("GET_CUSTOMER_DELIVERY_ADDRESSES_API_START | customerId={}", customerId);
         log.info("Fetching delivery addresses for customerId={}", customerId);
 
-        List<CoCustomerDeliveryAddressResponseDto> responseDto = customerDeliveryAddressService.getCustomerDeliveryAddresses(customerId);
+        List<CoCustomerDeliveryAddressResponseDto> responseDto =
+                customerDeliveryAddressService.getCustomerDeliveryAddresses(customerId);
 
         log.info("GET_CUSTOMER_DELIVERY_ADDRESSES_API_SUCCESS | customerId={} | addressCount={}", customerId, responseDto.size());
 

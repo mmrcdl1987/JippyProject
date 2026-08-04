@@ -31,8 +31,7 @@ public class    FmProductController {
                 req.getCategoryId(),
                 req.getProducts() == null ? 0 : req.getProducts().size());
 
-        return ResponseEntity.ok(
-                productMappingService.mapToProducts(req));
+        return ResponseEntity.ok(productMappingService.mapToProducts(req));
     }
 
     /**

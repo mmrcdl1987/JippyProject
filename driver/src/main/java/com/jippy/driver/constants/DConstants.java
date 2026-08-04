@@ -11,6 +11,9 @@ public class DConstants {
     public static final String STATUS_500 = "500";
     public static final String MSG_SUCCESS = "Success";
     public static final String ROLE_DRIVER ="ROLE_DRIVER";
+    public static final String CURRENT_MONTH ="CURRENT_MONTH";
+    public static final String current_Month ="currentMonth";
+    public static final String ALL ="ALL";
 
     public static final String AWS_PROFILE_PIC_STATIC_URL ="https://jippys3bucket.s3.ap-south-2.amazonaws.com/";
     public static final String TYPE_DRIVER="DRIVER";

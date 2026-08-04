@@ -3,6 +3,9 @@ package com.jippy.customerandorder.repository;
 import com.jippy.customerandorder.entity.CoCustomerDeliveryAddress;
 import com.jippy.customerandorder.projection.CustomerDeliveryAddressProjection;
 import com.jippy.customerandorder.projection.CustomerLocationProjection;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +16,19 @@ import java.util.List;
 @Repository
 public interface CoCustomerDeliveryAddressRepository extends JpaRepository<CoCustomerDeliveryAddress, Integer> {
 
+    /**
+     * Checks whether the same customer delivery address
+     * already exists for the given customer.
+     *
+     * Used to prevent duplicate customer delivery addresses.
+     */
+    boolean existsByCustomerIdAndDoorNoAndBuildingNameAndLaneNoAndAreaAndCity(
+            Integer customerId,
+            String doorNo,
+            String buildingName,
+            String laneNo,
+            Integer area,
+            Integer city);
     //     to get the customer location based on the customer address id
     @Query(value = """
             SELECT

@@ -9,6 +9,7 @@ public final class FmAppConstants {
 
 
     // -------------------- Approval Request --------------------
+    public static final String DEACTIVATE_DRIVER = "N";
 
     public static final String APPROVAL_LEVEL_1 = "Level 1";
     public static final String APPROVAL_LEVEL_2 = "Level 2";

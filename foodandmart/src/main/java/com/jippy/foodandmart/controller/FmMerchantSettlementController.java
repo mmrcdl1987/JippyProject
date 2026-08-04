@@ -36,10 +36,13 @@ public class FmMerchantSettlementController {
      Fetch outlet details using outlet id
      */
     @Operation(summary = "Get Outlet By Id")
-    @GetMapping("/outlet")
+    @GetMapping("/settlement/outlet")
     public FmOutletsResponseDto getOutletById(
 
             @RequestParam Integer outletId) {
+        log.info("******** HIT SETTLEMENT OUTLET API ********");
+        log.info("Settlement outletId={}", outletId);
+
 
         log.info("Received request to fetch outlet details for outlet id : {}", outletId);
 

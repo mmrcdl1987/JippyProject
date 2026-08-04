@@ -6,8 +6,9 @@ public interface FmOutletByMerchantProjection {
     String getOutletName();
     String getOutletPhone();
 
+    Boolean getIsApproved();          // Outlet approval
 
-    Boolean getIsApproved();
+    Boolean getMerchantApproved();    // Merchant approval
 
     String getStateName();
     String getCityName();

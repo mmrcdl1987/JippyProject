@@ -19,6 +19,10 @@ public class FmMerchantWithBankDto {
 
         @NotBlank(message = "Merchant name should not be empty")
         @Size(min = 3, max = 100, message = "Merchant name must be between 3 and 100 characters")
+        @Pattern(
+                regexp = "^[A-Za-z ]+$",
+                message = "Merchant name can contain only letters and spaces"
+        )
         private String merchantName;
 
         @NotBlank(message = "Merchant email should not be empty")

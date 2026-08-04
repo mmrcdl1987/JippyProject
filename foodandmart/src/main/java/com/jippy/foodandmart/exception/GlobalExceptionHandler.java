@@ -2,6 +2,7 @@ package com.jippy.foodandmart.exception;
 
 import com.jippy.foodandmart.dto.FmApiResponse;
 import feign.FeignException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,6 +56,18 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(FmApiResponse.error(ex.getMessage()));
+    }
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleConstraintViolationException(
+            ConstraintViolationException ex) {
+
+        List<String> errors = ex.getConstraintViolations()
+                .stream()
+                .map(violation -> violation.getMessage())
+                .collect(Collectors.toList());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(FmApiResponse.error("Validation failed", errors));
     }
 
     // --- Specific Business Logic Exceptions ---

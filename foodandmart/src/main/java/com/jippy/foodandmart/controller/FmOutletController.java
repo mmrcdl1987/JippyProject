@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -23,6 +24,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,6 +41,7 @@ import java.util.function.Function;
  * in private helpers to keep the service layer free of file-format concerns.</p>
  */
 @RestController
+@Validated
 @RequestMapping("/api/fm/outlets")
 @RequiredArgsConstructor
 @Slf4j
@@ -197,10 +200,15 @@ public class FmOutletController {
 //    --------------------------------------------------------------------------------------------
     //edit and Update outlet product details
     @PutMapping("/editAndUpdateOutletProducts")
-    @Operation(summary = "Update outlet details", description = "Updates outlet timings, categories, products and product timings. " + "OutletId, outletName and outletPhone are not editable.")
+    @Operation(summary = "Update outlet details",
+            description = "Updates outlet timings, categories, products and product timings. "
+                    + "OutletId, outletName and outletPhone are not editable.")
     public ResponseEntity<FmOutletDetailsDto> updateOutletDetailsByMerchant(
 
-            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId, @RequestParam String userType, @RequestBody FmOutletDetailsDto dto) {
+            @Parameter(description = "Outlet ID", required = true)
+            @RequestParam Integer outletId,
+            @RequestParam String userType,
+            @RequestBody FmOutletDetailsDto dto) {
 
         log.info("Received request to update outlet with id={}", outletId);
 
@@ -260,7 +268,9 @@ public class FmOutletController {
 }
 //---------------------------------------------------------------------------------------------------
 
-    @Operation(summary = "Get Outlets by Merchant ID", description = "Fetch all outlets for a merchant with state, city, and area details. Throws error if outlet is not approved.")
+    @Operation(summary = "Get Outlets by Merchant ID",
+            description = "Fetch all outlets for a " +
+            "merchant with state, city, and area details. Throws error if outlet is not approved.")
     //    for getOutletsByMerchant API - to fetch outlet's, address-state,city,area details based on merchant id
     @ApiResponse(responseCode = "200", description = "Outlets fetched successfully")
     @ApiResponse(responseCode = "400", description = "Outlet not approved")
@@ -268,11 +278,14 @@ public class FmOutletController {
     @GetMapping("/getOutletsByMerchant")
     public ResponseEntity<List<FmOutletByMerchantDto>> getOutletsByFmMerchant(
 
-            @Parameter(description = "Merchant ID", required = true) @RequestParam Integer merchantId) {
+            @Parameter(description = "Merchant ID", required = true)
+            @Positive(message = "Merchant ID must be a positive number")
+            @RequestParam Integer merchantId) {
 
         log.info("Fetching outlets for merchantId={}", merchantId);
 
-        List<FmOutletByMerchantDto> OutletByMerchantDetails = outletService.getOutletsByFmMerchantId(merchantId);
+        List<FmOutletByMerchantDto> OutletByMerchantDetails =
+                outletService.getOutletsByFmMerchantId(merchantId);
 
         log.info("Successfully fetched outlets for merchantId={}", merchantId);
 
@@ -750,7 +763,10 @@ public class FmOutletController {
 
     //    for Feign  in the CO_Microservice to just fetch
     @GetMapping("/fetchOutletName")
-    public ResponseEntity<String> fetchOutletName(@RequestParam Integer outletId) {
+    public ResponseEntity<String> fetchOutletName(
+            @RequestParam
+            @Positive(message = "Outlet ID must be a positive number")
+            Integer outletId) {
 
         return ResponseEntity.ok(outletService.fetchOutletName(outletId));
     }

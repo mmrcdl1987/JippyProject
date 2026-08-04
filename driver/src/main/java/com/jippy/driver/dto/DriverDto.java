@@ -7,8 +7,8 @@ import lombok.Data;
 @Data
 public class DriverDto {
 
-    @Schema(description = "Unique identifier of the Driver.", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
-    private Integer driverId;
+//    @Schema(description = "Unique identifier of the Driver.", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
+//    private Integer driverId;
 
     // Driver fields
     @Schema(description = "Driver first name.", example = "Rohan")

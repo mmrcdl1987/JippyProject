@@ -10,10 +10,12 @@ import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
 import com.jippy.customerandorder.repository.CoOrderPriceBreakupRepository;
 import com.jippy.customerandorder.repository.CoOrderRepository;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -24,6 +26,7 @@ import java.util.List;
 @RequestMapping("/api/co")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class CoOrderController {
 
     private final IOrderService orderService;
@@ -150,10 +153,14 @@ public class CoOrderController {
         return dto;
     }
 
-    //    to get frequent orders >=3 times
+    //    to get frequent orders >=3 times it will be considered as frequent order and return the outlet id
     @GetMapping("/frequent")
-    public List<Integer> getFrequentOutlets(@RequestParam Integer customerId) {
+    public List<Integer> getFrequentOutlets(
+            @Positive(message = "Customer ID must be a positive integer")
+            @RequestParam Integer customerId) {
 
+        log.info("frequent is more than 3 times when th customer order from same outlet" +
+                " and return the outlet id for customerId={}", customerId);
         log.info("Fetching frequent outlets for customerId={}", customerId);
 
         return orderService.getFrequentOutlets(customerId);

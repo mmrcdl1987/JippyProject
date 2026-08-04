@@ -25,11 +25,13 @@ public class DriverZoneAssignmentController {
 
     @Operation(summary = "Assign zone to driver using latitude and longitude")
     @PostMapping("/zoneAssignmentToDriver")
-    public ResponseEntity<DriverZoneAssignmentResponseDto> assignZoneToDriver(@Valid @RequestBody DriverZoneAssignmentRequestDto requestDto) {
+    public ResponseEntity<DriverZoneAssignmentResponseDto> assignZoneToDriver
+            (@Valid @RequestBody DriverZoneAssignmentRequestDto requestDto) {
 
         log.info("Received request for zone assignment");
 
-        DriverZoneAssignmentResponseDto AssignDriverResponse = assignmentService.assignZoneToDriver(requestDto);
+        DriverZoneAssignmentResponseDto AssignDriverResponse =
+                assignmentService.assignZoneToDriver(requestDto);
 
         return ResponseEntity.ok(AssignDriverResponse);
     }

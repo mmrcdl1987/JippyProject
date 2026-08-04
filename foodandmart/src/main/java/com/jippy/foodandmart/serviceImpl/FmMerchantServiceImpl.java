@@ -17,6 +17,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.sql.Update;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -85,7 +86,8 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     public FmMerchant createMerchant(FmMerchantRequestDTO dto) {
         log.info("[MERCHANT] Creating merchant: email={}, phone={}", dto.getEmail(), dto.getPhone());
 
-        validateUniqueness(dto.getEmail(), dto.getPhone(), dto.getPan(), dto.getAdhar(), dto.getFssai(), dto.getAccountNumber());
+        validateUniqueness(dto.getEmail(), dto.getPhone(), dto.getPan(), dto.getAdhar(),
+                dto.getFssai(), dto.getAccountNumber());
 
         FmMerchant merchant = FmMerchantMapper.toEntity(dto);
         merchant = merchantRepository.save(merchant);
@@ -288,25 +290,28 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         return FmMerchantMapper.mapToMerchantWithBankDto(data);
     }
 
-    //    update--> merchant + bank
+    //    update--> merchant + bank Details
     @Override
-    @jakarta.transaction.Transactional
+    @Transactional
     public FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto) {
 
         log.info("Updating merchant profile for merchantId: {}", dto.getMerchantId());
         log.debug("Request DTO: {}", dto);
         // 1. Fetch Merchant
-        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId().intValue()).orElseThrow(() -> {
+        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId().intValue())
+                .orElseThrow(() -> {
             log.error("Merchant not found with ID: {}", dto.getMerchantId());
             return new ResourceNotFoundException("Merchant not found with ID :" + dto.getMerchantId());
         });
+        // Check duplicate merchant email only if the email is changed.
+        if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getMerchantEmail())
+                && merchantRepository.existsByMerchantEmail(dto.getMerchantEmail())) {
 
-        // 2. Update Merchant fields by using lombok -getters and setters(data)s
-        merchant.setMerchantName(dto.getMerchantName());
-        merchant.setMerchantEmail(dto.getMerchantEmail());
-        merchant.setMerchantPhone(dto.getMerchantPhone());
-        merchant.setMerchantBusinessType(dto.getBusinessType());
-        merchant.setStatus(dto.getStatus());
+            throw new DuplicateResourceException("Merchant email already exists");
+        }
+
+// 3. Update merchant entity using mapper
+        FmMerchantMapper.updateMerchantEntity(merchant, dto);
 
         merchantRepository.save(merchant);
         log.info("Merchant updated successfully for merchantId: {}", dto.getMerchantId());
@@ -319,13 +324,8 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
             throw new DuplicateResourceException("Account number already exists");
         }
-
-// 5. Update Bank fields
-        bank.setAccountNumber(dto.getAccountNumber());
-        bank.setIfscCode(dto.getIfscCode());
-        bank.setBankName(dto.getBankName());
-        bank.setAccountHolderName(dto.getAccountHolderName());
-        bank.setUserType("MERCHANT");
+// 5. Update bank entity using mapper
+        FmMerchantMapper.updateBankEntity(bank, dto);
 
         bankDetailsRepository.save(bank);
         log.info("Bank details updated successfully for merchantId: {}", dto.getMerchantId());

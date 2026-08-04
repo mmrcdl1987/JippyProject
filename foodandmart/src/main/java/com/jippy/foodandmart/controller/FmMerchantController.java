@@ -85,8 +85,8 @@ public class FmMerchantController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant updated successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Merchant or bank not found")
     @PutMapping("/updateMerchantProfile")
-    public ResponseEntity<FmMerchantWithBankDto> updateMerchantProfile(@Valid
-                                                                       @RequestBody FmMerchantWithBankDto dto) {
+    public ResponseEntity<FmMerchantWithBankDto> updateMerchantProfile(
+            @Valid @RequestBody FmMerchantWithBankDto dto) {
         log.info("Updating merchant profile with data: {}", dto);
 
         FmMerchantWithBankDto updated =

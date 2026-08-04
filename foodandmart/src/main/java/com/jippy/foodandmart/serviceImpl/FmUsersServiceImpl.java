@@ -6,6 +6,7 @@ import com.jippy.foodandmart.dto.FmPasswordResetByAdminRequestDto;
 import com.jippy.foodandmart.dto.FmUserDto;
 import com.jippy.foodandmart.dto.FmUserResponseDto;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.repository.*;
@@ -52,11 +53,19 @@ public class FmUsersServiceImpl implements IFmUsersService {
         // Find driver user
         Optional<FmUser> user = usersRepo.findByUserIdAndUserType(userId, "DRIVER");
 
-        if (!user.isPresent()) {
-            throw new RuntimeException("Driver not found in users table");
+        if (user.isEmpty()) {
+            throw new ResourceNotFoundException("Driver not found in users table");
         }
 
         FmUser existingUser = user.get();
+        // ----------------------------------------------------
+        // Check whether driver is already inactive
+        // ----------------------------------------------------
+        if (FmAppConstants.DEACTIVATE_DRIVER.equalsIgnoreCase(existingUser.getIsActive())) {
+
+            throw new BadRequestException(
+                    "Driver is already inactive.");
+        }
         //for updating the user record, we will set is_active = 'N' when orders lock in Co wallet table = false
         existingUser.setIsActive("N");
 

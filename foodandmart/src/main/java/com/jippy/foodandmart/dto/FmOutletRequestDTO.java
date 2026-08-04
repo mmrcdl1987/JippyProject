@@ -156,13 +156,19 @@ public class FmOutletRequestDTO {
             "dayOfWeekId": 1,
             "isOpen": true,
             "openingTime": "09:00",
-            "closingTime": "22:00",
+            "closingTime": "12:00",
           },
           {
+            "dayOfWeekId": 1,
+            "isOpen": true,
+            "openingTime": "12:00",
+            "closingTime": "22:00",
+          },
+           {
             "dayOfWeekId": 2,
             "isOpen": true,
-            "openingTime": "08:00",
-            "closingTime": "21:00",
+            "openingTime": "12:00",
+            "closingTime": "22:00",
           }
         ]
         """)

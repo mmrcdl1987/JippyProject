@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 @Data
@@ -18,7 +19,7 @@ public class FmPasswordResetByAdminRequestDto {
 
     @Schema(
             description = "Type of user account",
-            example = "MERCHANT",
+            example = "\"MERCHANT\" or, \"CUSTOMER\" or, \"DRIVER\" or, \"DIVISION_ADMIN\"}",
             allowableValues = {"MERCHANT", "CUSTOMER", "DRIVER", "DIVISION_ADMIN"},
             requiredMode = Schema.RequiredMode.REQUIRED
     )
@@ -28,6 +29,11 @@ public class FmPasswordResetByAdminRequestDto {
             description = "New password to be assigned by the administrator",
             example = "NewPassword@123",
             requiredMode = Schema.RequiredMode.REQUIRED
+    )
+    @Pattern(
+            regexp = "^(?!.*[<>])(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,20}$",
+            message = "Password must be 8-20 characters, contain at least one letter, " +
+                    "one number, one special character, and must not contain '<' or '>'"
     )
     private String newPassword;
 }
