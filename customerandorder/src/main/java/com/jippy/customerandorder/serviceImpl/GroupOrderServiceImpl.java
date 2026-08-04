@@ -409,7 +409,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         );
 
         // 3. Broadcast to all subscribers of this specific group invitation
-        String destination = "/topic/group-order/" + groupOrderInvitation.getGroupOrdersInvitationId();
+        String destination ="/topic/group-order/" + groupOrderInvitation.getGroupOrdersInvitationId();
         log.info("Broadcasting cart update to channel: {}", destination);
 
         messagingTemplate.convertAndSend(destination, event);
@@ -435,7 +435,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
                     groupOrdersInvitationId, groupOrderInvitation.getStatus());
             throw new IllegalStateException("This group order is locked and cannot be checked out.");
         }
-        groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_STATUS_LOCKED);
+        //groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_STATUS_LOCKED);
         groupOrderInvitationRepository.save(groupOrderInvitation);
 
         //get platform fee,surge fee etc.., from OrderSettings

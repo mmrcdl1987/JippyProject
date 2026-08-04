@@ -2,31 +2,36 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.entity.CoCommunity;
 import com.jippy.customerandorder.entity.CoCommunityEvents;
 import com.jippy.customerandorder.entity.CoCustomerCommunities;
-import com.jippy.customerandorder.entity.GroupOrderInvitation;
-import com.jippy.customerandorder.exception.CoBadRequestException;
+import com.jippy.customerandorder.exception.CommunityZoneException;
 import com.jippy.customerandorder.feignClients.DriverFeignClient;
 import com.jippy.customerandorder.iservice.CommunityOrderService;
 import com.jippy.customerandorder.mapper.CommunityOrderMapper;
-import com.jippy.customerandorder.mapper.GroupOrderMapper;
 import com.jippy.customerandorder.repository.CoCommunityEventsRepository;
+import com.jippy.customerandorder.repository.CoCommunityRepository;
 import com.jippy.customerandorder.repository.CoCustomerCommunityRepository;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.locationtech.jts.geom.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +42,11 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
     private final DriverFeignClient driverFeignClient;
     private final CoCustomerCommunityRepository customerCommunityRepository;
     private final GroupOrderServiceImpl groupOrderService;
+    private final CoCommunityRepository communityRepository;
+    private final GeometryFactory geometryFactory = new GeometryFactory();
+    private final ImageValidationService imageValidationService;
+    private final S3ImageService s3ImageService;
+
 
     @Autowired
     private StringRedisTemplate redisTemplate;
@@ -192,6 +202,95 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
         Integer response = responseEntity.getBody();
         return ResponseEntity.status(200).body(response);
     }
+
+    @Override
+    public String createCommunity(CommunityDto communityDto, MultipartFile communityImage) {
+
+        try{
+            Optional<CoCommunity> existingCommunity = communityRepository.findByCommunityName(communityDto.getCommunityName());
+            Polygon polygon = convertToPolygon(communityDto.getBoundary());
+
+            imageValidationService.validateImage(communityImage);
+
+            if (existingCommunity.isPresent()) {
+                if (communityRepository.existsBySpatialBoundary(polygon)) {
+                    throw new CommunityZoneException("A boundary with this exact shape already exists!");
+                } else {
+                    log.info("Updating existing community with id: {}", existingCommunity.get().getCommunityId());
+                    CoCommunity communityToUpdate = existingCommunity.get();
+                    CoCommunity community = CommunityOrderMapper.mapToCommunityEntity(communityToUpdate,communityDto, polygon);
+                    String s3BucketFilePath = s3ImageService.uploadFile(communityImage,communityToUpdate.getCommunityId());
+                    communityRepository.save(communityToUpdate);
+                    return "Community:" + communityToUpdate.getCommunityName() + " updated successfully!";
+                }
+            }
+            CoCommunity community = new CoCommunity();
+            community = CommunityOrderMapper.mapToCommunityEntity(community, communityDto, polygon);
+            CoCommunity savedCommunity = communityRepository.save(community);
+            log.info("New Community is created with id: {}", savedCommunity.getCommunityId());
+
+            String s3BucketFilePath = s3ImageService.uploadFile(communityImage,savedCommunity.getCommunityId());
+            savedCommunity.setCommunityImageUrl(s3BucketFilePath);
+            communityRepository.save(savedCommunity);
+
+            log.info("File uploaded to S3 successfully. Bucket path: {}", s3BucketFilePath);
+
+
+            return "Community:" + savedCommunity.getCommunityName() + " created successfully!";
+
+        } catch (Exception e) {
+            log.error("An unexpected error occurred while creating/updating the community: {}", e.getMessage());
+            throw new RuntimeException("An unexpected error occurred while creating/updating the community.", e);
+        }
+
+
+    }
+
+    public Polygon convertToPolygon(List<List<CommunityDto.CoordinateDTO>> boundary) {
+        if (boundary == null || boundary.isEmpty()) {
+            throw new IllegalArgumentException("Boundary coordinates cannot be empty");
+        }
+
+        // 1. Convert the exterior ring (index 0)
+        List<CommunityDto.CoordinateDTO> exteriorCoords = boundary.get(0);
+        Coordinate[] exteriorCoordinates = mapAndCloseCoordinates(exteriorCoords);
+        LinearRing exteriorRing = geometryFactory.createLinearRing(exteriorCoordinates);
+
+        // 2. Convert interior rings (holes), if any exist (index 1 to N)
+        LinearRing[] holes = null;
+        if (boundary.size() > 1) {
+            holes = new LinearRing[boundary.size() - 1];
+            for (int i = 1; i < boundary.size(); i++) {
+                Coordinate[] holeCoords = mapAndCloseCoordinates(boundary.get(i));
+                holes[i - 1] = geometryFactory.createLinearRing(holeCoords);
+            }
+        }
+
+        // 3. Construct single Polygon
+        Polygon polygon = geometryFactory.createPolygon(exteriorRing, holes);
+        polygon.setSRID(4326);
+
+        return polygon;
+    }
+
+    private Coordinate[] mapAndCloseCoordinates(List<CommunityDto.CoordinateDTO> dtos) {
+        List<Coordinate> coords = dtos.stream()
+                .map(c -> new Coordinate(c.getLongitude(), c.getLatitude()))
+                .collect(Collectors.toList());
+
+        // JTS requires at least 4 coordinates for a valid ring (3 vertices + 1 closing point)
+        if (coords.size() < 3) {
+            throw new IllegalArgumentException("A polygon ring must have at least 3 distinct coordinates");
+        }
+
+        // Ensure the ring is explicitly closed
+        if (!coords.get(0).equals2D(coords.get(coords.size() - 1))) {
+            coords.add(new Coordinate(coords.get(0).x, coords.get(0).y));
+        }
+
+        return coords.toArray(new Coordinate[0]);
+    }
+
 
 
 }

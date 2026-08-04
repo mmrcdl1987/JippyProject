@@ -1,17 +1,18 @@
 package com.jippy.customerandorder.controller;
 
-import com.jippy.customerandorder.dto.CoAddOrDropMembersFromCommunityDto;
-import com.jippy.customerandorder.dto.CoCommunityEventsDto;
-import com.jippy.customerandorder.dto.CoResponseDto;
-import com.jippy.customerandorder.dto.JoinGroupMembersDto;
+import com.jippy.customerandorder.constants.COConstants;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.iservice.CommunityOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @Slf4j
@@ -49,6 +50,17 @@ public class CoCommunityOrderController {
         log.info("Check Customer location In Community: {} ,{} ",latitude,longitude );
 
         return communityOrderService.findCustomerInCommunity(latitude,longitude);
+    }
+
+    @PostMapping(value = "/createCommunity",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create Communities", description = "Create Communities")
+    public ResponseEntity<CoResponseDto> createCommunity(@RequestPart("communityDto") CommunityDto communityDto,
+            @RequestPart(value = "communityImage", required = false) MultipartFile communityImage) {
+
+        log.info("POST API called for created Community:");
+        String message = communityOrderService.createCommunity(communityDto,communityImage);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_201, message));
     }
 
 }
