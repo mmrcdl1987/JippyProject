@@ -52,15 +52,15 @@ public class FmSecurityConfig {
 
                         //.requestMatchers("/api/fm/**").authenticated() // Protected routes
                         // 2. READ-ONLY ROLE (Can only perform GET requests)
-                        .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN","CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN","CUSTOMER","INTERNAL_SYSTEM")
 
                         // 3. CREATE/UPDATE ROLE (Can perform POST/PUT/PATCH)
-                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
-                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
+                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
+                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
 
                         // 4. FULL ADMIN (Can also DELETE)
-                        .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

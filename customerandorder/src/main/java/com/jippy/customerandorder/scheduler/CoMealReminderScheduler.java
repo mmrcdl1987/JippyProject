@@ -16,7 +16,7 @@ public class CoMealReminderScheduler {
     private final ICustomerReminderService customerReminderService;
     private final FMFeignClient mealReminderFeignClient;
 
-    @Scheduled(cron = "*/10 * * * * *")
+   // @Scheduled(cron = "*/10 * * * * *")
     public void processMealReminder() {
 
         log.info("SCHEDULER_START | PROCESS_MEAL_REMINDER");
