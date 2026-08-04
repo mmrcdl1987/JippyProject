@@ -131,10 +131,37 @@ public class GlobalExceptionHandler {
 //        return error;
 //    }
 
+    /**
+     * Handles all uncaught RuntimeExceptions.
+     * Returns 404 for resource not found exceptions,
+     * otherwise returns 500 Internal Server Error.
+     */
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<CoResponseDto> handleRuntimeException(RuntimeException ex) {
-        CoResponseDto response = new CoResponseDto("500", "An unexpected error occurred: " + ex.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    public ResponseEntity<CoResponseDto> handleRuntimeException(
+            RuntimeException ex) {
+
+        // ---------------------------------------------------------
+        // Handle resource not found
+        // ---------------------------------------------------------
+        if (ex instanceof CoResourceNotFoundException) {
+
+            log.warn("Resource not found: {}", ex.getMessage());
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new CoResponseDto(
+                            "404",
+                            ex.getMessage()));
+        }
+
+        // ---------------------------------------------------------
+        // Handle all other runtime exceptions
+        // ---------------------------------------------------------
+        log.error("Unexpected exception occurred", ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new CoResponseDto(
+                        "500",
+                        "An unexpected error occurred: " + ex.getMessage()));
     }
 
 }

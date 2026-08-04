@@ -44,7 +44,8 @@ public interface IFmOutletService {
     List<FmOutletByMerchantDto> getOutletsByFmMerchantId(Integer merchantId);
 
     //    for update outlet details by outlet id
-    FmOutletDetailsDto updateOutletDetails(Integer outletId, FmOutletDetailsDto dto, String userType);
+    FmOutletDetailsDto updateOutletDetails(Integer outletId,
+                                           FmOutletDetailsDto dto, String userType);
 
     /**
      * Customer App: fetch active outlets within default 3 km of the customer.

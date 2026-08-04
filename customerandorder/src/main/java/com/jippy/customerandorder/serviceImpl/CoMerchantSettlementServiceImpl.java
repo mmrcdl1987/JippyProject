@@ -56,7 +56,8 @@ public class CoMerchantSettlementServiceImpl implements CoMerchantSettlementServ
 
             log.error("No delivered orders found between {} and {}", startDate, endDate);
 
-            throw new CoBadRequestException("No delivered orders found between " + startDate + " and " + endDate);
+            throw new CoBadRequestException("No delivered orders found between "
+                    + startDate + " and " + endDate);
         }
 
 //         Store outlet wise settlements in map to avoid duplicate outlet details
@@ -71,13 +72,15 @@ public class CoMerchantSettlementServiceImpl implements CoMerchantSettlementServ
 
 //             Map order details instead of list because we need to set products list in order details
 //             and it will be easy to manage products list in order details instead of outlet details
-            CoMerchantSettlementResponseDto settlement = CoMerchantSettlementMapper.toSettlementResponseDto(order);
+            CoMerchantSettlementResponseDto settlement =
+                    CoMerchantSettlementMapper.toSettlementResponseDto(order);
 
 
 //             Fetch outlet details from FM
             log.info("Calling FM outlet API for outlet id : {}", order.getOutletId());
 
             CoFmOutletDto outletDto = coFmFeignClient.getOutletById(order.getOutletId());
+            log.info("FM Outlet Response: {}", outletDto);
 
 //             Fetch area name from FM from CoFmOutletDto-> area id
             log.info("Calling FM area API for area id : {}", outletDto.getAreaId());

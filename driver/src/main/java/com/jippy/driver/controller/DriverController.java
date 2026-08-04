@@ -9,12 +9,15 @@
     import io.swagger.v3.oas.annotations.responses.ApiResponse;
     import io.swagger.v3.oas.annotations.tags.Tag;
     import jakarta.validation.Valid;
+    import jakarta.validation.constraints.Email;
+    import jakarta.validation.constraints.Positive;
     import lombok.RequiredArgsConstructor;
     import lombok.extern.slf4j.Slf4j;
     import org.springframework.format.annotation.DateTimeFormat;
     import org.springframework.http.HttpStatus;
     import org.springframework.http.MediaType;
     import org.springframework.http.ResponseEntity;
+    import org.springframework.validation.annotation.Validated;
     import org.springframework.web.bind.annotation.*;
 
     import java.time.LocalDate;
@@ -24,6 +27,7 @@
     @RequestMapping("/api/driver")
     @RequiredArgsConstructor
     @Slf4j
+    @Validated
     @Tag(name = "Driver API", description = "Driver and KYC operations")
     public class DriverController {
 
@@ -55,6 +59,7 @@
         @Operation(summary = "Get Driver", description = "Fetch driver by ID")
         public ResponseEntity<DriverDto> getDriverDetails(
 
+                @Positive(message = "Driver ID must be greater than zero")
                 @RequestParam Integer driverId) {
 
             log.info("GET API called with id to get all details of driver : {}", driverId);
@@ -89,7 +94,10 @@
         @GetMapping("/fetchEarnings")
         @Operation(summary = "Fetch Driver Earnings", description = "Fetch total earnings and orders count for a driver on a particular date")
         public ResponseEntity<DriverEarningsDto> fetchEarnings
-                (@RequestParam Integer driverId, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+                (        @Positive(message = "Driver ID must be greater than zero.")
+                         @RequestParam Integer driverId,
+                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
             log.info("date format must be [YYYY-MM-dd] for date: {}", date);
             log.info("Fetch earnings API called for driver id: {}", driverId);
@@ -101,9 +109,10 @@
     //    outlet name based on outlet id which is mapped to driver id to
     //    use CoDriverController microservice
         @GetMapping("/fetchOrderEarningsHistory")
-        @Operation(summary = "Fetch Order Earnings History", description = "Fetch complete order earnings history of driver")
+        @Operation(summary = "Fetch Order Earnings History",
+                description = "Fetch complete order earnings history of driver")
         public ResponseEntity<List<DriverOrderHistoryDto>> fetchOrderEarningsHistory(
-
+                @Positive(message = "Driver ID must be greater than zero.")
                 @RequestParam Integer driverId){
 
             log.info("Fetch order earnings history API called for driver id: {}", driverId);
@@ -117,7 +126,7 @@
         @GetMapping("/fetchTotalEarnings")
         @Operation(summary = "Fetch Total Earnings", description = "Fetch total earnings details of driver")
         public ResponseEntity<DriverTotalEarningsDto> fetchTotalEarnings(
-
+                @Positive(message = "Driver ID must be greater than zero.")
                 @RequestParam Integer driverId) {
 
             log.info("Fetch total earnings API called for driver id: {}", driverId);
@@ -157,7 +166,9 @@
 //        used for forget password api in Fm
         @GetMapping("/findByEmail")
         @Operation(summary = "Find Driver By Email")
-        public ResponseEntity<DriverDto> findByEmail(@RequestParam String email) {
+        public ResponseEntity<DriverDto> findByEmail(
+                @Email(message = "Please enter a valid email address.")
+                @RequestParam String email) {
 
             log.info("Finding driver by email : {}", email);
 

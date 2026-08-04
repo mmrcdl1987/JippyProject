@@ -39,27 +39,46 @@ public class DriverZoneAssignmentServiceImpl implements DriverZoneAssignmentServ
 
         log.info("Zone assignment started for driver id : {}", requestDto.getDriverId());
 
+        // Validate request.
+        // Either zoneId OR both latitude and longitude must be provided.
+        if (requestDto.getZoneId() == null &&
+                (requestDto.getLatitude() == null || requestDto.getLongitude() == null)) {
+
+            throw new IllegalArgumentException(
+                    "Provide either zoneId or both latitude and longitude.");
+        }
+
+// Do not allow both zoneId and coordinates together.
+        if (requestDto.getZoneId() != null &&
+                (requestDto.getLatitude() != null || requestDto.getLongitude() != null)) {
+
+            throw new IllegalArgumentException(
+                    "Provide either zoneId or latitude/longitude, not both.");
+        }
         // Validate driver existence id driver exist or not
         Driver driver = driverRepository.findById(requestDto.getDriverId()).orElseThrow(() -> {
 
             log.error("Driver not found with id : {}", requestDto.getDriverId());
 
-            return new ResourceNotFoundException("Driver not found with" + requestDto.getDriverId());
-        });
+            return new ResourceNotFoundException(
+                    "Driver not found with id : " + requestDto.getDriverId());        });
 
         // Find zone using coordinates in CoZone table
         DriverZone foundZone = new DriverZone();
 //        if zone id is not provided in request dto then we will find the zone using
 //        latitude and longitude otherwise we will find the zone using zone id
-        if(!(requestDto.getZoneId() != null)) {
-             foundZone = zoneRepository.findZoneByCoordinates(requestDto.getLatitude(), requestDto.getLongitude());
+        if(requestDto.getZoneId() == null) {
+            log.info("Finding zone using latitude and longitude.");
+
+             foundZone = zoneRepository.
+                     findZoneByCoordinates(requestDto.getLatitude(), requestDto.getLongitude());
 
             // Throw exception if no zone found
             if (foundZone == null) {
 
                 log.error("No zone found for latitude : {} and longitude : {}", requestDto.getLatitude(), requestDto.getLongitude());
 
-                throw new ResourceNotFoundException("No zone found for given coordinates" + "Latitude: " + requestDto.getLatitude() + "Longitude: " + requestDto.getLongitude() + " try other zones or check the coordinates");
+                throw new ResourceNotFoundException("No zone found for given coordinates for: " + "Latitude: " + requestDto.getLatitude() + "Longitude: " + requestDto.getLongitude() + " try other zones or check the coordinates");
             }
 
 //        to assign zone id to driver we need to check if the driver is already assigned to that zone or not
@@ -70,8 +89,9 @@ public class DriverZoneAssignmentServiceImpl implements DriverZoneAssignmentServ
 
                 log.error("Zone not found with id : {}", requestDto.getZoneId());
 
-                return new ResourceNotFoundException("Zone not found with id" + requestDto.getZoneId());
-            });
+               return new ResourceNotFoundException("Zone not found with id : "
+                               + requestDto.getZoneId());
+           });
         }
 
         // Prevent duplicate assignment of the same zone to the same driver
@@ -83,8 +103,8 @@ public class DriverZoneAssignmentServiceImpl implements DriverZoneAssignmentServ
 
             log.error("Driver already assigned to zone id : {}", foundZone.getZoneId());
 
-            throw new ResourceNotFoundException("Driver already assigned to this zone");
-        }
+            throw new IllegalStateException(
+                    "Driver is already assigned to this zone.");        }
 
         // Create assignment entity and set values
         DriverZoneAssignment assignment = new DriverZoneAssignment();

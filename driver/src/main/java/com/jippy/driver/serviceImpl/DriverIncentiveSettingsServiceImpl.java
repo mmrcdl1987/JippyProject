@@ -1,10 +1,12 @@
 package com.jippy.driver.serviceImpl;
 
 
+import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.DriverIncentiveHistoryResponseDto;
 import com.jippy.driver.dto.DriverIncentiveSettingsDto;
 import com.jippy.driver.entity.DriverIncentiveHistory;
 import com.jippy.driver.entity.DriverIncentiveSettings;
+import com.jippy.driver.exception.DriverBusinessException;
 import com.jippy.driver.mapper.DriverIncentiveSettingsMapper;
 import com.jippy.driver.repositary.DriverIncentiveHistoryRepository;
 import com.jippy.driver.repositary.DriverIncentiveSettingsRepository;
@@ -30,114 +32,252 @@ public class DriverIncentiveSettingsServiceImpl implements DriverIncentiveSettin
     private final DriverIncentiveHistoryRepository repository;
 
     @Override
-    public DriverIncentiveSettingsDto saveOrUpdateIncentives(DriverIncentiveSettingsDto dto) {
+    public DriverIncentiveSettingsDto saveOrUpdateIncentives(
+            DriverIncentiveSettingsDto dto) {
 
-        log.info("Save/Update Incentives START | dto={}", dto);
+        log.info("SAVE_OR_UPDATE_INCENTIVE_START | dto={}", dto);
 
-        // Create new incentive setting if ID is null
+        // ============================================================
+        // CREATE NEW INCENTIVE
+        // ============================================================
         if (dto.getDriverIncentiveSettingsId() == null) {
 
-            log.info("Creating new incentive setting");
+            log.info("CREATE_INCENTIVE_START | ordersCount={} | incentiveAmount={}",
+                    dto.getOrdersCount(),
+                    dto.getIncentiveAmount());
+            // --------------------------------------------------------
+            // Check duplicate orders count
+            // One ordersCount should have only one incentive slab
+            // --------------------------------------------------------
+            if (incentiveSettingsRepository.existsByOrdersCount(
+                    dto.getOrdersCount())) {
 
-//            for post request, ID will be null, so we will create new record
-            DriverIncentiveSettings entity = DriverIncentiveSettingsMapper.toIncentiveEntity(dto);
+                log.error(
+                        "Duplicate incentive slab found for ordersCount={}",
+                        dto.getOrdersCount());
+
+                throw new DriverBusinessException(
+                        "Incentive slab already exists for orders count : "
+                                + dto.getOrdersCount());
+            }
+
+            // --------------------------------------------------------
+            // Map DTO to Entity
+            // --------------------------------------------------------
+            DriverIncentiveSettings entity =
+                    DriverIncentiveSettingsMapper
+                            .toIncentiveEntity(dto);
+
             entity.setCreatedAt(LocalDateTime.now());
             entity.setCreatedBy(1);
 
-//            save to database and get the saved entity with generated ID
-            DriverIncentiveSettings saved = incentiveSettingsRepository.save(entity);
+            // --------------------------------------------------------
+            // Save into database
+            // --------------------------------------------------------
+            DriverIncentiveSettings saved =
+                    incentiveSettingsRepository.save(entity);
 
-            log.info("Created successfully | ID={}", saved.getDriverIncentiveSettingsId());
+            log.info(
+                    "Incentive created successfully | id={}",
+                    saved.getDriverIncentiveSettingsId());
 
-            // mapper for response entity to DTO
-            return DriverIncentiveSettingsMapper.incentiveEntityToDto(saved);
+            DriverIncentiveSettingsDto response =
+                    DriverIncentiveSettingsMapper
+                            .incentiveEntityToDto(saved);
+
+            log.info(
+                    "CREATE_INCENTIVE_SUCCESS | incentiveSettingsId={} | ordersCount={}",
+                    response.getDriverIncentiveSettingsId(),
+                    response.getOrdersCount());
+            return response;
         }
 
-        // Update existing incentive setting if ID is provided
+        // ============================================================
+        // UPDATE EXISTING INCENTIVE
+        // ============================================================
         else {
 
-            Integer id = dto.getDriverIncentiveSettingsId();
-            log.info("Updating incentive with ID: {}", id);
+            Integer incentiveSettingsId = dto.getDriverIncentiveSettingsId();
 
-            DriverIncentiveSettings existing = incentiveSettingsRepository.findById(id).orElseThrow(() -> {
-                log.error("Record not found for ID: {}", id);
-                return new ResourceNotFoundException("Record not found with ID: " + id);
-            });
+            log.info(
+                    "UPDATE_INCENTIVE_START | incentiveSettingsId={} | ordersCount={} | incentiveAmount={}",
+                    incentiveSettingsId,
+                    dto.getOrdersCount(),
+                    dto.getIncentiveAmount());
 
-//            to update existing record, we will use the mapper method that
-//            updates the entity with new values from DTO, without changing the ID
-            DriverIncentiveSettingsMapper.updateIncentiveEntity(existing, dto);
+            DriverIncentiveSettings existing =
+                    incentiveSettingsRepository.findById(incentiveSettingsId)
+                            .orElseThrow(() -> {
+
+                                log.error(
+                                        "Incentive setting not found | incentiveSettingsId={}",
+                                        incentiveSettingsId);
+
+                                return new ResourceNotFoundException(
+                                        "Incentive setting not found with ID: "
+                                                + incentiveSettingsId);
+                            });
+
+                // --------------------------------------------------------
+                // Check duplicate orders count
+                // Ignore current record while checking duplicates
+                // --------------------------------------------------------
+            if (incentiveSettingsRepository
+                    .existsByOrdersCountAndDriverIncentiveSettingsIdNot(
+                            dto.getOrdersCount(),
+                            incentiveSettingsId)) {
+
+                log.error(
+                        "DUPLICATE_INCENTIVE_SLAB | ordersCount={} | incentiveSettingsId={}",
+                        dto.getOrdersCount(),
+                        incentiveSettingsId);
+
+                throw new DriverBusinessException(
+                        "Duplicate incentive slab found for orders count: "
+                                + dto.getOrdersCount());
+            }
+
+            // --------------------------------------------------------
+            // Update entity values
+            // --------------------------------------------------------
+            DriverIncentiveSettingsMapper
+                    .updateIncentiveEntity(existing, dto);
+
             existing.setUpdatedAt(LocalDateTime.now());
             existing.setUpdatedBy(1);
 
-//            saving updated entity back to database, which will perform the update operation
-            DriverIncentiveSettings updated = incentiveSettingsRepository.save(existing);
+            // --------------------------------------------------------
+            // Save updated record
+            // --------------------------------------------------------
+            DriverIncentiveSettings updated =
+                    incentiveSettingsRepository.save(existing);
 
-            log.info("Updated successfully | ID={}", updated.getDriverIncentiveSettingsId());
+            log.info(
+                    "Incentive updated successfully | id={}",
+                    updated.getDriverIncentiveSettingsId());
 
-            // for mapper response entity to DTO
-            return DriverIncentiveSettingsMapper.incentiveEntityToDto(updated);
+            DriverIncentiveSettingsDto response =
+                    DriverIncentiveSettingsMapper
+                            .incentiveEntityToDto(updated);
+
+            log.info(
+                    "UPDATE_INCENTIVE_SUCCESS | incentiveSettingsId={} | ordersCount={}",
+                    response.getDriverIncentiveSettingsId(),
+                    response.getOrdersCount());
+
+            return response;
         }
     }
 
     @Override
-    public Page<DriverIncentiveHistoryResponseDto> getDriverIncentiveHistory
-            (Integer driverId, String filter,Integer page,
-             Integer size) {
+    public Page<DriverIncentiveHistoryResponseDto> getDriverIncentiveHistory(
+            Integer driverId,
+            String filter,
+            Integer page,
+            Integer size) {
 
-        log.info("Fetching incentive history for driverId : {}, filter : {}", driverId, filter);
+        log.info("Fetching incentive history | driverId={} | filter={}",
+                driverId, filter);
+
+        // ------------------------------------------------------------
+        // Create pagination object
+        // ------------------------------------------------------------
+        Pageable pageable = PageRequest.of(page, size);
 
         Page<DriverIncentiveHistory> incentiveHistoryList;
-// pagination can be applied here if needed, for now we are fetching all records for the month
-        Pageable pageable =
-                PageRequest.of(
-                        page,
-                        size);
 
-        if ("currentMonth".equalsIgnoreCase(filter)) {
-//            Monthly filter - get records for the current month, we will calculate
-//            the start and end date of the current month and fetch records between those dates
+        // ------------------------------------------------------------
+        // Fetch current month's incentive history
+        // ------------------------------------------------------------
+        if (DConstants.CURRENT_MONTH.equalsIgnoreCase(filter)) {
+
+            // First day of current month
             LocalDate startDate = LocalDate.now().withDayOfMonth(1);
 
-            LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+            // Last day of current month
+            LocalDate endDate = LocalDate.now()
+                    .withDayOfMonth(LocalDate.now().lengthOfMonth());
 
-            log.info("Fetching current month records between {} and {}", startDate, endDate);
+            log.info("Fetching CURRENT_MONTH incentive history | startDate={} | endDate={}",
+                    startDate, endDate);
 
+            incentiveHistoryList =
+                    repository.findByDriverIdAndCurrDateBetween(
+                            driverId,
+                            startDate,
+                            endDate,
+                            pageable);
 
-            incentiveHistoryList = repository.findByDriverIdAndCurrDateBetween
-                    (driverId, startDate, endDate,pageable);
-
-        } else {
-
-            log.info("Fetching all incentive history records");
-
-            incentiveHistoryList = repository.findByDriverId(driverId,pageable);
         }
 
-        if (incentiveHistoryList.isEmpty()) {
-            log.info("Total Elements: {}", incentiveHistoryList.getTotalElements());
-            log.info("Current Page: {}", incentiveHistoryList.getNumber());
-            log.info("Content Size: {}", incentiveHistoryList.getContent().size());
-            throw new ResourceNotFoundException("No incentive history found for driverId : " + driverId);
+        // ------------------------------------------------------------
+        // Fetch complete incentive history
+        // ------------------------------------------------------------
+        else if (DConstants.ALL.equalsIgnoreCase(filter)) {
+
+            log.info("Fetching ALL incentive history records");
+
+            incentiveHistoryList =
+                    repository.findByDriverId(driverId, pageable);
         }
 
-//       converting list of entities to list of DTOs for response
+        // ------------------------------------------------------------
+        // Invalid filter value
+        // Supported values:
+        // CURRENT_MONTH
+        // ALL
+        // ------------------------------------------------------------
+        else {
+
+            log.error("Invalid filter received : {}", filter);
+
+            throw new DriverBusinessException(
+                    "Invalid filter. Allowed values are CURRENT_MONTH and ALL.");
+        }
+
+        // ------------------------------------------------------------
+        // If driver has no incentive history, throw exception.
+        // Note:
+        // getTotalElements() == 0 means no records exist.
+        // If totalElements > 0 and requested page is beyond range,
+        // content will be empty but totalElements will still be > 0.
+        // This avoids returning 500 for out-of-range pages.
+        // ------------------------------------------------------------
+        if (incentiveHistoryList.getTotalElements() == 0) {
+
+            log.info("No incentive history found for driverId={}", driverId);
+
+            throw new ResourceNotFoundException(
+                    "No incentive history found for driverId : " + driverId);
+        }
+
+        // ------------------------------------------------------------
+        // Convert Entity list to Response DTO list
+        // ------------------------------------------------------------
         List<DriverIncentiveHistoryResponseDto> responseList = new ArrayList<>();
 
-        for (DriverIncentiveHistory history : incentiveHistoryList.getContent()) {
+        for (DriverIncentiveHistory history
+                : incentiveHistoryList.getContent()) {
 
             responseList.add(DriverIncentiveSettingsMapper.toResponseDto(history));
         }
 
         log.info("Total records fetched : {}", responseList.size());
+
+        // ------------------------------------------------------------
+        // Prepare paginated response
+        // ------------------------------------------------------------
         Page<DriverIncentiveHistoryResponseDto> responsePage =
                 new PageImpl<>(
                         responseList,
                         pageable,
                         incentiveHistoryList.getTotalElements());
 
-        log.info("Returning paginated response with {} records",
-                responsePage.getNumberOfElements());
+        log.info(
+                "Returning paginated response | page={} | size={} | totalElements={}",
+                responsePage.getNumber(),
+                responsePage.getNumberOfElements(),
+                responsePage.getTotalElements());
 
         return responsePage;
     }

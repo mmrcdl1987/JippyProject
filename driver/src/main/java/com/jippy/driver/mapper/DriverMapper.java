@@ -101,7 +101,7 @@ public class DriverMapper {
         DriverDto dto = new DriverDto();
 
         // Set driver details
-        dto.setDriverId(driver.getDriverId());
+//        dto.setDriverId(driver.getDriverId());
         dto.setFirstName(driver.getFirstName());
         dto.setLastName(driver.getLastName());
         dto.setPhoneNumber(driver.getPhoneNumber());
@@ -167,10 +167,9 @@ public class DriverMapper {
         existingDriver.setUpdatedAt(LocalDateTime.now());
         existingDriver.setUpdatedBy(1);
 
-        // restricting updation of 5 feilds as per requirement
-        // phoneNumber,email,kyc details(more 3 feilds namely aadharNumber , drivingLicenseNumber, rcCopy)
-        // should not be updated through this method
-
+        // As per business requirements, phone number, email, and KYC fields
+        // (Aadhaar number, driving license number, and RC copy) are read-only
+        // and are intentionally not updated through this API.
     }
 
     //    for api to fetchOrderEarningsHistory mapper

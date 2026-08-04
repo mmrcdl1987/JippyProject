@@ -46,18 +46,18 @@ public class DriverSettlementController {
 //    The response includes driver ID, total incentives amount, and incentive details
 //    for each driver.
 //    api path -> /api/driver/getDriversIncentivesForSettlements?filter=currentMonth
-    @GetMapping("/getDriversIncentivesForSettlements")
-    @Operation(summary = "Get Drivers Incentives For Settlements",
-            description = "Fetches total incentives amount for each driver based on the provided filter. "
-                    +"filter can be 'currentMonth' to fetch incentives for the previous month. "
-                   + "[ api path ]-> /api/driver/getDriversIncentivesForSettlements?filter=currentMonth" +
-                    "(fetches previous month start to end )")
-    public ResponseEntity<List<DriverIncentiveSettlementResponseDto>> getDriversIncentivesForSettlements(
-            @Parameter(description = "currentMonth")
-            @RequestParam String filter) {
+        @GetMapping("/getDriversIncentivesForSettlements")
+        @Operation(summary = "Get Drivers Incentives For Settlements",
+                description = "Fetches total incentives amount for each driver based on the provided filter. "
+                        +"filter can be 'currentMonth' to fetch incentives for the previous month. "
+                       + "[ api path ]-> /api/driver/getDriversIncentivesForSettlements?filter=currentMonth" +
+                        "(fetches previous month start to end )")
+        public ResponseEntity<List<DriverIncentiveSettlementResponseDto>> getDriversIncentivesForSettlements(
+                @Parameter(description = "currentMonth")
+                @RequestParam String filter) {
 
-        log.info("Received request to fetch driver incentive settlements for filter : {}", filter);
-        log.info("Validating filter: -> currentMonth(i.e PreviousMonth) {}", filter);
+            log.info("Received request to fetch driver incentive settlements for filter : {}", filter);
+            log.info("Validating filter: -> currentMonth(i.e PreviousMonth) {}", filter);
 
         List<DriverIncentiveSettlementResponseDto> response =
                 driverSettlementService.getDriversIncentivesForSettlements(filter);

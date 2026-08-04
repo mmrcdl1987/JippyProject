@@ -112,12 +112,16 @@ springdoc:
   api-docs:
     path: /api/fm/v3/api-docs
 
+product-content:
+  admin-email: manjith2244@gmail.com
+
 aws:
   s3:
     bucket-name: jippys3bucket
     region: ap-south-2
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
+    product-content-file: product-content/master_products_descriptions_images.xlsx
 
 
 

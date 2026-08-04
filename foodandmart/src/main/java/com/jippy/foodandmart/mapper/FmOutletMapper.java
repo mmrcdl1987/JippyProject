@@ -308,7 +308,7 @@ public final class FmOutletMapper {
         for (FmOutletMenuProjection row : rows) {
             if (row != null) {
                 // Set basic outlet info (repeated in rows)
-                outlet.setOutletId(row.getOutletId());
+//                outlet.setOutletId(row.getOutletId());
                 outlet.setOutletName(row.getOutletName());
                 outlet.setOutletPhone(row.getOutletPhone());
                 outlet.setAlternateOutletPhone(row.getAlternateOutletPhone());

@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
+import com.jippy.driver.exception.DriverBusinessException;
 import com.jippy.driver.exception.DriverZoneException;
 import com.jippy.driver.exception.ImageValidationException;
+import com.jippy.driver.exception.ResourceNotFoundException;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverMapper;
@@ -17,7 +19,6 @@ import com.jippy.driver.service.DriverService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.locationtech.jts.geom.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ public class DriverServiceImpl implements DriverService {
 
     private final DriverRepository driverRepository;
     private final DriverZoneRepository zoneRepository;
+    private final DriverKycRepository driverKycRepository;
     //    private final CoOrderRepository ordersRepository;
     private final COFeignClient coFeignClients;
     private final DriverOrderRepository driverOrderRepository;
@@ -59,9 +61,68 @@ public class DriverServiceImpl implements DriverService {
     public DriverDto postDriverDetails(DriverDto dto) {
 
         log.info("Creating driver for phone: {}", dto.getPhoneNumber());
+        // ----------------------------------------------------------------------
+// Validate duplicate phone number
+// ----------------------------------------------------------------------
+        if (driverRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
+
+            log.error("Phone number already exists : {}", dto.getPhoneNumber());
+
+            throw new DriverBusinessException(
+                    "Phone number already exists.");
+        }
+
+// ----------------------------------------------------------------------
+// Validate duplicate email
+// ----------------------------------------------------------------------
+        if (driverRepository.existsByEmail(dto.getEmail())) {
+
+            log.error("Email already exists : {}", dto.getEmail());
+
+            throw new DriverBusinessException(
+                    "Email already exists.");
+        }
+
+// ----------------------------------------------------------------------
+// Validate duplicate Aadhaar number
+// ----------------------------------------------------------------------
+        if (driverKycRepository.existsByAadharNumber(dto.getAadharNumber())) {
+
+            log.error("Aadhaar number already exists : {}",
+                    dto.getAadharNumber());
+
+            throw new DriverBusinessException(
+                    "Aadhaar number already exists.");
+        }
+
+// ----------------------------------------------------------------------
+// Validate duplicate Driving License Number
+// ----------------------------------------------------------------------
+        if (driverKycRepository.existsByDrivingLicenseNumber(
+                dto.getDrivingLicenseNumber())) {
+
+            log.error("Driving License already exists : {}",
+                    dto.getDrivingLicenseNumber());
+
+            throw new DriverBusinessException(
+                    "Driving License number already exists.");
+        }
+
+// ----------------------------------------------------------------------
+// Validate duplicate RC Copy
+// ----------------------------------------------------------------------
+        if (driverKycRepository.existsByRcCopy(dto.getRcCopy())) {
+
+            log.error("RC Copy already exists : {}",
+                    dto.getRcCopy());
+
+            throw new DriverBusinessException(
+                    "RC Copy already exists.");
+        }
 
         // Convert DTO → Entity
         Driver driver = DriverMapper.mapToDriverEntity(dto);
+
 
         // Save driver
         Driver savedDriver = driverRepository.save(driver);
@@ -126,9 +187,17 @@ public class DriverServiceImpl implements DriverService {
         coAddressRequestDto.setAddressType(DConstants.TYPE_DRIVER);
         DriverAddressRequestDto coAddressRequestDtoFeign = null;
         try {
-            coAddressRequestDtoFeign = fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+
+            coAddressRequestDtoFeign =
+                    fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
+
         } catch (Exception e) {
-            log.error("Address service failed, but continuing driver creation", e);
+
+            log.error("Address creation failed for driver id : {}",
+                    savedDriver.getDriverId(), e);
+
+            throw new DriverBusinessException(
+                    "Failed to create driver address.");
         }
 //        create driver wallet details , create entity ,repo
         DriverWallet wallet = new DriverWallet();
@@ -266,9 +335,14 @@ public class DriverServiceImpl implements DriverService {
         DriverAddressRequestDto updatedAddress = null;
 
         try {
+
             updatedAddress = fmFeignClient.saveAddressDetails(addressDto).getBody();
         } catch (Exception e) {
-            log.error("Address update failed", e);
+
+            log.error("Address update failed for driver id : {}", driverId, e);
+
+            throw new DriverBusinessException(
+                    "Failed to update driver address.");
         }
         // Convert updated entity → response DTO with updated address details
         DriverDto response = DriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
@@ -475,14 +549,15 @@ public class DriverServiceImpl implements DriverService {
             return new ResourceNotFoundException("Driver not found with id: " + driverId);
         });
 
-        List<DriverOrderHistoryProjection> projections = driverOrderRepository.fetchOrderEarningsHistory(driverId);
+        List<DriverOrderHistoryProjection> projections =
+                driverOrderRepository.fetchOrderEarningsHistory(driverId);
 
         List<DriverOrderHistoryDto> response = new ArrayList<>();
 
         for (DriverOrderHistoryProjection projection : projections) {
 
             // call customer ms
-            DriveOrderDto order = coFeignClients.getOrder(String.valueOf(projection.getOrderId()));
+            DriveOrderDto order = coFeignClients.getOrder(projection.getOrderId());
 
             log.info("Order Response = {}", order);
             // call fm ms
@@ -492,7 +567,8 @@ public class DriverServiceImpl implements DriverService {
 
             log.info("Outlet Name={}", outletName);
 
-            DriverOrderHistoryDto dto = DriverMapper.mapToDriverOrderHistoryDto(projection, order.getOrderStatus(), outletName);
+            DriverOrderHistoryDto dto = DriverMapper.mapToDriverOrderHistoryDto
+                    (projection, order.getOrderStatus(), outletName);
 
             response.add(dto);
         }
@@ -779,11 +855,11 @@ public class DriverServiceImpl implements DriverService {
 
         Driver driver = driverRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Driver not found with email : " + email));
+                        new ResourceNotFoundException( "Driver not found for the provided email."));
 
         DriverDto dto = new DriverDto();
 
-        dto.setDriverId(driver.getDriverId());
+//        dto.setDriverId(driver.getDriverId());
         dto.setEmail(driver.getEmail());
         dto.setFirstName(driver.getFirstName());
         dto.setLastName(driver.getLastName());

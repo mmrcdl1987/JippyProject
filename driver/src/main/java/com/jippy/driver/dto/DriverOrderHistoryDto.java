@@ -12,7 +12,7 @@ public class DriverOrderHistoryDto {
     private Integer driverId;
 
     // Order id
-    private Integer orderId;
+    private String orderId;
 
     // Pick up distance
     private BigDecimal pickUpDistanceInKms;

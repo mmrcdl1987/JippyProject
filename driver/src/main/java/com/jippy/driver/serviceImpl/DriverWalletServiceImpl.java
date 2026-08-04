@@ -52,8 +52,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
     private COFeignClient coFeignClient;
 
     @Autowired
-    private  DriverWalletTransactionsRepository
-            driverWalletTransactionRepository;
+    private  DriverWalletTransactionsRepository driverWalletTransactionRepository;
 
     @Override
     public DriverCodResponseDto processDriverCod(DriverCodRequestDto dto) {
@@ -79,7 +78,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         // -------------------------------
         // STEP 2: VALIDATE STATUS
         // -------------------------------
-        if (!"DELIVERED".equalsIgnoreCase(order.getOrderStatus())) {
+        if (!DConstants.STATUS_DELIVERED.equalsIgnoreCase(order.getOrderStatus())) {
             logger.error("Order not delivered: {}", dto.getOrderId());
             throw new DriverBusinessException("Order is not delivered");
         }
@@ -126,13 +125,23 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         }
 
         double orderAmount = breakup.getOrderTotalAmount().doubleValue();
+        // -----------------------------------------------------
+        // Prevent duplicate COD deduction for same order
+        // -----------------------------------------------------
+        if (txnRepo.existsByOrderId(dto.getOrderId())) {
 
+            logger.error("COD already processed for orderId={}",
+                    dto.getOrderId());
+
+            throw new DriverBusinessException(
+                    "COD already processed for this order.");
+        }
         // ------------------------------------------
         // STEP 5: FETCH DRIVER WALLET from wallet table
         // ------------------------------------------
         DriverWallet wallet = walletRepo.findByDriverId(dto.getDriverId()).orElseThrow(() -> {
             logger.error("Driver wallet not found for driverId: {}", dto.getDriverId());
-            return new DriverBusinessException("Driver wallet not found");
+            return new ResourceNotFoundException("Driver wallet not found with Id: " + dto.getDriverId());
         });
 
 //        -----------------------------------------
@@ -193,7 +202,7 @@ public class DriverWalletServiceImpl implements DriverWalletService {
         // -------------------------------
         DriverWalletTransactions txn = DriverMapper.mapToTransaction(wallet.getDriverWalletId(), dto.getOrderId(), orderAmount,dto.getDriverId());
 
-        DriverWalletTransactions savetxn = txnRepo.save(txn);
+        txnRepo.save(txn);
 
         // -------------------------------
         // STEP 9: PREPARE RESPONSE

@@ -290,4 +290,28 @@ public final class FmMerchantMapper {
 
         return dto;
     }
+    /**
+     * Updates existing Merchant entity from MerchantWithBank DTO.
+     * Used in Update Merchant Profile API.
+     */
+    public static void updateMerchantEntity(FmMerchant merchant, FmMerchantWithBankDto dto) {
+
+        merchant.setMerchantName(dto.getMerchantName());
+        merchant.setMerchantEmail(dto.getMerchantEmail());
+        merchant.setMerchantPhone(dto.getMerchantPhone());
+        merchant.setMerchantBusinessType(dto.getBusinessType());
+        merchant.setStatus(dto.getStatus());
+    }
+    /**
+     * Updates existing Merchant Bank entity from MerchantWithBank DTO.
+     * Used in Update Merchant Profile API.
+     */
+    public static void updateBankEntity(FmMerchantBankDetails bank, FmMerchantWithBankDto dto) {
+
+        bank.setAccountNumber(dto.getAccountNumber());
+        bank.setIfscCode(dto.getIfscCode());
+        bank.setBankName(dto.getBankName());
+        bank.setAccountHolderName(dto.getAccountHolderName());
+        bank.setUserType("MERCHANT");
+    }
 }

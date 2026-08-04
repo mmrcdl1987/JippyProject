@@ -16,11 +16,12 @@ import com.jippy.customerandorder.constants.COConstants;
 import java.time.Duration;
 
 
-
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -205,14 +206,36 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
 
         log.info("CREATE_CUSTOMER_ADDRESS_SERVICE_START | customerId={}", requestDto.getCustomerId());
 
-        customerRepository.findById(requestDto.getCustomerId()).orElseThrow(() -> new CoResourceNotFoundException("Customer not found with customerId : " + requestDto.getCustomerId()));
+        customerRepository.findById(requestDto.getCustomerId()).
+                orElseThrow(() -> new CoResourceNotFoundException("Customer not found with customerId : "
+                        + requestDto.getCustomerId()));
 
 //        mapping the request DTO to the entity class CoCustomerDeliveryAddress
 //        using the CoCustomerDeliveryMapper
-        CoCustomerDeliveryAddress customerDeliveryAddress = CoCustomerDeliveryMapper.mapToEntity(requestDto);
+        CoCustomerDeliveryAddress customerDeliveryAddress
+                = CoCustomerDeliveryMapper.mapToEntity(requestDto);
 
+        // ------------------------------------------------------
+        // Prevent duplicate customer delivery address
+        // ------------------------------------------------------
+        if (customerDeliveryAddressRepository
+                .existsByCustomerIdAndDoorNoAndBuildingNameAndLaneNoAndAreaAndCity(
+                        requestDto.getCustomerId(),
+                        requestDto.getDoorNo(),
+                        requestDto.getBuildingName(),
+                        requestDto.getLaneNo(),
+                        requestDto.getArea(),
+                        requestDto.getCity())) {
+
+            log.error("Duplicate delivery address found for customerId={}",
+                    requestDto.getCustomerId());
+
+            throw new CoBusinessException(
+                    "Customer delivery address already exists.");
+        }
 //        saving the customer delivery address details to the database
-        CoCustomerDeliveryAddress savedCustomerDeliveryAddress = customerDeliveryAddressRepository.save(customerDeliveryAddress);
+        CoCustomerDeliveryAddress savedCustomerDeliveryAddress
+                = customerDeliveryAddressRepository.save(customerDeliveryAddress);
 
         log.info("CREATE_CUSTOMER_ADDRESS_SERVICE_SUCCESS | customerAddressId={}", savedCustomerDeliveryAddress.getCustomerAddressId());
 
@@ -223,7 +246,8 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
     }
 
     @Override
-    public List<CoCustomerDeliveryAddressResponseDto> getCustomerDeliveryAddresses(Integer customerId) {
+    public List<CoCustomerDeliveryAddressResponseDto> getCustomerDeliveryAddresses(
+            Integer customerId) {
 
         log.info("GET_CUSTOMER_DELIVERY_ADDRESSES_SERVICE_START | customerId={}", customerId);
         log.info("Validating customer existence for customerId={}", customerId);
@@ -231,19 +255,23 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
 
         customerRepository.findById(customerId).orElseThrow(() -> new CoResourceNotFoundException("Customer not found with customerId : " + customerId));
 
-        List<CoCustomerDeliveryAddress> customerDeliveryAddresses = customerDeliveryAddressRepository.findByCustomerId(customerId);
+        List<CoCustomerDeliveryAddress> customerDeliveryAddresses
+                = customerDeliveryAddressRepository.findByCustomerId(customerId);
 
         if (customerDeliveryAddresses.isEmpty()) {
 
-            throw new CoResourceNotFoundException("No delivery addresses found for customerId : " + customerId);
+            throw new CoResourceNotFoundException("No delivery addresses found for customerId : "
+                    + customerId);
         }
 
         List<CoCustomerDeliveryAddressResponseDto> addressResponseDtoList = new ArrayList<>();
 
-//        looping through the list of customer delivery addresses and mapping each address to the response DTO
+//        looping through the list of customer delivery addresses and mapping each
+//        address to the response DTO
         for (CoCustomerDeliveryAddress customerDeliveryAddress : customerDeliveryAddresses) {
 
-            CoCustomerDeliveryAddressResponseDto coCustomerDeliveryAddressResponseDto = CoCustomerDeliveryMapper.mapToResponseDto(customerDeliveryAddress);
+            CoCustomerDeliveryAddressResponseDto coCustomerDeliveryAddressResponseDto
+                    = CoCustomerDeliveryMapper.mapToResponseDto(customerDeliveryAddress);
             addressResponseDtoList.add(coCustomerDeliveryAddressResponseDto);
         }
 

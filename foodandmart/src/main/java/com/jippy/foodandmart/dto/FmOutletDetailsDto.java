@@ -7,13 +7,13 @@ import java.util.List;
 
 @Data
 public class FmOutletDetailsDto {
-    private Integer outletId;
+//    private Integer outletId;
 
     @Schema(example = "Friends Restaurant")
     private String outletName;
     @Schema(example = "friendsrestaurant@gmail.com")
     private String outletEmail;
-    @Schema(example = "123 Main Street, City, State, ZIP")
+    @Schema(example = "6548022339")
     private String outletPhone;
 
     @Schema(example = "9848022339")

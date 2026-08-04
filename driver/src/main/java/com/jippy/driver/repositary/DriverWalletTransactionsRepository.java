@@ -13,5 +13,10 @@ public interface DriverWalletTransactionsRepository extends
 
     List<DriverWalletTransactions> findByDriverWalletId(
             Integer driverWalletId);
+    /**
+     * Check whether COD deduction already exists
+     * for the given order.
+     */
+    boolean existsByOrderId(String orderId);
 
 }
