@@ -125,7 +125,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.20.0</version>
+        </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing-bridge-otel</artifactId>
@@ -185,7 +189,7 @@
                 <version>3.5.1</version>
                 <configuration>
                     <to>
-                        <image>docker.io/mmrcdl1987/jippyproject-${project.artifactId}:s2</image>
+                        <image>docker.io/mmrcdl1987/jippydeploy25may2026-${project.artifactId}:s1</image>
                         <auth>
                             <username></username>
                             <password></password>

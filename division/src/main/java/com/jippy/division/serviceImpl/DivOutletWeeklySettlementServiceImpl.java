@@ -8,13 +8,12 @@ import com.jippy.division.dto.DivOutletWeeklySettlementResponseDto;
 import com.jippy.division.entity.DivOutletWeeklySettlement;
 import com.jippy.division.enums.DivSettlementFilter;
 import com.jippy.division.exception.ResourceNotFoundException;
-import com.jippy.division.feignclients.FMFeignClient;
+import com.jippy.division.feignClients.FMFeignClient;
 import com.jippy.division.mapper.DivOutletWeeklySettlementMapper;
 import com.jippy.division.repositary.DivOutletWeeklySettlementRepository;
 import com.jippy.division.service.DivOutletWeeklySettlementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;

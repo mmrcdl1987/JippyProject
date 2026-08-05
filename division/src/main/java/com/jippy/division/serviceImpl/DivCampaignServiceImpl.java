@@ -4,7 +4,7 @@ import com.jippy.division.dto.*;
 import com.jippy.division.entity.DivCouponMappingOutletProduct;
 import com.jippy.division.entity.DivPriceDropMappingOutletsProduct;
 import com.jippy.division.entity.DivPromotionDate;
-import com.jippy.division.feignclients.FMFeignClient;
+import com.jippy.division.feignClients.FMFeignClient;
 import com.jippy.division.mapper.DivCampaignMapper;
 import com.jippy.division.repositary.DivCouponMappingRepository;
 import com.jippy.division.repositary.DivPriceDropMappingRepository;
