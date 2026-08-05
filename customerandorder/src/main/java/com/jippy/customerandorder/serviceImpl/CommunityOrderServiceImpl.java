@@ -6,17 +6,18 @@ import com.jippy.customerandorder.entity.CoCommunity;
 import com.jippy.customerandorder.entity.CoCommunityEvents;
 import com.jippy.customerandorder.entity.CoCustomerCommunities;
 import com.jippy.customerandorder.exception.CommunityZoneException;
-import com.jippy.customerandorder.feignClients.DriverFeignClient;
+import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.CommunityOrderService;
 import com.jippy.customerandorder.mapper.CommunityOrderMapper;
+import com.jippy.customerandorder.projection.CoActiveCommunityGroupOrdersProjection;
 import com.jippy.customerandorder.repository.CoCommunityEventsRepository;
 import com.jippy.customerandorder.repository.CoCommunityRepository;
 import com.jippy.customerandorder.repository.CoCustomerCommunityRepository;
 
+import com.jippy.customerandorder.repository.GroupOrderInvitationRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.locationtech.jts.geom.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -39,14 +40,14 @@ import java.util.stream.Collectors;
 public class CommunityOrderServiceImpl implements CommunityOrderService {
 
     private final CoCommunityEventsRepository communityEventsRepository;
-    private final DriverFeignClient driverFeignClient;
+    private final FMFeignClient fmFeignClient;
     private final CoCustomerCommunityRepository customerCommunityRepository;
     private final GroupOrderServiceImpl groupOrderService;
     private final CoCommunityRepository communityRepository;
     private final GeometryFactory geometryFactory = new GeometryFactory();
     private final ImageValidationService imageValidationService;
     private final S3ImageService s3ImageService;
-
+    private final GroupOrderInvitationRepository groupOrderInvitationRepository;
 
     @Autowired
     private StringRedisTemplate redisTemplate;
@@ -155,11 +156,10 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
     @Override
     public ResponseEntity<CoResponseDto> AddOrDropMembersFromCommunity(CoAddOrDropMembersFromCommunityDto addOrDropMembersFromCommunityDto) {
 
-        ResponseEntity<CoZoneResponseDto> zoneResponseDtoResponseEntity = driverFeignClient
-                .findCommunityById(addOrDropMembersFromCommunityDto.getCommunityId());
 
-        CoZoneResponseDto zoneResponseDto = zoneResponseDtoResponseEntity.getBody();
-        if(zoneResponseDto.getZoneId() == null){
+        Optional<CoCommunity> community = communityRepository.findByCommunityId(addOrDropMembersFromCommunityDto.getCommunityId());
+
+        if(community.isEmpty()){
             log.warn("Community does not exist");
             return  ResponseEntity.status(500).body(new CoResponseDto("500", "Community does not exist "));
         }
@@ -171,7 +171,7 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
                     savedCustomerCommunity.getCustomerId(),savedCustomerCommunity.getCommunityId());
 
             return  ResponseEntity.status(200).body(new CoResponseDto("200", "Customer with ID :"+ savedCustomerCommunity.getCustomerId()+
-                    " is added to community : "+zoneResponseDto.getZoneName()));
+                    " is added to community : "+community.get().getCommunityName()));
         }
         if(addOrDropMembersFromCommunityDto.getType().equals(COConstants.DROP_COMMUNITY_TYPE)){
 
@@ -182,25 +182,34 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
            if(customerCommunities.isPresent()){
                customerCommunityRepository.delete(customerCommunities.get());
                log.info(" Customer with ID: {} is deleted from community :{} ",
-                       addOrDropMembersFromCommunityDto.getCustomerId(),zoneResponseDto.getZoneName());
+                       addOrDropMembersFromCommunityDto.getCustomerId(),community.get().getCommunityName());
                return  ResponseEntity.status(200).body(new CoResponseDto("200", "Customer with ID :"+ addOrDropMembersFromCommunityDto.getCustomerId()+
-                       " is dropped from community : "+zoneResponseDto.getZoneName()));
+                       " is dropped from community : "+community.get().getCommunityName()));
            }else{
                log.warn("Customer with ID: {} is not in the community : {} ",
-                       addOrDropMembersFromCommunityDto.getCustomerId(),zoneResponseDto.getZoneName());
+                       addOrDropMembersFromCommunityDto.getCustomerId(),community.get().getCommunityName());
                return  ResponseEntity.status(500).body(new CoResponseDto("500", "Customer with ID :"+ addOrDropMembersFromCommunityDto.getCustomerId()+
-                       " is not in community : "+zoneResponseDto.getZoneName()));
+                       " is not in community : "+community.get().getCommunityName()));
            }
         }
         return  null;
     }
 
     @Override
-    public ResponseEntity<Integer> findCustomerInCommunity(Double latitude, Double longitude) {
+    public ResponseEntity<?> findCustomerInCommunity(Double latitude, Double longitude) {
 
-        ResponseEntity<Integer> responseEntity = driverFeignClient.findCustomerInCommunity(latitude,longitude);
-        Integer response = responseEntity.getBody();
-        return ResponseEntity.status(200).body(response);
+        Optional<CoCommunity> optionalCommunity =communityRepository.findCustomerInCommunity(latitude,longitude);
+        if(optionalCommunity.isPresent()){
+            CoCommunity community = optionalCommunity.get();
+
+            String areaName =fmFeignClient.findAreaById(community.getCommunityAreaId());
+
+            CoCommunityResponseDto communityResponseDto = CommunityOrderMapper.toCommunityResponseDto(community,areaName);
+
+            return ResponseEntity.status(200).body(communityResponseDto);
+        }
+
+        return ResponseEntity.status(404).body(new CoResponseDto("404", "No community found for the given coordinates."));
     }
 
     @Override
@@ -292,5 +301,26 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
     }
 
 
+    @Override
+    public ResponseEntity<?> getActiveCommunityGroupOrders(Integer communityId) {
+
+        List<CoActiveCommunityGroupOrdersProjection> activeCommunityGroupOrders = groupOrderInvitationRepository.findActiveCommunityGroupOrders(communityId);
+
+        if (activeCommunityGroupOrders.isEmpty()) {
+            log.info("No active community group orders found.");
+            return ResponseEntity.status(404).body(new CoResponseDto("404", "No active community group orders found."));
+        }
+
+        List<CoActiveGroupOrdersResponseDto> groupOrdersResponseDtos = new ArrayList<>();
+
+        for (CoActiveCommunityGroupOrdersProjection groupOrder : activeCommunityGroupOrders) {
+
+            CoActiveGroupOrdersResponseDto groupOrdersResponseDto = CommunityOrderMapper.toCommunityOrdersResponseDto(groupOrder);
+            groupOrdersResponseDtos.add(groupOrdersResponseDto);
+        }
+
+        log.info("Found {} active community group orders.", groupOrdersResponseDtos.size());
+        return ResponseEntity.status(200).body(groupOrdersResponseDtos);
+    }
 
 }

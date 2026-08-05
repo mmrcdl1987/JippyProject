@@ -26,6 +26,7 @@ public class CommunityDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer updatedBy;
+    private Integer noOfFamilies;
 
     @Data
     public static class CoordinateDTO {

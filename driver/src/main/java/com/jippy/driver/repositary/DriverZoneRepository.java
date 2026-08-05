@@ -40,22 +40,21 @@
             DriverZone findZoneByCoordinates(@Param("latitude") Double latitude, @Param("longitude") Double longitude);
 
 
-            @Query(value = "SELECT zone_id, zone_name, zone_type, " +
+            @Query(value = "SELECT zone_id, zone_name, " +
                     "ST_AsGeoJSON(boundary) as boundary_json " +
-                    "FROM jippy_driver.zones " +
-                    "WHERE zone_type = :zoneType",
+                    "FROM jippy_driver.zones " ,
                     nativeQuery = true)
-            List<Map<String,Object>> findZonesByType(@Param("zoneType") String zoneType);
+            List<Map<String,Object>> findZones();
 
-            Optional<DriverZone> findByZoneIdAndZoneType(Integer communityId, String communityType);
+            //Optional<DriverZone> findByZoneIdAndZoneType(Integer communityId, String communityType);
 
-            @Query(value = "SELECT * FROM jippy_driver.zones z WHERE ST_Covers(z.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)) LIMIT 1",
-                    nativeQuery = true)
-            Optional<DriverZone> findCustomerInCommunity(@Param("latitude") Double latitude, @Param("longitude") Double longitude);
-
-            @Query(value = "SELECT * FROM jippy_driver.zones z WHERE ST_Covers(z.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)) AND zone_id =:communityId LIMIT 1",
-                    nativeQuery = true)
-            Optional<DriverZone> checkCustomerAddressWithCommunity(
-                    @Param("latitude") Double latitude, @Param("longitude") Double longitude,
-                    @Param("communityId") Integer communityId);
+//            @Query(value = "SELECT * FROM jippy_driver.zones z WHERE ST_Covers(z.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)) LIMIT 1",
+//                    nativeQuery = true)
+//            Optional<DriverZone> findCustomerInCommunity(@Param("latitude") Double latitude, @Param("longitude") Double longitude);
+//
+//            @Query(value = "SELECT * FROM jippy_driver.zones z WHERE ST_Covers(z.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)) AND zone_id =:communityId LIMIT 1",
+//                    nativeQuery = true)
+//            Optional<DriverZone> checkCustomerAddressWithCommunity(
+//                    @Param("latitude") Double latitude, @Param("longitude") Double longitude,
+//                    @Param("communityId") Integer communityId);
         }

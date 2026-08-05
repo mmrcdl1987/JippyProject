@@ -44,7 +44,7 @@ public class CoCommunityOrderController {
 
     @GetMapping("/findCustomerInCommunity")
     @Operation(summary = "Find Customer In Community", description = "Checks given latitude and longitude with all communities, if matches return corresponding community Id, else 0  ")
-    public ResponseEntity<Integer> findCustomerInCommunity(@Valid @RequestParam Double latitude,
+    public ResponseEntity<?> findCustomerInCommunity(@Valid @RequestParam Double latitude,
     @RequestParam Double longitude) {
 
         log.info("Check Customer location In Community: {} ,{} ",latitude,longitude );
@@ -62,5 +62,17 @@ public class CoCommunityOrderController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new CoResponseDto(COConstants.STATUS_201, message));
     }
+
+    @GetMapping("/getActiveCommunityGroupOrders")
+    @Operation(summary = "Get Active Community Group Orders details", description = "Get Active Community Group Orders details, events are not included here")
+    public ResponseEntity<?> getActiveCommunityGroupOrders(@RequestParam Integer communityId) {
+
+        log.info("Get Active Community Group Orders details API called");
+
+        return communityOrderService.getActiveCommunityGroupOrders(communityId);
+    }
+
+
+
 
 }

@@ -91,4 +91,7 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/meal-reminder/current-meal-type")
     CoCurrentMealTypeResponse getCurrentMealType();
 
+    @GetMapping("/api/fm/location/findAreaById")
+    public String findAreaById(@RequestParam Integer areaId);
+
 }

@@ -1,12 +1,10 @@
 package com.jippy.customerandorder.mapper;
 
-import com.jippy.customerandorder.dto.CoAddOrDropMembersFromCommunityDto;
-import com.jippy.customerandorder.dto.CoCommunityEventsDto;
-import com.jippy.customerandorder.dto.CommunityDto;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCommunity;
 import com.jippy.customerandorder.entity.CoCommunityEvents;
 import com.jippy.customerandorder.entity.CoCustomerCommunities;
-import org.locationtech.jts.geom.MultiPolygon;
+import com.jippy.customerandorder.projection.CoActiveCommunityGroupOrdersProjection;
 import org.locationtech.jts.geom.Polygon;
 
 import java.time.LocalDateTime;
@@ -64,7 +62,37 @@ public class CommunityOrderMapper {
         community.setEstablishedYear(communityDto.getEstablishedYear());
         community.setCreatedBy(communityDto.getCreatedBy());
         community.setCreatedAt(LocalDateTime.now());
+        community.setNoOfFamilies(communityDto.getNoOfFamilies());
 
         return community;
+    }
+
+    public static CoCommunityResponseDto toCommunityResponseDto(CoCommunity community, String areaName) {
+
+        CoCommunityResponseDto communityResponseDto = new CoCommunityResponseDto();
+
+        communityResponseDto.setCommunityId(community.getCommunityId());
+        communityResponseDto.setCommunityName(community.getCommunityName());
+        communityResponseDto.setCommunityAreaName(areaName);
+        communityResponseDto.setAboutCommunity(community.getAboutCommunity());
+        communityResponseDto.setEstablishedYear(community.getEstablishedYear());
+        communityResponseDto.setCommunityImageUrl(community.getCommunityImageUrl());
+        communityResponseDto.setNoOfFamilies(community.getNoOfFamilies());
+
+        return communityResponseDto;
+    }
+
+    public static CoActiveGroupOrdersResponseDto toCommunityOrdersResponseDto(CoActiveCommunityGroupOrdersProjection groupOrdersProjection) {
+
+        CoActiveGroupOrdersResponseDto groupOrdersResponseDto = new CoActiveGroupOrdersResponseDto();
+
+        groupOrdersResponseDto.setActiveOrdersCount(groupOrdersProjection.getActiveOrdersCount());
+        groupOrdersResponseDto.setCommunityId(groupOrdersProjection.getCommunityId());
+        groupOrdersResponseDto.setGroupOrdersInvitationId(groupOrdersProjection.getGroupOrdersInvitationId());
+        groupOrdersResponseDto.setMaxMembers(groupOrdersProjection.getMaxMembers());
+        groupOrdersResponseDto.setOrderClosingTimeInMinutes(groupOrdersProjection.getOrderClosingTimeInMinutes());
+
+        return groupOrdersResponseDto;
+
     }
 }

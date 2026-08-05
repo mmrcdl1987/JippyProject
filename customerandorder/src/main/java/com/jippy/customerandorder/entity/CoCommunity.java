@@ -20,6 +20,7 @@ public class CoCommunity {
     private String aboutCommunity;
     private String establishedYear;
     private String communityImageUrl;
+    private Integer noOfFamilies;
 
 
     @Column(

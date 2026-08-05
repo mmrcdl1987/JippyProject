@@ -14,7 +14,9 @@ public interface CommunityOrderService {
 
     ResponseEntity<CoResponseDto> AddOrDropMembersFromCommunity(@Valid CoAddOrDropMembersFromCommunityDto addOrDropMembersFromCommunityDto);
 
-    ResponseEntity<Integer> findCustomerInCommunity(@Valid Double latitude, Double longitude);
+    ResponseEntity<?> findCustomerInCommunity(@Valid Double latitude, Double longitude);
 
     String createCommunity(CommunityDto communityDto, MultipartFile communityImage);
+
+    ResponseEntity<?> getActiveCommunityGroupOrders(Integer communityId);
 }
