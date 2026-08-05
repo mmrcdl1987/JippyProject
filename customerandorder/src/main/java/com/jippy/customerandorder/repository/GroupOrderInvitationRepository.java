@@ -1,8 +1,9 @@
 package com.jippy.customerandorder.repository;
 
+import com.jippy.customerandorder.entity.CoCommunityEvents;
 import com.jippy.customerandorder.entity.GroupOrderInvitation;
+import com.jippy.customerandorder.projection.CoActiveCommunityGroupOrdersProjection;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -41,4 +43,11 @@ public interface GroupOrderInvitationRepository extends JpaRepository<GroupOrder
     int activatePendingCommunityGroupOrders();
 
     Optional<GroupOrderInvitation> findByGroupOrdersInvitationId(Integer groupOrdersInvitationId);
+
+    @Query(value = "SELECT group_orders_invitation_id,order_closing_time_in_minutes,max_members,community_id, "+
+            "COUNT(community_id) OVER() AS active_orders_count "+
+            "FROM jippy_customer_and_order.group_orders_invitation "+
+    "WHERE community_id IS NOT NULL AND status = 'ACTIVE' "+
+    "AND (created_at + (order_closing_time_in_minutes || ' minutes')::INTERVAL) > NOW() AND community_id =:communityId" , nativeQuery = true)
+    List<CoActiveCommunityGroupOrdersProjection> findActiveCommunityGroupOrders(@Param("communityId") Integer communityId);
 }

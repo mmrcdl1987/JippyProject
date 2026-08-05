@@ -35,4 +35,6 @@ public interface FmAreaRepository extends JpaRepository<FmArea, Integer> {
        """)
     Optional<FmArea> findByAreaNameIgnoreCaseAndCityId(@Param("areaName") String areaName,
             @Param("cityId") Integer cityId);
+
+    Optional<FmArea> findByAreaId(Integer areaId);
 }

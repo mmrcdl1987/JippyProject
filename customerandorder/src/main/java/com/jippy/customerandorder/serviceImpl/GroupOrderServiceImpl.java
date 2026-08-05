@@ -43,6 +43,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
     private final CoOrderSettingsRepository orderSettingsRepository;
     private final FMFeignClient fmFeignClient;
     private final StringRedisTemplate redisTemplate;
+    private final CoCommunityRepository communityRepository;
     private final DriverFeignClient driverFeignClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final GroupOrderPriceBreakupRepository priceBreakupRepository;
@@ -243,11 +244,10 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             CustomerDeliveryAddressProjection deliveryAddressProjection= customerDeliveryAddressRepository
                     .findByDeliveryAddressId(joinGroupMembersDto.getDeliveryAddressId());
 
-            ResponseEntity<Integer> responseEntity =  driverFeignClient.findCustomerInCommunity
+            Optional<CoCommunity> community = communityRepository.findCustomerInCommunity
                     (deliveryAddressProjection.getLatitude(),deliveryAddressProjection.getLongitude());
-            Integer response = responseEntity.getBody();
 
-            if(response == 0){
+            if(!community.isPresent()){
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(new CoResponseDto("400", "Given delivery address does not belongs to community"));
             }
@@ -292,11 +292,10 @@ public class GroupOrderServiceImpl implements GroupOrderService {
                 .findByDeliveryAddressId(joinGroupMembersDto.getDeliveryAddressId());
         log.info("========================================="+deliveryAddressProjection.getLatitude()+deliveryAddressProjection.getLongitude()+coCommunityEvents.get().getCommunityId());
 
-        ResponseEntity<Integer> responseEntity =  driverFeignClient.checkCustomerAddressWithCommunity
+        Optional<CoCommunity> community = communityRepository.checkCustomerAddressWithCommunity
                 (deliveryAddressProjection.getLatitude(),deliveryAddressProjection.getLongitude(),coCommunityEvents.get().getCommunityId());
 
-        Integer respone = responseEntity.getBody();
-        if(respone == 0){
+        if(!community.isPresent()){
             log.error("Customer address is not community address {}", joinGroupMembersDto.getDeliveryAddressId());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CoResponseDto("404",
                     "Customer address is not community address "));

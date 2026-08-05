@@ -862,6 +862,7 @@ CREATE TABLE jippy_customer_and_order.community (
     about_community TEXT,
     established_year character varying(20),
     community_image_url character varying(100),
+    no_of_families integer,
 	created_at timestamp without time zone,
     created_by integer,
     updated_at timestamp without time zone,

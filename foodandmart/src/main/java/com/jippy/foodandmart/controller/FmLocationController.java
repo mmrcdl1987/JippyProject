@@ -66,4 +66,16 @@ public class FmLocationController {
 
         return ResponseEntity.ok(areas);
     }
+
+    @GetMapping("/findAreaById")
+    public String findAreaById(
+            @RequestParam Integer areaId) {
+
+        logger.info("API CALL: Fetch area by areaId ={}", areaId);
+
+       return locationService.findAreaById(areaId);
+
+    }
+
+
 }

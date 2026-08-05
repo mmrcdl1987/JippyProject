@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class FmLocationServiceImpl implements IFmLocationService {
@@ -127,4 +128,22 @@ public class FmLocationServiceImpl implements IFmLocationService {
 
         return areaDtoList;
     }
+
+    @Override
+    public String findAreaById(Integer areaId) {
+
+       Optional<FmArea> optionalArea  = areaRepository.findByAreaId(areaId);
+       if(optionalArea.isPresent()){
+
+          String areaName =  optionalArea.get().getAreaName();
+
+           return areaName;
+       }else {
+           logger.warn("No area found for areaId={}", areaId);
+           return "No areas found for areaId: " + areaId;
+       }
+
+    }
+
+
 }

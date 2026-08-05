@@ -199,39 +199,39 @@
             return ResponseEntity.ok(driverService.getDriverById(driverId));
         }
 
-        @GetMapping("/getZonesByType")
-        public ResponseEntity<List<DriverZoneResponseDto>> getZonesByType(@RequestParam(value = "zoneType") String zoneType) {
+        @GetMapping("/getZones")
+        public ResponseEntity<List<DriverZoneResponseDto>> getZones() {
 
-            List<DriverZoneResponseDto> zones = driverService.getZonesByType(zoneType);
-
-            return ResponseEntity.status(HttpStatus.OK).body(zones);
-        }
-
-        @GetMapping("/findCommunityById")
-        public ResponseEntity<DriverZoneResponseDto> findCommunityById(@RequestParam(value = "communityId") Integer communityId) {
-
-            DriverZoneResponseDto zones = driverService.findCommunityById(communityId);
+            List<DriverZoneResponseDto> zones = driverService.getZones();
 
             return ResponseEntity.status(HttpStatus.OK).body(zones);
         }
 
-        @GetMapping("/findCustomerInCommunity")
-        public ResponseEntity<Integer> findCustomerInCommunity(@RequestParam Double latitude,
-                @RequestParam Double longitude) {
+//        @GetMapping("/findCommunityById")
+//        public ResponseEntity<DriverZoneResponseDto> findCommunityById(@RequestParam(value = "communityId") Integer communityId) {
+//
+//            DriverZoneResponseDto zones = driverService.findCommunityById(communityId);
+//
+//            return ResponseEntity.status(HttpStatus.OK).body(zones);
+//        }
 
-            Integer status = driverService.findCustomerInCommunity(latitude,longitude);
+//        @GetMapping("/findCustomerInCommunity")
+//        public ResponseEntity<Integer> findCustomerInCommunity(@RequestParam Double latitude,
+//                @RequestParam Double longitude) {
+//
+//            Integer status = driverService.findCustomerInCommunity(latitude,longitude);
+//
+//            return ResponseEntity.status(HttpStatus.OK).body(status);
+//        }
 
-            return ResponseEntity.status(HttpStatus.OK).body(status);
-        }
-
-        @GetMapping("/checkCustomerAddressWithCommunity")
-        public ResponseEntity<Integer> checkCustomerAddressWithCommunity(@RequestParam Double latitude,
-                @RequestParam Double longitude,@RequestParam Integer communityId) {
-
-            Integer status = driverService.checkCustomerAddressWithCommunity(latitude,longitude,communityId);
-
-            return ResponseEntity.status(HttpStatus.OK).body(status);
-        }
+//        @GetMapping("/checkCustomerAddressWithCommunity")
+//        public ResponseEntity<Integer> checkCustomerAddressWithCommunity(@RequestParam Double latitude,
+//                @RequestParam Double longitude,@RequestParam Integer communityId) {
+//
+//            Integer status = driverService.checkCustomerAddressWithCommunity(latitude,longitude,communityId);
+//
+//            return ResponseEntity.status(HttpStatus.OK).body(status);
+//        }
 
 
     }

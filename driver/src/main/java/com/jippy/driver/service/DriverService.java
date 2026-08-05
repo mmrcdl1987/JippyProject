@@ -49,11 +49,11 @@ public interface DriverService {
      */
     FmDriverApprovalResponseDTO getDriverById(Integer driverId);
 
-    List<DriverZoneResponseDto> getZonesByType(String zoneType);
+    List<DriverZoneResponseDto> getZones();
 
-    DriverZoneResponseDto findCommunityById(Integer communityId);
-
-    Integer findCustomerInCommunity(Double latitude, Double longitude);
-
-    Integer checkCustomerAddressWithCommunity(Double latitude, Double longitude, Integer communityId);
+//    DriverZoneResponseDto findCommunityById(Integer communityId);
+//
+//    Integer findCustomerInCommunity(Double latitude, Double longitude);
+//
+//    Integer checkCustomerAddressWithCommunity(Double latitude, Double longitude, Integer communityId);
 }

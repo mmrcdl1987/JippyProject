@@ -12,6 +12,5 @@ public class DriverZoneResponseDto {
 
     private Integer zoneId;
     private String zoneName;
-    private String zoneType;
     private JsonNode boundary;
 }
