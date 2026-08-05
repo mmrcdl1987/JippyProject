@@ -113,7 +113,7 @@ springdoc:
     path: /api/fm/v3/api-docs
 
 product-content:
-  admin-email: manjith2244@gmail.com
+  admin-email: accounts@jippymart.in
 
 aws:
   s3:
