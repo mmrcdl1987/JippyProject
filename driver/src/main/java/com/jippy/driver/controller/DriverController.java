@@ -232,6 +232,31 @@
 //
 //            return ResponseEntity.status(HttpStatus.OK).body(status);
 //        }
+//        @GetMapping("/checkCustomerAddressWithCommunity")
+//        public ResponseEntity<Integer> checkCustomerAddressWithCommunity(@RequestParam Double latitude,
+//                @RequestParam Double longitude,@RequestParam Integer communityId) {
+//
+//            Integer status = driverService.checkCustomerAddressWithCommunity(latitude,longitude,communityId);
+//
+//            return ResponseEntity.status(HttpStatus.OK).body(status);
+//        }
+        /**
+         * Approves the Driver.
+         *
+         * @param driverId Driver Id
+         */
+        @PutMapping("/approve/{driverId}")
+        public ResponseEntity<Void> approveDriver(
+                @PathVariable Integer driverId) {
+
+            log.info("Received request to approve Driver. Driver Id : {}", driverId);
+
+            driverService.approveDriver(driverId);
+
+            log.info("Driver approved successfully. Driver Id : {}", driverId);
+
+            return ResponseEntity.ok().build();
+        }
 
 
     }

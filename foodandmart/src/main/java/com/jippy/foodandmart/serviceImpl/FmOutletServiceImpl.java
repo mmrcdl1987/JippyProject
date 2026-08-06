@@ -1,24 +1,20 @@
 package com.jippy.foodandmart.serviceImpl;
 
 
-import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
-import com.jippy.foodandmart.mapper.FmNearbyOutletMapper;
-import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
+import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmGoogleMapsService;
-import com.jippy.foodandmart.service.IFmApprovalRequestService;
 import com.jippy.foodandmart.service.IFmOutletService;
-import com.jippy.foodandmart.util.FmCredentialUtil;
-import jakarta.persistence.Convert;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -27,19 +23,14 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.time.*;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /**
  * Service implementation for outlet management.
@@ -983,11 +974,29 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         log.info("Fetching outlets for merchantId={}", merchantId);
 
-        List<FmOutletByMerchantProjection> rows = outletRepository.getOutletsByMerchantId(merchantId);
+        List<FmOutletByMerchantProjection> rows =
+                outletRepository.getOutletsByMerchantId(merchantId);
 
-        if (rows == null || rows.isEmpty()) {
-            throw new ResourceNotFoundException("No outlets found for merchantId: " + merchantId);
+        if (rows.isEmpty()) {
+
+            log.warn("No outlets found for merchantId={}", merchantId);
+
+            throw new ResourceNotFoundException(
+                    "No outlets found for merchantId: " + merchantId);
         }
+        log.info("Merchant approved: {}", rows.get(0).getMerchantApproved());
+
+
+        if (!Boolean.TRUE.equals(rows.get(0).getMerchantApproved())) {
+
+            log.warn("Merchant is not approved. merchantId={}", merchantId);
+
+            throw new BadRequestException(
+                    "Merchant is not approved. Please complete the approval process.");
+        }
+
+        log.info("Successfully fetched {} outlets for merchantId={}",
+                rows.size(), merchantId);
 
         return FmOutletMapper.mapToOutletByMerchantDto(rows);
     }

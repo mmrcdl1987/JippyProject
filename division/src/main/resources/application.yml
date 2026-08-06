@@ -13,6 +13,19 @@ spring:
     username: jippyfooddelivery2026@gmail.com
     password: cgbh eipp hner gdap
 
+  kafka:
+    bootstrap-servers: 187.127.156.147:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    consumer:
+      group-id: promotion-schedule-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
     properties:
       mail:
         smtp:

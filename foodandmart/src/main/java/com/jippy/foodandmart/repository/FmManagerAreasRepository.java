@@ -2,7 +2,11 @@ package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmManagerAreas;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -73,4 +77,38 @@ public interface FmManagerAreasRepository
     List<FmManagerAreas> findByUserId(Integer userId);
 
 
+    /**
+     * Updates the Manager Id for all mapped Areas.
+     *
+     * Business Rule:
+     * When an Approval Setting Approver changes,
+     * all Area mappings of the previous Approver
+     * are transferred to the new Approver.
+     *
+     * Example:
+     *
+     * Before
+     * -------
+     * User 80
+     * Area 1
+     * Area 2
+     * Area 3
+     *
+     * After
+     * ------
+     * User 81
+     * Area 1
+     * Area 2
+     * Area 3
+     */
+            @Modifying
+            @Transactional
+            @Query("""
+        UPDATE FmManagerAreas m
+        SET m.userId=:newUserId
+        WHERE m.userId=:oldUserId
+        """)
+    int updateManagerAreas(
+            @Param("oldUserId") Integer oldUserId,
+            @Param("newUserId") Integer newUserId);
 }

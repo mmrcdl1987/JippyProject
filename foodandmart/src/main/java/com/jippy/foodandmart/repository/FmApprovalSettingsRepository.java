@@ -161,8 +161,12 @@ public interface FmApprovalSettingsRepository extends JpaRepository<FmApprovalSe
           AND UPPER(aps.workflow_type) = 'PARALLEL'
           AND aps.is_active = true
         """,
+
             nativeQuery = true)
     Integer countActiveParallelApprovers(
             @Param("entityType") String entityType,
             @Param("approvalLevel") String approvalLevel);
+
+
+
 }
