@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DivPriceModelRepository extends JpaRepository<DivPriceModel,Integer>{
 
+    boolean existsByPriceModelId(Integer priceModelId);
+
 }

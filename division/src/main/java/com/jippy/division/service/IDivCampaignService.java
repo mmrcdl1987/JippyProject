@@ -25,5 +25,9 @@ public interface IDivCampaignService {
     List<AvailableMealSlotResponseDto> getAvailableMealSlots(
             AvailableMealSlotRequestDto request);
 
+    String updateCampaign(Integer campaignId, DivCampaignRequestDto dto);
+
+    String deleteCampaign(String campaignType, Integer campaignId);
+
 
 }

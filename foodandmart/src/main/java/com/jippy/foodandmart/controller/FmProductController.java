@@ -14,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/fm/products")
 @RequiredArgsConstructor
-public class    FmProductController {
+public class FmProductController {
 
     private final FmProductService productMappingService;
 
@@ -24,14 +24,9 @@ public class    FmProductController {
      * Maps selected master products into outlet products.
      */
     @PostMapping("/from-master")
-    public ResponseEntity<FmMapToProductResult> mapFromMaster(
-            @RequestBody FmMapToProduct req) {
+    public ResponseEntity<FmMapToProductResult> mapFromMaster(@RequestBody FmMapToProduct req) {
 
-        log.info(
-                "[PRODUCT-MAP] POST /from-master - OutletId={}, CategoryId={}, Products={}",
-                req.getOutletId(),
-                req.getCategoryId(),
-                req.getProducts() == null ? 0 : req.getProducts().size());
+        log.info("[PRODUCT-MAP] POST /from-master - OutletId={}, CategoryId={}, Products={}", req.getOutletId(), req.getCategoryId(), req.getProducts() == null ? 0 : req.getProducts().size());
 
         return ResponseEntity.ok(productMappingService.mapToProducts(req));
     }
@@ -62,27 +57,52 @@ public class    FmProductController {
      * GET /api/fm/products/{productId}
      */
     @GetMapping("/{productId}")
-    public ResponseEntity<FmProductUpdateResponseDto> getProductById(
-            @PathVariable Integer productId) {
+    public ResponseEntity<FmProductUpdateResponseDto> getProductById(@PathVariable Integer productId) {
 
         log.info("[PRODUCT] GET Product. ProductId={}", productId);
 
-        return ResponseEntity.ok(
-                productMappingService.getProductById(productId));
+        return ResponseEntity.ok(productMappingService.getProductById(productId));
     }
 
     /**
      * PUT /api/fm/products/{productId}
      */
     @PutMapping("/{productId}")
-    public ResponseEntity<FmProductUpdateResponseDto> updateProduct(
-            @PathVariable Integer productId,
-            @Valid @RequestBody FmProductUpdateRequestDto request) {
+    public ResponseEntity<FmProductUpdateResponseDto> updateProduct(@PathVariable Integer productId, @Valid @RequestBody FmProductUpdateRequestDto request) {
 
         log.info("[PRODUCT] UPDATE Product. ProductId={}", productId);
 
-        return ResponseEntity.ok(
-                productMappingService.updateProduct(productId, request));
+        return ResponseEntity.ok(productMappingService.updateProduct(productId, request));
+    }
+
+    @GetMapping("/exists")
+    public ResponseEntity<Boolean> existsProductInOutlet(
+
+            @RequestParam Integer outletId,
+
+            @RequestParam Integer productId) {
+
+        log.info("Received request to validate product belongs to outlet. outletId={}, productId={}", outletId, productId);
+
+        Boolean exists = productMappingService.existsProductInOutlet(outletId, productId);
+
+        log.info("Product validation request completed. outletId={}, productId={}, exists={}", outletId, productId, exists);
+
+        return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/active-product-ids")
+    public ResponseEntity<List<Integer>> getActiveProductIdsByOutlet(
+
+            @RequestParam Integer outletId) {
+
+        log.info("Received request to fetch active product ids. outletId={}", outletId);
+
+        List<Integer> productIds = productMappingService.getActiveProductIdsByOutlet(outletId);
+
+        log.info("Returning {} active product ids. outletId={}", productIds.size(), outletId);
+
+        return ResponseEntity.ok(productIds);
     }
 
     @GetMapping("/outlets/{outletId}")

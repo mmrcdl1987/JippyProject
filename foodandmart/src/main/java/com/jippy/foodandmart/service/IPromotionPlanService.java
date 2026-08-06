@@ -1,12 +1,6 @@
 package com.jippy.foodandmart.service;
 
-import com.jippy.foodandmart.dto.FmApiResponse;
-import com.jippy.foodandmart.dto.PageResponseDto;
-import com.jippy.foodandmart.dto.PromotionListResponseDto;
-import com.jippy.foodandmart.dto.PromotionPlanAuditResponseDto;
-import com.jippy.foodandmart.dto.PromotionPlanRequestDto;
-import com.jippy.foodandmart.dto.PromotionPlanResponseDto;
-import com.jippy.foodandmart.dto.PromotionStatusCountDto;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.enums.PromotionStatus;
 
 import java.util.List;
@@ -59,4 +53,7 @@ public interface IPromotionPlanService {
      */
     PromotionStatusCountDto getPromotionStatusCounts(
             Integer outletId);
+
+    PromotionScheduleDetailsDto getPromotionScheduleDetails(
+            Integer promotionPlanId);
 }

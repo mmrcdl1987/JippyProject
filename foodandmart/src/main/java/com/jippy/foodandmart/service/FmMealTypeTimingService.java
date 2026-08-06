@@ -9,4 +9,6 @@ public interface FmMealTypeTimingService {
 
     List<FmMealTypeTimingResponse> getAllMealTypeTimings();
 
+    boolean existsById(Integer mealTypeTimingsId);
+
 }

@@ -615,6 +615,49 @@ public class FmProductServiceImpl implements FmProductService {
         return getProductById(productId);
     }
 
+    @Override
+    public boolean existsProductInOutlet(
+            Integer outletId,
+            Integer productId) {
+
+        log.info(
+                "Validating product belongs to outlet. outletId={}, productId={}",
+                outletId,
+                productId);
+
+        boolean exists = productRepository.existsProductInOutlet(
+                outletId,
+                productId);
+
+        log.info(
+                "Product validation completed. outletId={}, productId={}, exists={}",
+                outletId,
+                productId,
+                exists);
+
+        return exists;
+    }
+
+    @Override
+    public List<Integer> getActiveProductIdsByOutlet(
+            Integer outletId) {
+
+        log.info(
+                "Fetching active product ids. outletId={}",
+                outletId);
+
+        List<Integer> productIds =
+                productRepository.findActiveProductIdsByOutlet(
+                        outletId);
+
+        log.info(
+                "Fetched {} active products. outletId={}",
+                productIds.size(),
+                outletId);
+
+        return productIds;
+    }
+
     /**
      * Save Product Variant Options
      */

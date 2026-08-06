@@ -45,6 +45,7 @@ public class FmSecurityConfig {
 
                         // 2. ADD THIS: Allow Health Checks
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/fm/internal/**").permitAll()
                         .requestMatchers("/api/fm/users/findByUserIdAndUserType").permitAll()
                         .requestMatchers("/api/fm/users/createUser").permitAll()
 

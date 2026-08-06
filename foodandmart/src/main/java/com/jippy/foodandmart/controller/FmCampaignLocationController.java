@@ -1,9 +1,6 @@
 package com.jippy.foodandmart.controller;
-
-
 import com.jippy.foodandmart.dto.FmCampaignLocationResponse;
 import com.jippy.foodandmart.dto.FmMealTypeTimingResponse;
-import com.jippy.foodandmart.entity.MealTypeTiming;
 import com.jippy.foodandmart.service.FmCampaignLocationService;
 import com.jippy.foodandmart.service.FmMealTypeTimingService;
 import lombok.RequiredArgsConstructor;
@@ -60,5 +57,14 @@ public class FmCampaignLocationController {
         log.info("Received request to fetch all meal type timings.");
 
         return ResponseEntity.ok(mealTypeTimingService.getAllMealTypeTimings());
+    }
+
+
+    @GetMapping("/{mealTypeTimingsId}/exists")
+    public ResponseEntity<Boolean> existsMealTypeTiming(
+            @PathVariable Integer mealTypeTimingsId) {
+
+        return ResponseEntity.ok(
+                mealTypeTimingService.existsById(mealTypeTimingsId));
     }
 }
