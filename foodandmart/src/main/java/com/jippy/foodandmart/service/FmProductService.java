@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.service;
 
 import com.jippy.foodandmart.dto.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -69,5 +70,14 @@ public interface FmProductService {
             Integer productId,
             FmProductUpdateRequestDto request);
 
+
+    boolean existsProductInOutlet(
+            Integer outletId,
+            Integer productId);
+
+    List<Integer> getActiveProductIdsByOutlet(
+            Integer outletId);
+
+    @Transactional(readOnly = true)
     List<FmProductPriceResponse> getProductsByOutlet(Integer outletId);
 }

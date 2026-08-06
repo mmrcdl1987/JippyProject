@@ -4,7 +4,7 @@ import com.jippy.division.constants.DivAppConstants;
 import com.jippy.division.dto.DivOrderDto;
 import com.jippy.division.entity.OrderRefund;
 import com.jippy.division.entity.PaymentTransaction;
-import com.jippy.division.feignclients.CoFeignClient;
+import com.jippy.division.feignClients.CoFeignClient;
 import com.jippy.division.repositary.OrderRefundRepository;
 import com.jippy.division.repositary.TransactionRepository;
 import com.paytm.pg.merchant.PaytmChecksum;

@@ -16,49 +16,52 @@ import java.util.Optional;
 @Repository
 public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     List<FmProduct> findByOutletCategoryId(Integer outletCategoryId);
+
     Optional<FmProduct> findByOutletCategoryIdAndProductNameIgnoreCase(Integer outletCategoryId, String productName);
+
     boolean existsByOutletCategoryIdAndProductNameIgnoreCase(Integer outletCategoryId, String productName);
+
     long countByOutletCategoryId(Integer outletCategoryId);
 
     // APPROVED FLOW (WITH PRICING - NEW DESIGN)
     @Query(value = """
-        SELECT 
-            p.product_id,
-            p.product_name,
-            p.merchant_price,
-            pop.online_price
-        FROM jippy_fm.products p
-        JOIN jippy_fm.outlet_categories oc 
-          ON p.outlet_category_id = oc.outlet_category_id
-        LEFT JOIN jippy_fm.product_online_pricing pop
-          ON pop.product_id = p.product_id
-         AND pop.outlet_category_id = oc.outlet_category_id
-        WHERE oc.outlet_id IN (:outletIds)
-        """, nativeQuery = true)
+            SELECT 
+                p.product_id,
+                p.product_name,
+                p.merchant_price,
+                pop.online_price
+            FROM jippy_fm.products p
+            JOIN jippy_fm.outlet_categories oc 
+              ON p.outlet_category_id = oc.outlet_category_id
+            LEFT JOIN jippy_fm.product_online_pricing pop
+              ON pop.product_id = p.product_id
+             AND pop.outlet_category_id = oc.outlet_category_id
+            WHERE oc.outlet_id IN (:outletIds)
+            """, nativeQuery = true)
     List<Object[]> findProducts(@Param("outletIds") List<Integer> outletIds);
 
 
     // UNAPPROVED FLOW (NO PRICING)
     @Query(value = """
-        SELECT 
-            p.product_id,
-            p.product_name,
-            p.merchant_price,
-            NULL as online_price
-        FROM jippy_fm.products p
-        JOIN jippy_fm.outlet_categories oc 
-          ON p.outlet_category_id = oc.outlet_category_id
-        WHERE oc.outlet_id IN (:outletIds)
-        """, nativeQuery = true)
+            SELECT 
+                p.product_id,
+                p.product_name,
+                p.merchant_price,
+                NULL as online_price
+            FROM jippy_fm.products p
+            JOIN jippy_fm.outlet_categories oc 
+              ON p.outlet_category_id = oc.outlet_category_id
+            WHERE oc.outlet_id IN (:outletIds)
+            """, nativeQuery = true)
     List<Object[]> findProductsWithoutPricing(@Param("outletIds") List<Integer> outletIds);
 
 
     // REQUIRED FOR SERVICE (STEP 4)
     @Query(value = """
-        SELECT outlet_category_id
-        FROM jippy_fm.products
-        WHERE product_id = :productId
-        """, nativeQuery = true)
+            SELECT outlet_category_id
+            FROM jippy_fm.products
+            WHERE product_id = :productId
+            """, nativeQuery = true)
     Integer findOutletCategoryId(@Param("productId") Integer productId);
 
     Optional<FmProduct> findById(Integer productId);
@@ -85,11 +88,11 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
 
     @Modifying
     @Query("""
-           UPDATE FmProduct p
-           SET p.isActive = :status,
-               p.isToggle = false
-           WHERE p.productId = :productId
-           """)
+            UPDATE FmProduct p
+            SET p.isActive = :status,
+                p.isToggle = false
+            WHERE p.productId = :productId
+            """)
     void permanentlyCloseProduct(
             @Param("productId")
             Integer productId,
@@ -100,7 +103,7 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             Integer productId,
             String isActive);
 
-        @Query("""
+    @Query("""
             SELECT CASE WHEN COUNT(p) > 0 THEN TRUE ELSE FALSE END
             FROM FmProduct p
             JOIN FmOutletCategory oc
@@ -108,36 +111,80 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             WHERE p.productId = :productId
               AND oc.outletId = :outletId
             """)
-        boolean existsByProductIdAndOutletId(
-                @Param("productId") Integer productId,
-                @Param("outletId") Integer outletId);
+    boolean existsByProductIdAndOutletId(
+            @Param("productId") Integer productId,
+            @Param("outletId") Integer outletId);
 
     /**
      * Fetch all products whose image and description are not updated.
      */
-
     Page<FmProduct> findByIsImageDescUpdatedFalse(Pageable pageable);
-    @Query(value = """
-            SELECT
-                p.product_id AS productId,
-                p.product_name AS productName,
-                NULL AS variantId,
-                NULL AS variantName,
-                p.merchant_price AS merchantPrice,
-                pop.online_price AS onlinePrice
-            FROM jippy_fm.outlets o
-            INNER JOIN jippy_fm.outlet_categories oc
-                ON o.outlet_id = oc.outlet_id
-            INNER JOIN jippy_fm.product_online_pricing pop
-                ON oc.outlet_category_id = pop.outlet_category_id
-            INNER JOIN jippy_fm.products p
-                ON pop.product_id = p.product_id
-            WHERE o.outlet_id = :outletId
-            ORDER BY p.product_name
-            """, nativeQuery = true)
-    List<FmProductPriceProjection> findProductsByOutletId(
+
+    @Query("""
+            SELECT p
+            FROM FmProduct p
+            JOIN p.outletCategory oc
+            WHERE oc.outletId = :outletId
+              AND p.outletCategoryId IN :categoryIds
+            """)
+    List<FmProduct> findByOutletIdAndOutletCategoryIds(
+            @Param("outletId") Integer outletId,
+            @Param("categoryIds") List<Integer> categoryIds);
+
+
+    @Query("""
+            SELECT p.productId
+            FROM FmProduct p
+            JOIN p.outletCategory oc
+            WHERE oc.outletId = :outletId
+              AND p.isActive = 'Y'
+              AND p.isToggle = true
+            ORDER BY p.productId
+            """)
+    List<Integer> findActiveProductIdsByOutlet(
             @Param("outletId") Integer outletId);
 
-}
+    @Query("""
+            SELECT p
+            FROM FmProduct p
+            WHERE p.outletCategoryId IN :categoryIds
+            """)
+    List<FmProduct> findByOutletCategoryIds(
+            List<Integer> categoryIds);
+
+
+    @Query("""
+            SELECT COUNT(p) > 0
+            FROM FmProduct p
+            JOIN p.outletCategory oc
+            WHERE oc.outletId = :outletId
+              AND p.productId = :productId
+              AND p.isActive = 'Y'
+              AND p.isToggle = true
+            """)
+    boolean existsProductInOutlet(
+            @Param("outletId") Integer outletId,
+            @Param("productId") Integer productId);
+
+    @Query(value = """
+    SELECT
+        p.product_id AS productId,
+        p.product_name AS productName,
+        NULL AS variantId,
+        NULL AS variantName,
+        p.merchant_price AS merchantPrice,
+        pop.online_price AS onlinePrice
+    FROM jippy_fm.outlets o
+    INNER JOIN jippy_fm.outlet_categories oc
+        ON o.outlet_id = oc.outlet_id
+    INNER JOIN jippy_fm.product_online_pricing pop
+        ON oc.outlet_category_id = pop.outlet_category_id
+    INNER JOIN jippy_fm.products p
+        ON pop.product_id = p.product_id
+    WHERE o.outlet_id = :outletId
+    ORDER BY p.product_name
+    """, nativeQuery = true)
+    List<FmProductPriceProjection> findProductsByOutletId(
+            @Param("outletId") Integer outletId);}
 
 

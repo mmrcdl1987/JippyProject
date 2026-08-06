@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-
 @Repository
 public interface DivCouponRepository extends JpaRepository<DivCoupon, Integer> {
 
@@ -19,25 +18,27 @@ public interface DivCouponRepository extends JpaRepository<DivCoupon, Integer> {
 
     Page<DivCoupon> findAllByIsActive(Boolean isActive, Pageable pageable);
 
-    // Added method to fetch active coupons for UI dropdown
     List<DivCoupon> findByIsActiveTrue();
 
     @Query("""
-SELECT c
-FROM DivCoupon c
-WHERE c.isActive = true
-  AND c.userType = 'CUSTOMER'
-  AND (
-        c.startTime IS NULL
-        OR c.startTime <= CURRENT_TIMESTAMP
-      )
-  AND (
-        c.endTime IS NULL
-        OR c.endTime >= CURRENT_TIMESTAMP
-      )
-  AND c.couponCode IN ('WELCOME100','WELCOME75','WELCOME50')
-ORDER BY c.discountValue DESC
-""")
+    SELECT c
+    FROM DivCoupon c
+    WHERE c.isActive = true
+      AND c.userType = 'CUSTOMER'
+      AND (
+            c.startTime IS NULL
+            OR c.startTime <= CURRENT_TIMESTAMP
+          )
+      AND (
+            c.endTime IS NULL
+            OR c.endTime >= CURRENT_TIMESTAMP
+          )
+      AND c.couponCode IN ('WELCOME100','WELCOME75','WELCOME50')
+    ORDER BY c.discountValue DESC
+    """)
     List<DivCoupon> findActiveWelcomeCoupons();
 
+    boolean existsByCouponIdAndIsActive(
+            Integer couponId,
+            Boolean isActive);
 }

@@ -1,4 +1,4 @@
-package com.jippy.division.feignclients;
+package com.jippy.division.feignClients;
 
 import com.jippy.division.dto.DivOrderDto;
 import com.jippy.division.dto.DivPaymentModesDto;
