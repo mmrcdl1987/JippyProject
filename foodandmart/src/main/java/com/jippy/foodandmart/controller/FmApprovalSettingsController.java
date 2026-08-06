@@ -1,19 +1,17 @@
 package com.jippy.foodandmart.controller;
 
-import com.jippy.foodandmart.dto.FmApiResponse;
-import com.jippy.foodandmart.dto.FmApprovalSettingsRequestDTO;
-import com.jippy.foodandmart.dto.FmApprovalSettingsResponseDTO;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.service.IFmApprovalSettingsService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * REST Controller for Approval Settings.
@@ -111,6 +109,121 @@ public class FmApprovalSettingsController {
                 )
         );
 
+    }
+    //============================================================================
+    /// Replace Approver with Areas
+    ///============================================================================
+
+    /**
+     * Replaces the existing Approver with a new Approver for an
+     * Approval Setting.
+     *
+     * <p>
+     * Business Rules:
+     *
+     * 1. Approval Setting must exist.
+     * 2. Existing Approver is replaced with the New Approver.
+     * 3. All Manager Area mappings assigned to the Old Approver
+     *    are transferred to the New Approver.
+     * 4. Approval Level, Entity Type and Workflow Type remain unchanged.
+     * 5. Updated By and Updated At are recorded.
+     */
+    @Operation(
+            summary = "Replace Approver",
+            description = """
+                Replaces the existing Approver with a New Approver
+                for an Approval Setting.
+                
+                Business Rules:
+                
+                1. Approval Setting must exist.
+                2. Existing Approver is replaced with the New Approver.
+                3. All Manager Area mappings assigned to the Old Approver
+                   are transferred to the New Approver.
+                4. Approval Level remains unchanged.
+                5. Entity Type remains unchanged.
+                6. Workflow Type remains unchanged.
+                7. Updated By and Updated At are recorded.
+                
+                Example:
+                
+                Before
+                -------
+                Approval Setting:
+                Approver Id : 80
+                
+                Manager Areas:
+                80 -> Area 1
+                80 -> Area 2
+                80 -> Area 3
+                
+                After
+                -----
+                Approval Setting:
+                Approver Id : 81
+                
+                Manager Areas:
+                81 -> Area 1
+                81 -> Area 2
+                81 -> Area 3
+                """)
+    @ApiResponse(
+            responseCode = "200",
+            description = "Approver replaced successfully.")
+    @ApiResponse(
+            responseCode = "404",
+            description = "Approval Setting not found.")
+    @ApiResponse(
+            responseCode = "400",
+            description = "Invalid Request.")
+    @PutMapping("/replaceApproverWithAreas")
+    public ResponseEntity<FmUpdateApprovalSettingsResponseDTO> replaceApprover(
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Replace Approver Request",
+                    required = true,
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    value = """
+                                {
+                                  "approvalSettingsId":21,
+                                  "approverId":81,
+                                  "updatedBy":1
+                                }
+                                """)))
+            @Valid
+            @RequestBody
+            FmUpdateApprovalSettingsRequestDTO requestDTO) {
+
+        //----------------------------------------------------------
+        // Request Received
+        //----------------------------------------------------------
+
+        log.info(
+                "Received request to replace Approver. Approval Settings Id : {}, New Approver Id : {}",
+                requestDTO.getApprovalSettingsId(),
+                requestDTO.getApproverId());
+
+        //----------------------------------------------------------
+        // Replace Existing Approver
+        //----------------------------------------------------------
+
+        FmUpdateApprovalSettingsResponseDTO response =
+                service.replaceApproverWithAreas(requestDTO);
+
+        //----------------------------------------------------------
+        // Request Completed Successfully
+        //----------------------------------------------------------
+
+        log.info(
+                "Approver replaced successfully. Approval Settings Id : {}",
+                requestDTO.getApprovalSettingsId());
+
+        //----------------------------------------------------------
+        // Return Response
+        //----------------------------------------------------------
+
+        return ResponseEntity.ok(response);
     }
 
 }

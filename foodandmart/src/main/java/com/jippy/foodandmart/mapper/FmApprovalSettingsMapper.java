@@ -2,6 +2,7 @@ package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.dto.FmApprovalSettingsRequestDTO;
 import com.jippy.foodandmart.dto.FmApprovalSettingsResponseDTO;
+import com.jippy.foodandmart.dto.FmUpdateApprovalSettingsResponseDTO;
 import com.jippy.foodandmart.entity.FmApprovalSettings;
 
 import java.time.LocalDateTime;
@@ -60,6 +61,47 @@ public class FmApprovalSettingsMapper {
         response.setTimeToEscalateInHours(entity.getTimeToEscalateInHours());
         response.setTriggersActivation(entity.getTriggersActivation());
         response.setRequiredApprovalsCount(entity.getRequiredApprovalsCount());
+
+        return response;
+    }
+
+    /**
+     * Converts Approval Settings Entity
+     * into Update Approval Settings Response DTO.
+     *
+     * @param entity Approval Settings Entity
+     * @return Update Approval Settings Response
+     */
+    public static FmUpdateApprovalSettingsResponseDTO mapEntityToReplaceApproverResponse(FmApprovalSettings entity) {
+
+        FmUpdateApprovalSettingsResponseDTO response = new FmUpdateApprovalSettingsResponseDTO();
+
+        //----------------------------------------------------------
+        // Approval Settings Details
+        //----------------------------------------------------------
+
+        response.setApprovalSettingsId(entity.getApprovalSettingsId());
+
+        response.setEntityType(entity.getEntityType());
+
+        response.setApproverRole(entity.getApproverRole());
+
+        response.setApprovalLevel(entity.getApprovalLevel());
+        //----------------------------------------------------------
+        // Workflow Details
+        //----------------------------------------------------------
+
+        response.setWorkflowType(entity.getWorkflowType());
+
+
+        //----------------------------------------------------------
+        // Audit Details
+        //----------------------------------------------------------
+
+        response.setUpdatedAt(entity.getUpdatedAt());
+
+        response.setUpdatedBy(entity.getUpdatedBy());
+
 
         return response;
     }

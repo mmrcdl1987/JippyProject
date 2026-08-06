@@ -240,7 +240,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                     ON addr.area_id = a.area_id
             
             -- Return all outlets for merchant
-               WHERE m.merchant_id = :merchantId --for Api response @query
+               WHERE m.merchant_id = :merchantId       --for Api response @query
             
                  --WHERE o.merchant_id = :1 -- for postgres SQL testing used
             """, nativeQuery = true)
