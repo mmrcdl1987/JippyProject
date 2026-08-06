@@ -7,7 +7,8 @@ import java.util.List;
 
 @Getter
 @Setter
-public class DivCampaignRequestDto {
+public class
+DivCampaignRequestDto {
 
     private Integer couponId;
 

@@ -34,29 +34,6 @@ public class DivGlobalExceptionHandler {
         return new ResponseEntity<>(new DivErrorResponseDto(request.getDescription(false), HttpStatus.BAD_REQUEST, ex.getMessage(), LocalDateTime.now()), HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * Handles ResourceNotFoundException.
-     */
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {
-
-        log.error("Resource not found exception occurred : {}", ex.getMessage());
-
-        ErrorResponse errorResponse = new ErrorResponse();
-
-        errorResponse.setTimestamp(LocalDateTime.now());
-
-        errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
-
-        errorResponse.setError(HttpStatus.NOT_FOUND.getReasonPhrase());
-
-        errorResponse.setMessage(ex.getMessage());
-
-        errorResponse.setPath(request.getRequestURI());
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-    }
-
 
     //  Generic Exception (fallback)
     @ExceptionHandler(Exception.class)
@@ -64,5 +41,60 @@ public class DivGlobalExceptionHandler {
 
         return new ResponseEntity<>(new DivErrorResponseDto(request.getDescription(false), HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), LocalDateTime.now()), HttpStatus.INTERNAL_SERVER_ERROR);
     }
+    @ExceptionHandler(DivCampaignNotFoundException.class)
+    public ResponseEntity<DivErrorResponseDto> handleCampaignNotFound(
+            DivCampaignNotFoundException ex,
+            WebRequest request) {
 
+        log.error("Campaign not found: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new DivErrorResponseDto(
+                        request.getDescription(false),
+                        HttpStatus.NOT_FOUND,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
+    }
+    @ExceptionHandler(DivPromotionDateNotFoundException.class)
+    public ResponseEntity<DivErrorResponseDto> handlePromotionDateNotFound(
+            DivPromotionDateNotFoundException ex,
+            WebRequest request) {
+
+        log.error("Promotion date not found: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new DivErrorResponseDto(
+                        request.getDescription(false),
+                        HttpStatus.NOT_FOUND,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
+    }
+    @ExceptionHandler(DivPromotionScheduleException.class)
+    public ResponseEntity<DivErrorResponseDto> handlePromotionScheduleException(
+            DivPromotionScheduleException ex,
+            WebRequest request) {
+
+        log.error("Promotion schedule error: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new DivErrorResponseDto(
+                        request.getDescription(false),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
+    }
+    @ExceptionHandler(DivInvalidRequestException.class)
+    public ResponseEntity<DivErrorResponseDto> handleInvalidRequest(
+            DivInvalidRequestException ex,
+            WebRequest request) {
+
+        log.error("Invalid request: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new DivErrorResponseDto(
+                        request.getDescription(false),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()));
+    }
 }

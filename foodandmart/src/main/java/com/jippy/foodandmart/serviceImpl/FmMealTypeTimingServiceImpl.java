@@ -3,7 +3,6 @@ package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.dto.FmMealTypeTimingResponse;
 import com.jippy.foodandmart.entity.MealTypeTiming;
 import com.jippy.foodandmart.repository.MealTypeTimingRepository;
-import com.jippy.foodandmart.repository.MealTypeTimingRepository;
 import com.jippy.foodandmart.service.FmMealTypeTimingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,4 +35,11 @@ public class FmMealTypeTimingServiceImpl implements FmMealTypeTimingService {
                         .build())
                 .toList();
     }
+
+    @Override
+    public boolean existsById(Integer mealTypeTimingsId) {
+
+        return mealTypeTimingRepository.existsById(mealTypeTimingsId);
+    }
+
 }
