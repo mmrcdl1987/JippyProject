@@ -1,6 +1,8 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmMasterProduct;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,6 +12,10 @@ import java.util.Optional;
 
 public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct, Integer> {
 
+    // Handled natively by JpaRepository for dynamic pagination
+    Page<FmMasterProduct> findAll(Pageable pageable);
+
+    // Required by compareFileWithDB in Service layer
     List<FmMasterProduct> findAllByOrderByMasterProductIdAsc();
 
     List<FmMasterProduct> findByCategoryIdOrderByMasterProductIdAsc(Integer categoryId);
@@ -18,12 +24,10 @@ public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct
 
     boolean existsByMasterProductNameIgnoreCaseAndCategoryId(String name, Integer categoryId);
 
-    // NEW
     boolean existsByMasterProductNameIgnoreCaseAndCategoryNameIgnoreCase(
             String masterProductName,
             String categoryName);
 
-    // NEW
     Optional<FmMasterProduct> findByMasterProductNameIgnoreCaseAndCategoryNameIgnoreCase(
             String masterProductName,
             String categoryName);

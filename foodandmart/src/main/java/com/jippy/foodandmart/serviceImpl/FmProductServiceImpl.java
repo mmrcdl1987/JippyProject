@@ -5,6 +5,7 @@ import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.mapper.FmProductVariantOptionMapper;
+import com.jippy.foodandmart.projections.FmProductPriceProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmProductService;
 import lombok.RequiredArgsConstructor;
@@ -1121,5 +1122,35 @@ public class FmProductServiceImpl implements FmProductService {
             }
         }
     }
+    @Transactional(readOnly = true)
+    @Override
+    public List<FmProductPriceResponse> getProductsByOutlet(Integer outletId) {
 
+        log.info("Fetching products for outletId : {}", outletId);
+
+        List<FmProductPriceProjection> projections =
+                productRepository.findProductsByOutletId(outletId);
+
+        if (projections.isEmpty()) {
+            log.warn("No products found for outletId : {}", outletId);
+            throw new ResourceNotFoundException(
+                    "No products found for outletId : " + outletId);
+        }
+
+        List<FmProductPriceResponse> response = projections.stream()
+                .map(product -> FmProductPriceResponse.builder()
+                        .productId(product.getProductId())
+                        .productName(product.getProductName())
+                        .variantId(product.getVariantId())
+                        .variantName(product.getVariantName())
+                        .merchantPrice(product.getMerchantPrice())
+                        .onlinePrice(product.getOnlinePrice())
+                        .build())
+                .toList();
+
+        log.info("Successfully fetched {} products for outletId {}",
+                response.size(), outletId);
+
+        return response;
+    }
 }

@@ -17,4 +17,5 @@ public interface FmRoleService {
             Integer roleId,
             String roleName
     );
+
 }
