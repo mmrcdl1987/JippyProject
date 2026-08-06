@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/fm/products")
@@ -81,6 +83,16 @@ public class    FmProductController {
 
         return ResponseEntity.ok(
                 productMappingService.updateProduct(productId, request));
+    }
+
+    @GetMapping("/outlets/{outletId}")
+    public ResponseEntity<List<FmProductPriceResponse>> getProductsByOutlet(
+            @PathVariable Integer outletId) {
+
+        log.info("REST Request : Get Products By OutletId : {}", outletId);
+
+        return ResponseEntity.ok(
+                productMappingService.getProductsByOutlet(outletId));
     }
 
 }

@@ -31,8 +31,11 @@ public class DivCampaignRequestDto {
 
     private String promotionToDate;
 
-    private Integer createdBy;
+    private Integer createdBy; // Stores numeric User ID (e.g. 101)
 
+    // Supports multiple meal slots sent from Frontend
+    private List<Integer> mealTypeSlotIds;
 
+    // Single meal slot ID used internally during processing/saving
     private Integer mealTypeSlotId;
 }

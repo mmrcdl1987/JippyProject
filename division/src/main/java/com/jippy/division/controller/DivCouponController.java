@@ -170,5 +170,11 @@ public class DivCouponController {
         return ResponseEntity.ok(
                 divCampaignService.getAvailableMealSlots(request));
     }
+    @GetMapping("/active")
+    public ResponseEntity<List<DivCouponResponseDto>> getActiveCoupons() {
+        logger.info("REST Request: GET /api/div/coupons/active");
+        List<DivCouponResponseDto> activeCoupons = couponService.getAllActiveCoupons();
+        return ResponseEntity.ok(activeCoupons);
+    }
 
 }

@@ -23,4 +23,7 @@ public interface ICouponService {
     List<DivPriceModelDto> getAllPriceModels();
 
     List<DivCouponResponseDto> getActiveWelcomeCoupons();
+
+    // Fetch all active coupons for UI dropdowns
+    List<DivCouponResponseDto> getAllActiveCoupons();
 }

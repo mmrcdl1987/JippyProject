@@ -2,6 +2,8 @@ package com.jippy.foodandmart.service;
 
 import com.jippy.foodandmart.dto.*;
 
+import java.util.List;
+
 public interface FmProductService {
     /**
      * Maps selected products into outlet products.
@@ -66,4 +68,6 @@ public interface FmProductService {
     FmProductUpdateResponseDto updateProduct(
             Integer productId,
             FmProductUpdateRequestDto request);
+
+    List<FmProductPriceResponse> getProductsByOutlet(Integer outletId);
 }

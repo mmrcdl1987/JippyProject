@@ -4,6 +4,7 @@ import com.jippy.foodandmart.dto.FmCreateRoleRequestDto;
 import com.jippy.foodandmart.dto.FmRoleResponseDto;
 import com.jippy.foodandmart.dto.RolePermissionUpdateDto;
 import com.jippy.foodandmart.service.FmRoleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/fm/roles")
 @RequiredArgsConstructor
- @Slf4j
+@Slf4j
 public class FmRoleController {
 
     private final FmRoleService fmRoleService;
@@ -27,10 +28,10 @@ public class FmRoleController {
     }
 
     @PutMapping("/{roleId}/permissions")
-    public String updateRolePermissions(@PathVariable Integer roleId, @RequestBody RolePermissionUpdateDto dto) {
+    public String updateRolePermissions(@PathVariable Integer roleId,
+                                        @RequestBody RolePermissionUpdateDto dto) {
 
         log.info("Received permission update request for Role Id : {}", roleId);
-
         log.info("Permission Ids : {}", dto.getPermissionIds());
 
         fmRoleService.updateRolePermissions(roleId, dto.getPermissionIds());
@@ -41,7 +42,7 @@ public class FmRoleController {
     }
 
     @PostMapping
-    public String createRole(@RequestBody FmCreateRoleRequestDto dto) {
+    public String createRole(@Valid @RequestBody FmCreateRoleRequestDto dto) {
 
         log.info("Received Create Role Request : {}", dto.getRoleName());
 
@@ -49,27 +50,17 @@ public class FmRoleController {
 
         return "Role Created Successfully";
     }
+
     @PutMapping("/{roleId}")
-    public String updateRole(
-            @PathVariable Integer roleId,
-            @RequestBody FmCreateRoleRequestDto dto
-    ) {
+    public String updateRole(@PathVariable Integer roleId,
+                             @Valid @RequestBody FmCreateRoleRequestDto dto) {
 
-        log.info(
-                "Received Update Role Request. RoleId : {}",
-                roleId
-        );
+        log.info("Received Update Role Request. RoleId : {}", roleId);
+        log.info("New Role Name : {}", dto.getRoleName());
 
-        log.info(
-                "New Role Name : {}",
-                dto.getRoleName()
-        );
-
-        fmRoleService.updateRole(
-                roleId,
-                dto.getRoleName()
-        );
+        fmRoleService.updateRole(roleId, dto.getRoleName());
 
         return "Role Updated Successfully";
     }
+
 }

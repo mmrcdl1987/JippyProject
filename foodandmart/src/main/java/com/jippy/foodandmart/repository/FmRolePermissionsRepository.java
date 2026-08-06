@@ -13,22 +13,30 @@ import java.util.List;
 
 @Repository
 public interface FmRolePermissionsRepository extends JpaRepository<FmRolePermissions, Integer> {
+
+    /**
+     * Find all permissions for a role.
+     */
     List<FmRolePermissions> findByRole(FmRoles role);
+
+    /**
+     * Find all role-permission mappings by roleId.
+     */
+    @Query("""
+        SELECT rp
+        FROM FmRolePermissions rp
+        WHERE rp.role.roleId = :roleId
+    """)
+    List<FmRolePermissions> findByRoleId(@Param("roleId") Integer roleId);
+
+    /**
+     * Delete all role-permission mappings by roleId.
+     */
     @Modifying
     @Transactional
     @Query("""
-        delete from FmRolePermissions rp
-        where rp.role.roleId = :roleId
+        DELETE FROM FmRolePermissions rp
+        WHERE rp.role.roleId = :roleId
     """)
-    void deleteByRoleId(Integer roleId);
-
-    @Query("""
-SELECT rp
-FROM FmRolePermissions rp
-WHERE rp.role.roleId = :roleId
-""")
-    List<FmRolePermissions> findByRoleId(
-            @Param("roleId")
-            Integer roleId
-    );
+    void deleteByRoleId(@Param("roleId") Integer roleId);
 }

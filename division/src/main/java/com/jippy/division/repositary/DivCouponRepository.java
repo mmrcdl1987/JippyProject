@@ -19,6 +19,9 @@ public interface DivCouponRepository extends JpaRepository<DivCoupon, Integer> {
 
     Page<DivCoupon> findAllByIsActive(Boolean isActive, Pageable pageable);
 
+    // Added method to fetch active coupons for UI dropdown
+    List<DivCoupon> findByIsActiveTrue();
+
     @Query("""
 SELECT c
 FROM DivCoupon c
@@ -36,6 +39,5 @@ WHERE c.isActive = true
 ORDER BY c.discountValue DESC
 """)
     List<DivCoupon> findActiveWelcomeCoupons();
-
 
 }

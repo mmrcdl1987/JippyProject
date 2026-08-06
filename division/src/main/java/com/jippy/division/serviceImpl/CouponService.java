@@ -140,6 +140,7 @@ public class CouponService implements ICouponService {
 
         log.info("Coupon disabled successfully. CouponId={}", couponId);
     }
+
     /**
      * Fetch coupon by id.
      */
@@ -174,6 +175,29 @@ public class CouponService implements ICouponService {
 
         return response;
     }
+
+    /**
+     * Fetch all active coupons for UI dropdown.
+     */
+    @Override
+    public List<DivCouponResponseDto> getAllActiveCoupons() {
+
+        log.info("Fetching all active coupons for dropdown display.");
+
+        List<DivCoupon> activeCoupons = couponRepository.findByIsActiveTrue();
+
+        if (activeCoupons.isEmpty()) {
+
+            log.warn("No active coupons found.");
+
+            return List.of();
+        }
+
+        log.info("Successfully fetched {} active coupons.", activeCoupons.size());
+
+        return DivCouponMapper.toDtoList(activeCoupons);
+    }
+
     @Override
     public List<DivCouponResponseDto> getActiveWelcomeCoupons() {
 
@@ -214,6 +238,7 @@ public class CouponService implements ICouponService {
 
         return DivCouponMapper.toPriceModelDto(priceModels);
     }
+
     /**
      * Validates that the coupon code does not already exist.
      */

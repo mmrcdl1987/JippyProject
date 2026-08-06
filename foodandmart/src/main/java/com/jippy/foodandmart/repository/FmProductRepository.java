@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProduct;
+import com.jippy.foodandmart.projections.FmProductPriceProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -114,7 +115,29 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     /**
      * Fetch all products whose image and description are not updated.
      */
+
     Page<FmProduct> findByIsImageDescUpdatedFalse(Pageable pageable);
+    @Query(value = """
+            SELECT
+                p.product_id AS productId,
+                p.product_name AS productName,
+                NULL AS variantId,
+                NULL AS variantName,
+                p.merchant_price AS merchantPrice,
+                pop.online_price AS onlinePrice
+            FROM jippy_fm.outlets o
+            INNER JOIN jippy_fm.outlet_categories oc
+                ON o.outlet_id = oc.outlet_id
+            INNER JOIN jippy_fm.product_online_pricing pop
+                ON oc.outlet_category_id = pop.outlet_category_id
+            INNER JOIN jippy_fm.products p
+                ON pop.product_id = p.product_id
+            WHERE o.outlet_id = :outletId
+            ORDER BY p.product_name
+            """, nativeQuery = true)
+    List<FmProductPriceProjection> findProductsByOutletId(
+            @Param("outletId") Integer outletId);
+
 }
 
 
