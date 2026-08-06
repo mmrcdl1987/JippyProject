@@ -105,14 +105,4 @@ public class FmProductController {
         return ResponseEntity.ok(productIds);
     }
 
-    @GetMapping("/outlets/{outletId}")
-    public ResponseEntity<List<FmProductPriceResponse>> getProductsByOutlet(
-            @PathVariable Integer outletId) {
-
-        log.info("REST Request : Get Products By OutletId : {}", outletId);
-
-        return ResponseEntity.ok(
-                productMappingService.getProductsByOutlet(outletId));
-    }
-
 }

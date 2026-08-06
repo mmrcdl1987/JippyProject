@@ -27,23 +27,12 @@ public interface PromotionScheduleService {
      */
     void updatePriceDropSchedule(Integer priceDropMappingId);
 
-    /**
-     * Remove schedules after Price Drop deletion.
-     */
+
     void deletePriceDropSchedule(Integer priceDropMappingId);
 
-    /**
-     * Generate schedules for Coupon.
-     */
     void createCouponSchedule(Integer couponMappingId);
 
-    /**
-     * Regenerate schedules after Coupon update.
-     */
     void updateCouponSchedule(Integer couponMappingId);
 
-    /**
-     * Remove schedules after Coupon deletion.
-     */
     void deleteCouponSchedule(Integer couponMappingId);
 }

@@ -1,6 +1,7 @@
 package com.jippy.division.entity;
 
 import com.jippy.division.enums.LocationType;
+import com.jippy.division.enums.PromotionScheduleStatus;
 import com.jippy.division.enums.PromotionSourceType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -45,4 +46,7 @@ public class PromotionSchedule {
     @Column(name = "end_date_time", nullable = false)
     private LocalDateTime endDateTime;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private PromotionScheduleStatus status;
 }
