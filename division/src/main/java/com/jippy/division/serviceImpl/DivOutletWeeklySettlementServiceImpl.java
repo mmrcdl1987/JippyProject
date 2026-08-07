@@ -248,7 +248,10 @@ public class DivOutletWeeklySettlementServiceImpl implements DivOutletWeeklySett
     @Override
     public void sendOutletSettlementMail() {
 
-        List<DivOutletWeeklySettlement> settlements = divOutletWeeklySettlementRepository.findByPaymentStatusAndEmailStatus(DivAppConstants.PAYMENT_STATUS_PAID, DivAppConstants.EMAIL_STATUS_PENDING);
+        List<DivOutletWeeklySettlement> settlements =
+                divOutletWeeklySettlementRepository.
+                        findByPaymentStatusAndEmailStatus(DivAppConstants.PAYMENT_STATUS_PAID,
+                                DivAppConstants.EMAIL_STATUS_PENDING);
 
         if (settlements.isEmpty()) {
             log.info("No eligible settlements found");

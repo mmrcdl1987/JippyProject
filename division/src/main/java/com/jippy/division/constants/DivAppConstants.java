@@ -13,7 +13,7 @@ public class DivAppConstants {
 
     public static final String EMAIL_STATUS_SENT = "EMAIL_SENT";
 
-    public static final String JIPPY_DEFAULT_EMAIL="jippyfooddelivery2026@gmail.com";
+    public static final String JIPPY_DEFAULT_EMAIL="accounts@jippymart.in";
 
     public static final String EMAIL_SUBJECT="Weekly Settlement Report";
 
