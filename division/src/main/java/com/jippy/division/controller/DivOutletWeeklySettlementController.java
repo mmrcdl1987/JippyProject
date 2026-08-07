@@ -24,12 +24,18 @@ public class DivOutletWeeklySettlementController {
     private final EmailService emailService;
 
     @GetMapping("/getOutletWeeklySettlement")
-    @Operation(summary = "Get Outlet Weekly Settlement Details", description = "Retrieves outlet weekly settlement details based on the provided weekly settlement ID. " + "The response includes outlet information, settlement amount, payment status, " + "transaction details, order count, and deductions for the specified settlement record.")
-    public ResponseEntity<DivOutletWeeklySettlementResponseDto> getOutletWeeklySettlement(@Parameter(description = "Unique identifier of the weekly settlement record", example = "3") @RequestParam Integer weeklySettlementId) {
+    @Operation(summary = "Get Outlet Weekly Settlement Details",
+            description = "Retrieves outlet weekly settlement details based on the" +
+                    " provided weekly settlement ID. " + "The response includes outlet information," +
+                    " settlement amount, payment status, " + "transaction details, order count, and " +
+                    "deductions for the specified settlement record.")
+    public ResponseEntity<DivOutletWeeklySettlementResponseDto> getOutletWeeklySettlement
+            (@Parameter(description = "Unique identifier of the weekly settlement record", example = "3") @RequestParam Integer weeklySettlementId) {
 
         log.info("Received request to fetch outlet weekly settlement details for weeklySettlementId : {}", weeklySettlementId);
 
-        DivOutletWeeklySettlementResponseDto response = divOutletWeeklySettlementService.getOutletWeeklySettlement(weeklySettlementId);
+        DivOutletWeeklySettlementResponseDto response
+                = divOutletWeeklySettlementService.getOutletWeeklySettlement(weeklySettlementId);
 
         return ResponseEntity.ok(response);
     }

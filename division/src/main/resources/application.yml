@@ -7,11 +7,27 @@ spring:
 
 
   #     gMail SMTP Configuration -- gmail integration
+#  mail:
+#    host: smtp.gmail.com
+#    port: 587
+#    username: jippyfooddelivery2026@gmail.com
+#    password: cgbh eipp hner gdap
+
   mail:
-    host: smtp.gmail.com
+    host: email-smtp.ap-south-1.amazonaws.com # Replace with your specific SES region endpoint
     port: 587
-    username: jippyfooddelivery2026@gmail.com
-    password: cgbh eipp hner gdap
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        transport:
+          protocol: smtp
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
 
   kafka:
     bootstrap-servers: 187.127.156.147:9092
