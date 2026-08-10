@@ -281,9 +281,9 @@ public class FmUsersServiceImpl implements IFmUsersService {
 
             user.setUserId(employee.getEmployeeId());
 
-            user.setUserType("EMPLOYEE");
+            user.setUserType(FmAppConstants.TYPE_EMPLOYEE);
 
-            user.setIsActive("Y");
+            user.setIsActive(FmAppConstants.FLAG_YES);
 
             user = usersRepo.save(user);
 

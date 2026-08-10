@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.DriverWalletUpdateResponseDto;
 import com.jippy.foodandmart.dto.FmUpdateCODResponseDto;
 import com.jippy.foodandmart.entity.FmUser;
@@ -49,7 +50,7 @@ public class FmFleetManagerServiceImpl implements FmFleetManagerService {
         FmUser existingUser = user.get();
         log.info("User status before update = {}", existingUser.getIsActive());
 
-        existingUser.setIsActive("Y");
+        existingUser.setIsActive(FmAppConstants.FLAG_YES);
         existingUser.setUpdatedAt(LocalDateTime.now());
 
         FmUser savedUser = fmUsersRepository.save(existingUser);
