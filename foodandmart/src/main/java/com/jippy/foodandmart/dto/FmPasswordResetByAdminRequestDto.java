@@ -19,8 +19,8 @@ public class FmPasswordResetByAdminRequestDto {
 
     @Schema(
             description = "Type of user account",
-            example = "\"MERCHANT\" or, \"CUSTOMER\" or, \"DRIVER\" or, \"DIVISION_ADMIN\"}",
-            allowableValues = {"MERCHANT", "CUSTOMER", "DRIVER", "DIVISION_ADMIN"},
+            example = "\"MERCHANT\" or, \"CUSTOMER\" or, \"DRIVER\" or,\"EMPLOYEE\", \"DIVISION_ADMIN\"}",
+            allowableValues = {"MERCHANT", "CUSTOMER", "DRIVER","EMPLOYEE", "DIVISION_ADMIN"},
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     private String userType;
