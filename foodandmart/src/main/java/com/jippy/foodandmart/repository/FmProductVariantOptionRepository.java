@@ -51,4 +51,16 @@ public interface FmProductVariantOptionRepository
 
     List<FmProductVariantOption> findByProductIdOrderByProductVariantOptionsIdAsc(
             Integer productId);
+
+
+    @Query("""
+    SELECT v
+    FROM FmProductVariantOption v
+    WHERE v.productId IN :productIds
+      AND v.isActive = true
+    ORDER BY v.productId, v.productVariantOptionsId
+    """)
+    List<FmProductVariantOption> findActiveVariantsForProducts(
+            @Param("productIds") List<Integer> productIds
+    );
 }

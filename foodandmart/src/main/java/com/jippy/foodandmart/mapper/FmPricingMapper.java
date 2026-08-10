@@ -1,4 +1,5 @@
 package com.jippy.foodandmart.mapper;
+
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmProductResponseDto;
 import com.jippy.foodandmart.entity.FmProductOnlinePricing;
@@ -11,33 +12,37 @@ import java.time.LocalDateTime;
 public class FmPricingMapper {
 
     public FmProductResponseDto map(Object[] row) {
-        return new FmProductResponseDto(
-                ((Number) row[0]).intValue(),
-                (String) row[1],
-                (BigDecimal) row[2],
-                (BigDecimal) row[3]
-        );
+
+        return new FmProductResponseDto(((Number) row[0]).intValue(), (String) row[1], (BigDecimal) row[2], row[3] != null ? (BigDecimal) row[3] : null);
     }
 
-    public FmProductOnlinePricing toEntity(Integer productId,
-                                           Integer outletCategoryId,
-                                           BigDecimal price) {
+    /**
+     * Creates a product_online_pricing entity.
+     * <p>
+     * productVariantId = null
+     * -> Base product price
+     * <p>
+     * productVariantId != null
+     * -> MAIN / ADD variant price
+     */
+    public FmProductOnlinePricing toEntity(Integer productId, Integer outletCategoryId, Integer productVariantId, BigDecimal onlinePrice) {
 
-        FmProductOnlinePricing ProductOnlinePricingEntity = new FmProductOnlinePricing();
+        FmProductOnlinePricing entity = new FmProductOnlinePricing();
 
-        ProductOnlinePricingEntity.setProductId(productId);
-        ProductOnlinePricingEntity.setOutletCategoryId(outletCategoryId);
-        ProductOnlinePricingEntity.setOnlinePrice(price);
+        entity.setProductId(productId);
+        entity.setOutletCategoryId(outletCategoryId);
+        entity.setProductVariantId(productVariantId);
+        entity.setOnlinePrice(onlinePrice);
 
-        ProductOnlinePricingEntity.setCreatedAt(LocalDateTime.now());
-        ProductOnlinePricingEntity.setUpdatedAt(LocalDateTime.now());
+        entity.setCreatedAt(LocalDateTime.now());
+        entity.setCreatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-        ProductOnlinePricingEntity.setCreatedBy(FmAppConstants.DEFAULT_CREATED_BY);
-        ProductOnlinePricingEntity.setUpdatedBy(FmAppConstants.DEFAULT_CREATED_BY);
+        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setUpdatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-        ProductOnlinePricingEntity.setIsApproved(true);
-        ProductOnlinePricingEntity.setApprovedBy(FmAppConstants.DEFAULT_CREATED_BY);
+        entity.setIsApproved(true);
+        entity.setApprovedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-        return ProductOnlinePricingEntity;
+        return entity;
     }
 }

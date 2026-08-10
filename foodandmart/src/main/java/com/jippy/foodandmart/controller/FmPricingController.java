@@ -20,6 +20,8 @@ public class FmPricingController {
 
     private final IPricingService pricingService;
 
+
+
     private static final Logger log = LoggerFactory.getLogger(FmPricingController.class);
 
     // GET OUTLETS =================
