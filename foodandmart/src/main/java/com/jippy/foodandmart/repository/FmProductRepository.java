@@ -55,15 +55,6 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             """, nativeQuery = true)
     List<Object[]> findProductsWithoutPricing(@Param("outletIds") List<Integer> outletIds);
 
-
-    // REQUIRED FOR SERVICE (STEP 4)
-    @Query(value = """
-            SELECT outlet_category_id
-            FROM jippy_fm.products
-            WHERE product_id = :productId
-            """, nativeQuery = true)
-    Integer findOutletCategoryId(@Param("productId") Integer productId);
-
     Optional<FmProduct> findById(Integer productId);
 
     boolean existsByProductId(Integer productId);
@@ -185,6 +176,37 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     ORDER BY p.product_name
     """, nativeQuery = true)
     List<FmProductPriceProjection> findProductsByOutletId(
-            @Param("outletId") Integer outletId);}
+            @Param("outletId") Integer outletId);
+
+    /**
+     * Fetch all products for multiple outlets in a single query.
+     *
+     * Returns:
+     * [0] productId
+     * [1] productName
+     * [2] merchantPrice
+     * [3] outletCategoryId
+     * [4] outletId
+     */
+    @Query(value = """
+        SELECT
+            p.product_id,
+            p.product_name,
+            p.merchant_price,
+            p.outlet_category_id,
+            oc.outlet_id
+        FROM jippy_fm.products p
+        INNER JOIN jippy_fm.outlet_categories oc
+            ON oc.outlet_category_id = p.outlet_category_id
+        WHERE oc.outlet_id IN (:outletIds)
+          AND p.is_active = 'Y'
+          AND oc.is_active = 'Y'
+        ORDER BY oc.outlet_id, p.product_id
+        """, nativeQuery = true)
+    List<Object[]> findProductsForBulkPricing(
+            @Param("outletIds") List<Integer> outletIds
+    );
+
+}
 
 

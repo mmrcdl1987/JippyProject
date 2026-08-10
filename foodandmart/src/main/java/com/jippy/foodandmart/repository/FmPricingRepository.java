@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricing, Integer> {
@@ -23,19 +24,21 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
             @Param("productId") Integer productId,
             @Param("outletCategoryId") Integer outletCategoryId
     );
-    //  CHECK EXISTING ROW
     @Query(value = """
     SELECT COUNT(*)
     FROM jippy_fm.product_online_pricing
     WHERE product_id = :productId
       AND outlet_category_id = :outletCategoryId
-""", nativeQuery = true)
+      AND (
+            (:productVariantId IS NULL AND product_variant_id IS NULL)
+            OR product_variant_id = :productVariantId
+          )
+    """, nativeQuery = true)
     int existsRow(
             @Param("productId") Integer productId,
-            @Param("outletCategoryId")Integer outletCategoryId
+            @Param("outletCategoryId") Integer outletCategoryId,
+            @Param("productVariantId") Integer productVariantId
     );
-
-    // UPDATE EXISTING PRICE
     @Modifying
     @Query(value = """
     UPDATE jippy_fm.product_online_pricing
@@ -46,10 +49,15 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
         approved_by = :approvedBy
     WHERE product_id = :productId
       AND outlet_category_id = :outletCategoryId
-""", nativeQuery = true)
+      AND (
+            (:productVariantId IS NULL AND product_variant_id IS NULL)
+            OR product_variant_id = :productVariantId
+          )
+    """, nativeQuery = true)
     int updatePrice(
             @Param("productId") Integer productId,
             @Param("outletCategoryId") Integer outletCategoryId,
+            @Param("productVariantId") Integer productVariantId,
             @Param("price") BigDecimal price,
             @Param("updatedBy") Integer updatedBy,
             @Param("approvedBy") Integer approvedBy
@@ -83,5 +91,34 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
             @Param("productId") Integer productId,
             @Param("outletCategoryId") Integer outletCategoryId);
 
+    @Query("""
+    SELECT oc.outletCategoryId
+    FROM FmOutletCategory oc
+    JOIN FmProduct p
+        ON p.outletCategoryId = oc.outletCategoryId
+    WHERE p.productId = :productId
+      AND oc.outletId = :outletId
+      AND oc.isActive = 'Y'
+    """)
+    Optional<Integer> findOutletCategoryIdByProductAndOutlet(
+            @Param("productId") Integer productId,
+            @Param("outletId") Integer outletId
+    );
+
+
+
+    @Query(value = """
+    SELECT
+        product_online_pricing_id,
+        product_id,
+        outlet_category_id,
+        product_variant_id,
+        online_price
+    FROM jippy_fm.product_online_pricing
+    WHERE outlet_category_id IN (:outletCategoryIds)
+    """, nativeQuery = true)
+    List<Object[]> findExistingBulkPricing(
+            @Param("outletCategoryIds") List<Integer> outletCategoryIds
+    );
 
 }

@@ -15,13 +15,15 @@ public interface IPricingService {
 
     void updatePrices(FmPriceUpdateRequestDto dto, boolean isApproved);
 
-    void bulkUpdatePrices(FmBulkPriceUpdateRequestDto dto, boolean isApproved);
-
     FmProductDetailResponseDto getProductById(Integer productId);
 
     FmProductDetailResponseDto getProductByIdAndOutletId(
             Integer productId,
             Integer outletId);
 
+    void bulkUpdatePrices(
+            FmBulkPriceUpdateRequestDto dto,
+            boolean isApproved
+    );
 }
 

@@ -2,7 +2,10 @@ package com.jippy.foodandmart.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,7 +16,6 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class FmProductVariantOption {
 
     @Id
@@ -26,7 +28,11 @@ public class FmProductVariantOption {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_group_values_id", insertable = false, updatable = false)
+    @JoinColumn(
+            name = "product_variant_group_values_id",
+            insertable = false,
+            updatable = false
+    )
     private FmProductVariantGroupValue productVariantGroupValue;
 
     @Column(name = "product_id", nullable = false)
@@ -34,13 +40,28 @@ public class FmProductVariantOption {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", insertable = false, updatable = false)
+    @JoinColumn(
+            name = "product_id",
+            insertable = false,
+            updatable = false
+    )
     private FmProduct product;
 
+    /**
+     * MAIN or ADD
+     */
     @Column(name = "price_type", nullable = false, length = 20)
     private String priceType;
 
-    @Column(name = "variant_price", nullable = false, precision = 10, scale = 2)
+    /**
+     * Source price for variant/add-on pricing calculation.
+     */
+    @Column(
+            name = "variant_price",
+            nullable = false,
+            precision = 10,
+            scale = 2
+    )
     private BigDecimal variantPrice;
 
     @Column(name = "created_by")
@@ -55,7 +76,6 @@ public class FmProductVariantOption {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
 
