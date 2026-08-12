@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.exception;
 
 import com.jippy.foodandmart.dto.FmApiResponse;
+import com.jippy.foodandmart.dto.FmResponseDto;
 import feign.FeignException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,32 +44,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(FmApiResponse.error(ex.getMessage()));
     }
 
-    @ExceptionHandler({
-            MerchantAlreadyExistsException.class,
-            DuplicateResourceException.class,
-            PromotionPlanTypeAlreadyExistsException.class,
-            PromotionPlanAlreadyExistsException.class,
-            IllegalStateException.class,
-            BadRequestException.class
-    })
+    @ExceptionHandler({MerchantAlreadyExistsException.class, DuplicateResourceException.class, PromotionPlanTypeAlreadyExistsException.class, PromotionPlanAlreadyExistsException.class, IllegalStateException.class, BadRequestException.class})
     public ResponseEntity<FmApiResponse<Void>> handleConflict(Exception ex) {
 
         log.warn("Conflict/Duplicate data: {}", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(FmApiResponse.error(ex.getMessage()));
     }
+
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleConstraintViolationException(
-            ConstraintViolationException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException ex) {
 
-        List<String> errors = ex.getConstraintViolations()
-                .stream()
-                .map(violation -> violation.getMessage())
-                .collect(Collectors.toList());
+        List<String> errors = ex.getConstraintViolations().stream().map(violation -> violation.getMessage()).collect(Collectors.toList());
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(FmApiResponse.error("Validation failed", errors));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Validation failed", errors));
     }
 
     // --- Specific Business Logic Exceptions ---
@@ -134,84 +124,80 @@ public class GlobalExceptionHandler {
             status = HttpStatus.BAD_GATEWAY;
         }
 
-        return ResponseEntity.status(status)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(status).body(FmApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(BannerUploadException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleBannerUploadException(
-            BannerUploadException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleBannerUploadException(BannerUploadException ex) {
 
         log.error("Banner upload failed: {}", ex.getMessage(), ex);
 
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(FmApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidOtpException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleInvalidOtpException(
-            InvalidOtpException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleInvalidOtpException(InvalidOtpException ex) {
 
-        log.warn("[OTP] Invalid OTP validation failed | reason={}",
-                ex.getMessage());
+        log.warn("[OTP] Invalid OTP validation failed | reason={}", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(OtpExpiredException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleOtpExpiredException(
-            OtpExpiredException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleOtpExpiredException(OtpExpiredException ex) {
 
-        log.warn("[OTP] OTP expired | reason={}",
-                ex.getMessage());
+        log.warn("[OTP] OTP expired | reason={}", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(EmailSendingException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleEmailSendingException(
-            EmailSendingException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleEmailSendingException(EmailSendingException ex) {
 
-        log.error("[EMAIL] Email sending failed | reason={}",
-                ex.getMessage(), ex);
+        log.error("[EMAIL] Email sending failed | reason={}", ex.getMessage(), ex);
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(FmApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleInvalidTokenException(
-            InvalidTokenException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleInvalidTokenException(InvalidTokenException ex) {
 
-        log.warn("[TOKEN] Invalid or expired token | reason={}",
-                ex.getMessage());
+        log.warn("[TOKEN] Invalid or expired token | reason={}", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(FmApiResponse.error(ex.getMessage()));
     }
-    @ExceptionHandler({
-            InvalidPromotionDateException.class,
-            InvalidPromotionAmountException.class,
-            InvalidPromotionItemException.class
-    })
+
+    @ExceptionHandler({InvalidPromotionDateException.class, InvalidPromotionAmountException.class, InvalidPromotionItemException.class})
     public ResponseEntity<FmApiResponse<Void>> handlePromotionValidation(Exception ex) {
 
         log.warn("[PROMOTION] Validation failed | reason={}", ex.getMessage());
 
-        return ResponseEntity.badRequest()
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.badRequest().body(FmApiResponse.error(ex.getMessage()));
     }
+
     @ExceptionHandler(ProductContentException.class)
-    public ResponseEntity<FmApiResponse<Void>> handleProductContentException(
-            ProductContentException ex) {
+    public ResponseEntity<FmApiResponse<Void>> handleProductContentException(ProductContentException ex) {
 
         log.error("[PRODUCT CONTENT] {}", ex.getMessage(), ex);
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(FmApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(FmApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PriceSettingsException.class)
+    public ResponseEntity<FmResponseDto> handlePriceSettingsException(PriceSettingsException ex) {
+
+        log.warn("Price settings business validation failed | message={}", ex.getMessage());
+
+        return ResponseEntity.badRequest().body(new FmResponseDto("400", ex.getMessage()));
+    }
+
+    @ExceptionHandler(PriceSettingsNotFoundException.class)
+    public ResponseEntity<FmResponseDto> handlePriceSettingsNotFoundException(PriceSettingsNotFoundException ex) {
+
+        log.warn("Price settings record not found | message={}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new FmResponseDto("404", ex.getMessage()));
     }
 
 }

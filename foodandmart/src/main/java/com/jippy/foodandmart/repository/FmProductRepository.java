@@ -207,6 +207,34 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             @Param("outletIds") List<Integer> outletIds
     );
 
+    @Query(value = """
+    SELECT
+        EXISTS (
+            SELECT 1
+            FROM jippy_fm.products p
+            INNER JOIN jippy_fm.outlet_categories oc
+                ON oc.outlet_category_id = p.outlet_category_id
+            WHERE p.product_id = :productId
+              AND oc.outlet_id = :outletId
+              AND p.is_active = 'Y'
+              AND oc.is_active = 'Y'
+        )
+        AND (
+            :variantId IS NULL
+            OR EXISTS (
+                SELECT 1
+                FROM jippy_fm.product_variant_options pvo
+                WHERE pvo.product_id = :productId
+                  AND pvo.product_variant_options_id = :variantId
+                  AND pvo.is_active = true
+            )
+        )
+    """, nativeQuery = true)
+    boolean existsActiveProductAndVariantInOutlet(
+            @Param("productId") Integer productId,
+            @Param("outletId") Integer outletId,
+            @Param("variantId") Integer variantId
+    );
 }
 
 

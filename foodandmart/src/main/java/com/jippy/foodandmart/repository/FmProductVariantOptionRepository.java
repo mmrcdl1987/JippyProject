@@ -63,4 +63,5 @@ public interface FmProductVariantOptionRepository
     List<FmProductVariantOption> findActiveVariantsForProducts(
             @Param("productIds") List<Integer> productIds
     );
+
 }
