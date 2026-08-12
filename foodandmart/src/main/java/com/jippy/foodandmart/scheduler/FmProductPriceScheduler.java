@@ -20,8 +20,8 @@ public class FmProductPriceScheduler {
      * <p>
      * Change the cron after testing if required.
      */
-    @Scheduled(cron = "0 */2 * * * *")
-//    @Scheduled(cron = "0 0 1 * * ?")
+    // @Scheduled(cron = "0 */2 * * * *")
+   @Scheduled(cron = "0 0 1 * * ?")
     public void processScheduledPrices() {
 
         log.info("PRODUCT_PRICE_SCHEDULER_START");
