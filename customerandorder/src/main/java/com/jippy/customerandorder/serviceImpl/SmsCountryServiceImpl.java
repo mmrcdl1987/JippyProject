@@ -8,13 +8,18 @@ import com.jippy.customerandorder.dto.SmsCountryResponseDto;
 import com.jippy.customerandorder.iservice.SmsCountryService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SmsCountryServiceImpl implements SmsCountryService {
+
+    @Value("${smscountry.templateId}")
+    private String templateId;
 
     private final SmsCountryFeignClient smsCountryFeignClient;
     private final SmsCountryProperties properties;
@@ -30,17 +35,16 @@ public class SmsCountryServiceImpl implements SmsCountryService {
             request.setNumber(mobileNumber);
             request.setSenderId(properties.getSenderId());
 
+
             String message = String.format(
-                    "Dear Customer,\n\n" +
-                            "Your Jippy verification OTP is %s.\n\n" +
-                            "This OTP is valid for 10 minutes. " +
-                            "Please do not share it with anyone.\n\n" +
-                            "Team Jippy\n" +
-                            "www.jippymart.in",
+                    "Your OTP for jippymart login is %s. Please do not share this OTP with anyone. It is valid for the next 10 minutes-jippymart.in.",
                     otp
             );
 
             request.setText(message);
+            request.setTemplateId(templateId);
+
+            log.info("SMS REQUEST = {}",request);
 
             SmsCountryResponseDto response = smsCountryFeignClient.sendSms(properties.getAuthKey(), request);
 
@@ -73,7 +77,7 @@ public class SmsCountryServiceImpl implements SmsCountryService {
         } catch (FeignException ex) {
 
             log.error("SMS_SERVICE | SEND_OTP | mobile={} | ERROR | status={} | body={}", mobileNumber, ex.status(), ex.contentUTF8(), ex);
-
+            ex.printStackTrace();
             throw new SmsFailedException("Unable to send OTP. Please try again later.");
         }
     }

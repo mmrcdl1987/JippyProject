@@ -14,4 +14,10 @@ public class SmsCountryRequestDto {
 
     @JsonProperty("SenderId")
     private String senderId;
+
+    // SMSCountry accepts TemplateId or Template_Id depending on account provisioning
+    @JsonProperty("TemplateId")
+    private String templateId;
+
+
 }

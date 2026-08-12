@@ -80,6 +80,7 @@ smscountry:
   auth-token: 1sTCN36yT5iYW2kfgkrV7qNyLC845mlpJzjlY8J1
   sender-id: JIPPYM
   base-url: https://restapi.smscountry.com/v0.1
+  templateId : 1707172854166470178
 
 management:
   tracing:
