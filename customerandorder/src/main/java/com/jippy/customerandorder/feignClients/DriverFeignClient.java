@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(name = "driver",configuration = FeignClientConfig.class)
 public interface DriverFeignClient {
 
-    @PostMapping("/api/driver/delivery-charge/calculate")
+    @PostMapping("/api/driver/delivery-charge/calculate/checkout")
     DeliveryChargeCalculationResponseDto calculateDeliveryCharge(@RequestBody DeliveryChargeCalculationRequestDto requestDto);
 
 //    @GetMapping("/api/driver/getZonesByType")

@@ -19,6 +19,9 @@ public class CoCustomerCart {
     @Column(name = "customer_id", nullable = false)
     private Integer customerId;
 
+    @Column(name = "outlet_id", nullable = false)
+    private Integer outletId;
+
     @Column(name = "product_id", nullable = false)
     private Integer productId;
 

@@ -36,7 +36,7 @@ public class DriverChargeController {
     }
 
     // CHECKOUT DELIVERY CHARGE
-    @PostMapping("/delivery-charge/calculate")
+    @PostMapping("/delivery-charge/calculate/checkout")
     @Operation(summary = "Calculate Delivery Charge", description = "Calculate delivery charge during customer checkout")
     public ResponseEntity<DeliveryChargeCalculationResponseDto> calculateDeliveryCharge(@Valid @RequestBody DeliveryChargeCalculationRequestDto requestDto) {
 

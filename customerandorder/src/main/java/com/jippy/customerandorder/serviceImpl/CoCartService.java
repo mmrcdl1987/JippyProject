@@ -34,23 +34,113 @@ public class CoCartService implements ICartService {
     @Override
     public String saveOrUpdateCart(CoCartUpdateRequestDto dto) {
 
-        log.info("SERVICE_START | SAVE_OR_UPDATE_CART | customerId={} | productId={} | quantity={}", dto.getCustomerId(), dto.getProductId(), dto.getQuantity());
+        log.info("SERVICE_START | SAVE_OR_UPDATE_CART | customerId={} | outletId={} | productId={} | quantity={}", dto != null ? dto.getCustomerId() : null, dto != null ? dto.getOutletId() : null, dto != null ? dto.getProductId() : null, dto != null ? dto.getQuantity() : null);
 
         validateSaveOrUpdateCartRequest(dto);
 
         try {
 
-            CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductId(dto.getCustomerId(), dto.getProductId()).orElse(null);
-
-            // REMOVE CART ITEM
+            /*
+             * REMOVE CART ITEM
+             * Quantity = 0 means remove only the selected product.
+             */
+            /*
+             * REMOVE CART ITEM
+             * Quantity = 0 means remove only the selected product.
+             */
             if (dto.getQuantity() == 0) {
+
+                CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductId(dto.getCustomerId(), dto.getProductId()).orElse(null);
+
+                if (existingCart == null) {
+
+                    log.error("CART_ITEM_NOT_FOUND | customerId={} | outletId={} | productId={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId());
+
+                    throw new CartException("Cart item not found");
+                }
+
+                /*
+                 * Validate outlet before removing item.
+                 */
+                if (existingCart.getOutletId() == null) {
+
+                    log.error("CART_OUTLET_ID_NULL | customerId={} | cartId={}", dto.getCustomerId(), existingCart.getCartId());
+
+                    throw new CartException("Cart outlet information not found");
+                }
+
+                /*
+                 * Requested outlet must match the outlet
+                 * stored against the cart item.
+                 */
+                if (!existingCart.getOutletId().equals(dto.getOutletId())) {
+
+                    log.error("CART_OUTLET_MISMATCH | customerId={} | cartOutletId={} | requestedOutletId={} | productId={}", dto.getCustomerId(), existingCart.getOutletId(), dto.getOutletId(), dto.getProductId());
+
+                    throw new CartException("Selected outlet does not match the cart item outlet");
+                }
 
                 return removeCartItem(existingCart, dto);
             }
 
+            /*
+             * GET CUSTOMER EXISTING CART
+             */
+            List<CoCustomerCart> existingCartList = cartRepository.findByCustomerId(dto.getCustomerId());
+
+            /*
+             * CHECK OUTLET
+             *
+             * Customer can have items from only ONE outlet.
+             *
+             * Existing cart outlet = 1001
+             * New item outlet      = 1002
+             *
+             * Then old cart will be completely cleared.
+             */
+            if (!existingCartList.isEmpty()) {
+
+                Integer existingOutletId = existingCartList.get(0).getOutletId();
+
+                /*
+                 * Defensive validation.
+                 */
+                if (existingOutletId == null) {
+
+                    log.error("CART_OUTLET_ID_NULL | customerId={} | cartId={}", dto.getCustomerId(), existingCartList.get(0).getCartId());
+
+                    throw new CartException("Existing cart outlet information not found");
+                }
+
+                /*
+                 * DIFFERENT OUTLET
+                 */
+                if (!existingOutletId.equals(dto.getOutletId())) {
+
+                    log.info("CART_OUTLET_CHANGED | customerId={} | oldOutletId={} | newOutletId={}", dto.getCustomerId(), existingOutletId, dto.getOutletId());
+
+                    /*
+                     * Clear customer's complete old cart.
+                     */
+                    cartRepository.deleteByCustomerId(dto.getCustomerId());
+
+                    log.info("OLD_CART_CLEARED | customerId={} | oldOutletId={} | newOutletId={}", dto.getCustomerId(), existingOutletId, dto.getOutletId());
+                }
+            }
+
+            /*
+             * FIND EXISTING PRODUCT
+             *
+             * If outlet changed above, old cart has already
+             * been deleted, so this will return empty.
+             */
+            CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductId(dto.getCustomerId(), dto.getProductId()).orElse(null);
+
             BigDecimal totalPrice = dto.getUnitPrice().multiply(BigDecimal.valueOf(dto.getQuantity()));
 
-            // UPDATE CART
+            /*
+             * UPDATE EXISTING PRODUCT
+             */
             if (existingCart != null) {
 
                 existingCart.setQuantity(dto.getQuantity());
@@ -63,17 +153,25 @@ public class CoCartService implements ICartService {
 
                 cartRepository.save(existingCart);
 
-                log.info("CART_UPDATED | cartId={} | customerId={} | productId={} | quantity={}", existingCart.getCartId(), dto.getCustomerId(), dto.getProductId(), dto.getQuantity());
+                log.info("CART_UPDATED | cartId={} | customerId={} | outletId={} | productId={} | quantity={}", existingCart.getCartId(), dto.getCustomerId(), existingCart.getOutletId(), dto.getProductId(), dto.getQuantity());
 
                 log.info("SERVICE_END | SAVE_OR_UPDATE_CART_SUCCESS | operation=UPDATE | customerId={}", dto.getCustomerId());
 
                 return COConstants.MSG_CART_UPDATED;
             }
 
-            // CREATE CART ITEM
+            /*
+             * CREATE NEW CART ITEM
+             */
             CoCustomerCart newCart = new CoCustomerCart();
 
             newCart.setCustomerId(dto.getCustomerId());
+
+            /*
+             * IMPORTANT:
+             * Store outletId in customer_cart.
+             */
+            newCart.setOutletId(dto.getOutletId());
 
             newCart.setProductId(dto.getProductId());
 
@@ -87,7 +185,7 @@ public class CoCartService implements ICartService {
 
             cartRepository.save(newCart);
 
-            log.info("CART_CREATED | customerId={} | productId={} | quantity={}", dto.getCustomerId(), dto.getProductId(), dto.getQuantity());
+            log.info("CART_CREATED | customerId={} | outletId={} | productId={} | quantity={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), dto.getQuantity());
 
             log.info("SERVICE_END | SAVE_OR_UPDATE_CART_SUCCESS | operation=CREATE | customerId={}", dto.getCustomerId());
 
@@ -95,13 +193,13 @@ public class CoCartService implements ICartService {
 
         } catch (CartException ex) {
 
-            log.error("BUSINESS_EXCEPTION | SAVE_OR_UPDATE_CART_FAILED | error={}", ex.getMessage(), ex);
+            log.error("BUSINESS_EXCEPTION | SAVE_OR_UPDATE_CART_FAILED | customerId={} | outletId={} | productId={} | error={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), ex.getMessage(), ex);
 
             throw ex;
 
         } catch (Exception ex) {
 
-            log.error("EXCEPTION | SAVE_OR_UPDATE_CART_FAILED | customerId={} | productId={} | error={}", dto.getCustomerId(), dto.getProductId(), ex.getMessage(), ex);
+            log.error("EXCEPTION | SAVE_OR_UPDATE_CART_FAILED | customerId={} | outletId={} | productId={} | error={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), ex.getMessage(), ex);
 
             throw new CartException("Unable to save or update cart");
         }
@@ -124,6 +222,42 @@ public class CoCartService implements ICartService {
                 log.error("CART_EMPTY | customerId={}", customerId);
 
                 throw new CartException(COConstants.MSG_CART_EMPTY);
+            }
+
+            /*
+             * Since one customer can have only one outlet
+             * in the cart, get outletId from the first item.
+             */
+            Integer outletId = cartList.get(0).getOutletId();
+
+            if (outletId == null) {
+
+                log.error("CART_OUTLET_ID_NULL | customerId={} | cartId={}", customerId, cartList.get(0).getCartId());
+
+                throw new CartException("Cart outlet information not found");
+            }
+
+            /*
+             * Defensive validation.
+             *
+             * Every item in the cart must belong to
+             * the same outlet.
+             */
+            for (CoCustomerCart cart : cartList) {
+
+                if (cart.getOutletId() == null) {
+
+                    log.error("CART_ITEM_OUTLET_ID_NULL | customerId={} | cartId={} | productId={}", customerId, cart.getCartId(), cart.getProductId());
+
+                    throw new CartException("Cart item outlet information not found");
+                }
+
+                if (!outletId.equals(cart.getOutletId())) {
+
+                    log.error("MULTIPLE_OUTLETS_IN_CART | customerId={} | expectedOutletId={} | actualOutletId={} | productId={}", customerId, outletId, cart.getOutletId(), cart.getProductId());
+
+                    throw new CartException("Cart contains items from multiple outlets");
+                }
             }
 
             List<CoCartItemResponseDto> items = new ArrayList<>();
@@ -155,17 +289,23 @@ public class CoCartService implements ICartService {
 
             response.setCustomerId(customerId);
 
+            /*
+             * Return the outlet associated with
+             * the customer's current cart.
+             */
+            response.setOutletId(outletId);
+
             response.setItems(items);
 
             response.setGrandTotal(grandTotal);
 
-            log.info("SERVICE_END | GET_CART_SUCCESS | customerId={} | itemCount={} | grandTotal={}", customerId, items.size(), grandTotal);
+            log.info("SERVICE_END | GET_CART_SUCCESS | customerId={} | outletId={} | itemCount={} | grandTotal={}", customerId, outletId, items.size(), grandTotal);
 
             return response;
 
         } catch (CartException ex) {
 
-            log.error("BUSINESS_EXCEPTION | GET_CART_FAILED | error={}", ex.getMessage(), ex);
+            log.error("BUSINESS_EXCEPTION | GET_CART_FAILED | customerId={} | error={}", customerId, ex.getMessage(), ex);
 
             throw ex;
 
@@ -176,7 +316,6 @@ public class CoCartService implements ICartService {
             throw new CartException("Unable to fetch cart");
         }
     }
-
     // ================= REMOVE CART =================
 
     private String removeCartItem(CoCustomerCart existingCart, CoCartUpdateRequestDto dto) {
@@ -210,6 +349,13 @@ public class CoCartService implements ICartService {
 
         validateCustomerId(dto.getCustomerId());
 
+        if (dto.getOutletId() == null || dto.getOutletId() <= 0) {
+
+            log.error("VALIDATION_FAILED | INVALID_OUTLET_ID | outletId={}", dto.getOutletId());
+
+            throw new CartException("Invalid outlet ID");
+        }
+
         if (dto.getProductId() == null || dto.getProductId() <= 0) {
 
             log.error("VALIDATION_FAILED | INVALID_PRODUCT_ID | productId={}", dto.getProductId());
@@ -217,14 +363,18 @@ public class CoCartService implements ICartService {
             throw new CartException("Invalid product ID");
         }
 
-        if (dto.getQuantity() < 0) {
+        if (dto.getQuantity() == null || dto.getQuantity() < 0) {
 
             log.error("VALIDATION_FAILED | INVALID_QUANTITY | quantity={}", dto.getQuantity());
 
             throw new CartException(COConstants.MSG_INVALID_QUANTITY);
         }
 
-        if (dto.getUnitPrice() == null || dto.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
+        /*
+         * Unit price is required only when adding/updating.
+         * For quantity = 0, it is not required.
+         */
+        if (dto.getQuantity() > 0 && (dto.getUnitPrice() == null || dto.getUnitPrice().compareTo(BigDecimal.ZERO) < 0)) {
 
             log.error("VALIDATION_FAILED | INVALID_UNIT_PRICE | unitPrice={}", dto.getUnitPrice());
 
@@ -277,30 +427,22 @@ public class CoCartService implements ICartService {
 
         return value == null ? BigDecimal.ZERO : value;
     }
+
     @Override
     @Transactional(readOnly = true)
     public List<CoCartReminderDto> getCartReminderCustomers() {
 
         log.info("SERVICE_START | GET_CART_REMINDERS");
 
-        List<CoCartReminderProjection> reminders =
-                cartRepository.findEligibleCartReminders();
+        List<CoCartReminderProjection> reminders = cartRepository.findEligibleCartReminders();
 
         List<CoCartReminderDto> response = new ArrayList<>();
 
         for (CoCartReminderProjection cart : reminders) {
 
-            String notificationSubject =
-                    cart.getCartTotal().compareTo(COConstants.HIGH_VALUE_CART_LIMIT) > 0
-                            ? COConstants.HIGH_VALUE_CART
-                            : COConstants.ITEM_ADDED_NOT_ORDERED;
+            String notificationSubject = cart.getCartTotal().compareTo(COConstants.HIGH_VALUE_CART_LIMIT) > 0 ? COConstants.HIGH_VALUE_CART : COConstants.ITEM_ADDED_NOT_ORDERED;
 
-            CoCartReminderDto dto = CoCartReminderDto.builder()
-                    .customerId(cart.getCustomerId())
-                    .cartTotal(cart.getCartTotal())
-                    .lastUpdated(cart.getLastUpdated())
-                    .notificationSubject(notificationSubject)
-                    .build();
+            CoCartReminderDto dto = CoCartReminderDto.builder().customerId(cart.getCustomerId()).cartTotal(cart.getCartTotal()).lastUpdated(cart.getLastUpdated()).notificationSubject(notificationSubject).build();
 
             response.add(dto);
         }
@@ -309,6 +451,7 @@ public class CoCartService implements ICartService {
 
         return response;
     }
+
     @Override
     public void processCartReminders() {
 
@@ -329,15 +472,13 @@ public class CoCartService implements ICartService {
 
             try {
 
-                log.info("Publishing Cart Reminder for Customer : {}",
-                        reminder.getCustomerId());
+                log.info("Publishing Cart Reminder for Customer : {}", reminder.getCustomerId());
 
                 cartReminderKafkaProducer.sendCartReminder(reminder);
 
             } catch (Exception ex) {
 
-                log.error("Failed to publish cart reminder for customer {}",
-                        reminder.getCustomerId(), ex);
+                log.error("Failed to publish cart reminder for customer {}", reminder.getCustomerId(), ex);
             }
         }
 
