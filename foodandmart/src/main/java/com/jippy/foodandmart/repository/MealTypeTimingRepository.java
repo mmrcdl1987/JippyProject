@@ -3,6 +3,7 @@ package com.jippy.foodandmart.repository;
 import com.jippy.foodandmart.entity.MealTypeTiming;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.util.Lazy;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalTime;
@@ -32,4 +33,6 @@ public interface MealTypeTimingRepository extends JpaRepository<MealTypeTiming, 
                 )
             """)
     Optional<MealTypeTiming> findCurrentMealType(LocalTime currentTime);
+
+   Optional<MealTypeTiming> mealTypeTimingsId(Integer mealTypeSlotId);
 }

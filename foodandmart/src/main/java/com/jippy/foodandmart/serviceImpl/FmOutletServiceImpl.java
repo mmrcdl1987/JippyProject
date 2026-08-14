@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
@@ -8,8 +9,10 @@ import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
+import com.jippy.foodandmart.feignClients.DivisionFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
+import com.jippy.foodandmart.projections.FmActivePromotionDiscountsProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import com.jippy.foodandmart.repository.*;
@@ -21,16 +24,21 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Service implementation for outlet management.
@@ -65,8 +73,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmCityRepository cityRepository;
    // private final IFmApprovalRequestService approvalRequestService;
     private final FmUserKycRepository userKycRepository;
-
-
+    private final DivisionFeignClient divisionFeignClient;
+    private final PromotionPlanRepository promotionPlanRepository;
+    private final ObjectMapper objectMapper;
+    private final StringRedisTemplate redisTemplate;
+    private final MealTypeTimingRepository mealTypeTimingRepository;
 
     @Override
     @Transactional
@@ -897,51 +908,403 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         log.info("Fetching outlet details for outletId={}, userType={}, customerId={}", outletId, userType, customerId);
 
-        List<FmOutletMenuProjection> rows = outletRepository.getOutletMenu(outletId);
+        FmOutletDetailsDto outletDtoresponse = new FmOutletDetailsDto();
 
-        if (rows == null || rows.isEmpty()) {
-            log.error("No data found for outletId={}", outletId);
-            throw new ResourceNotFoundException("Outlet not found with id: " + outletId);
-        }
+        // 1. Construct userType-specific Redis Key
+        String cacheKey = String.format("menu:outlet:%d:type:%s", outletId, userType.toUpperCase());
+        try{
+            // =========================================================================
+            // STEP 1: CHECK REDIS FIRST (Fast Path)
+            // =========================================================================
+            String cachedJson = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedJson != null) {
+                log.info("Cache HIT for outlet menu key: {}", cacheKey);
+                return objectMapper.readValue(cachedJson, FmOutletDetailsDto.class);
+            }
 
-        FmOutletDetailsDto outletDtoresponse = FmOutletMapper.mapToOutletDto(rows, userType);
+            // =========================================================================
+            // STEP 2: FETCH BASE DATA
+            // =========================================================================
 
-        log.debug("Added For UI - Outlet availability : {}", outletDtoresponse.getIsAvailable());
+            List<FmOutletMenuProjection> rows = outletRepository.getOutletMenu(outletId);
+
+            if (rows == null || rows.isEmpty()) {
+                log.error("No data found for outletId={}", outletId);
+                throw new ResourceNotFoundException("Outlet not found with id: " + outletId);
+            }
+
+            LocalDateTime earliestEndTime = null;
+            
+             outletDtoresponse = FmOutletMapper.mapToOutletDto(rows, userType);
+
+             log.info("============outletDtoresponse================"+outletDtoresponse);
+
+            if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)){
+
+                // =========================================================================
+                // STEP 3: Fetch active discounts
+                // =========================================================================
+
+                //Get active promotions
+                List<FmActivePromotionDiscountsProjection> activePromotionDiscountsProjections =
+                        promotionPlanRepository.getActivePromtionDiscounts(LocalDateTime.now(),outletId);
+
+                log.info("Active Promotion Discounts {}",activePromotionDiscountsProjections);
+
+                //Get active coupons and price drops
+                ResponseEntity<List<FmActiveDiscountsResponseDto>> rawActiveDiscountsResponse =
+                        divisionFeignClient.getActiveDiscounts();
+
+                List<FmActiveDiscountsResponseDto> rawActiveDiscounts = rawActiveDiscountsResponse.getBody();
+
+                // EARLY EXIT GUARD: If both sources are completely empty, skip ALL processing
+                boolean hasPromos = activePromotionDiscountsProjections != null && !activePromotionDiscountsProjections.isEmpty();
+                boolean hasDivisionDiscounts = rawActiveDiscounts != null && !rawActiveDiscounts.isEmpty();
+
+                if (!hasPromos && !hasDivisionDiscounts) {
+                    log.info("Zero active promotions or coupons found. Proceeding with standard menu pricing.");
+
+                    // Cache the raw menu in Redis with standard 10-minute TTL so subsequent calls hit Redis Step 1
+                    saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
+
+                    return outletDtoresponse;
+                }
+
+                // -------------------------------------------------------------------------
+                //  Filter Division Discounts by FM Meal Type Slot Timings
+                // -------------------------------------------------------------------------
+                LocalTime currentTime = LocalTime.now();
+
+                List<FmActiveDiscountsResponseDto> activeDiscountsResponseDtoList = Optional.ofNullable(rawActiveDiscounts)
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .filter(discount -> isDiscountActiveInCurrentSlot(discount, currentTime))
+                        .collect(Collectors.toList());
+
+                log.info("Division discounts valid for current meal slot ({}): {}", currentTime, activeDiscountsResponseDtoList);
+
+                // Index Merchant Promotion Projections by outletId (Priority 2)
+                Map<Integer, List<FmActivePromotionDiscountsProjection>> merchantPromotionsMap = Optional.ofNullable(activePromotionDiscountsProjections)
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .filter(p -> p.getOutletId() != null)
+                        .collect(Collectors.groupingBy(FmActivePromotionDiscountsProjection::getOutletId));
+
+                // =========================================================================
+                // STEP 4: APPLY PRIORITY LOGIC & MAP TO RESPONSE
+                // Priority: Merchant Promotion (1) > Division Coupon/Price Drop (2) > None (3)
+                // =========================================================================
+
+                if (merchantPromotionsMap.containsKey(outletId)) {
+
+                    log.info("Given Outlet :{} has merchant promotions",outletId);
+                    // PRIORITY 1: Merchant Promotion
+                    List<FmActivePromotionDiscountsProjection> promos = merchantPromotionsMap.get(outletId);
+                    applyMerchantPromotions(outletDtoresponse, promos);
+
+                    // Capture end time for TTL
+                    earliestEndTime = promos.stream()
+                            .map(FmActivePromotionDiscountsProjection::getEndDateTime)
+                            .filter(Objects::nonNull)
+                            .min(LocalDateTime::compareTo)
+                            .orElse(null);
+
+                } else  {
+
+                    log.info("Given Outlet :{} has coupons/price drops ",outletId);
+
+                    // Index Division Active Discounts by outletId (Priority 1)
+                    // (Grouping by outletId in case an outlet has multiple discounts, or toMap if 1 discount per outlet)
+                    Map<Integer, List<FmActiveDiscountsResponseDto>> divisionDiscountsMap = Optional.ofNullable(activeDiscountsResponseDtoList)
+                            .orElse(Collections.emptyList())
+                            .stream()
+                            .filter(d -> d.getOutletId() != null)
+                            .collect(Collectors.groupingBy(FmActiveDiscountsResponseDto::getOutletId));
+
+                    // PRIORITY 2: Division Coupon / Price Drop
+                    List<FmActiveDiscountsResponseDto> feignDiscounts = divisionDiscountsMap.get(outletId);
+
+                    // SAFE GUARD: Check if feignDiscounts is actually present for this outlet
+                    if (feignDiscounts != null && !feignDiscounts.isEmpty()) {
+                        applyDivisionDiscounts(outletDtoresponse, feignDiscounts);
+
+                        // Calculate the earliest slot end time among active discounts
+                        earliestEndTime = feignDiscounts.stream()
+                                .map(discount -> getActiveMealSlotEndTime(discount, LocalDateTime.now()))
+                                .filter(Objects::nonNull)
+                                .min(LocalDateTime::compareTo)
+                                .orElse(null);
+                    } else {
+                        log.info("No division discounts match outletId={}", outletId);
+                    }
+                }
+
+            }
+
+            // =========================================================================
+            // STEP 5: PUSH DATA TO REDIS (Lazy Write)
+            // =========================================================================
+
+          LocalDateTime now = LocalDateTime.now();
+
+            if ("CUSTOMER".equalsIgnoreCase(userType) && earliestEndTime != null && earliestEndTime.isAfter(now)) {
+                // TTL matches either current meal slot end time OR merchant plan end date
+                long ttlSeconds = Duration.between(now, earliestEndTime).getSeconds();
+
+                // Safety guard: ensure TTL is at least 30 seconds
+                ttlSeconds = Math.max(30, ttlSeconds);
+
+                saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
+
+                //redisTemplate.opsForValue().set(cacheKey, jsonPayload, ttlSeconds, TimeUnit.SECONDS);
+               // log.info("Cached CUSTOMER view [{}] in Redis with offer/slot TTL: {}s", cacheKey, ttlSeconds);
+            } else {
+                // Merchant view or No-Offer Customer view: Standard 10 min TTL
+                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
+              //  redisTemplate.opsForValue().set(cacheKey, jsonPayload, 5, TimeUnit.MINUTES);
+              //  log.info("Cached [{}] in Redis with standard TTL: 300s", cacheKey);
+            }
+
+
+            log.debug("Added For UI - Outlet availability : {}", outletDtoresponse.getIsAvailable());
 //      -----------------------------------------------------------------------------------
-        /*
-         * Default value.
-         * If customerId is not passed,
-         * favourite should be false.
-         */
-        outletDtoresponse.setIsFavourite(false);
+            /*
+             * Default value.
+             * If customerId is not passed,
+             * favourite should be false.
+             */
+            outletDtoresponse.setIsFavourite(false);
 
 //        Check favourite only for CUSTOMER.
-        if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && customerId != null) {
+            if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && customerId != null) {
 
-            log.info("Checking favourite status for customerId={} and outletId={}", customerId, outletId);
+                log.info("Checking favourite status for customerId={} and outletId={}", customerId, outletId);
 
 //      ----------------------------------------------------------------------------
-            Optional<FmFavoriteOutlet> favourite =
-                    favoriteOutletRepository.findByCustomerIdAndFavoriteIdAndFavouriteType(customerId, outletId, FmAppConstants.TYPE_OUTLET);
+                Optional<FmFavoriteOutlet> favourite =
+                        favoriteOutletRepository.findByCustomerIdAndFavoriteIdAndFavouriteType(customerId, outletId, FmAppConstants.TYPE_OUTLET);
 
 //  favourite.isPresent() --> returns true if record exists in the favourite table
-            outletDtoresponse.setIsFavourite(favourite.isPresent());
+                outletDtoresponse.setIsFavourite(favourite.isPresent());
 
-            log.info("Favourite status: {}", favourite.isPresent());
+                log.info("Favourite status: {}", favourite.isPresent());
 
-            /*
-             * Populate product favourite status for logged-in customer.
-             */
-            log.info("Checking is_product_favourite status");
+                /*
+                 * Populate product favourite status for logged-in customer.
+                 */
+                log.info("Checking is_product_favourite status");
 
-            setProductFavouriteStatus(outletDtoresponse, customerId);
+                setProductFavouriteStatus(outletDtoresponse, customerId);
 
-        }
+            }
 //  ---------------------------------------------------------------------------
 
-        log.info("Successfully fetched outlet details for outletId={}", outletId);
+            log.info("Successfully fetched outlet details for outletId={}", outletId);
 
-        return outletDtoresponse;
+            return outletDtoresponse;
+        } catch (Exception e) {
+            log.error("Corrupted cache payload for key: {}, fetching from DB", cacheKey, e);
+        }
+
+        return  outletDtoresponse;
+
+    }
+
+    private void saveToRedis(String cacheKey, FmOutletDetailsDto outletDtoresponse, long time, TimeUnit timeUnit) {
+       try{
+           String jsonPayload = objectMapper.writeValueAsString(outletDtoresponse);
+           LocalDateTime now = LocalDateTime.now();
+
+           redisTemplate.opsForValue().set(cacheKey, jsonPayload, time, timeUnit);
+           log.info("Cached [{}] in Redis with standard TTL:{} {} ", cacheKey,time,timeUnit);
+       }catch (Exception e){
+           log.error("An unexpected error occurs in redis push {} ",e.getMessage());
+       }
+
+
+    }
+
+    private boolean isDiscountActiveInCurrentSlot(FmActiveDiscountsResponseDto discount, LocalTime currentTime) {
+
+        // 1. Get list of slot IDs from the comma-separated string ("2,3" -> [2, 3])
+        List<Integer> slotIds = discount.getMealTypeSlotIds();
+
+        // If no slots are specified, the offer applies all day
+        if (slotIds == null || slotIds.isEmpty()) {
+            return true;
+        }
+
+        // 2. Fetch all matching slot definitions in a single database query
+        List<MealTypeTiming> slots = mealTypeTimingRepository.findAllById(slotIds);
+
+        // If no matching slot records found in DB, default to active (or return false based on your business rule)
+        if (slots.isEmpty()) {
+            return true;
+        }
+
+        // 3. Check if current time falls into ANY of the assigned slots (e.g. Morning OR Evening)
+        for (MealTypeTiming slot : slots) {
+            LocalTime startTime = slot.getFromTime(); // e.g., 05:00:00
+            LocalTime endTime = slot.getToTime();     // e.g., 11:00:00
+
+            if (startTime == null || endTime == null) {
+                continue;
+            }
+
+            boolean isActiveInThisSlot;
+
+            // Handling overnight slots (e.g., Midnight Dinner 23:00 to 02:00)
+            if (endTime.isBefore(startTime)) {
+                isActiveInThisSlot = !currentTime.isBefore(startTime) || !currentTime.isAfter(endTime);
+            } else {
+                // Standard daytime slot (e.g., Breakfast 05:00 to 11:00)
+                isActiveInThisSlot = !currentTime.isBefore(startTime) && !currentTime.isAfter(endTime);
+            }
+
+            // If current time hits ANY valid slot, return true immediately!
+            if (isActiveInThisSlot) {
+                return true;
+            }
+        }
+
+        // Current time matches none of the configured slots
+        return false;
+    }
+
+    private void applyDivisionDiscounts(FmOutletDetailsDto outletDtoresponse, List<FmActiveDiscountsResponseDto> feignDiscounts) {
+
+        if (outletDtoresponse == null || feignDiscounts == null || feignDiscounts.isEmpty()) {
+            return;
+        }
+
+        // 1. Separate Product-Specific Discounts (Price Drops) and Outlet-Level Discounts (Coupons)
+        Map<Integer, FmActiveDiscountsResponseDto> productDiscountsMap = feignDiscounts.stream()
+                .filter(d -> d.getProductId() != null)
+                .collect(Collectors.toMap(
+                        FmActiveDiscountsResponseDto::getProductId,
+                        d -> d,
+                        (existing, replacement) -> existing
+                ));
+
+        // Find outlet-wide coupon (where productId is null)
+        Optional<FmActiveDiscountsResponseDto> outletDiscountsDto = feignDiscounts.stream()
+                .filter(d -> d.getProductId() == null && ("COUPON".equalsIgnoreCase(d.getSourceType())
+                || "PRICE_DROP" .equalsIgnoreCase(d.getSourceType()) ))
+                .findFirst();
+
+        // 2. Attach Outlet-Level Offer if present
+        if (outletDiscountsDto.isPresent()) {
+            FmActiveDiscountsResponseDto outletDiscounts = outletDiscountsDto.get();
+
+            log.info("Outlet level discounts are there  ");
+
+            // Map to activeOffer DTO on root outlet object
+           // FmActiveDiscountsResponseDto activeOffer = new FmActiveDiscountsResponseDto();
+
+            FmActiveDiscountsDto activeOffer = FmOutletMapper.mapToActiveDiscounts(outletDiscounts);
+
+            outletDtoresponse.setActiveDiscounts(activeOffer);
+        }
+
+        // 3. Apply Product-Level discounts
+        if (outletDtoresponse.getCategories() != null && !productDiscountsMap.isEmpty()) {
+            for (FmCategoryDto category : outletDtoresponse.getCategories()) {
+                if (category.getProducts() == null) continue;
+
+                for (FmProductDto product : category.getProducts()) {
+
+                    log.info("Product level discounts are there ");
+
+                    Integer productId = product.getProductId();
+
+                    if (productDiscountsMap.containsKey(productId)) {
+                        FmActiveDiscountsResponseDto productDiscounts = productDiscountsMap.get(productId);
+
+                        FmActiveDiscountsDto activeOffer = FmOutletMapper.mapToActiveDiscounts(productDiscounts);
+                        product.setActiveDiscountsDto(activeOffer);
+
+                    }
+                }
+            }
+        }
+    }
+
+    private void applyMerchantPromotions(FmOutletDetailsDto outletDtoresponse, List<FmActivePromotionDiscountsProjection> promos) {
+        if (outletDtoresponse == null || outletDtoresponse.getCategories() == null || promos == null) {
+            return;
+        }
+
+        // Index promotions by productId for fast O(1) lookup
+        Map<Integer, FmActivePromotionDiscountsProjection> promoByProductMap = promos.stream()
+                .filter(p -> p.getProductId() != null)
+                .collect(Collectors.toMap(
+                        FmActivePromotionDiscountsProjection::getProductId,
+                        p -> p,
+                        (existing, replacement) -> existing // Keep first in case of duplicates
+                ));
+
+        // Iterate through categories and products to apply discounts
+        for (FmCategoryDto category : outletDtoresponse.getCategories()) {
+            if (category.getProducts() == null) continue;
+
+            for (FmProductDto product : category.getProducts()) {
+                Integer productId = product.getProductId();
+
+                if (promoByProductMap.containsKey(productId)) {
+                    FmActivePromotionDiscountsProjection promo = promoByProductMap.get(productId);
+
+                    FmActiveDiscountsDto activeDiscountsDto = new FmActiveDiscountsDto();
+                    // Set discounted details on product DTO
+                    activeDiscountsDto.setPlanType(promo.getPlanType());
+                    activeDiscountsDto.setDiscountAmount(promo.getOfferAmount());
+                    activeDiscountsDto.setMinOrderValue(promo.getMinimumOrderValue());
+                    activeDiscountsDto.setOfferName(promo.getOfferName());
+                    activeDiscountsDto.setPriceType(promo.getOfferType());
+                    //activeDiscountsDto.setPromotionScheduleId(promo.getPromotion);
+
+                    product.setActiveDiscountsDto(activeDiscountsDto);
+                }
+            }
+        }
+
+
+    }
+
+    private LocalDateTime getActiveMealSlotEndTime(FmActiveDiscountsResponseDto discount, LocalDateTime now) {
+        List<Integer> slotIds = discount.getMealTypeSlotIds();
+
+        // If no slot is attached, fall back to the campaign's endDateTime
+        if (slotIds == null || slotIds.isEmpty()) {
+            return discount.getEndDateTime();
+        }
+
+        List<MealTypeTiming> slots = mealTypeTimingRepository.findAllById(slotIds);
+        LocalTime currentTime = now.toLocalTime();
+
+        for (MealTypeTiming slot : slots) {
+            LocalTime startTime = slot.getFromTime();
+            LocalTime endTime = slot.getToTime();
+
+            if (startTime == null || endTime == null) continue;
+
+            boolean isActive = (endTime.isBefore(startTime))
+                    ? (!currentTime.isBefore(startTime) || !currentTime.isAfter(endTime))
+                    : (!currentTime.isBefore(startTime) && !currentTime.isAfter(endTime));
+
+            if (isActive) {
+                // Determine if the active slot ends today or tomorrow morning
+                if (endTime.isBefore(startTime) && currentTime.isAfter(startTime)) {
+                    // Overnight slot (e.g., 23:00 to 02:00) ending tomorrow
+                    return now.plusDays(1).with(endTime);
+                } else {
+                    // Daytime slot ending today
+                    return now.with(endTime);
+                }
+            }
+        }
+
+        // Fallback to plan endDateTime if no slot match is found
+        return discount.getEndDateTime();
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.PromotionPlan;
+import com.jippy.foodandmart.projections.FmActivePromotionDiscountsProjection;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -9,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 @Repository
@@ -88,4 +91,47 @@ public interface PromotionPlanRepository extends
             @Param("outletId") Integer outletId,
             @Param("status") String status,
             Pageable pageable);
+
+    @Query(value = """
+            SELECT
+                pp.promotion_plans_id,
+                pp.outlet_id,
+                ppt.plan_name AS plan_type,
+                pp.offer_name,
+                pp.offer_type,
+                pp.offer_amount,
+                pp.minimum_order_value,
+                -- If product_id in plan_products is NULL, fallback to product_id from the category join
+                COALESCE(ppp.product_id, p.product_id) AS product_id,
+                ppp.outlet_category_id,
+                -- 💡 CALCULATE END DATE TIME FOR REDIS TTL:
+                    -- If end_time exists: plan_end_date + plan_end_time
+                    -- If end_time IS NULL: plan_end_date + 23:59:59
+                    CASE
+                        WHEN pp.plan_end_time IS NOT NULL
+                            THEN (pp.plan_end_date + pp.plan_end_time)
+                        ELSE
+                            (pp.plan_end_date + TIME '23:59:59')
+                    END AS end_date_time
+            FROM jippy_fm.promotion_plans pp
+            INNER JOIN jippy_fm.promotion_plan_types ppt
+                ON pp.promotion_plan_types_id = ppt.promotion_plan_types_id
+            LEFT JOIN jippy_fm.promotion_plan_products ppp
+                ON pp.promotion_plans_id = ppp.promotion_plans_id
+                
+            -- Join products table when product_id is NULL to expand category into individual products
+            
+            LEFT JOIN jippy_fm.products p
+                ON p.outlet_category_id = ppp.outlet_category_id
+               AND ppp.product_id IS NULL
+            WHERE
+                CURRENT_DATE BETWEEN pp.plan_start_date AND pp.plan_end_date
+                AND (
+                    (pp.plan_start_time IS NULL AND pp.plan_end_time IS NULL)
+                    OR
+                    (:now BETWEEN pp.plan_start_time AND pp.plan_end_time)
+                ) AND pp.outlet_id = :outletId ;""",
+    nativeQuery = true)
+    List<FmActivePromotionDiscountsProjection> getActivePromtionDiscounts(@Param("now") LocalDateTime now,
+            @Param("outletId") Integer outletId);
 }

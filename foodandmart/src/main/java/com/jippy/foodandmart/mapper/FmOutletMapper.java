@@ -152,6 +152,8 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -775,5 +777,38 @@ public final class FmOutletMapper {
         }
 
         return new BigDecimal(o.toString());
+    }
+
+    public static FmActiveDiscountsDto mapToActiveDiscounts(FmActiveDiscountsResponseDto outletDiscounts) {
+
+        FmActiveDiscountsDto activeOffer = new FmActiveDiscountsDto();
+
+        activeOffer.setDiscountAmount(outletDiscounts.getDiscountAmount());
+        activeOffer.setPriceType(outletDiscounts.getPriceType());
+        activeOffer.setCouponCode(outletDiscounts.getCouponCode());
+        activeOffer.setMinOrderValue(outletDiscounts.getMinOrderValue());
+        activeOffer.setEndDateTime(outletDiscounts.getEndDateTime());
+        activeOffer.setSourceId(outletDiscounts.getSourceId());
+        activeOffer.setSourceType(outletDiscounts.getSourceType());
+        activeOffer.setStartDateTime(outletDiscounts.getStartDateTime());
+        activeOffer.setPromotionScheduleId(outletDiscounts.getPromotionScheduleId());
+        activeOffer.setUsageLimitPerUser(outletDiscounts.getUsageLimitPerUser());
+
+        if(outletDiscounts.getSourceType().equals("PRICE_DROP")){
+
+            log.info("Outlet has price drop ");
+            Duration duration = Duration.between(LocalDateTime.now(), outletDiscounts.getEndDateTime());
+
+            long hours = duration.toHours();
+            long minutes = duration.toMinutesPart();
+            long seconds = duration.toSecondsPart();
+            String remainingTimeStr = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+            activeOffer.setRemainingTime(remainingTimeStr);
+
+            log.info("===================={} ",remainingTimeStr);
+        }
+
+        return activeOffer;
     }
 }

@@ -1,9 +1,11 @@
 package com.jippy.division.mapper;
 
+import com.jippy.division.dto.DivActiveDiscountsResponseDto;
 import com.jippy.division.dto.DivCampaignRequestDto;
 import com.jippy.division.entity.DivCouponMappingOutletProduct;
 import com.jippy.division.entity.DivPriceDropMappingOutletsProduct;
 import com.jippy.division.entity.DivPromotionDate;
+import com.jippy.division.projection.DivActiveDiscountsProjection;
 
 import java.time.LocalDateTime;
 
@@ -94,5 +96,24 @@ public class DivCampaignMapper {
         entity.setCreatedBy(createdBy);
 
         return entity;
+    }
+
+    public static DivActiveDiscountsResponseDto mapToActiveDiscounts(DivActiveDiscountsProjection activeDiscountsProjection, DivActiveDiscountsResponseDto activeDiscountsResponseDto) {
+
+        activeDiscountsResponseDto.setDiscountAmount(activeDiscountsProjection.getDiscountAmount());
+        activeDiscountsResponseDto.setEndDateTime(activeDiscountsProjection.getEndDateTime());
+        activeDiscountsResponseDto.setCouponCode(activeDiscountsProjection.getCouponCode());
+        activeDiscountsResponseDto.setSourceId(activeDiscountsProjection.getSourceId());
+        activeDiscountsResponseDto.setSourceType(activeDiscountsProjection.getSourceType());
+        activeDiscountsResponseDto.setStartDateTime(activeDiscountsProjection.getStartDateTime());
+        activeDiscountsResponseDto.setPriceType(activeDiscountsProjection.getpriceModelName());
+        activeDiscountsResponseDto.setMinOrderValue(activeDiscountsProjection.getMinOrderValue());
+        activeDiscountsResponseDto.setProductId(activeDiscountsProjection.getProductId());
+        activeDiscountsResponseDto.setOutletId(activeDiscountsProjection.getOutletId());
+        activeDiscountsResponseDto.setUsageLimitPerUser(activeDiscountsProjection.getUsageLimitPerUser());
+        activeDiscountsResponseDto.setPromotionScheduleId(activeDiscountsProjection.getPromotionScheduleId());
+        activeDiscountsResponseDto.setMealTypeSlotIdsStr(activeDiscountsProjection.getMealTypeSlotIdsStr());
+
+        return activeDiscountsResponseDto;
     }
 }

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -23,6 +24,25 @@ public class FmProductDto {
     @Schema(example = "true",
             description = "Indicates whether this product is marked as favourite by the customer.")
     private Boolean isProductFavourite;
+
+    // All these fields are related to discounts
+//    private String sourceType;
+//    private Integer sourceId;
+//    private BigDecimal minimumOrderValue;
+//    private String priceType;
+//    private BigDecimal discountValue;
+//    private Integer usageLimitPerUser;
+//    private String couponCode;
+//    private LocalDateTime startDateTime;
+//    private LocalDateTime endDateTime;
+
+    private FmActiveDiscountsDto activeDiscountsDto;
+
+//    //Merchant promotions has these values
+//    private String planType;
+//    private  String offerName;
+
+
 
     private List<FmProductVariantDTO> variants;
     private List<FmProductTimingDto> productTimings;
