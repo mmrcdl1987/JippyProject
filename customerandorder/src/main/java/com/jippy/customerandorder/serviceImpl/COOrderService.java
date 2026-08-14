@@ -2,6 +2,7 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.entity.CoCustomerCart;
 import com.jippy.customerandorder.entity.CoMealSubscription;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
@@ -9,11 +10,7 @@ import com.jippy.customerandorder.exception.OrderException;
 import com.jippy.customerandorder.iservice.IOrderService;
 import com.jippy.customerandorder.mapper.COEventMapper;
 import com.jippy.customerandorder.mapper.CoOrderMapper;
-import com.jippy.customerandorder.repository.CoOrderItemRepository;
-import com.jippy.customerandorder.repository.CoOrderPriceBreakupRepository;
-import com.jippy.customerandorder.repository.CoOrderRepository;
-import com.jippy.customerandorder.repository.CoOrderSequenceRepository;
-import com.jippy.customerandorder.repository.MealSubscriptionRepository;
+import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +35,8 @@ public class COOrderService implements IOrderService {
     private final CoOrderRepository orderRepository;
     private final CoOrderItemRepository orderItemRepository;
     private final CoOrderPriceBreakupRepository priceRepository;
-
+    private final CoCustomerCartRepository cartRepository;
     private final MealSubscriptionRepository subscriptionRepository;
-
     private final CoOrderMapper orderMapper;
     private final CoOrderSequenceRepository sequenceRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -57,14 +53,13 @@ public class COOrderService implements IOrderService {
         try {
 
             validatePlaceOrderRequest(dto);
+            validateCartOutlet(dto);
+
 
             /*
              * NORMAL ORDER
              */
-            if (COConstants.ORDER_TYPE_NORMAL.equalsIgnoreCase(dto.getOrderType()) ||
-                    COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType()) ||
-                    COConstants.COMMUNITY_ORDER_ORDER_TYPE.equals(dto.getOrderType())||
-                    COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE.equals(dto.getOrderType())) {
+            if (COConstants.ORDER_TYPE_NORMAL.equalsIgnoreCase(dto.getOrderType()) || COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType()) || COConstants.COMMUNITY_ORDER_ORDER_TYPE.equals(dto.getOrderType()) || COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE.equals(dto.getOrderType())) {
 
                 return processNormalOrder(dto);
             }
@@ -106,12 +101,17 @@ public class COOrderService implements IOrderService {
         CoOrder order = orderMapper.mapToOrder(dto);
 
         order.setOrderId(orderId);
-
         CoOrder savedOrder = orderRepository.save(order);
 
         saveOrderItems(dto.getItems(), orderId);
 
         CoOrderPriceBreakup savedOrderPriceBreakUp = priceRepository.save(orderMapper.mapToPrice(dto, orderId));
+
+        /*
+         * Clear customer's cart only after the order
+         * and its related data have been successfully saved.
+         */
+        clearCustomerCart(dto.getCustomerId());
         CoPlaceOrderRequestDto updatedDto = new CoPlaceOrderRequestDto();
 
         updatedDto.setOrderId(savedOrder.getOrderId());
@@ -127,6 +127,15 @@ public class COOrderService implements IOrderService {
         log.info("SERVICE_END | PROCESS_NORMAL_ORDER_SUCCESS | orderId={}", orderId);
 
         return buildResponse(COConstants.MSG_ORDER_CREATED, null, List.of(orderId), updatedDto);
+    }
+
+    private void clearCustomerCart(Integer customerId) {
+
+        log.info("SERVICE_START | CLEAR_CUSTOMER_CART | customerId={}", customerId);
+
+        cartRepository.deleteByCustomerId(customerId);
+
+        log.info("SERVICE_END | CLEAR_CUSTOMER_CART_SUCCESS | customerId={}", customerId);
     }
 
     private CoPlaceOrderResponseDto processRecurringOrders(CoPlaceOrderRequestDto dto) {
@@ -433,7 +442,7 @@ public class COOrderService implements IOrderService {
 
         response.setCreatedAt(LocalDateTime.now());
 
-        if(dto.getOrderType().equals("NORMAL")){
+        if (dto.getOrderType().equals("NORMAL")) {
             response.setOrderTotalAmount(dto.getOrderTotalAmount());
             response.setOrderId(dto.getOrderId());
             response.setOutletId(dto.getOutletId());
@@ -533,7 +542,7 @@ public class COOrderService implements IOrderService {
 
         dto.setOutletId(order.getOutletId());
 
-        return  dto;
+        return dto;
     }
 
     @Override
@@ -549,6 +558,63 @@ public class COOrderService implements IOrderService {
         orderRepository.save(order);
 
         log.info("SERVICE_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
+    }
+
+    private void validateCartOutlet(CoPlaceOrderRequestDto dto) {
+
+        log.info("SERVICE_START | VALIDATE_CART_OUTLET | customerId={} | requestedOutletId={}", dto.getCustomerId(), dto.getOutletId());
+
+        List<CoCustomerCart> cartItems = cartRepository.findByCustomerId(dto.getCustomerId());
+
+        if (cartItems == null || cartItems.isEmpty()) {
+
+            log.error("VALIDATION_FAILED | CART_EMPTY | customerId={}", dto.getCustomerId());
+
+            throw new OrderException(COConstants.MSG_CART_EMPTY);
+        }
+
+        Integer cartOutletId = cartItems.get(0).getOutletId();
+
+        if (cartOutletId == null) {
+
+            log.error("VALIDATION_FAILED | CART_OUTLET_ID_MISSING | customerId={}", dto.getCustomerId());
+
+            throw new OrderException("Cart outlet information not found");
+        }
+
+        /*
+         * Verify that every cart item belongs
+         * to the same outlet.
+         */
+        for (CoCustomerCart cartItem : cartItems) {
+
+            if (cartItem.getOutletId() == null) {
+
+                log.error("VALIDATION_FAILED | CART_ITEM_OUTLET_ID_MISSING | customerId={} | cartId={} | productId={}", dto.getCustomerId(), cartItem.getCartId(), cartItem.getProductId());
+
+                throw new OrderException("Cart item outlet information not found");
+            }
+
+            if (!cartOutletId.equals(cartItem.getOutletId())) {
+
+                log.error("VALIDATION_FAILED | MULTIPLE_OUTLETS_IN_CART | customerId={} | expectedOutletId={} | actualOutletId={} | productId={}", dto.getCustomerId(), cartOutletId, cartItem.getOutletId(), cartItem.getProductId());
+
+                throw new OrderException("Cart contains items from multiple outlets");
+            }
+        }
+
+        /*
+         * Compare cart outlet with outlet
+         * requested for placing the order.
+         */
+        if (!cartOutletId.equals(dto.getOutletId())) {
+
+            log.error("VALIDATION_FAILED | CART_ORDER_OUTLET_MISMATCH | customerId={} | cartOutletId={} | orderOutletId={}", dto.getCustomerId(), cartOutletId, dto.getOutletId());
+
+            throw new OrderException("Selected outlet does not match the cart outlet");
+        }
+
+        log.info("SERVICE_END | VALIDATE_CART_OUTLET_SUCCESS | customerId={} | outletId={}", dto.getCustomerId(), cartOutletId);
     }
 
 

@@ -12,6 +12,9 @@ public class CoCartUpdateRequestDto  {
     private Integer customerId;
 
     @NotNull
+    private Integer outletId;
+
+    @NotNull
     private Integer productId;
 
     @NotNull

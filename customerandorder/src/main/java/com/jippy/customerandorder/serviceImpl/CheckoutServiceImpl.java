@@ -40,7 +40,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             CoCartResponseDto cartResponse = cartService.getCart(requestDto.getCustomerId());
 
-            validateCart(cartResponse, requestDto.getCustomerId());
+            validateCart(cartResponse, requestDto.getCustomerId(), requestDto.getOutletId());
 
             CoOrderSettings coOrderSettings = getOrderSettings();
 
@@ -123,13 +123,27 @@ public class CheckoutServiceImpl implements ICheckoutService {
         }
     }
 
-    private void validateCart(CoCartResponseDto cartResponse, Integer customerId) {
+    private void validateCart(CoCartResponseDto cartResponse, Integer customerId, Integer requestedOutletId) {
 
         if (cartResponse == null || cartResponse.getItems() == null || cartResponse.getItems().isEmpty()) {
 
             log.error("CART_EMPTY | customerId={}", customerId);
 
             throw new CoBadRequestException(COConstants.MSG_CART_EMPTY);
+        }
+
+        if (cartResponse.getOutletId() == null) {
+
+            log.error("CART_OUTLET_ID_MISSING | customerId={}", customerId);
+
+            throw new CoBadRequestException("Cart outlet information not found");
+        }
+
+        if (!cartResponse.getOutletId().equals(requestedOutletId)) {
+
+            log.error("CART_OUTLET_MISMATCH | customerId={} | cartOutletId={} | requestedOutletId={}", customerId, cartResponse.getOutletId(), requestedOutletId);
+
+            throw new CoBadRequestException("Selected outlet does not match the cart outlet");
         }
     }
 
@@ -209,6 +223,8 @@ public class CheckoutServiceImpl implements ICheckoutService {
     private CoCheckoutResponseDto buildCheckoutResponse(CoCartResponseDto cartResponse, BigDecimal itemTotal, BigDecimal deliveryCharge, BigDecimal platformFee, BigDecimal surgeFee, BigDecimal packagingFee, BigDecimal foodTax, BigDecimal deliveryTax, BigDecimal taxesAndCharges, BigDecimal couponDiscount, BigDecimal deliveryTip, BigDecimal toPay, Boolean codAvailable) {
 
         CoCheckoutResponseDto response = new CoCheckoutResponseDto();
+
+        response.setOutletId(cartResponse.getOutletId());
 
         response.setItems(cartResponse.getItems());
 

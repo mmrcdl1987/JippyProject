@@ -7,7 +7,12 @@ import java.util.List;
 
 @Data
 public class CoCartResponseDto {
+
     private Integer customerId;
+
+    private Integer outletId;
+
     private List<CoCartItemResponseDto> items;
+
     private BigDecimal grandTotal;
 }
