@@ -1,9 +1,6 @@
 package com.jippy.division.service;
 
-import com.jippy.division.dto.AvailableMealSlotRequestDto;
-import com.jippy.division.dto.AvailableMealSlotResponseDto;
-import com.jippy.division.dto.DivCampaignRequestDto;
-import com.jippy.division.dto.DivOutletDto;
+import com.jippy.division.dto.*;
 
 import java.util.List;
 
@@ -30,4 +27,5 @@ public interface IDivCampaignService {
     String deleteCampaign(String campaignType, Integer campaignId);
 
 
+    List<DivActiveDiscountsResponseDto> getActiveDiscounts();
 }

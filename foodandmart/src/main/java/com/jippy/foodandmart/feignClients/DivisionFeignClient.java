@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.feignClients;
 
+import com.jippy.foodandmart.dto.FmActiveDiscountsResponseDto;
 import com.jippy.foodandmart.dto.FmDivPriceModelDto;
 import com.jippy.foodandmart.dto.FmSendOtpMailRequestDto;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -18,4 +19,7 @@ public interface DivisionFeignClient {
 
     @PostMapping("/api/div/email/sendOtp")
     public ResponseEntity<String> sendOtpMail(@RequestBody FmSendOtpMailRequestDto requestDto);
+
+    @GetMapping("/api/div/campaign/getActiveDiscounts")
+    public ResponseEntity<List<FmActiveDiscountsResponseDto>> getActiveDiscounts();
 }

@@ -1,6 +1,7 @@
 package com.jippy.division.controller;
 
 import com.jippy.division.constants.DivAppConstants;
+import com.jippy.division.dto.DivActiveDiscountsResponseDto;
 import com.jippy.division.dto.DivCampaignRequestDto;
 import com.jippy.division.dto.DivOutletDto;
 import com.jippy.division.dto.DivResponseDto;
@@ -122,4 +123,17 @@ public class DivCampaignController {
 
         return ResponseEntity.ok(outlets);
     }
+
+    @GetMapping("/getActiveDiscounts")
+    public ResponseEntity<List<DivActiveDiscountsResponseDto>> getActiveDiscounts() {
+
+        log.info("Get Active discounts API called ");
+
+        List<DivActiveDiscountsResponseDto> activeDiscounts =
+                divCampaignService.getActiveDiscounts();
+
+        return ResponseEntity.ok(activeDiscounts);
+    }
+
+
 }

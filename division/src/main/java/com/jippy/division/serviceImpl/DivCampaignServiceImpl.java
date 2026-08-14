@@ -10,6 +10,7 @@ import com.jippy.division.exception.DivPromotionScheduleException;
 import com.jippy.division.exception.DivResourceNotFoundException;
 import com.jippy.division.feignClients.FMFeignClient;
 import com.jippy.division.mapper.DivCampaignMapper;
+import com.jippy.division.projection.DivActiveDiscountsProjection;
 import com.jippy.division.repositary.*;
 import com.jippy.division.service.IDivCampaignService;
 import com.jippy.division.service.PromotionScheduleService;
@@ -37,6 +38,7 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
     private final DivPriceModelRepository priceModelRepository;
     private final PromotionScheduleService promotionScheduleService;
     private final FMFeignClient fmClient;
+    private final PromotionScheduleRepository promotionScheduleRepository;
 
 
 
@@ -240,6 +242,8 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
         throw new DivInvalidRequestException("Invalid Campaign Type");
     }
+
+
 
     private void saveCampaign(DivCampaignRequestDto dto, Integer promotionDateId, Integer outletId, Integer productId) {
 
@@ -636,4 +640,27 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
         log.info("Price drop campaign update validation completed successfully.");
     }
+
+    @Override
+    public List<DivActiveDiscountsResponseDto> getActiveDiscounts() {
+
+        List<DivActiveDiscountsProjection> activeDiscountsProjectionList = promotionScheduleRepository
+                .getActiveDiscounts(LocalDateTime.now());
+
+        log.info("Get active discounts : {} ",activeDiscountsProjectionList);
+
+        List<DivActiveDiscountsResponseDto> activeDiscountsResponseDtos = new ArrayList<>();
+
+        for(DivActiveDiscountsProjection activeDiscountsProjection : activeDiscountsProjectionList){
+
+            DivActiveDiscountsResponseDto activeDiscountsResponseDto = new DivActiveDiscountsResponseDto();
+
+            activeDiscountsResponseDtos.add(DivCampaignMapper.
+                    mapToActiveDiscounts(activeDiscountsProjection,activeDiscountsResponseDto));
+        }
+        log.info("==============================="+activeDiscountsResponseDtos);
+
+        return activeDiscountsResponseDtos;
+    }
+
 }

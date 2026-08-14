@@ -72,6 +72,7 @@ public class FmOutletDetailsDto {
     @Schema(example = "true")
     private Boolean isAvailable;
 
+    private FmActiveDiscountsDto activeDiscounts;
     private List<FmOutletTimingDto> outletTimings;
     private List<FmCategoryDto> categories;
 }
