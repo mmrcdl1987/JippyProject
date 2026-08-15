@@ -130,8 +130,8 @@ public interface PromotionPlanRepository extends
                     (pp.plan_start_time IS NULL AND pp.plan_end_time IS NULL)
                     OR
                     (:now BETWEEN pp.plan_start_time AND pp.plan_end_time)
-                ) AND pp.outlet_id = :outletId ;""",
+                ) AND pp.outlet_id IN (:outletIds) ;""",
     nativeQuery = true)
     List<FmActivePromotionDiscountsProjection> getActivePromtionDiscounts(@Param("now") LocalDateTime now,
-            @Param("outletId") Integer outletId);
+            @Param("outletIds") List<Integer> outletIds);
 }

@@ -1,5 +1,6 @@
             package com.jippy.division.dto;
 
+            import com.jippy.foodandmart.dto.FmActiveDiscountsDto;
             import io.swagger.v3.oas.annotations.media.Schema;
             import lombok.AllArgsConstructor;
             import lombok.Data;
@@ -58,4 +59,6 @@
 
                 @Schema(description = "Whether the outlet is open right now based on outlet_days hours", example = "true")
                 private Boolean openNow;
+
+                private FmActiveDiscountsDto activeDiscountsDto;
             }
