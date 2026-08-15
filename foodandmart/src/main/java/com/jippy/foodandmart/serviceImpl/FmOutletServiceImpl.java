@@ -945,9 +945,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 // STEP 3: Fetch active discounts
                 // =========================================================================
 
+                List<Integer> outletIds = new ArrayList<>();
+                outletIds.add(outletId);
                 //Get active promotions
                 List<FmActivePromotionDiscountsProjection> activePromotionDiscountsProjections =
-                        promotionPlanRepository.getActivePromtionDiscounts(LocalDateTime.now(),outletId);
+                        promotionPlanRepository.getActivePromtionDiscounts(LocalDateTime.now(),outletIds);
 
                 log.info("Active Promotion Discounts {}",activePromotionDiscountsProjections);
 
@@ -1652,13 +1654,66 @@ public class FmOutletServiceImpl implements IFmOutletService {
             return response;
         }
 
+        // =========================================================================
+        // STEP 1: COLLECT ALL OUTLET IDs FROM ROWS
+        // =========================================================================
+        List<Integer> outletIds = rows.stream()
+                .map(row -> row[0] != null ? ((Number) row[0]).intValue() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalTime curTime = now.toLocalTime();
+
         List<FmNearbyOutletDto> outlets = new ArrayList<>();
+
+        // =========================================================================
+        // STEP 2: BULK FETCH MERCHANT PROMOTIONS (PRIORITY 1)
+        // =========================================================================
+        // Querying active promotions for all fetched nearby outlets in a single DB call
+        List<FmActivePromotionDiscountsProjection> activePromos =
+                promotionPlanRepository.getActivePromtionDiscounts(now, outletIds);
+
+        Map<Integer, List<FmActivePromotionDiscountsProjection>> merchantPromotionsMap = Optional.ofNullable(activePromos)
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(p -> p.getOutletId() != null)
+                .collect(Collectors.groupingBy(FmActivePromotionDiscountsProjection::getOutletId));
+
+        // =========================================================================
+        // STEP 3: BULK FETCH DIVISION DISCOUNTS VIA FEIGN (PRIORITY 2 FALLBACK)
+        // =========================================================================
+        // Fetch active division coupons/price drops only for outlets that DON'T have merchant promotions
+        List<Integer> outletsNeedingDivisionDiscounts = outletIds.stream()
+                .filter(id -> !merchantPromotionsMap.containsKey(id))
+                .collect(Collectors.toList());
+
+        Map<Integer, List<FmActiveDiscountsResponseDto>> divisionDiscountsMap = Collections.emptyMap();
+
+        if (!outletsNeedingDivisionDiscounts.isEmpty()) {
+            try {
+                ResponseEntity<List<FmActiveDiscountsResponseDto>> feignResponse = divisionFeignClient.getActiveDiscounts();
+                List<FmActiveDiscountsResponseDto> rawDivisionDiscounts = feignResponse.getBody();
+
+                if (rawDivisionDiscounts != null && !rawDivisionDiscounts.isEmpty()) {
+                    divisionDiscountsMap = rawDivisionDiscounts.stream()
+                            .filter(d -> d.getOutletId() != null && outletsNeedingDivisionDiscounts.contains(d.getOutletId()))
+                            .filter(discount -> isDiscountActiveInCurrentSlot(discount, curTime))
+                            .collect(Collectors.groupingBy(FmActiveDiscountsResponseDto::getOutletId));
+                }
+            } catch (Exception e) {
+                log.error("Failed to fetch division discounts via Feign client in nearby outlets API", e);
+            }
+        }
 
         for (Object[] row : rows) {
 
             FmNearbyOutletDto dto = new FmNearbyOutletDto();
 
-            dto.setOutletId(row[0] != null ? ((Number) row[0]).intValue() : null);
+            Integer outletId = row[0] != null ? ((Number) row[0]).intValue() : null;
+
+            dto.setOutletId(outletId);
 
             dto.setOutletName((String) row[1]);
 
@@ -1773,6 +1828,41 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 } else {
 
                     dto.setDeliveryTime("10 mins");
+                }
+            }
+
+            /*
+             * =========================================================================
+             * ATTACH DISCOUNT INFO TO DTO (PRIORITY MATCHING)
+             * =========================================================================
+             */
+            if (outletId != null) {
+
+                // PRIORITY 1: Merchant Promotion
+                if (merchantPromotionsMap.containsKey(outletId)) {
+                    List<FmActivePromotionDiscountsProjection> promos = merchantPromotionsMap.get(outletId);
+
+                    // Set offer badge text (e.g., "FLAT ₹80 OFF" or "20% OFF")
+                    FmActivePromotionDiscountsProjection promotionDiscountsProjection = promos.get(0);
+
+                   FmActiveDiscountsDto activeDiscountsDto = new FmActiveDiscountsDto();
+
+                    // Set discounted details on product DTO
+                    activeDiscountsDto.setPlanType(promotionDiscountsProjection.getPlanType());
+                    activeDiscountsDto.setDiscountAmount(promotionDiscountsProjection.getOfferAmount());
+                    activeDiscountsDto.setMinOrderValue(promotionDiscountsProjection.getMinimumOrderValue());
+                    activeDiscountsDto.setOfferName(promotionDiscountsProjection.getOfferName());
+                    activeDiscountsDto.setPriceType(promotionDiscountsProjection.getOfferType());
+
+                    dto.setActiveDiscountsDto(activeDiscountsDto);
+
+                    // PRIORITY 2: Division Coupon / Price Drop
+                } else if (divisionDiscountsMap.containsKey(outletId)) {
+                    List<FmActiveDiscountsResponseDto> divisionDiscounts = divisionDiscountsMap.get(outletId);
+                    FmActiveDiscountsResponseDto activeDiscounts = divisionDiscounts.get(0);
+
+                    FmActiveDiscountsDto activeDiscountsDto= FmOutletMapper.mapToActiveDiscounts(activeDiscounts);
+                    dto.setActiveDiscountsDto(activeDiscountsDto);
                 }
             }
 
