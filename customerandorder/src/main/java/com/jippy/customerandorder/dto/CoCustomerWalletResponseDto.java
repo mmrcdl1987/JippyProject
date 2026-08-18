@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CoCustomerWalletResponseDto {
 
+    private Integer walletId;
     private Integer customerId;
+    private String customerName;
     private BigDecimal balanceAmount;
     private Integer balancePoints;
 
