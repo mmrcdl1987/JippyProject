@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -21,6 +22,7 @@ public class CoCustomerWallet {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
+    @JsonIgnore
     private CoCustomer customer;
 
     @Column(name = "balance_amount")
