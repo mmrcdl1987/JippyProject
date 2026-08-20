@@ -16,6 +16,11 @@ public interface OrderNotificationStatusRepository
             Integer notificationRecipientId
     );
 
+    boolean existsByOrderIdAndNotificationIdAndNotificationRecipientId(
+            String orderId,
+            Integer notificationId,
+            Integer notificationRecipientId);
+
     boolean existsByOrderIdAndNotificationRecipientId(
             String orderId,
             Integer notificationRecipientId

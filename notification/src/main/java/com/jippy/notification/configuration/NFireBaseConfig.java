@@ -34,39 +34,43 @@ public class NFireBaseConfig {
 //            e.printStackTrace();
 //        }
 //    }
+//
 
-    private static final String FIREBASE_FILE = "jippy-firebase-key.json";
-    String firebasePath = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
-
-    @PostConstruct
-    public void initialize() {
-
-        log.info("CONFIG_START | FIREBASE_INITIALIZATION");
-        try {
-        if (!FirebaseApp.getApps().isEmpty()) {
-                log.info("CONFIG_SKIP | FIREBASE_ALREADY_INITIALIZED");
-            return;
-        }
-
-            /*try (InputStream serviceAccount =
-                         new FileInputStream(firebasePath)) {*/
-        try (InputStream serviceAccount =
-                     new ClassPathResource(FIREBASE_FILE).getInputStream()) {
-
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
-
-            FirebaseApp.initializeApp(options);
-
-                log.info("CONFIG_END | FIREBASE_INITIALIZED_SUCCESSFULLY");
-            }
-        } catch (Exception ex) {
-
-            log.error("CONFIG_ERROR | FIREBASE_INITIALIZATION_FAILED | error={}", ex.getMessage(), ex);
-
-            throw new NotificationException("Firebase initialization failed");
-        }
-    }
-
+    //    ===================================================================================================
+//    private static final String FIREBASE_FILE = "jippy-firebase-key.json";
+//    String firebasePath = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
+//
+//    @PostConstruct
+//    public void initialize() {
+//
+//        log.info("CONFIG_START | FIREBASE_INITIALIZATION");
+//        try {
+//            if (!FirebaseApp.getApps().isEmpty()) {
+//                log.info("CONFIG_SKIP | FIREBASE_ALREADY_INITIALIZED");
+//                return;
+//            }
+//
+//            /*try (InputStream serviceAccount =
+//                         new FileInputStream(firebasePath)) {*/
+//            try (InputStream serviceAccount =
+//                         new ClassPathResource(FIREBASE_FILE).getInputStream()) {
+//
+//                FirebaseOptions options = FirebaseOptions.builder()
+//                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+//                        .build();
+//
+//                FirebaseApp.initializeApp(options);
+//
+//                log.info("CONFIG_END | FIREBASE_INITIALIZED_SUCCESSFULLY");
+//            }
+//        } catch (Exception ex) {
+//
+//            log.error("CONFIG_ERROR | FIREBASE_INITIALIZATION_FAILED | error={}", ex.getMessage(), ex);
+//
+//            throw new NotificationException("Firebase initialization failed" + ex.getMessage()
+//            );
+//        }
+//    }
 }
+
+

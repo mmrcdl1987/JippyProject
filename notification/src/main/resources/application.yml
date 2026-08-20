@@ -33,9 +33,9 @@ spring:
       ack-mode: record
 
     # Custom Firebase Path
-    # app:
-    #  firebase:
-    #   config-path: classpath:jippy-firebase-key.json
+#     app:
+#      firebase:
+#       config-path: classpath:jippy-firebase-key.json
 
 eureka:
   instance:

@@ -4,9 +4,13 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.jippy.notification.constants.NConstants;
 import com.jippy.notification.dto.NOrderEvent;
+import com.jippy.notification.dto.NWalletPointsEvent;
+import com.jippy.notification.entity.NDeviceToken;
 import com.jippy.notification.entity.Notification;
 import com.jippy.notification.entity.OrderNotificationStatus;
 import com.jippy.notification.exception.NotificationException;
+import com.jippy.notification.mapper.NWalletNotificationMapper;
+import com.jippy.notification.repository.DeviceTokenRepository;
 import com.jippy.notification.repository.NotificationRepository;
 import com.jippy.notification.repository.OrderNotificationStatusRepository;
 
@@ -27,6 +31,7 @@ public class NotificationService {
 
     private final OrderNotificationStatusRepository statusRepository;
 
+    private final DeviceTokenRepository deviceTokenRepository;
     @Transactional
     public OrderNotificationStatus processNotification(NOrderEvent event) {
 
@@ -57,7 +62,9 @@ public class NotificationService {
         /*
          * FETCH TEMPLATE
          */
-        Notification notification = notificationRepository.findByRoleAndSubject(NConstants.ROLE_OUTLET, subject).orElseThrow(() -> {
+        Notification notification =
+                notificationRepository.findByRoleAndSubject(NConstants.ROLE_OUTLET, subject)
+                        .orElseThrow(() -> {
 
             log.error("VALIDATION_FAILED | TEMPLATE_NOT_FOUND | subject={}", subject);
 
@@ -67,7 +74,8 @@ public class NotificationService {
         /*
          * DUPLICATE CHECK
          */
-        boolean exists = statusRepository.existsByOrderIdAndNotificationRecipientIdAndNotificationId(event.getOrderId(), event.getOutletId(), notification.getNotificationId());
+        boolean exists = statusRepository
+                .existsByOrderIdAndNotificationRecipientIdAndNotificationId(event.getOrderId(), event.getOutletId(), notification.getNotificationId());
 
         if (exists) {
 
@@ -208,7 +216,7 @@ public class NotificationService {
 
         status.setUpdatedAt(LocalDateTime.now());
 
-        status.setUpdatedBy(1);
+//        status.setUpdatedBy(1);
 
         statusRepository.save(status);
 
@@ -260,4 +268,115 @@ public class NotificationService {
                                 "Notification template not found for type : "
                                         + notificationType));
     }
+//    ================================================================================================
+//    =========================== process Wallet Points Notification =================================
+//    ================================================================================================
+@Transactional
+public void processWalletPointsNotification(NWalletPointsEvent event) {
+
+    log.info(
+            "PROCESS_WALLET_POINTS_NOTIFICATION_START | " +
+                    "orderId={} | customerId={}",
+            event.getOrderId(),
+            event.getCustomerId()
+    );
+
+    // 1. Get notification template checks for the notification type and role
+    Notification notification =
+            getNotificationTemplateByType(
+                    NConstants.ROLE_CUSTOMER,
+                    event.getNotificationType()
+            );
+
+    // 2. Prevent duplicate notification
+//     checks if a notification for the same order, notification type,
+//     and customer has already been sent
+    boolean alreadyExists =
+            statusRepository
+                    .existsByOrderIdAndNotificationIdAndNotificationRecipientId(
+                            event.getOrderId(),
+                            notification.getNotificationId(),
+                            event.getCustomerId()
+                    );
+
+    if (alreadyExists) {
+
+        log.info(
+                "DUPLICATE_WALLET_NOTIFICATION_SKIPPED | " +
+                        "orderId={} | customerId={}",
+                event.getOrderId(),
+                event.getCustomerId()
+        );
+
+        return;
+    }
+
+    // 3. Fetch customer's device token
+    NDeviceToken deviceToken =
+            deviceTokenRepository
+                    .findByUserIdAndUserType(
+                            event.getCustomerId(),
+                            NConstants.ROLE_CUSTOMER
+                    )
+                    .orElse(null);
+
+    if (deviceToken == null) {
+
+        log.warn(
+                "CUSTOMER_DEVICE_TOKEN_NOT_FOUND | customerId={}",
+                event.getCustomerId()
+        );
+
+        return;
+    }
+
+    // 4. Build personalized message for the notification using the
+    // event data and notification template
+    String message =
+            NWalletNotificationMapper
+                    .buildWalletPointsMessage(
+                            notification,
+                            event
+                    );
+    log.info(
+            "WALLET_POINTS_NOTIFICATION_MESSAGE | customerId={} | message={}",
+            event.getCustomerId(),
+            message
+    );
+
+    // 5. Create notification history record in to the database
+    OrderNotificationStatus status =
+            NWalletNotificationMapper.toNotificationStatus(
+                    event,
+                    notification,
+                    deviceToken
+            );
+
+    statusRepository.save(status);
+
+    // 6. Send Firebase notification and get the message ID
+
+//    String firebaseMessageId =
+//            sendNotification(
+//                    deviceToken.getFcmToken(),
+//                    notification.getSubject(),
+//                    message
+//            );
+//
+//    // 7. Mark notification as sent when Firebase notification is successfully sent
+//    status.setNotificationStatus(true);
+//    status.setFirebaseMessageId(firebaseMessageId);
+//    status.setDeliveredAt(LocalDateTime.now());
+//    status.setUpdatedAt(LocalDateTime.now());
+//
+//    statusRepository.save(status);
+
+//    log.info(
+//            "WALLET_POINTS_NOTIFICATION_SENT | " +
+//                    "orderId={} | customerId={} | firebaseMessageId={}",
+//            event.getOrderId(),
+//            event.getCustomerId(),
+//            firebaseMessageId
+//    );
+}
 }

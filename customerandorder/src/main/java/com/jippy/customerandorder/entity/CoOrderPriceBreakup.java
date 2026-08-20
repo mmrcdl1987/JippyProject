@@ -74,4 +74,11 @@ public class CoOrderPriceBreakup {
 
     @Column(name = "deliver_charges")
     private BigDecimal deliveryCharges;
+
+
+    /**
+     * Amount used for wallet points.
+     */
+    @Column(name = "order_amount_discounted")
+    private BigDecimal orderAmountDiscounted;
 }

@@ -133,8 +133,11 @@ public class GlobalExceptionHandler {
 
     /**
      * Handles all uncaught RuntimeExceptions.
-     * Returns 404 for resource not found exceptions,
-     * otherwise returns 500 Internal Server Error.
+     *
+     * Returns:
+     * 404 → Resource not found
+     * 400 → Business validation failure
+     * 500 → Unexpected runtime exception
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<CoResponseDto> handleRuntimeException(
@@ -150,6 +153,19 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new CoResponseDto(
                             "404",
+                            ex.getMessage()));
+        }
+
+        // ---------------------------------------------------------
+        // Handle business validation exception
+        // ---------------------------------------------------------
+        if (ex instanceof CoValidationException) {
+
+            log.warn("Validation failed: {}", ex.getMessage());
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new CoResponseDto(
+                            "400",
                             ex.getMessage()));
         }
 

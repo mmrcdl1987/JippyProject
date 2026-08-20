@@ -8,6 +8,16 @@ public class COConstants {
 
     }
 
+    public static final String DELIVERED = "DELIVERED";
+
+    public static final String ORDER_VALUE_POINTS = "ORDER_VALUE_POINTS";
+
+    public static final String WALLET_POINTS_TOPIC =
+            "wallet-points-earned";
+
+    public static final String WALLET_POINTS_EARNED =
+            "WALLET_POINTS_EARNED";
+
     public static final String ROLE_CUSTOMER = "ROLE_CUSTOMER";
     public static final String STATUS_200 = "200";
     public static final String STATUS_400 = "400";

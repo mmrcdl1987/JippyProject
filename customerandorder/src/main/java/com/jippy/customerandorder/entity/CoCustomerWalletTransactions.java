@@ -22,6 +22,14 @@ public class CoCustomerWalletTransactions {
     @Column(name = "wallet_id")
     private Integer walletId;
 
+    /**
+     * Order that generated this wallet points transaction.
+     * Used to prevent the same order from receiving
+     * ORDER_VALUE_POINTS more than once.
+     */
+    @Column(name = "order_id")
+    private String orderId;
+
     @Column(name = "points_type")
     private String pointsType;
 
