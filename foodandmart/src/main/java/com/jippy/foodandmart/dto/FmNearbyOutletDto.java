@@ -60,5 +60,9 @@
                 @Schema(description = "Whether the outlet is open right now based on outlet_days hours", example = "true")
                 private Boolean openNow;
 
+                private String outletPicUrl;
+
+                private Boolean isVegOutlet;
+
                 private FmActiveDiscountsDto activeDiscountsDto;
             }

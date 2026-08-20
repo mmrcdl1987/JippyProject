@@ -20,10 +20,6 @@ public final class OutletSubscriptionPlanMapper {
 
         dto.setSubscriptionPlanId(entity.getSubscriptionPlanId());
 
-        dto.setSubscriptionFromDate(entity.getSubscriptionFromDate());
-
-        dto.setSubscriptionToDate(entity.getSubscriptionToDate());
-
         dto.setBannerSlotDaysId(entity.getBannerSlotDaysId());
 
         dto.setMealTypeTimingsIds(entity.getMealTypeTimingsIds());

@@ -137,11 +137,5 @@ public class OutletSubscriptionPlanController {
             endOperation();
         }
     }
-//    @GetMapping("/active-banners")
-//    public FmApiResponse<List<ActiveBannerResponseDto>> getActiveBanners() {
-//
-//        return FmApiResponse.success(
-//                "Active banners fetched successfully",
-//                outletSubscriptionPlanService.getActiveBanners());
-//    }
+
 }

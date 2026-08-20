@@ -1765,6 +1765,16 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
             dto.setOpenNow(openNow);
 
+            if (row[19] != null) {
+                if (row[19] instanceof Boolean) {
+                    dto.setIsVegOutlet((Boolean) row[19]);
+                }
+            }
+
+            if(row[20] != null){
+                dto.setOutletPicUrl(row[20].toString());
+            }
+
             /*
              * GOOGLE MAPS DISTANCE + DELIVERY TIME
              */

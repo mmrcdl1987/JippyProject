@@ -7,9 +7,11 @@ import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.OutletSubscriptionPlanMapper;
 import com.jippy.foodandmart.projections.ActiveBannerProjection;
 import com.jippy.foodandmart.repository.*;
+import com.jippy.foodandmart.service.BannerCacheService;
 import com.jippy.foodandmart.service.OutletSubscriptionPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +41,10 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
     private final MealTypeTimingRepository mealTypeTimingRepository;
 
+    private final RedisTemplate<String, String> redisTemplate;
+
+    private static final String GEO_KEY = "jippy:banner:geo";
+    private static final String META_KEY = "jippy:banner:meta";
 
     @Override
     @Transactional
@@ -102,9 +108,6 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
             entity.setOutletId(request.getOutletId());
             entity.setSubscriptionPlanId(request.getSubscriptionPlanId());
-
-            entity.setSubscriptionFromDate(subscriptionFromDate);
-            entity.setSubscriptionToDate(subscriptionToDate);
 
             entity.setBannerSlotDaysId(request.getBannerSlotDaysId());
             entity.setMealTypeTimingsIds(request.getMealTypeTimingsIds());
@@ -176,10 +179,6 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
             dto.setSubscriptionPlanId(plan.getSubscriptionPlanId());
 
             dto.setPlanName(plan.getPlanName());
-
-            dto.setSubscriptionFromDate(outletPlan.getSubscriptionFromDate());
-
-            dto.setSubscriptionToDate(outletPlan.getSubscriptionToDate());
 
             dto.setBannerSlotDaysId(outletPlan.getBannerSlotDaysId());
 
@@ -339,6 +338,12 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
             response.setDealsBannerUrl(savedOutletSubscription.getDealsBannerUrl());
 
             log.info("{} | SUCCESS | outletSubscriptionPlanId={}", op, outletSubscriptionPlanId);
+
+            //Delete redis banner cache after uploading banners
+            // 2. Clear old Redis Keys
+            Boolean geoDeleted = redisTemplate.delete(GEO_KEY);
+            Boolean metaDeleted = redisTemplate.delete(META_KEY);
+
             return response;
         } catch (IOException ex) {
             log.error("{} | S3_UPLOAD_FAILED | outletSubscriptionPlanId={} | error={}", op, outletSubscriptionPlanId, ex.getMessage(), ex);
@@ -427,18 +432,18 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
             String status;
 
-            if (today.isBefore(outletPlan.getSubscriptionFromDate())) {
-
-                status = "UPCOMING";
-
-            } else if (today.isAfter(outletPlan.getSubscriptionToDate())) {
-
-                status = "EXPIRED";
-
-            } else {
-
-                status = "ACTIVE";
-            }
+//            if (today.isBefore(outletPlan.getSubscriptionFromDate())) {
+//
+//                status = "UPCOMING";
+//
+//            } else if (today.isAfter(outletPlan.getSubscriptionToDate())) {
+//
+//                status = "EXPIRED";
+//
+//            } else {
+//
+//                status = "ACTIVE";
+//            }
 
             OutletSubscriptionStatusResponseDto dto = new OutletSubscriptionStatusResponseDto();
 
@@ -450,11 +455,7 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
             dto.setPlanName(plan.getPlanName());
 
-            dto.setSubscriptionStatus(status);
-
-            dto.setSubscriptionFromDate(outletPlan.getSubscriptionFromDate());
-
-            dto.setSubscriptionToDate(outletPlan.getSubscriptionToDate());
+           // dto.setSubscriptionStatus(status);
 
             dto.setBannerSlotDaysId(outletPlan.getBannerSlotDaysId());
 
@@ -484,7 +485,7 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
 
             dto.setOfferAmount(outletPlan.getOfferAmount());
 
-            log.info("{} | SUCCESS | outletId={} | status={}", op, outletId, status);
+            //log.info("{} | SUCCESS | outletId={} | status={}", op, outletId, status);
 
             return dto;
 
