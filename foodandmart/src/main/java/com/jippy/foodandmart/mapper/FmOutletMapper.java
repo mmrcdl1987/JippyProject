@@ -381,17 +381,50 @@ public final class FmOutletMapper {
                                 .orElse(null);
 
                         if (product == null) {
-                            product = new FmProductDto();
+                            product = new FmProductDto( );
                             product.setProductId(row.getProductId());
                             product.setProductName(row.getProductName());
                             product.setDescription(row.getDescription());
+                            // Product image
+                            product.setImageLink(row.getImageLink());
+                            // =========================================================
+                            // Product Pricing
+                            // =========================================================
+                            //
+                            // MERCHANT:
+                            //     merchantPrice = products.merchant_price
+                            //     price         = null
+                            //
+                            // CUSTOMER:
+                            //     If online price exists:
+                            //         merchantPrice = null
+                            //         price = online price
+                            //
+                            //     If online price does NOT exist:
+                            //         merchantPrice = merchant price
+                            //         price = null
+                            // =========================================================
 
+                            if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
 
-                            // Pricing logic
-                            if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && row.getOnlinePrice() != null) {
-                                product.setPrice(row.getOnlinePrice());
-                            } else {
-                                product.setPrice(row.getMerchantPrice());
+                                // Merchant gets merchant price
+                                product.setMerchantPrice(row.getMerchantPrice());
+                                product.setOnlinePrice(null);
+
+                            } else if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
+
+                                if (row.getOnlinePrice() != null) {
+
+                                    // Customer gets online price
+                                    product.setMerchantPrice(null);
+                                    product.setOnlinePrice(row.getOnlinePrice());
+
+                                } else {
+
+                                    // No online price → fallback to merchant price
+                                    product.setMerchantPrice(row.getMerchantPrice());
+                                    product.setOnlinePrice(null);
+                                }
                             }
 
                             product.setIsVeg(row.getIsVeg());
@@ -432,46 +465,146 @@ public final class FmOutletMapper {
                                 product.getProductTimings().add(pt);
                             }
                         }
-//                        ------------------------------------------------------------------------
+                        // =========================================================
+                        // Map Product Variants
+                        // =========================================================
+                        //
+                        // Only products with has_product_variants = true
+                        // should contain variant information.
+                        // =========================================================
                         /*
                          * Map Product Variants.
                          */
-                        if (row.getProductVariantId() != null) {
+                        if (Boolean.TRUE.equals(row.getHasProductVariants())
+                                && row.getProductVariantId() != null) {
 
-                            boolean variantExists = false;
+                                boolean variantExists = false;
 
-                            for (FmProductVariantDTO existingVariant : product.getVariants()) {
+                            // ---------------------------------------------------------
+                            // Check whether this variant was already added
+                            // ---------------------------------------------------------
+                                for (FmProductVariantDTO existingVariant : product.getVariants()) {
 
-                                if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
+                                    if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
 
-                                    variantExists = true;
-                                    break;
-                                }
-                            }
-
-                            if (!variantExists) {
-
-                                FmProductVariantDTO variant = new FmProductVariantDTO();
-
-                                variant.setVariantId(row.getProductVariantId());
-                                variant.setVariantName(row.getVariantName());
-
-                                /*
-                                 * Customer sees online price.
-                                 * Merchant sees merchant price.
-                                 */
-                                if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
-                                        && row.getOnlinePrice() != null) {
-
-                                    variant.setPrice(row.getOnlinePrice());
-
-                                } else {
-
-                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+                                        variantExists = true;
+                                        break;
+                                    }
                                 }
 
-                                product.getVariants().add(variant);
-                            }
+                                // ---------------------------------------------------------
+                                // Add variant only if it does not already exist
+                                // ---------------------------------------------------------
+                                if (!variantExists) {
+
+                                    FmProductVariantDTO variant = new FmProductVariantDTO();
+
+    //                                variant.setVariantId(row.getProductVariantId());
+    //                                variant.setVariantName(row.getVariantName());
+    //
+    //                                /*
+    //                                 * Customer sees online price.
+    //                                 * Merchant sees merchant price.
+    //                                 */
+    //                                if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
+    //                                        && row.getOnlinePrice() != null) {
+    //
+    //                                    variant.setPrice(row.getOnlinePrice());
+    //
+    //                                } else {
+    //
+    //                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+    //                                }
+    //
+    //                                product.getVariants().add(variant);
+
+
+                                    // =========================================================
+                                    // Variant Option
+                                    // =========================================================
+
+                                    variant.setVariantId(row.getProductVariantId());
+
+
+                                    // =========================================================
+                                    // Variant Group Value
+                                    // =========================================================
+
+  //                                   commented for UI
+//                                    variant.setVariantValueId(row.getVariantValueId());
+
+                                    variant.setVariantName(row.getVariantName());
+
+
+                                    // =========================================================
+                                    // Variant Group
+                                    // =========================================================
+
+//                                    commented for UI
+//                                    variant.setVariantGroupId(row.getVariantGroupId());
+
+                                    variant.setGroupName(row.getVariantGroupName());
+
+//                                    variant.setSelectionType(row.getVariantSelectionType());
+
+//                                    commented for UI
+//                                    variant.setMinSelection(row.getVariantMinSelection());
+
+//                                    variant.setMaxSelection(row.getVariantMaxSelection());
+
+
+                                    // =========================================================
+                                    // Price Type
+                                    // MAIN / ADD
+                                    // =========================================================
+
+                                    variant.setPriceType(row.getVariantPriceType());
+
+                                    // =========================================================
+                                    // Variant Pricing
+                                    // =========================================================
+                                    //
+                                    // MERCHANT:
+                                    //     merchantPrice = variant_price
+                                    //     price         = null
+                                    //
+                                    // CUSTOMER:
+                                    //     If variant online price exists:
+                                    //         merchantPrice = null
+                                    //         price = variant online price
+                                    //
+                                    //     If variant online price does NOT exist:
+                                    //         merchantPrice = variant merchant price
+                                    //         price = null
+                                    // =========================================================
+
+                                    if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
+
+                                        // Merchant gets variant merchant price
+                                        variant.setMerchantPrice(row.getVariantMerchantPrice());
+                                        variant.setOnlinePrice(null);
+
+                                    } else if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
+
+                                        if (row.getVariantOnlinePrice() != null) {
+
+                                            // Customer gets variant online price
+                                            variant.setMerchantPrice(null);
+                                            variant.setOnlinePrice(row.getVariantOnlinePrice());
+
+                                        } else {
+
+                                            // No variant online price → fallback to merchant price
+                                            variant.setMerchantPrice(row.getVariantMerchantPrice());
+                                            variant.setOnlinePrice(null);
+                                        }
+                                    }
+                                // =========================================================
+                                // Add to product
+                                // =========================================================
+
+                                    product.getVariants().add(variant);
+                                }
                         }
                     }
                 }
