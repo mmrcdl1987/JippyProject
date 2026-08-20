@@ -1,7 +1,11 @@
 package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.dto.ActiveBannerResponseDto;
+import com.jippy.foodandmart.dto.BannerInfoDto;
 import com.jippy.foodandmart.dto.CustomerBannerDto;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CustomerBannerMapper {
 
@@ -10,43 +14,36 @@ public final class CustomerBannerMapper {
 
     public static CustomerBannerDto toDto(
             ActiveBannerResponseDto banner,
-            String bannerType,
-            Integer slotNumber,
-            String bannerUrl) {
+            List<ActiveBannerResponseDto> rows) {
 
         CustomerBannerDto dto = new CustomerBannerDto();
 
-        dto.setAreaId(banner.getAreaId());
-
         dto.setOutletId(banner.getOutletId());
-
         dto.setOutletName(banner.getOutletName());
-
-        dto.setSlotNumber(slotNumber);
-
-        dto.setBannerType(bannerType);
-
-        dto.setBannerUrl(bannerUrl);
-
-        dto.setPriceModelType(banner.getPriceModelType());
-
-        dto.setOfferAmount(banner.getOfferAmount());
-
-        // NEW
-        dto.setBannerFromDate(banner.getBannerFromDate());
-
-        dto.setBannerToDate(banner.getBannerToDate());
-
-        dto.setMealTypeTimings(banner.getMealTypeTimings());
-
+       // dto.setAreaId(banner.getAreaId());
+        dto.setLatitude(banner.getLatitude());
+        dto.setLongitude(banner.getLongitude());
         dto.setRadiusInKms(banner.getRadiusInKms());
-
         dto.setMealTypeTimingIds(banner.getMealTypeTimingsIds());
 
-        dto.setLatitude(banner.getLatitude());
+        List<BannerInfoDto> bannerList = new ArrayList<>();
 
-        dto.setLongitude(banner.getLongitude());
+        for (ActiveBannerResponseDto row : rows) {
+            // Main Slot
+            if (row.getMainBannerUrl() != null && row.getBannerSlot() != null) {
+                bannerList.add(new BannerInfoDto("MAIN", row.getMainBannerUrl(), row.getBannerSlot(), banner.getOutletId(), banner.getOutletName()));
+            }
+            // Best Restaurant Slot
+            if (row.getBestRestaurantBannerUrl() != null && row.getBestRestaurantSlot() != null) {
+                bannerList.add(new BannerInfoDto("BEST_RESTAURANT", row.getBestRestaurantBannerUrl(), row.getBestRestaurantSlot(), banner.getOutletId(), banner.getOutletName()));
+            }
+            // Deals Slot
+            if (row.getDealsBannerUrl() != null && row.getDealsSlot() != null) {
+                bannerList.add(new BannerInfoDto("DEALS", row.getDealsBannerUrl(), row.getDealsSlot(), banner.getOutletId(), banner.getOutletName()));
+            }
+        }
 
+        dto.setBannerInfoDtos(bannerList);
         return dto;
     }
 }

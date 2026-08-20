@@ -38,12 +38,6 @@ public class FmOutletSubscriptionPlan {
     @Column(name = "subscription_plan_id")
     private Integer subscriptionPlanId;
 
-    @Column(name = "subscription_from_date")
-    private LocalDate subscriptionFromDate;
-
-    @Column(name = "subscription_to_date")
-    private LocalDate subscriptionToDate;
-
     @Column(name = "banner_slot_days_id", nullable = false)
     private Integer bannerSlotDaysId;
 

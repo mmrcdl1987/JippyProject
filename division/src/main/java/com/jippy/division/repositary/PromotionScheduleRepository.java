@@ -78,9 +78,8 @@ public interface PromotionScheduleRepository
             c.price_model_id,
             pdm.price_model_id,
             pml.price_model_name,
-            ps.promotion_schedule_id,
-            ps.source_id
-        
+            ps.source_id,
+            ps.promotion_schedule_id -- Added ps.promotion_schedule_id
         ORDER BY "startDateTime" DESC """
        ,nativeQuery = true)
     List<DivActiveDiscountsProjection> getActiveDiscounts(@Param("now") LocalDateTime now);

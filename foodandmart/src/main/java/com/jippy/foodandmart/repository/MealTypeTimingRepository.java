@@ -3,6 +3,7 @@ package com.jippy.foodandmart.repository;
 import com.jippy.foodandmart.entity.MealTypeTiming;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.util.Lazy;
 import org.springframework.stereotype.Repository;
 
@@ -35,4 +36,14 @@ public interface MealTypeTimingRepository extends JpaRepository<MealTypeTiming, 
     Optional<MealTypeTiming> findCurrentMealType(LocalTime currentTime);
 
    Optional<MealTypeTiming> mealTypeTimingsId(Integer mealTypeSlotId);
+
+    @Query("SELECT COUNT(m) > 0 FROM MealTypeTiming m " +
+            "WHERE m.mealTypeTimingsId IN :mealIds " +
+            "AND (" +
+            "  (m.fromTime <= m.toTime AND :currentTime BETWEEN m.fromTime AND m.toTime) " +
+            "  OR " +
+            "  (m.fromTime > m.toTime AND (:currentTime >= m.fromTime OR :currentTime <= m.toTime))" +
+            ")")
+    boolean isMealActiveNow(@Param("mealIds") List<Integer> mealIds,
+            @Param("currentTime") LocalTime currentTime);
 }

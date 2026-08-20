@@ -43,8 +43,6 @@ public class FmBannerDesignerServiceImpl
         dto.setOutletSubscriptionPlanId(entity.getOutletSubscriptionPlanId());
         dto.setOutletId(entity.getOutletId());
         dto.setSubscriptionPlanId(entity.getSubscriptionPlanId());
-        dto.setSubscriptionFromDate(entity.getSubscriptionFromDate());
-        dto.setSubscriptionToDate(entity.getSubscriptionToDate());
         dto.setMainBannerUrl(entity.getMainBannerUrl());
         dto.setBestRestaurantBannerUrl(entity.getBestRestaurantBannerUrl());
         dto.setDealsBannerUrl(entity.getDealsBannerUrl());
