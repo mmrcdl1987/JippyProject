@@ -68,11 +68,16 @@ public class FmOutletDetailsDto {
     private String areaName;
 
     // Outlet Toggle
+    @Schema(example = "true")
     private Boolean isFavourite;
     @Schema(example = "true")
     private Boolean isAvailable;
 
+    @Schema(description = "Details of active discounts applicable to the outlet.")
     private FmActiveDiscountsDto activeDiscounts;
+    @Schema(description = "List of outlet timings for each day of the week.")
     private List<FmOutletTimingDto> outletTimings;
+    @Schema(description = "List of categories available in the outlet," +
+            " each containing its products and their details.")
     private List<FmCategoryDto> categories;
 }

@@ -967,7 +967,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                     log.info("Zero active promotions or coupons found. Proceeding with standard menu pricing.");
 
                     // Cache the raw menu in Redis with standard 10-minute TTL so subsequent calls hit Redis Step 1
-                    saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
+//                    saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
 
                     return outletDtoresponse;
                 }
@@ -1049,20 +1049,20 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
           LocalDateTime now = LocalDateTime.now();
 
-            if ("CUSTOMER".equalsIgnoreCase(userType) && earliestEndTime != null && earliestEndTime.isAfter(now)) {
+            if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && earliestEndTime != null && earliestEndTime.isAfter(now)) {
                 // TTL matches either current meal slot end time OR merchant plan end date
                 long ttlSeconds = Duration.between(now, earliestEndTime).getSeconds();
 
                 // Safety guard: ensure TTL is at least 30 seconds
                 ttlSeconds = Math.max(30, ttlSeconds);
 
-                saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
+//                saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
 
                 //redisTemplate.opsForValue().set(cacheKey, jsonPayload, ttlSeconds, TimeUnit.SECONDS);
                // log.info("Cached CUSTOMER view [{}] in Redis with offer/slot TTL: {}s", cacheKey, ttlSeconds);
             } else {
                 // Merchant view or No-Offer Customer view: Standard 10 min TTL
-                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
+//                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
               //  redisTemplate.opsForValue().set(cacheKey, jsonPayload, 5, TimeUnit.MINUTES);
               //  log.info("Cached [{}] in Redis with standard TTL: 300s", cacheKey);
             }
@@ -1086,7 +1086,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 Optional<FmFavoriteOutlet> favourite =
                         favoriteOutletRepository.findByCustomerIdAndFavoriteIdAndFavouriteType(customerId, outletId, FmAppConstants.TYPE_OUTLET);
 
-//  favourite.isPresent() --> returns true if record exists in the favourite table
+        //  favourite.isPresent() --> returns true if record exists in the favourite table
                 outletDtoresponse.setIsFavourite(favourite.isPresent());
 
                 log.info("Favourite status: {}", favourite.isPresent());
@@ -1470,11 +1470,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
                                 if (vDto.getVariantName() != null) variant.setVariantName(vDto.getVariantName());
 
                                 // Update variant price if provided
-                                if (vDto.getPrice() != null) variant.setMerchantPrice(vDto.getPrice());
+                                if (vDto.getOnlinePrice() != null) variant.setMerchantPrice(vDto.getOnlinePrice());
                             }
                         }
                         // Update product price if provided
-                        if (productDto.getPrice() != null) product.setMerchantPrice(productDto.getPrice());
+                        if (productDto.getOnlinePrice() != null) product.setMerchantPrice(productDto.getOnlinePrice());
 
                         // Update product timings if provided
                         if (productDto.getProductTimings() != null) {

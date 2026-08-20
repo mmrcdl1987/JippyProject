@@ -10,8 +10,10 @@ import java.time.LocalTime;
 // 3)projection -- for Native Query Mapping--JOINS
 
 public interface FmOutletMenuProjection {
+    // =========================================================
+    // for outlet table
+    // =========================================================
 
-//    for outlet table
     Integer getOutletId();
     String getOutletName();
     String getOutletPhone();
@@ -25,8 +27,9 @@ public interface FmOutletMenuProjection {
     Double getLongitude();
     // Outlet is_available
     Boolean getOutletAvailable();
-//    -----------------------------------------------------------
+    // =========================================================
     // Outlet bank details (user_bank_details table)
+    // =========================================================
     String getAccountNumber();
 
     String getIfscCode();
@@ -35,7 +38,9 @@ public interface FmOutletMenuProjection {
 
     String getAccountHolderName();
 
-    // Address table
+    // =========================================================
+    // Address
+    // =========================================================
 
     String getBuildingNumber();
 
@@ -55,41 +60,110 @@ public interface FmOutletMenuProjection {
 
     String getAreaName();
 
-    //    for product_online_pricing tables
-    Integer productIdFromOnlinePricing();
+    // =========================================================
+    // Product Online Pricing
+    // =========================================================
+
+    /**
+     * Product-level customer price.
+         *
+     * For products with variants:
+     * minimum online price among active/approved variants.
+     */
     BigDecimal getOnlinePrice();
 
-//    for category table
+    // =========================================================
+    // Category
+    // =========================================================
     Integer getCategoryId();
     String getCategoryName();
     // Category is_available
     Boolean getCategoryAvailable();
 
 
-    //    for product table
+    // =========================================================
+    // Product Details
+    // =========================================================
     Integer getProductId();
     String getProductName();
     String getDescription();
     BigDecimal getMerchantPrice();
     Boolean getIsVeg();
+    String getImageLink();
     Boolean getHasProductVariants();
     // Product is_available
     Boolean getProductAvailable();
+    // =========================================================
+    // Product Variant Details
+    // =========================================================
 
-// for product variants
+    /**
+     * product_variant_options.product_variant_options_id
+     */
     Integer getProductVariantId();
 
+    /**
+     * product_variant_group_values.product_variant_group_values_id
+     */
+//    Integer getVariantValueId();
+
+    /**
+     * product_variant_group_values.product_variant_groups_id
+     */
+//    Integer getVariantGroupId();
+
+    /**
+     * product_variant_group_values.variant_name
+     */
     String getVariantName();
 
+    /**
+     * product_variant_groups.group_name
+     */
+    String getVariantGroupName();
+
+    /**
+     * product_variant_groups.selection_type
+     */
+//    String getVariantSelectionType();
+
+    /**
+     * product_variant_groups.min_selection
+     */
+//    Integer getVariantMinSelection();
+
+    /**
+     * product_variant_groups.max_selection
+     */
+//    Integer getVariantMaxSelection();
+
+    /**
+     * product_variant_options.price_type
+     */
+    String getVariantPriceType();
+
+    /**
+     * Merchant price from product_variant_options.variant_price.
+     */
     BigDecimal getVariantMerchantPrice();
 
-//    for outlet_days table
+    /**
+     * Customer price from product_online_pricing.online_price,
+     * matched using product_variant_id.
+     */
+    BigDecimal getVariantOnlinePrice();
+    // =========================================================
+    // Outlet Timings --for outlet_days table
+    // =========================================================
     Boolean getIsOpen();
     LocalTime getOpeningTime();
     LocalTime getClosingTime();
     String getOutletDay();
 
-//    for product_day table
+    // =========================================================
+    // Product Timings --for product_day table
+    // =========================================================
+
     LocalTime getStartTime();
     LocalTime getEndTime();
     String getProductDay();
