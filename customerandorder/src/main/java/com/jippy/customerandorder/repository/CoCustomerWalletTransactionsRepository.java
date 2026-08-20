@@ -8,4 +8,7 @@ import java.util.List;
 public interface CoCustomerWalletTransactionsRepository extends JpaRepository<CoCustomerWalletTransactions, Integer> {
 
     List<CoCustomerWalletTransactions> findByWalletIdOrderByCreatedAtDesc(Integer walletId);
+
+
+    boolean existsByOrderIdAndPointsType(String orderId, String pointsType);
 }
