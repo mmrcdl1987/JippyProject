@@ -20,9 +20,8 @@ public class CoCustomerWallet {
     @Column(name = "wallet_id")
     private Integer walletId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id")
-    @JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false, unique = true)
     private CoCustomer customer;
 
     @Column(name = "balance_amount")

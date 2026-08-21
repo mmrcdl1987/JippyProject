@@ -42,13 +42,15 @@ public class CoCustomerMapper {
 
         customer.setPhoneNumber(dto.getPhoneNumber());
 
-        customer.setReferralCode(generateReferralCode(
+        customer.setReferralCode(generateReferral(
 
                 dto.getFirstName(),
 
                 dto.getLastName(),
 
                 dto.getPhoneNumber()));
+
+        customer.setUsedReferral(dto.getReferralCodeUsed());
 
         customer.setCreatedAt(LocalDateTime.now());
 
@@ -66,15 +68,10 @@ public class CoCustomerMapper {
         CoCustomerWallet wallet = new CoCustomerWallet();
 
         wallet.setCustomer(customer);
-
         wallet.setBalancePoints(balancePoints);
-
         wallet.setBalanceAmount(BigDecimal.ZERO);
-
         wallet.setCreatedAt(LocalDateTime.now());
-
         wallet.setCreatedBy(createdBy);
-
         return wallet;
     }
 
@@ -82,16 +79,16 @@ public class CoCustomerMapper {
     // REFERRAL CODE GENERATOR
 
 
-    private static String generateReferralCode(String firstName, String lastName, String phoneNumber) {
+    public static String generateReferral(String firstName, String lastName, String phoneNumber) {
 
         String firstPart = firstName.substring(0, Math.min(3, firstName.length()));
-
         String lastPart = lastName.substring(0, Math.min(2, lastName.length()));
-
         String phoneLast3 = phoneNumber.substring(phoneNumber.length() - 3);
 
         return (firstPart + phoneLast3 + lastPart).toUpperCase();
     }
+
+
 
     public CoCustomerResponseDto mapToResponse(CoCustomer customer) {
 
@@ -101,6 +98,8 @@ public class CoCustomerMapper {
         dto.setFirstName(customer.getFirstName());
         dto.setLastName(customer.getLastName());
         dto.setEmail(customer.getEmail());
+        dto.setDOB(customer.getDateOfBirth());
+        dto.setProfilePicUrl(customer.getProfilePicUrl());
         dto.setPhoneNumber(customer.getPhoneNumber());
         dto.setReferralCode(customer.getReferralCode());
         dto.setCustomerStatusId(customer.getCustomerStatus().getCustomerStatusId());

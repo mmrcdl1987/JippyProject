@@ -36,6 +36,9 @@ public class CoCustomer {
     @Column(name = "referral_code")
     private String referralCode;
 
+    @Column(name = "used_referral_code")
+    private String usedReferral;
+
     @Column(name = "profile_pic_url")
     private String profilePicUrl;
 
@@ -58,7 +61,7 @@ public class CoCustomer {
     private Integer updatedBy;
 
     // ONE TO MANY RELATIONSHIP
-    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<CoCustomerWallet> wallets;
+    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private CoCustomerWallet wallet;
 
 }

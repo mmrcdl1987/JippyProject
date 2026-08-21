@@ -134,8 +134,8 @@ aws:
   s3:
     bucket-name: jippys3bucket
     region: ap-south-2
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_KEY_ID}
     product-content-file: product-content/master_products_descriptions_images.xlsx
 
 

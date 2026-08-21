@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
@@ -12,9 +13,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,6 +32,7 @@ public class CoCustomerController {
     private final ICoCustomerService customerService;
     private final CoCustomerDeliveryAddressRepository repository;
     private final CoCustomerDeliveryService customerDeliveryAddressService;
+    private final ObjectMapper objectMapper;
 
     // CREATE CUSTOMER
     @PostMapping
@@ -36,6 +40,10 @@ public class CoCustomerController {
 
         log.info("Customer create request received: {}", dto);
 
+        // Validate referral code if provided
+        if (dto.getReferralCodeUsed() != null && !dto.getReferralCodeUsed().isBlank()) {
+            log.info("Referral code validation: {}", dto.getReferralCodeUsed());
+        }
         return customerService.createCustomer(dto);
     }
 
@@ -115,16 +123,20 @@ public class CoCustomerController {
 
 
     // Update Customer Profile Pic
-    @PutMapping("/updateCustomerProfile")
-    public ResponseEntity<CoResponseDto> updateCustomerProfile(@RequestBody CoCustomerRequestDto requestDto) {
+    @PutMapping(value = "/updateCustomerProfile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CoResponseDto> updateCustomerProfile(
+            @RequestPart("customerData") String customerDataJson,
+            @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) throws Exception {
 
-        log.info("Update customer profile pic API called {} ", requestDto.getCustomerId());
+        CoCustomerRequestDto requestDto = objectMapper.readValue(customerDataJson, CoCustomerRequestDto.class);
 
-        String profilePicUrl = customerService.updateCustomerProfile(requestDto);
+        log.info("UPDATE_CUSTOMER_PROFILE_API_START | customerId={}", requestDto.getCustomerId());
 
-        log.info("UPDATE_CUSTOMER_API_SUCCESS | customerId {}", requestDto.getCustomerId());
+        String result = customerService.updateCustomerProfile(requestDto, profilePic);
 
-        return ResponseEntity.ok(new CoResponseDto(COConstants.STATUS_200, profilePicUrl));
+        log.info("UPDATE_CUSTOMER_PROFILE_API_SUCCESS | customerId={}", requestDto.getCustomerId());
+
+        return ResponseEntity.ok(new CoResponseDto(COConstants.STATUS_200, result));
     }
 
 //    ----------------------------------------------------------------------------------------------

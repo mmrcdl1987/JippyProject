@@ -601,7 +601,7 @@ CREATE TABLE IF NOT EXISTS jippy_customer_and_order.referrals(
     referrer_customer_id integer NOT NULL,
     referee_customer_id integer NOT NULL,
     referral_code character varying(20) NOT NULL,
-    referral_status character varying(20) NOT NULL DEFAULT 'PENDING', -- pending, qualified,rewarded
+    referral_status character varying(20) NOT NULL DEFAULT  -- pending, qualified,rewarded
     referral_type character varying(50) NOT NULL, -- customer,driver.
     created_at timestamp without time zone,
     created_by integer,

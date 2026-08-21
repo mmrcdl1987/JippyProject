@@ -2,6 +2,8 @@ package com.jippy.customerandorder.dto;
 
 import lombok.Data;
 
+import java.time.LocalDate;
+
 @Data
 public class CoCustomerResponseDto {
     private Integer customerId;
@@ -11,4 +13,6 @@ public class CoCustomerResponseDto {
     private String phoneNumber;
     private Integer customerStatusId;
     private String referralCode;
+    private LocalDate DOB;
+    private String profilePicUrl;
 }

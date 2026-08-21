@@ -228,7 +228,7 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
                     log.info("Updating existing community with id: {}", existingCommunity.get().getCommunityId());
                     CoCommunity communityToUpdate = existingCommunity.get();
                     CoCommunity community = CommunityOrderMapper.mapToCommunityEntity(communityToUpdate,communityDto, polygon);
-                    String s3BucketFilePath = s3ImageService.uploadFile(communityImage,communityToUpdate.getCommunityId());
+                    String s3BucketFilePath = s3ImageService.uploadFile(communityImage,"communities"+communityToUpdate.getCommunityId());
                     communityRepository.save(communityToUpdate);
                     return "Community:" + communityToUpdate.getCommunityName() + " updated successfully!";
                 }
@@ -238,7 +238,7 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
             CoCommunity savedCommunity = communityRepository.save(community);
             log.info("New Community is created with id: {}", savedCommunity.getCommunityId());
 
-            String s3BucketFilePath = s3ImageService.uploadFile(communityImage,savedCommunity.getCommunityId());
+            String s3BucketFilePath = s3ImageService.uploadFile(communityImage,"communities"+savedCommunity.getCommunityId());
             savedCommunity.setCommunityImageUrl(s3BucketFilePath);
             communityRepository.save(savedCommunity);
 
