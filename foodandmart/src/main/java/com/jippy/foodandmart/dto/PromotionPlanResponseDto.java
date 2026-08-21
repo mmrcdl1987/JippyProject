@@ -39,5 +39,7 @@ public class PromotionPlanResponseDto {
 
     private List<Integer> outletCategoryIds;
 
+    private Integer maxSelection;
+
     private PromotionStatus status;
 }

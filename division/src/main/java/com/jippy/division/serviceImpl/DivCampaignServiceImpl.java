@@ -6,7 +6,6 @@ import com.jippy.division.entity.DivPriceDropMappingOutletsProduct;
 import com.jippy.division.entity.DivPromotionDate;
 import com.jippy.division.exception.DivInvalidDateException;
 import com.jippy.division.exception.DivInvalidRequestException;
-import com.jippy.division.exception.DivPromotionScheduleException;
 import com.jippy.division.exception.DivResourceNotFoundException;
 import com.jippy.division.feignClients.FMFeignClient;
 import com.jippy.division.mapper.DivCampaignMapper;
@@ -19,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,18 +38,14 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
     private final FMFeignClient fmClient;
     private final PromotionScheduleRepository promotionScheduleRepository;
 
-
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createCampaign(DivCampaignRequestDto dto) {
 
-        log.info("Campaign creation started. campaignType={}, locationId={}, outletCount={}, productCount={}", dto.getCampainType(), dto.getLocationId(), dto.getOutletIds().size(), dto.getProductIds() == null ? 0 : dto.getProductIds().size());
+        log.info("Campaign creation started. campaignType={}, locationId={}, outletCount={}, productCount={}, mealSlotCount={}", dto.getCampainType(), dto.getLocationId(), dto.getOutletIds() == null ? 0 : dto.getOutletIds().size(), dto.getProductIds() == null ? 0 : dto.getProductIds().size(), dto.getMealTypeSlotIds() == null ? 0 : dto.getMealTypeSlotIds().size());
 
-        // Step 1 - Basic validations
         validateRequest(dto);
 
-        // Step 2 - Business validations
         if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
 
             validateCouponCampaign(dto);
@@ -65,21 +59,36 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
             throw new DivInvalidRequestException("Invalid Campaign Type.");
         }
 
-        // Step 3 - Save Promotion Date
-        DivPromotionDate promotionDate = promotionDateRepository.save(DivCampaignMapper.mapToPromotionDateEntity(dto));
+        /*
+         * One common createdAt identifies all promotion_date
+         * records belonging to this campaign.
+         */
+        LocalDateTime campaignCreatedAt = LocalDateTime.now();
 
-        // Step 4 - Save Campaign Mappings
-        for (Integer outletId : dto.getOutletIds()) {
+        /*
+         * Create one promotion_date record for every meal type slot.
+         */
+        for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
 
-            List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+            DivPromotionDate promotionDate = DivCampaignMapper.mapToPromotionDateEntity(dto, mealTypeSlotId);
 
-            for (Integer productId : campaignProducts) {
+            promotionDate.setCreatedAt(campaignCreatedAt);
+            promotionDate.setCreatedBy(dto.getCreatedBy());
 
-                saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
+            promotionDate = promotionDateRepository.save(promotionDate);
+
+            for (Integer outletId : dto.getOutletIds()) {
+
+                List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+
+                for (Integer productId : campaignProducts) {
+
+                    saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
+                }
             }
         }
 
-        log.info("Campaign created successfully. campaignType={}, promotionDateId={}", dto.getCampainType(), promotionDate.getPromotionDateId());
+        log.info("Campaign created successfully. campaignType={}, mealSlotCount={}", dto.getCampainType(), dto.getMealTypeSlotIds().size());
 
         return "Campaign Created Successfully";
     }
@@ -98,7 +107,6 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
         Set<Integer> blockedOutlets = new HashSet<>();
 
         blockedOutlets.addAll(couponOutlets);
-
         blockedOutlets.addAll(priceDropOutlets);
 
         return allOutlets.stream().filter(outlet -> !blockedOutlets.contains(outlet.getOutletId())).toList();
@@ -118,11 +126,13 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
             AvailableMealSlotResponseDto dto = new AvailableMealSlotResponseDto();
 
             dto.setMealTypeTimingsId(mealType.getMealTypeTimingsId());
+
             dto.setMealType(mealType.getMealType());
+
             dto.setFromTime(mealType.getFromTime());
+
             dto.setToTime(mealType.getToTime());
 
-            // Temporary
             dto.setAvailable(true);
             dto.setMessage("Available");
 
@@ -140,67 +150,165 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
         validateRequest(dto);
 
+        /*
+         * COUPON UPDATE
+         */
         if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
 
+            /*
+             * Validate the new campaign before deleting
+             * the existing campaign.
+             */
             validateCouponCampaignForUpdate(campaignId, dto);
 
-        } else if ("PRICE_DROP".equalsIgnoreCase(dto.getCampainType())) {
+            DivCouponMappingOutletProduct existingMapping = mappingRepository.findByCouponMappingId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Coupon Mapping not found with id : " + campaignId));
 
-            validatePriceDropCampaignForUpdate(campaignId, dto);
-        }
-        if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
+            Integer existingPromotionDateId = existingMapping.getPromotionDateId();
 
-            DivCouponMappingOutletProduct mapping = mappingRepository.findByCouponMappingId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Coupon Mapping not found with id : " + campaignId));
+            DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingPromotionDateId).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingPromotionDateId));
 
-            // Update Promotion Date
-            DivPromotionDate promotionDate = promotionDateRepository.findById(mapping.getPromotionDateId()).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found"));
+            /*
+             * All meal slots of the same campaign have
+             * the same createdAt.
+             */
+            List<DivPromotionDate> existingPromotionDates = promotionDateRepository.findByCreatedAt(existingPromotionDate.getCreatedAt());
 
-            promotionDate.setPromotionFromDate(LocalDateTime.parse(dto.getPromotionFromDate()));
+            /*
+             * Collect mappings belonging to ALL meal slots.
+             */
+            List<DivCouponMappingOutletProduct> existingMappings = new ArrayList<>();
 
-            promotionDate.setPromotionToDate(LocalDateTime.parse(dto.getPromotionToDate()));
+            for (DivPromotionDate promotionDate : existingPromotionDates) {
 
-            promotionDate.setMealTypeSlotId(dto.getMealTypeSlotId());
+                existingMappings.addAll(mappingRepository.findByPromotionDateId(promotionDate.getPromotionDateId()));
+            }
 
-            promotionDateRepository.save(promotionDate);
+            /*
+             * Delete schedules for all old mappings.
+             */
+            for (DivCouponMappingOutletProduct mapping : existingMappings) {
 
-            // Update Mapping
-            mapping.setCouponId(dto.getCouponId());
-            mapping.setLocationId(dto.getLocationId());
-            mapping.setLocationType(dto.getLocationType());
-            mapping.setUpdatedAt(LocalDateTime.now());
-            mapping.setUpdatedBy(dto.getCreatedBy());
+                promotionScheduleService.deleteCouponSchedule(mapping.getCouponMappingId());
+            }
 
-            mappingRepository.save(mapping);
+            /*
+             * Delete all old mappings.
+             */
+            mappingRepository.deleteAll(existingMappings);
 
-            promotionScheduleService.updateCouponSchedule(mapping.getCouponMappingId());
+            /*
+             * Delete all old promotion dates.
+             */
+            promotionDateRepository.deleteAll(existingPromotionDates);
+
+            /*
+             * CREATE UPDATED COUPON CAMPAIGN
+             */
+
+            LocalDateTime campaignCreatedAt = LocalDateTime.now();
+
+            for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
+
+                DivPromotionDate promotionDate = DivCampaignMapper.mapToPromotionDateEntity(dto, mealTypeSlotId);
+
+                promotionDate.setCreatedAt(campaignCreatedAt);
+
+                promotionDate.setCreatedBy(dto.getCreatedBy());
+
+                promotionDate = promotionDateRepository.save(promotionDate);
+
+                for (Integer outletId : dto.getOutletIds()) {
+
+                    List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+
+                    for (Integer productId : campaignProducts) {
+
+                        saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
+                    }
+                }
+            }
+
+            log.info("Coupon campaign updated successfully. campaignId={}", campaignId);
 
             return "Coupon Campaign Updated Successfully";
         }
-
         if ("PRICE_DROP".equalsIgnoreCase(dto.getCampainType())) {
 
-            DivPriceDropMappingOutletsProduct mapping = priceDropRepository.findByPriceDropMappingOutletsProductsId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Price Drop Mapping not found with id : " + campaignId));
+            /*
+             * Validate the new campaign before deleting
+             * the existing campaign.
+             */
+            validatePriceDropCampaignForUpdate(campaignId, dto);
 
-            DivPromotionDate promotionDate = promotionDateRepository.findById(mapping.getPromotionDateId()).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found"));
+            DivPriceDropMappingOutletsProduct existingMapping = priceDropRepository.findByPriceDropMappingOutletsProductsId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Price Drop Mapping not found with id : " + campaignId));
 
-            promotionDate.setPromotionFromDate(LocalDateTime.parse(dto.getPromotionFromDate()));
+            Integer existingPromotionDateId = existingMapping.getPromotionDateId();
 
-            promotionDate.setPromotionToDate(LocalDateTime.parse(dto.getPromotionToDate()));
+            DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingPromotionDateId).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingPromotionDateId));
 
-            promotionDate.setMealTypeSlotId(dto.getMealTypeSlotId());
+            /*
+             * Find ALL promotion_date records belonging
+             * to this campaign.
+             */
+            List<DivPromotionDate> existingPromotionDates = promotionDateRepository.findByCreatedAt(existingPromotionDate.getCreatedAt());
 
-            promotionDateRepository.save(promotionDate);
+            /*
+             * Collect Price Drop mappings from ALL
+             * meal slots.
+             */
+            List<DivPriceDropMappingOutletsProduct> existingMappings = new ArrayList<>();
 
-            mapping.setPriceModelId(dto.getPriceModelId());
-            mapping.setPriceDropValue(dto.getPriceDropValue());
-            mapping.setLocationId(dto.getLocationId());
-            mapping.setLocationType(dto.getLocationType());
-            mapping.setUpdatedAt(LocalDateTime.now());
-            mapping.setUpdatedBy(dto.getCreatedBy());
+            for (DivPromotionDate promotionDate : existingPromotionDates) {
 
-            priceDropRepository.save(mapping);
+                existingMappings.addAll(priceDropRepository.findByPromotionDateId(promotionDate.getPromotionDateId()));
+            }
 
-            promotionScheduleService.updatePriceDropSchedule(mapping.getPriceDropMappingOutletsProductsId());
+            /*
+             * Delete schedules for ALL old mappings.
+             */
+            for (DivPriceDropMappingOutletsProduct mapping : existingMappings) {
+
+                promotionScheduleService.deletePriceDropSchedule(mapping.getPriceDropMappingOutletsProductsId());
+            }
+
+            /*
+             * Delete ALL old Price Drop mappings.
+             */
+            priceDropRepository.deleteAll(existingMappings);
+
+            /*
+             * Delete ALL old promotion dates.
+             */
+            promotionDateRepository.deleteAll(existingPromotionDates);
+
+            /*
+             * CREATE UPDATED PRICE DROP CAMPAIGN
+             */
+
+            LocalDateTime campaignCreatedAt = LocalDateTime.now();
+
+            for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
+
+                DivPromotionDate promotionDate = DivCampaignMapper.mapToPromotionDateEntity(dto, mealTypeSlotId);
+
+                promotionDate.setCreatedAt(campaignCreatedAt);
+
+                promotionDate.setCreatedBy(dto.getCreatedBy());
+
+                promotionDate = promotionDateRepository.save(promotionDate);
+
+                for (Integer outletId : dto.getOutletIds()) {
+
+                    List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+
+                    for (Integer productId : campaignProducts) {
+
+                        saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
+                    }
+                }
+            }
+
+            log.info("Price Drop campaign updated successfully. campaignId={}", campaignId);
 
             return "Price Drop Campaign Updated Successfully";
         }
@@ -214,28 +322,112 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
         log.info("Campaign delete started. campaignType={}, campaignId={}", campaignType, campaignId);
 
+        /*
+         * COUPON DELETE
+         */
         if ("COUPON".equalsIgnoreCase(campaignType)) {
 
             DivCouponMappingOutletProduct mapping = mappingRepository.findByCouponMappingId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Coupon Mapping not found with id : " + campaignId));
 
-            promotionScheduleService.deleteCouponSchedule(campaignId);
+            /*
+             * Get one promotion_date from the selected mapping.
+             */
+            Integer promotionDateId = mapping.getPromotionDateId();
 
-            mappingRepository.delete(mapping);
+            DivPromotionDate promotionDate = promotionDateRepository.findById(promotionDateId).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + promotionDateId));
 
-            log.info("Coupon Campaign deleted successfully.");
+            /*
+             * Find ALL promotion_date records belonging
+             * to this campaign.
+             *
+             * All meal slots created for the same campaign
+             * have the same createdAt.
+             */
+            List<DivPromotionDate> promotionDates = promotionDateRepository.findByCreatedAt(promotionDate.getCreatedAt());
+
+            /*
+             * Collect mappings from ALL meal slots.
+             */
+            List<DivCouponMappingOutletProduct> mappings = new ArrayList<>();
+
+            for (DivPromotionDate campaignPromotionDate : promotionDates) {
+
+                mappings.addAll(mappingRepository.findByPromotionDateId(campaignPromotionDate.getPromotionDateId()));
+            }
+
+            /*
+             * Delete schedules for ALL mappings.
+             */
+            for (DivCouponMappingOutletProduct couponMapping : mappings) {
+
+                promotionScheduleService.deleteCouponSchedule(couponMapping.getCouponMappingId());
+            }
+
+            /*
+             * Delete ALL coupon mappings.
+             */
+            mappingRepository.deleteAll(mappings);
+
+            /*
+             * Delete ALL promotion dates.
+             */
+            promotionDateRepository.deleteAll(promotionDates);
+
+            log.info("Coupon campaign deleted successfully. campaignId={}, mealSlotCount={}", campaignId, promotionDates.size());
 
             return "Coupon Campaign Deleted Successfully";
         }
 
+        /*
+         * PRICE DROP DELETE
+         */
         if ("PRICE_DROP".equalsIgnoreCase(campaignType)) {
 
             DivPriceDropMappingOutletsProduct mapping = priceDropRepository.findByPriceDropMappingOutletsProductsId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Price Drop Mapping not found with id : " + campaignId));
 
-            promotionScheduleService.deletePriceDropSchedule(campaignId);
+            /*
+             * Get one promotion_date from the selected mapping.
+             */
+            Integer promotionDateId = mapping.getPromotionDateId();
 
-            priceDropRepository.delete(mapping);
+            DivPromotionDate promotionDate = promotionDateRepository.findById(promotionDateId).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + promotionDateId));
 
-            log.info("Price Drop Campaign deleted successfully.");
+            /*
+             * Find ALL promotion_date records belonging
+             * to this campaign.
+             */
+            List<DivPromotionDate> promotionDates = promotionDateRepository.findByCreatedAt(promotionDate.getCreatedAt());
+
+            /*
+             * Collect Price Drop mappings from ALL
+             * meal slots.
+             */
+            List<DivPriceDropMappingOutletsProduct> mappings = new ArrayList<>();
+
+            for (DivPromotionDate campaignPromotionDate : promotionDates) {
+
+                mappings.addAll(priceDropRepository.findByPromotionDateId(campaignPromotionDate.getPromotionDateId()));
+            }
+
+            /*
+             * Delete schedules for ALL mappings.
+             */
+            for (DivPriceDropMappingOutletsProduct priceDropMapping : mappings) {
+
+                promotionScheduleService.deletePriceDropSchedule(priceDropMapping.getPriceDropMappingOutletsProductsId());
+            }
+
+            /*
+             * Delete ALL Price Drop mappings.
+             */
+            priceDropRepository.deleteAll(mappings);
+
+            /*
+             * Delete ALL promotion dates.
+             */
+            promotionDateRepository.deleteAll(promotionDates);
+
+            log.info("Price Drop campaign deleted successfully. campaignId={}, mealSlotCount={}", campaignId, promotionDates.size());
 
             return "Price Drop Campaign Deleted Successfully";
         }
@@ -243,14 +435,11 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
         throw new DivInvalidRequestException("Invalid Campaign Type");
     }
 
-
-
     private void saveCampaign(DivCampaignRequestDto dto, Integer promotionDateId, Integer outletId, Integer productId) {
 
         if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
 
-            DivCouponMappingOutletProduct mapping = DivCampaignMapper.mapToCouponMappingEntity(dto.getCouponId(), outletId, productId, dto.getLocationId(), dto.getLocationType(), promotionDateId, dto.getCreatedBy());
-
+            DivCouponMappingOutletProduct mapping = DivCampaignMapper.mapToCouponMappingEntity(dto.getCouponId(), outletId, productId, dto.getLocationId(), dto.getLocationType(), promotionDateId, dto.getPromotionMessage(), dto.getMaxSelection(), dto.getCreatedBy());
             mapping = mappingRepository.save(mapping);
 
             promotionScheduleService.createCouponSchedule(mapping.getCouponMappingId());
@@ -260,81 +449,57 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
         if ("PRICE_DROP".equalsIgnoreCase(dto.getCampainType())) {
 
-            DivPriceDropMappingOutletsProduct entity = DivCampaignMapper.mapToPriceDropEntity(outletId, productId, dto.getLocationId(), dto.getLocationType(), promotionDateId, dto.getPriceModelId(), dto.getPriceDropValue(), dto.getCreatedBy());
-
+            DivPriceDropMappingOutletsProduct entity = DivCampaignMapper.mapToPriceDropEntity(outletId, productId, dto.getLocationId(), dto.getLocationType(), promotionDateId, dto.getPriceModelId(), dto.getPriceDropValue(), dto.getPromotionMessage(), dto.getMaxSelection(), dto.getCreatedBy());
             entity = priceDropRepository.save(entity);
 
             promotionScheduleService.createPriceDropSchedule(entity.getPriceDropMappingOutletsProductsId());
         }
     }
 
-    private void validateCampaignForUpdate(Integer campaignId, DivCampaignRequestDto dto) {
-
-        LocalDate fromDate = LocalDateTime.parse(dto.getPromotionFromDate()).toLocalDate();
-
-        LocalDate toDate = LocalDateTime.parse(dto.getPromotionToDate()).toLocalDate();
-
-        Integer campaignCount = 0;
-
-        if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
-
-            campaignCount = mappingRepository.countCouponCampaignForUpdate(campaignId, dto.getLocationId(), dto.getLocationType(), dto.getMealTypeSlotId(), fromDate, toDate);
-
-        } else if ("PRICE_DROP".equalsIgnoreCase(dto.getCampainType())) {
-
-            campaignCount = priceDropRepository.countPriceDropCampaignForUpdate(campaignId, dto.getLocationId(), dto.getLocationType(), dto.getMealTypeSlotId(), fromDate, toDate);
-        }
-
-        if (campaignCount > 0) {
-
-            throw new DivPromotionScheduleException("Campaign already exists for selected Location, Date Range and Meal Type.");
-        }
-    }
-
-    private void validateCoupon(Integer couponId) {
-
-        log.info("Validating coupon. couponId={}", couponId);
-
-        if (!couponRepository.existsByCouponIdAndIsActive(couponId, true)) {
-
-            log.error("Coupon not found or inactive. couponId={}", couponId);
-
-            throw new DivResourceNotFoundException("Coupon not found or inactive.");
-        }
-    }
-
-    private void validatePriceModel(Integer priceModelId) {
-
-        log.info("Validating Price Model. priceModelId={}", priceModelId);
-
-        if (!priceModelRepository.existsByPriceModelId(priceModelId)) {
-
-            log.error("Price Model not found. priceModelId={}", priceModelId);
-
-            throw new DivResourceNotFoundException("Price Model not found.");
-        }
-    }
-
     private void validateRequest(DivCampaignRequestDto dto) {
 
         if (dto.getCampainType() == null || dto.getCampainType().isBlank()) {
+
             throw new DivInvalidRequestException("Campaign Type is required");
         }
 
         if (dto.getLocationId() == null) {
+
             throw new DivInvalidRequestException("Location is required");
         }
 
+        validateMaxSelection(dto);
+
+
         if (dto.getLocationType() == null || dto.getLocationType().isBlank()) {
+
             throw new DivInvalidRequestException("Location Type is required");
         }
 
-        if (dto.getMealTypeSlotId() == null) {
+        /*
+         * New multi-slot validation.
+         */
+        if (dto.getMealTypeSlotIds() == null || dto.getMealTypeSlotIds().isEmpty()) {
 
-            throw new DivInvalidRequestException("Meal Type is required");
+            throw new DivInvalidRequestException("At least one Meal Type Slot is required");
         }
 
-        validateMealSlot(dto.getMealTypeSlotId());
+        Set<Integer> uniqueMealSlotIds = new HashSet<>(dto.getMealTypeSlotIds());
+
+        if (uniqueMealSlotIds.size() != dto.getMealTypeSlotIds().size()) {
+
+            throw new DivInvalidRequestException("Duplicate meal type slot ids are not allowed.");
+        }
+
+        for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
+
+            if (mealTypeSlotId == null || mealTypeSlotId <= 0) {
+
+                throw new DivInvalidRequestException("Invalid Meal Type Slot Id.");
+            }
+
+            validateMealSlot(mealTypeSlotId);
+        }
 
         if (dto.getPromotionFromDate() == null || dto.getPromotionFromDate().isBlank()) {
 
@@ -359,12 +524,27 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
             throw new DivInvalidRequestException("Please select at least one outlet");
         }
+
+        Set<Integer> uniqueOutletIds = new HashSet<>(dto.getOutletIds());
+
+        if (uniqueOutletIds.size() != dto.getOutletIds().size()) {
+
+            throw new DivInvalidRequestException("Duplicate outlet ids are not allowed.");
+        }
+
         for (Integer outletId : dto.getOutletIds()) {
 
             validateOutletBelongsToLocation(outletId, dto.getLocationId(), dto.getLocationType());
         }
 
         if (dto.getProductIds() != null && !dto.getProductIds().isEmpty()) {
+
+            Set<Integer> uniqueProductIds = new HashSet<>(dto.getProductIds());
+
+            if (uniqueProductIds.size() != dto.getProductIds().size()) {
+
+                throw new DivInvalidRequestException("Duplicate product ids are not allowed.");
+            }
 
             for (Integer outletId : dto.getOutletIds()) {
 
@@ -375,22 +555,6 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
             }
         }
 
-        Set<Integer> uniqueOutletIds = new HashSet<>(dto.getOutletIds());
-
-        if (uniqueOutletIds.size() != dto.getOutletIds().size()) {
-
-            throw new DivInvalidRequestException("Duplicate outlet ids are not allowed.");
-
-        }
-        if (dto.getProductIds() != null && !dto.getProductIds().isEmpty()) {
-
-            Set<Integer> uniqueProductIds = new HashSet<>(dto.getProductIds());
-
-            if (uniqueProductIds.size() != dto.getProductIds().size()) {
-
-                throw new DivInvalidRequestException("Duplicate product ids are not allowed.");
-            }
-        }
         if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
 
             if (dto.getCouponId() == null) {
@@ -472,35 +636,23 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
         if (!valid) {
 
-            log.error("Outlet {} does not belong to {} {}", outletId, locationType, locationId);
-
             throw new DivInvalidRequestException("Selected outlet does not belong to the selected location.");
         }
-
-        log.info("Outlet location validated successfully. outletId={}", outletId);
     }
 
     private void validateProductBelongsToOutlet(Integer outletId, Integer productId) {
-
-        log.info("Validating product belongs to outlet. outletId={}, productId={}", outletId, productId);
 
         Boolean exists = fmClient.existsProductInOutlet(outletId, productId);
 
         if (Boolean.FALSE.equals(exists)) {
 
-            log.error("Product {} does not belong to outlet {}", productId, outletId);
-
             throw new DivInvalidRequestException("Product " + productId + " does not belong to outlet " + outletId + ".");
         }
-
-        log.info("Product validated successfully. outletId={}, productId={}", outletId, productId);
     }
 
     private List<Integer> getCampaignProductIds(Integer outletId, List<Integer> productIds) {
 
         if (productIds == null || productIds.isEmpty()) {
-
-            log.info("No products selected. Fetching all active products for outletId={}", outletId);
 
             List<Integer> outletProducts = fmClient.getActiveProductIdsByOutlet(outletId);
 
@@ -515,150 +667,208 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
         return productIds;
     }
 
-    private void validateCouponOverlap(Integer outletId, Integer productId, LocalDateTime promotionFromDate, LocalDateTime promotionToDate) {
+    private void validateCoupon(Integer couponId) {
 
-        log.info("Validating coupon overlap. outletId={}, productId={}", outletId, productId);
+        if (!couponRepository.existsByCouponIdAndIsActive(couponId, true)) {
 
-        Long count = mappingRepository.countCouponOverlap(outletId, productId, promotionFromDate, promotionToDate);
-
-        if (count > 0) {
-
-            log.error("Coupon overlap found. outletId={}, productId={}", outletId, productId);
-
-            throw new DivInvalidRequestException("A coupon campaign already exists for the selected product during the selected date range.");
+            throw new DivResourceNotFoundException("Coupon not found or inactive.");
         }
-
-        log.info("Coupon overlap validation passed. outletId={}, productId={}", outletId, productId);
     }
 
-    private void validatePriceDropOverlap(Integer outletId, Integer productId, LocalDateTime promotionFromDate, LocalDateTime promotionToDate) {
+    private void validatePriceModel(Integer priceModelId) {
 
-        log.info("Validating price drop overlap. outletId={}, productId={}", outletId, productId);
+        if (!priceModelRepository.existsByPriceModelId(priceModelId)) {
 
-        Long count = priceDropRepository.countPriceDropOverlap(outletId, productId, promotionFromDate, promotionToDate);
-
-        if (count > 0) {
-
-            log.error("Price drop overlap found. outletId={}, productId={}", outletId, productId);
-
-            throw new DivInvalidRequestException("A price drop campaign already exists for the selected product during the selected date range.");
+            throw new DivResourceNotFoundException("Price Model not found.");
         }
-
-        log.info("Price drop overlap validation passed. outletId={}, productId={}", outletId, productId);
     }
 
-    private void validatePriceDropCampaign(DivCampaignRequestDto dto) {
+    private void validateCouponOverlap(Integer outletId, Integer productId, Integer mealTypeSlotId, LocalDateTime promotionFromDate, LocalDateTime promotionToDate) {
 
-        log.info("Validating price drop campaign.");
+        Long count = mappingRepository.countCouponOverlap(outletId, productId, mealTypeSlotId, promotionFromDate, promotionToDate);
 
-        LocalDateTime fromDate = LocalDateTime.parse(dto.getPromotionFromDate());
-
-        LocalDateTime toDate = LocalDateTime.parse(dto.getPromotionToDate());
-
-        for (Integer outletId : dto.getOutletIds()) {
-
-            List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
-
-            for (Integer productId : campaignProducts) {
-
-                validatePriceDropOverlap(outletId, productId, fromDate, toDate);
-            }
+        if (count > 0) {
+            throw new DivInvalidRequestException("A coupon campaign already exists for the selected product, " + "meal slot and date range.");
         }
+    }
 
-        log.info("Price drop campaign validation completed successfully.");
+    private void validatePriceDropOverlap(Integer outletId, Integer productId, Integer mealTypeSlotId, LocalDateTime promotionFromDate, LocalDateTime promotionToDate) {
+
+        Long count = priceDropRepository.countPriceDropOverlap(outletId, productId, mealTypeSlotId, promotionFromDate, promotionToDate);
+
+        if (count > 0) {
+            throw new DivInvalidRequestException("A price drop campaign already exists for the selected product, " + "meal slot and date range.");
+        }
     }
 
     private void validateCouponCampaign(DivCampaignRequestDto dto) {
 
-        log.info("Validating coupon campaign.");
+        LocalDateTime fromDate = LocalDateTime.parse(dto.getPromotionFromDate());
+
+        LocalDateTime toDate = LocalDateTime.parse(dto.getPromotionToDate());
+
+        for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
+
+            for (Integer outletId : dto.getOutletIds()) {
+
+                List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+
+                for (Integer productId : campaignProducts) {
+
+                    // Coupon vs Coupon
+                    validateCouponOverlap(outletId, productId, mealTypeSlotId, fromDate, toDate);
+
+                    // Coupon vs Price Drop
+                    validatePriceDropConflictForCoupon(outletId, productId, mealTypeSlotId, fromDate, toDate);
+                }
+            }
+        }
+    }
+
+    private void validatePriceDropCampaign(DivCampaignRequestDto dto) {
 
         LocalDateTime fromDate = LocalDateTime.parse(dto.getPromotionFromDate());
 
         LocalDateTime toDate = LocalDateTime.parse(dto.getPromotionToDate());
 
-        for (Integer outletId : dto.getOutletIds()) {
+        for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
 
-            List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+            for (Integer outletId : dto.getOutletIds()) {
 
-            for (Integer productId : campaignProducts) {
+                List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
 
-                validateCouponOverlap(outletId, productId, fromDate, toDate);
+                for (Integer productId : campaignProducts) {
+
+                    // Price Drop vs Price Drop
+                    validatePriceDropOverlap(outletId, productId, mealTypeSlotId, fromDate, toDate);
+
+                    // Price Drop vs Coupon
+                    validateCouponConflictForPriceDrop(outletId, productId, mealTypeSlotId, fromDate, toDate);
+                }
             }
         }
+    }
 
-        log.info("Coupon campaign validation completed successfully.");
+    private void validatePriceDropConflictForCoupon(Integer outletId, Integer productId, Integer mealTypeSlotId, LocalDateTime promotionFromDate, LocalDateTime promotionToDate) {
+
+        Long count = priceDropRepository.countPriceDropOverlap(outletId, productId, mealTypeSlotId, promotionFromDate, promotionToDate);
+
+        if (count > 0) {
+            throw new DivInvalidRequestException("A price drop campaign already exists for the selected product, " + "meal slot and date range. Coupon cannot be created.");
+        }
+    }
+
+    private void validateCouponConflictForPriceDrop(Integer outletId, Integer productId, Integer mealTypeSlotId, LocalDateTime promotionFromDate, LocalDateTime promotionToDate) {
+
+        Long count = mappingRepository.countCouponOverlap(outletId, productId, mealTypeSlotId, promotionFromDate, promotionToDate);
+
+        if (count > 0) {
+            throw new DivInvalidRequestException("A coupon campaign already exists for the selected product, " + "meal slot and date range. Price drop cannot be created.");
+        }
     }
 
     private void validateCouponCampaignForUpdate(Integer campaignId, DivCampaignRequestDto dto) {
 
-        log.info("Validating coupon campaign update.");
-
         LocalDateTime fromDate = LocalDateTime.parse(dto.getPromotionFromDate());
 
         LocalDateTime toDate = LocalDateTime.parse(dto.getPromotionToDate());
 
-        for (Integer outletId : dto.getOutletIds()) {
+        DivCouponMappingOutletProduct existingMapping = mappingRepository.findByCouponMappingId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Coupon Mapping not found with id : " + campaignId));
 
-            List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+        DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingMapping.getPromotionDateId()).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingMapping.getPromotionDateId()));
 
-            for (Integer productId : campaignProducts) {
+        LocalDateTime campaignCreatedAt = existingPromotionDate.getCreatedAt();
 
-                Long count = mappingRepository.countCouponOverlapForUpdate(campaignId, outletId, productId, fromDate, toDate);
+        for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
 
-                if (count > 0) {
+            for (Integer outletId : dto.getOutletIds()) {
 
-                    throw new DivInvalidRequestException("A coupon campaign already exists for the selected product during the selected date range.");
+                List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+
+                for (Integer productId : campaignProducts) {
+
+                    Long couponCount = mappingRepository.countCouponOverlapForUpdate(outletId, productId, mealTypeSlotId, fromDate, toDate, campaignCreatedAt);
+
+                    if (couponCount > 0) {
+
+                        throw new DivInvalidRequestException("A coupon campaign already exists for the selected " + "product, meal slot and date range.");
+                    }
+
+                    Long priceDropCount = priceDropRepository.countPriceDropOverlap(outletId, productId, mealTypeSlotId, fromDate, toDate);
+
+                    if (priceDropCount > 0) {
+
+                        throw new DivInvalidRequestException("A price drop campaign already exists for the selected " + "product, meal slot and date range. " + "Coupon cannot be updated.");
+                    }
                 }
             }
         }
+    }
 
-        log.info("Coupon campaign update validation completed successfully.");
+    private void validateMaxSelection(DivCampaignRequestDto dto) {
+
+        Integer maxSelection = dto.getMaxSelection();
+
+        if (maxSelection == null) {
+            return;
+        }
+
+        if (maxSelection == 0 || maxSelection < -1) {
+            throw new DivInvalidRequestException("Max selection must be -1 or greater than zero.");
+        }
     }
 
     private void validatePriceDropCampaignForUpdate(Integer campaignId, DivCampaignRequestDto dto) {
 
-        log.info("Validating price drop campaign update.");
-
         LocalDateTime fromDate = LocalDateTime.parse(dto.getPromotionFromDate());
 
         LocalDateTime toDate = LocalDateTime.parse(dto.getPromotionToDate());
 
-        for (Integer outletId : dto.getOutletIds()) {
+        DivPriceDropMappingOutletsProduct existingMapping = priceDropRepository.findByPriceDropMappingOutletsProductsId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Price Drop Mapping not found with id : " + campaignId));
 
-            List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+        DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingMapping.getPromotionDateId()).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingMapping.getPromotionDateId()));
 
-            for (Integer productId : campaignProducts) {
+        LocalDateTime campaignCreatedAt = existingPromotionDate.getCreatedAt();
 
-                Long count = priceDropRepository.countPriceDropOverlapForUpdate(campaignId, outletId, productId, fromDate, toDate);
+        for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
 
-                if (count > 0) {
+            for (Integer outletId : dto.getOutletIds()) {
 
-                    throw new DivInvalidRequestException("A price drop campaign already exists for the selected product during the selected date range.");
+                List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
+
+                for (Integer productId : campaignProducts) {
+
+                    Long priceDropCount = priceDropRepository.countPriceDropOverlapForUpdate(outletId, productId, mealTypeSlotId, fromDate, toDate, campaignCreatedAt);
+
+                    if (priceDropCount > 0) {
+
+                        throw new DivInvalidRequestException("A price drop campaign already exists for the selected " + "product, meal slot and date range.");
+                    }
+
+                    Long couponCount = mappingRepository.countCouponOverlap(outletId, productId, mealTypeSlotId, fromDate, toDate);
+
+                    if (couponCount > 0) {
+
+                        throw new DivInvalidRequestException("A coupon campaign already exists for the selected " + "product, meal slot and date range. " + "Price Drop cannot be updated.");
+                    }
                 }
             }
         }
-
-        log.info("Price drop campaign update validation completed successfully.");
     }
 
     @Override
     public List<DivActiveDiscountsResponseDto> getActiveDiscounts() {
 
-        List<DivActiveDiscountsProjection> activeDiscountsProjectionList = promotionScheduleRepository
-                .getActiveDiscounts(LocalDateTime.now());
-
-        log.info("Get active discounts : {} ",activeDiscountsProjectionList);
+        List<DivActiveDiscountsProjection> activeDiscountsProjectionList = promotionScheduleRepository.getActiveDiscounts(LocalDateTime.now());
 
         List<DivActiveDiscountsResponseDto> activeDiscountsResponseDtos = new ArrayList<>();
 
-        for(DivActiveDiscountsProjection activeDiscountsProjection : activeDiscountsProjectionList){
+        for (DivActiveDiscountsProjection projection : activeDiscountsProjectionList) {
 
-            DivActiveDiscountsResponseDto activeDiscountsResponseDto = new DivActiveDiscountsResponseDto();
+            DivActiveDiscountsResponseDto response = new DivActiveDiscountsResponseDto();
 
-            activeDiscountsResponseDtos.add(DivCampaignMapper.
-                    mapToActiveDiscounts(activeDiscountsProjection,activeDiscountsResponseDto));
+            activeDiscountsResponseDtos.add(DivCampaignMapper.mapToActiveDiscounts(projection, response));
         }
-        log.info("==============================="+activeDiscountsResponseDtos);
 
         return activeDiscountsResponseDtos;
     }

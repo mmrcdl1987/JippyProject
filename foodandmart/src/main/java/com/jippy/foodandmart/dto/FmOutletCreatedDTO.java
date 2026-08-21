@@ -12,7 +12,7 @@ public class FmOutletCreatedDTO {
     private Integer outletId;
     private String  outletName;
     private Integer merchantId;
-    private String  cuisineType;
+    private Integer[] cuisineType;
     private String  outletPhone;
     private String  isActive;
 

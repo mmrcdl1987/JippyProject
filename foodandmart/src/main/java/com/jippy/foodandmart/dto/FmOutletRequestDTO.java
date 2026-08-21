@@ -33,11 +33,14 @@ public class FmOutletRequestDTO {
     @Schema(description = "Merchant Id", example = "50")
     @NotNull(message = "Merchant ID is required")
     private Integer merchantId;
+    @Schema(
+            description = "Cuisine type IDs",
+            example = "[1, 2, 5]"
+    )
+    @NotNull(message = "Cuisine type is required")
+    @Size(min = 1, message = "At least one cuisine type is required")
+    private Integer[] cuisineType;
 
-    @Schema(description = "Cuisine Type", example = "Indian")
-    @NotBlank(message = "Cuisine type is required")
-    @Size(max = 100, message = "Cuisine type must not exceed 100 characters")
-    private String cuisineType;
 
     @Schema(description = "Primary outlet phone number", example = "9876543210")
     @NotBlank(message = "Outlet phone is required")
@@ -48,6 +51,13 @@ public class FmOutletRequestDTO {
     @NotBlank(message = "Outlet email is required")
     @Email(message = "Invalid email format")
     private String outletEmail;
+
+    @Schema(
+            description = "S3 URL of the outlet image",
+            example = "https://jippys3bucket.s3.ap-south-2.amazonaws.com/outlets/50/images/8d7f2c1a.jpg"
+    )
+    @Size(max = 1000, message = "Outlet image URL must not exceed 1000 characters")
+    private String outletPicUrl;
 
     @Schema(description = "Alternate outlet phone number", example = "9876543211")
     @Pattern(regexp = "^[6-9]\\d{9}$",

@@ -9,15 +9,19 @@ import com.jippy.division.projection.DivActiveDiscountsProjection;
 
 import java.time.LocalDateTime;
 
-public class DivCampaignMapper {
+public final class DivCampaignMapper {
 
     private DivCampaignMapper() {
     }
 
     /**
-     * MAP PROMOTION DATE
+     * Maps campaign request to PromotionDate entity.
+     *
+     * One PromotionDate record is created for each meal type slot.
      */
-    public static DivPromotionDate mapToPromotionDateEntity(DivCampaignRequestDto dto) {
+    public static DivPromotionDate mapToPromotionDateEntity(
+            DivCampaignRequestDto dto,
+            Integer mealTypeSlotId) {
 
         DivPromotionDate promotionDate = new DivPromotionDate();
 
@@ -27,7 +31,7 @@ public class DivCampaignMapper {
         promotionDate.setPromotionToDate(
                 LocalDateTime.parse(dto.getPromotionToDate()));
 
-        promotionDate.setMealTypeSlotId(dto.getMealTypeSlotId());
+        promotionDate.setMealTypeSlotId(mealTypeSlotId);
 
         promotionDate.setCreatedAt(LocalDateTime.now());
         promotionDate.setCreatedBy(dto.getCreatedBy());
@@ -36,7 +40,7 @@ public class DivCampaignMapper {
     }
 
     /**
-     * MAP COUPON ENTITY
+     * Maps campaign request to Coupon Mapping entity.
      */
     public static DivCouponMappingOutletProduct mapToCouponMappingEntity(
             Integer couponId,
@@ -45,6 +49,8 @@ public class DivCampaignMapper {
             Integer locationId,
             String locationType,
             Integer promotionDateId,
+            String promotionMessage,
+            Integer maxSelection,
             Integer createdBy) {
 
         DivCouponMappingOutletProduct mapping =
@@ -53,11 +59,14 @@ public class DivCampaignMapper {
         mapping.setCouponId(couponId);
         mapping.setOutletId(outletId);
         mapping.setProductId(productId);
-
         mapping.setLocationId(locationId);
         mapping.setLocationType(locationType);
-
         mapping.setPromotionDateId(promotionDateId);
+        mapping.setPromotionMessage(promotionMessage);
+
+        mapping.setMaxSelection(
+                maxSelection == null ? -1 : maxSelection
+        );
 
         mapping.setCreatedAt(LocalDateTime.now());
         mapping.setCreatedBy(createdBy);
@@ -66,7 +75,7 @@ public class DivCampaignMapper {
     }
 
     /**
-     * MAP PRICE DROP ENTITY
+     * Maps campaign request to Price Drop Mapping entity.
      */
     public static DivPriceDropMappingOutletsProduct mapToPriceDropEntity(
             Integer outletId,
@@ -76,6 +85,8 @@ public class DivCampaignMapper {
             Integer promotionDateId,
             Integer priceModelId,
             Double priceDropValue,
+            String promotionMessage,
+            Integer maxSelection,
             Integer createdBy) {
 
         DivPriceDropMappingOutletsProduct entity =
@@ -83,14 +94,16 @@ public class DivCampaignMapper {
 
         entity.setOutletId(outletId);
         entity.setProductId(productId);
-
         entity.setLocationId(locationId);
         entity.setLocationType(locationType);
-
         entity.setPromotionDateId(promotionDateId);
-
         entity.setPriceModelId(priceModelId);
         entity.setPriceDropValue(priceDropValue);
+        entity.setPromotionMessage(promotionMessage);
+
+        entity.setMaxSelection(
+                maxSelection == null ? -1 : maxSelection
+        );
 
         entity.setCreatedAt(LocalDateTime.now());
         entity.setCreatedBy(createdBy);
@@ -98,22 +111,34 @@ public class DivCampaignMapper {
         return entity;
     }
 
-    public static DivActiveDiscountsResponseDto mapToActiveDiscounts(DivActiveDiscountsProjection activeDiscountsProjection, DivActiveDiscountsResponseDto activeDiscountsResponseDto) {
+    /**
+     * Maps active discount projection to response DTO.
+     */
+    public static DivActiveDiscountsResponseDto mapToActiveDiscounts(
+            DivActiveDiscountsProjection projection,
+            DivActiveDiscountsResponseDto responseDto) {
 
-        activeDiscountsResponseDto.setDiscountAmount(activeDiscountsProjection.getDiscountAmount());
-        activeDiscountsResponseDto.setEndDateTime(activeDiscountsProjection.getEndDateTime());
-        activeDiscountsResponseDto.setCouponCode(activeDiscountsProjection.getCouponCode());
-        activeDiscountsResponseDto.setSourceId(activeDiscountsProjection.getSourceId());
-        activeDiscountsResponseDto.setSourceType(activeDiscountsProjection.getSourceType());
-        activeDiscountsResponseDto.setStartDateTime(activeDiscountsProjection.getStartDateTime());
-        activeDiscountsResponseDto.setPriceType(activeDiscountsProjection.getpriceModelName());
-        activeDiscountsResponseDto.setMinOrderValue(activeDiscountsProjection.getMinOrderValue());
-        activeDiscountsResponseDto.setProductId(activeDiscountsProjection.getProductId());
-        activeDiscountsResponseDto.setOutletId(activeDiscountsProjection.getOutletId());
-        activeDiscountsResponseDto.setUsageLimitPerUser(activeDiscountsProjection.getUsageLimitPerUser());
-        activeDiscountsResponseDto.setPromotionScheduleId(activeDiscountsProjection.getPromotionScheduleId());
-        activeDiscountsResponseDto.setMealTypeSlotIdsStr(activeDiscountsProjection.getMealTypeSlotIdsStr());
+        responseDto.setDiscountAmount(projection.getDiscountAmount());
+        responseDto.setEndDateTime(projection.getEndDateTime());
+        responseDto.setCouponCode(projection.getCouponCode());
+        responseDto.setSourceId(projection.getSourceId());
+        responseDto.setSourceType(projection.getSourceType());
+        responseDto.setStartDateTime(projection.getStartDateTime());
+        responseDto.setPriceType(projection.getpriceModelName());
+        responseDto.setMinOrderValue(projection.getMinOrderValue());
+        responseDto.setProductId(projection.getProductId());
+        responseDto.setOutletId(projection.getOutletId());
+        responseDto.setUsageLimitPerUser(projection.getUsageLimitPerUser());
+        responseDto.setPromotionScheduleId(
+                projection.getPromotionScheduleId());
+        responseDto.setMealTypeSlotIdsStr(
+                projection.getMealTypeSlotIdsStr());
+        responseDto.setPromotionMessage(
+                projection.getPromotionMessage());
 
-        return activeDiscountsResponseDto;
+        responseDto.setMaxSelection(
+                projection.getMaxSelection());
+
+        return responseDto;
     }
 }

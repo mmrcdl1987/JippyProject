@@ -35,26 +35,32 @@ public class PromotionPlanMapper {
         PromotionPlanResponseDto dto = new PromotionPlanResponseDto();
 
         dto.setPromotionPlanId(entity.getPromotionPlanId());
+
         dto.setOutletId(entity.getOutletId());
 
-        dto.setPromotionPlanTypeId(
-                entity.getPromotionPlanType().getPromotionPlanTypesId());
+        if (entity.getPromotionPlanType() != null) {
 
-        dto.setPromotionPlanType(
-                entity.getPromotionPlanType().getPlanName());
+            dto.setPromotionPlanTypeId(entity.getPromotionPlanType().getPromotionPlanTypesId());
+
+            dto.setPromotionPlanType(entity.getPromotionPlanType().getPlanName());
+        }
 
         dto.setPlanStartDate(entity.getPlanStartDate());
+
         dto.setPlanEndDate(entity.getPlanEndDate());
 
         dto.setPlanStartTime(entity.getPlanStartTime());
+
         dto.setPlanEndTime(entity.getPlanEndTime());
 
         dto.setOfferName(entity.getOfferName());
+
         dto.setMinimumOrderValue(entity.getMinimumOrderValue());
+
         dto.setOfferAmount(entity.getOfferAmount());
+
         dto.setOfferType(entity.getOfferType());
 
-        // If PromotionPlanResponseDto has status field
         dto.setStatus(getPromotionStatus(entity));
 
         return dto;
@@ -65,49 +71,61 @@ public class PromotionPlanMapper {
         PromotionPlanAuditResponseDto dto = new PromotionPlanAuditResponseDto();
 
         dto.setPromotionPlanId(entity.getPromotionPlanId());
+
         dto.setOutletId(entity.getOutletId());
 
-        dto.setPromotionPlanTypeId(
-                entity.getPromotionPlanType().getPromotionPlanTypesId());
+        if (entity.getPromotionPlanType() != null) {
 
-        dto.setPromotionPlanType(
-                entity.getPromotionPlanType().getPlanName());
+            dto.setPromotionPlanTypeId(entity.getPromotionPlanType().getPromotionPlanTypesId());
+
+            dto.setPromotionPlanType(entity.getPromotionPlanType().getPlanName());
+        }
 
         dto.setPlanStartDate(entity.getPlanStartDate());
+
         dto.setPlanEndDate(entity.getPlanEndDate());
 
         dto.setPlanStartTime(entity.getPlanStartTime());
+
         dto.setPlanEndTime(entity.getPlanEndTime());
 
         dto.setOfferName(entity.getOfferName());
+
         dto.setMinimumOrderValue(entity.getMinimumOrderValue());
+
         dto.setOfferAmount(entity.getOfferAmount());
+
         dto.setOfferType(entity.getOfferType());
 
         dto.setCreatedBy(entity.getCreatedBy());
+
         dto.setCreatedAt(entity.getCreatedAt());
 
         dto.setUpdatedBy(entity.getUpdatedBy());
+
         dto.setUpdatedAt(entity.getUpdatedAt());
 
-        // If PromotionPlanAuditResponseDto has status field
         dto.setStatus(getPromotionStatus(entity));
 
         return dto;
     }
 
-    public void updateEntity(PromotionPlan entity,
-                             PromotionPlanRequestDto dto) {
+    public void updateEntity(PromotionPlan entity, PromotionPlanRequestDto dto) {
 
         entity.setPlanStartDate(dto.getPlanStartDate());
+
         entity.setPlanEndDate(dto.getPlanEndDate());
 
         entity.setPlanStartTime(dto.getPlanStartTime());
+
         entity.setPlanEndTime(dto.getPlanEndTime());
 
         entity.setOfferName(dto.getOfferName());
+
         entity.setMinimumOrderValue(dto.getMinimumOrderValue());
+
         entity.setOfferAmount(dto.getOfferAmount());
+
         entity.setOfferType(dto.getOfferType());
     }
 
@@ -116,18 +134,19 @@ public class PromotionPlanMapper {
         PromotionListResponseDto dto = new PromotionListResponseDto();
 
         dto.setPromotionPlanId(entity.getPromotionPlanId());
+
         dto.setOfferName(entity.getOfferName());
 
-        // Keep enum if DTO field is OfferType.
-        // If DTO field is String, use .name()
         dto.setOfferType(entity.getOfferType());
 
         dto.setOfferAmount(entity.getOfferAmount());
 
         dto.setPlanStartDate(entity.getPlanStartDate());
+
         dto.setPlanEndDate(entity.getPlanEndDate());
 
         dto.setPlanStartTime(entity.getPlanStartTime());
+
         dto.setPlanEndTime(entity.getPlanEndTime());
 
         dto.setStatus(getPromotionStatus(entity));
@@ -139,13 +158,14 @@ public class PromotionPlanMapper {
 
         LocalDateTime now = LocalDateTime.now();
 
-        LocalDateTime startDateTime = LocalDateTime.of(
-                entity.getPlanStartDate(),
-                entity.getPlanStartTime());
+        if (entity.getPlanStartDate() == null || entity.getPlanStartTime() == null || entity.getPlanEndDate() == null || entity.getPlanEndTime() == null) {
 
-        LocalDateTime endDateTime = LocalDateTime.of(
-                entity.getPlanEndDate(),
-                entity.getPlanEndTime());
+            return PromotionStatus.SCHEDULED;
+        }
+
+        LocalDateTime startDateTime = LocalDateTime.of(entity.getPlanStartDate(), entity.getPlanStartTime());
+
+        LocalDateTime endDateTime = LocalDateTime.of(entity.getPlanEndDate(), entity.getPlanEndTime());
 
         if (now.isBefore(startDateTime)) {
             return PromotionStatus.SCHEDULED;

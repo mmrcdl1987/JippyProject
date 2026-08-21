@@ -523,8 +523,9 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             AND o.is_approved = true
             """,
             nativeQuery = true)
-    List<FmOutlet> getOutletsByAreaId(Integer areaId);
-
+    List<FmOutlet> getOutletsByAreaId(
+            @Param("areaId") Integer areaId
+    );
 
     // this query checks if an outlet with the same name already exists for the given merchant and area,
 // ignoring case and whitespace differences. It returns true if such an outlet exists, otherwise false.

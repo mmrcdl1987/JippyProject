@@ -3,6 +3,8 @@ package com.jippy.foodandmart.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
 
 import java.math.BigDecimal;
@@ -26,16 +28,17 @@ public class FmOutlet {
 
     @Column(name = "outlet_name", length = 100, nullable = false)
     private String outletName;
+
     @Column(name = "outlet_pic_url")
     private String outletPicUrl;
+
     @Column(name = "outlet_email")
     private String outletEmail;
     @Column(name = "alternate_outlet_phone", length = 10)
     private String alternateOutletPhone;
     @Column(name = "merchant_id", nullable = false)
     private Integer merchantId;
-    @Column(name = "cuisine_type", length = 100, nullable = false)
-    private String cuisineType;
+
     @Column(name = "outlet_phone", length = 20, nullable = false)
     private String outletPhone;
     @Column(name = "radius", precision = 10, scale = 2)
@@ -79,7 +82,13 @@ public class FmOutlet {
     @JoinColumn(name = "merchant_id", insertable = false, updatable = false)
     private FmMerchant merchant;
 
+    @Column(name = "is_toggle")
     private Boolean isToggle;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "cuisine_type", columnDefinition = "integer[]")
+    private Integer[] cuisineType;
+
 
 //    @JsonIgnore
 //    @OneToOne(mappedBy = "outlet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -102,10 +111,12 @@ public class FmOutlet {
         if (this.isActive == null) this.isActive = "Y";
         if (this.radius == null) this.radius = new BigDecimal("3.00");
         if (this.isApproved == null) this.isApproved = false;
+        if (this.isToggle == null) this.isToggle = false;
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
 }

@@ -134,4 +134,47 @@ public interface PromotionPlanRepository extends
     nativeQuery = true)
     List<FmActivePromotionDiscountsProjection> getActivePromtionDiscounts(@Param("now") LocalDateTime now,
             @Param("outletIds") List<Integer> outletIds);
+
+
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM jippy_fm.promotion_plans pp
+        JOIN jippy_fm.promotion_plan_products ppp
+          ON pp.promotion_plans_id = ppp.promotion_plans_id
+        WHERE pp.outlet_id = :outletId
+          AND ppp.product_id = :productId
+          AND (
+                pp.plan_start_date + pp.plan_start_time
+              ) <= :endDateTime
+          AND (
+                pp.plan_end_date + pp.plan_end_time
+              ) >= :startDateTime
+        """, nativeQuery = true)
+    long countMerchantPromotionOverlap(
+            @Param("outletId") Integer outletId,
+            @Param("productId") Integer productId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime);
+
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM jippy_fm.promotion_plans pp
+        JOIN jippy_fm.promotion_plan_products ppp
+          ON pp.promotion_plans_id = ppp.promotion_plans_id
+        WHERE pp.promotion_plans_id <> :promotionPlanId
+          AND pp.outlet_id = :outletId
+          AND ppp.product_id = :productId
+          AND (
+                pp.plan_start_date + pp.plan_start_time
+              ) <= :endDateTime
+          AND (
+                pp.plan_end_date + pp.plan_end_time
+              ) >= :startDateTime
+        """, nativeQuery = true)
+    long countMerchantPromotionOverlapForUpdate(
+            @Param("promotionPlanId") Integer promotionPlanId,
+            @Param("outletId") Integer outletId,
+            @Param("productId") Integer productId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime);
 }

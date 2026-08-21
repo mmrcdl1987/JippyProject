@@ -19,8 +19,7 @@ public class FmOutletDetailsDto {
     @Schema(example = "9848022339")
     private String alternateOutletPhone;
 
-    @Schema(example = "Indian")
-    private String cuisineType;
+    private Integer[] cuisineType;
 
     @Schema(example = "17.4940")
     private Double latitude;
