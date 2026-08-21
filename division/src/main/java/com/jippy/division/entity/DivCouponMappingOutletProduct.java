@@ -35,6 +35,12 @@ public class DivCouponMappingOutletProduct {
     @Column(name = "promotion_date_id")
     private Integer promotionDateId;
 
+    @Column(name = "promotion_message")
+    private String promotionMessage;
+
+    @Column(name = "max_selection", nullable = false)
+    private Integer maxSelection = -1;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

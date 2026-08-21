@@ -35,8 +35,14 @@ public class DivPriceDropMappingOutletsProduct {
     @Column(name = "promotion_date_id")
     private Integer promotionDateId;
 
+    @Column(name = "promotion_message")
+    private String promotionMessage;
+
     @Column(name = "price_model_id")
     private Integer priceModelId;
+
+    @Column(name = "max_selection", nullable = false)
+    private Integer maxSelection = -1;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

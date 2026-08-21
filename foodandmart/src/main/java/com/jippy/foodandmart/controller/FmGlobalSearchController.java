@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -96,22 +98,27 @@ public class FmGlobalSearchController {
                 .collect(Collectors.toList());
 
         // ── Outlets ──────────────────────────────────────────────────────────
+        // ── Outlets ──────────────────────────────────────────────────────────
         List<SearchItem> outlets = outletRepository.findAll().stream()
-                .filter(o -> matches(kw,
+                .filter(o -> matches(
+                        kw,
                         o.getOutletName(),
-                        o.getCuisineType(),
-                        o.getOutletPhone()))
+                        cuisineTypeToString(o.getCuisineType()),
+                        o.getOutletPhone()
+                ))
                 .limit(MAX_PER_SECTION)
                 .map(o -> {
                     SearchItem item = new SearchItem();
                     item.setId(o.getOutletId());
                     item.setTitle(o.getOutletName());
-                    item.setSubtitle(o.getCuisineType());
+                    item.setSubtitle(cuisineTypeToString(o.getCuisineType()));
                     item.setBadge("ID: " + o.getOutletId());
                     item.setSection("outlet");
                     return item;
                 })
                 .collect(Collectors.toList());
+
+
 
         // ── Master Products ──────────────────────────────────────────────────
         // Uses DB-side search (ILIKE) for efficiency instead of in-memory filtering
@@ -163,5 +170,17 @@ public class FmGlobalSearchController {
             if (f != null && f.toLowerCase().contains(kw)) return true;
         }
         return false;
+    }
+
+    private String cuisineTypeToString(Integer[] cuisineType) {
+
+        if (cuisineType == null || cuisineType.length == 0) {
+            return "";
+        }
+
+        return Arrays.stream(cuisineType)
+                .filter(Objects::nonNull)
+                .map(String::valueOf)
+                .collect(Collectors.joining(", "));
     }
 }

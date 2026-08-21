@@ -10,7 +10,7 @@ public interface FmNearbyOutletProjection {
 
     Integer getMerchantId();
 
-    String getCuisineType();
+    Integer[] getCuisineType();
 
     String getOutletPhone();
 

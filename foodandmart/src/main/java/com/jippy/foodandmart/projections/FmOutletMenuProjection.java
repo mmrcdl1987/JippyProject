@@ -22,7 +22,7 @@ public interface FmOutletMenuProjection {
 
 
 //    ---------------------------------------------------------
-    String getCuisineType();
+    Integer[] getCuisineType();
     Double getLatitude();
     Double getLongitude();
     // Outlet is_available

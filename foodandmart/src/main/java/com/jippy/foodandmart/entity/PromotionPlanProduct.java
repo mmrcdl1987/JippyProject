@@ -27,6 +27,9 @@ public class PromotionPlanProduct {
     @Column(name = "product_id")
     private Integer productId;
 
+    @Column(name = "max_selection", nullable = false)
+    private Integer maxSelection = -1;
+
     @Column(name = "created_by")
     private Integer createdBy;
 

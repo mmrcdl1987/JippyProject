@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.BannerSlotDayResponseDto;
+import com.jippy.foodandmart.dto.SettlementWeekResponseDto;
 import com.jippy.foodandmart.entity.BannerSlotDay;
 import com.jippy.foodandmart.mapper.BannerSlotDayMapper;
 import com.jippy.foodandmart.repository.BannerSlotDayRepository;
@@ -25,16 +26,15 @@ import java.util.Optional;
 @Transactional
 public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
-    private final BannerSlotDayRepository repository;
-    private final BannerSlotDayMapper mapper;
+    public static final String SETTLEMENT_WEEK = "settlement_week";
     private static final int INITIAL_MONTHS = 4;
     private static final int EXTEND_MONTHS = 2;
     private static final int SLOT_DAYS = 5;
-
     private static final int SETTLEMENT_MONTHS = 12;
-
     private static final String BANNER_SLOT = "banner_slot";
     private static final String SETTLEMENT_SLOT = "settlement_week";
+    private final BannerSlotDayRepository repository;
+    private final BannerSlotDayMapper mapper;
 
     @Override
     public void generateInitialFourMonths() {
@@ -48,20 +48,17 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
 
-        LocalDate endOfFourthMonth = startDate
-                .plusMonths(INITIAL_MONTHS)
-                .minusDays(1);
+        LocalDate endOfFourthMonth = startDate.plusMonths(INITIAL_MONTHS).minusDays(1);
 
         generateInitialSlots(startDate, endOfFourthMonth);
 
-        log.info("Initial {} months banner slots generated successfully.",
-                INITIAL_MONTHS);
+        log.info("Initial {} months banner slots generated successfully.", INITIAL_MONTHS);
     }
+
     @Override
     public void maintainBannerSlots() {
 
-        Optional<BannerSlotDay> optional =
-                repository.findTopBySlotTypeOrderBySlotEndDateDesc(BANNER_SLOT);
+        Optional<BannerSlotDay> optional = repository.findTopBySlotTypeOrderBySlotEndDateDesc(BANNER_SLOT);
 
         if (optional.isEmpty()) {
 
@@ -83,22 +80,18 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
         if (lastSlot.getSlotEndDate().isAfter(thresholdDate)) {
 
-            log.info("Banner slots are already available till {}",
-                    lastSlot.getSlotEndDate());
+            log.info("Banner slots are already available till {}", lastSlot.getSlotEndDate());
 
             return;
         }
 
         LocalDate nextStartDate = lastSlot.getSlotEndDate().plusDays(1);
 
-        LocalDate targetDate = nextStartDate
-                .plusMonths(EXTEND_MONTHS)
-                .minusDays(1);
+        LocalDate targetDate = nextStartDate.plusMonths(EXTEND_MONTHS).minusDays(1);
 
         appendSlots(nextStartDate, targetDate);
 
-        log.info("Next {} months banner slots generated successfully.",
-                EXTEND_MONTHS);
+        log.info("Next {} months banner slots generated successfully.", EXTEND_MONTHS);
     }
 
     @Override
@@ -109,24 +102,19 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
             return;
         }
 
-        LocalDate startDate = LocalDate.now()
-                .with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));
+        LocalDate startDate = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));
 
-        LocalDate targetDate = startDate
-                .plusMonths(SETTLEMENT_MONTHS)
-                .minusDays(1);
+        LocalDate targetDate = startDate.plusMonths(SETTLEMENT_MONTHS).minusDays(1);
 
         generateSettlementSlots(startDate, targetDate);
 
-        log.info("Initial {} months settlement week slots generated successfully.",
-                SETTLEMENT_MONTHS);
+        log.info("Initial {} months settlement week slots generated successfully.", SETTLEMENT_MONTHS);
     }
 
     @Override
     public void maintainSettlementWeeks() {
 
-        Optional<BannerSlotDay> optional =
-                repository.findTopBySlotTypeOrderBySlotEndDateDesc(SETTLEMENT_SLOT);
+        Optional<BannerSlotDay> optional = repository.findTopBySlotTypeOrderBySlotEndDateDesc(SETTLEMENT_SLOT);
 
         if (optional.isEmpty()) {
 
@@ -145,33 +133,27 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
         if (lastSlot.getSlotEndDate().isAfter(thresholdDate)) {
 
-            log.info("Settlement week slots are already available till {}",
-                    lastSlot.getSlotEndDate());
+            log.info("Settlement week slots are already available till {}", lastSlot.getSlotEndDate());
 
             return;
         }
 
         LocalDate nextStartDate = lastSlot.getSlotEndDate().plusDays(1);
 
-        LocalDate targetDate = nextStartDate
-                .plusMonths(EXTEND_MONTHS)
-                .minusDays(1);
+        LocalDate targetDate = nextStartDate.plusMonths(EXTEND_MONTHS).minusDays(1);
 
         appendSettlementSlots(nextStartDate, targetDate);
 
-        log.info("Next {} months settlement week slots generated successfully.",
-                EXTEND_MONTHS);
+        log.info("Next {} months settlement week slots generated successfully.", EXTEND_MONTHS);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BannerSlotDayResponseDto> getAllSlots() {
 
-        List<BannerSlotDay> entities =
-                repository.findAll(Sort.by("slotStartDate"));
+        List<BannerSlotDay> entities = repository.findAll(Sort.by("slotStartDate"));
 
-        List<BannerSlotDayResponseDto> response =
-                new ArrayList<>();
+        List<BannerSlotDayResponseDto> response = new ArrayList<>();
 
         for (BannerSlotDay entity : entities) {
             response.add(mapper.toResponseDto(entity));
@@ -179,8 +161,78 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
         return response;
     }
-    private void generateSettlementSlots(LocalDate startDate,
-                                         LocalDate targetDate) {
+
+    @Override
+    public List<SettlementWeekResponseDto> getSettlementWeeks(Integer year) {
+
+        validateYear(year);
+
+        log.info("Fetching settlement weeks for year: {}", year);
+
+        LocalDate yearStart = LocalDate.of(year, 1, 1);
+
+        LocalDate yearEnd = LocalDate.of(year, 12, 31);
+
+        List<BannerSlotDay> settlementWeeks = repository.findBySlotTypeAndSlotStartDateBetweenOrderBySlotStartDateAsc(SETTLEMENT_WEEK, yearStart, yearEnd);
+
+        if (settlementWeeks.isEmpty()) {
+
+            log.info("No settlement weeks found for year: {}", year);
+
+            return List.of();
+        }
+
+        List<SettlementWeekResponseDto> response = new ArrayList<>();
+
+        int currentMonth = -1;
+
+        int weekNumber = 0;
+
+        for (BannerSlotDay settlementWeek : settlementWeeks) {
+
+            LocalDate slotStartDate = settlementWeek.getSlotStartDate();
+
+            int slotMonth = slotStartDate.getMonthValue();
+
+            /*
+             * Reset W numbering whenever the
+             * slot starts in a new calendar month.
+             */
+            if (slotMonth != currentMonth) {
+
+                currentMonth = slotMonth;
+
+                weekNumber = 1;
+
+            } else {
+
+                weekNumber++;
+            }
+
+            SettlementWeekResponseDto responseDto = mapper.ResponseDto(settlementWeek, weekNumber);
+
+            response.add(responseDto);
+
+            log.debug("Settlement week mapped: {} {} - {}", responseDto.getWeekName(), responseDto.getStartDate(), responseDto.getEndDate());
+        }
+
+        log.info("Found {} settlement weeks for year: {}", response.size(), year);
+
+        return response;
+    }
+
+    private void validateYear(Integer year) {
+
+        if (year == null) {
+            throw new IllegalArgumentException("Year is required");
+        }
+
+        if (year < 1 || year > 9999) {
+            throw new IllegalArgumentException("Year must be between 1 and 9999");
+        }
+    }
+
+    private void generateSettlementSlots(LocalDate startDate, LocalDate targetDate) {
 
         List<BannerSlotDay> slots = new ArrayList<>();
 
@@ -195,11 +247,10 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
         repository.saveAll(slots);
 
-        log.info("{} settlement week slots generated successfully.",
-                slots.size());
+        log.info("{} settlement week slots generated successfully.", slots.size());
     }
-    private void appendSettlementSlots(LocalDate startDate,
-                                       LocalDate targetDate) {
+
+    private void appendSettlementSlots(LocalDate startDate, LocalDate targetDate) {
 
         List<BannerSlotDay> slots = new ArrayList<>();
 
@@ -214,9 +265,9 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
         repository.saveAll(slots);
 
-        log.info("{} settlement week slots appended successfully.",
-                slots.size());
+        log.info("{} settlement week slots appended successfully.", slots.size());
     }
+
     private BannerSlotDay createSettlementSlot(LocalDate startDate) {
 
         BannerSlotDay slot = new BannerSlotDay();
@@ -234,8 +285,8 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
         return slot;
     }
-    private void generateInitialSlots(LocalDate startDate,
-                                      LocalDate endDate) {
+
+    private void generateInitialSlots(LocalDate startDate, LocalDate endDate) {
 
         List<BannerSlotDay> slots = new ArrayList<>();
 
@@ -253,8 +304,7 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
         log.info("Initial {} slots generated successfully.", slots.size());
     }
 
-    private void appendSlots(LocalDate startDate,
-                             LocalDate targetDate) {
+    private void appendSlots(LocalDate startDate, LocalDate targetDate) {
 
         List<BannerSlotDay> slots = new ArrayList<>();
 

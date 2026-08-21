@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(FmApiResponse.error(ex.getMessage()));
     }
 
-    @ExceptionHandler({MerchantAlreadyExistsException.class, DuplicateResourceException.class, PromotionPlanTypeAlreadyExistsException.class, PromotionPlanAlreadyExistsException.class, IllegalStateException.class, BadRequestException.class})
+    @ExceptionHandler({MerchantAlreadyExistsException.class, DuplicateResourceException.class, PromotionPlanTypeAlreadyExistsException.class, PromotionPlanAlreadyExistsException.class, IllegalStateException.class})
     public ResponseEntity<FmApiResponse<Void>> handleConflict(Exception ex) {
 
         log.warn("Conflict/Duplicate data: {}", ex.getMessage());
@@ -198,6 +198,20 @@ public class GlobalExceptionHandler {
         log.warn("Price settings record not found | message={}", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new FmResponseDto("404", ex.getMessage()));
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleBadRequest(
+            BadRequestException ex) {
+
+        log.warn(
+                "Bad request: {}",
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(FmApiResponse.error(ex.getMessage()));
     }
 
 }

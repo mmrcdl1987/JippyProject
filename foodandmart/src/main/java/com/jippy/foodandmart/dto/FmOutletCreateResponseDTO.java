@@ -29,8 +29,14 @@ public class FmOutletCreateResponseDTO {
     @Schema(description = "Merchant Id", example = "50")
     private Integer merchantId;
 
+    @Schema(
+            description = "Outlet image URL",
+            example = "https://jippys3bucket.s3.ap-south-2.amazonaws.com/outlets/50/images/abc.jpg"
+    )
+    private String outletPicUrl;
+
     @Schema(description = "Cuisine Type", example = "Indian")
-    private String cuisineType;
+    private Integer[] cuisineType;
 
     @Schema(description = "Primary outlet phone number", example = "9876543210")
     private String outletPhone;

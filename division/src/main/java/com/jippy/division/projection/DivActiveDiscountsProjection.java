@@ -19,5 +19,6 @@ public interface DivActiveDiscountsProjection {
     String getCouponCode();
     String getpriceModelName();
     String getMealTypeSlotIdsStr();
-
+    String getPromotionMessage();
+    Integer getMaxSelection();
 }

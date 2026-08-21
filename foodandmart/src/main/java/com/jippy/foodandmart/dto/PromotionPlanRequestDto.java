@@ -54,4 +54,6 @@ public class PromotionPlanRequestDto {
      * Applies promotion to selected categories.
      */
     private List<Integer> outletCategoryIds;
+
+    private Integer maxSelection;
 }

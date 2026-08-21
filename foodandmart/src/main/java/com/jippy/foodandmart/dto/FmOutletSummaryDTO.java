@@ -21,7 +21,7 @@ public class FmOutletSummaryDTO {
     private Integer outletId;
     private Integer merchantId;
     private String  outletName;
-    private String  cuisineType;
+    private Integer[] cuisineType;
     private String  outletPhone;
     private String  isActive;
 
