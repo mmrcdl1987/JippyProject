@@ -132,24 +132,24 @@ public class DivCouponController {
         logger.info("getPriceModels API Response : {}", priceModelDtoList.toString());
         return  ResponseEntity.status(HttpStatus.OK).body(priceModelDtoList);
     }
-    /**
-     * CREATE CAMPAIGN
-     */
-    @PostMapping("/campaign/create")
-    public ResponseEntity<DivResponseDto> createCampaign(
-            @RequestBody DivCampaignRequestDto dto) {
-
-        logger.info("Campaign Create API Started");
-
-        String response = divCampaignService.createCampaign(dto);
-
-        logger.info("Campaign Create API Completed");
-
-        return ResponseEntity.ok(
-                new DivResponseDto(
-                        DivAppConstants.STATUS_200,
-                        response));
-    }
+//    /**
+//     * CREATE CAMPAIGN
+//     */
+//    @PostMapping("/campaign/create")
+//    public ResponseEntity<DivResponseDto> createCampaign(
+//            @RequestBody DivCampaignRequestDto dto) {
+//
+//        logger.info("Campaign Create API Started");
+//
+//        String response = divCampaignService.createCampaign(dto);
+//
+//        logger.info("Campaign Create API Completed");
+//
+//        return ResponseEntity.ok(
+//                new DivResponseDto(
+//                        DivAppConstants.STATUS_200,
+//                        response));
+//    }
 
     // FILE: controller/DivCouponController.java
     @GetMapping("/available-outlets/{areaId}")

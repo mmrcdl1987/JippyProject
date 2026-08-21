@@ -15,6 +15,7 @@ import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.projections.FmActivePromotionDiscountsProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
+import com.jippy.foodandmart.projections.OutletAddressProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmGoogleMapsService;
 import com.jippy.foodandmart.service.IFmOutletService;
@@ -1838,6 +1839,32 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("Fetching outlets by areaId={}", areaId);
 
         return outletRepository.getOutletsByAreaId(areaId);
+    }
+
+    @Override
+    public OutletLocationResponseDto getOutletAddressDetails(Integer outletId) {
+
+        // Use parameterized logging to avoid unnecessary String concatenation
+        log.info("Fetching address details  for outletId: {}", outletId);
+
+        OutletAddressProjection outletAddressProjection = outletRepository.getOutletAddressDetails(outletId);
+
+        if (outletAddressProjection == null) {
+            // Log the error locally before throwing to capture the failure context in the server logs
+            log.error("Location retrieval failed: Outlet with ID {} does not exist or has no coordinates", outletId);
+
+            throw new ResourceNotFoundException("Outlet not found with ID: " + outletId);
+        }
+
+        OutletLocationResponseDto response = new OutletLocationResponseDto();
+        response.setOutletId(outletAddressProjection.getOutletId());
+        response.setStateId(outletAddressProjection.getStateId());
+        response.setCityId(outletAddressProjection.getCityId());
+        response.setAreaId(outletAddressProjection.getAreaId());
+
+        log.info("Successfully mapped address data for outletId: {}", outletId);
+
+        return response;
     }
 
 

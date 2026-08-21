@@ -762,4 +762,18 @@ public class FmOutletController {
 
         return ResponseEntity.ok(service.fetchNearbySpecializedOutlets(latitude, longitude));
     }
+
+
+    // used as a feign client call
+    @GetMapping("/getOutletAddressDetails")
+    public ResponseEntity<OutletLocationResponseDto> getOutletAddressDetails(@RequestParam Integer outletId) {
+        log.info("REST request to get location for outletId: {}", outletId);
+
+        OutletLocationResponseDto response = outletService.getOutletAddressDetails(outletId);
+
+
+        log.debug("Returning location response for outletId: {}", outletId);
+
+        return ResponseEntity.ok(response);
+    }
 }
