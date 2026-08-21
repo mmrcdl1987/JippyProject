@@ -193,5 +193,9 @@ public class COConstants {
     public static final String ITEM_ADDED_NOT_ORDERED = "ITEM_ADDED_NOT_ORDERED";
 
     public static final String HIGH_VALUE_CART = "HIGH_VALUE_CART";
-    }
+
+    // REFERRAL SYSTEM
+    public static final String REFERRAL_REWARD = "REFERRAL_REWARD";
+    public static final Integer REFERRAL_REWARD_POINTS = 250;
+    public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};}
 

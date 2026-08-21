@@ -22,7 +22,7 @@ public class S3ImageService {
         this.s3Client = s3Client;
     }
 
-    public String uploadFile(MultipartFile file, Integer communityId) throws IOException {
+    public String uploadFile(MultipartFile file, String folder) throws IOException {
 
         String originalFileName = file.getOriginalFilename();
         String extension = "";
@@ -31,7 +31,7 @@ public class S3ImageService {
             extension = originalFileName.substring(originalFileName.lastIndexOf("."));
         }
 
-        String fileName = "communities" + "/" +  communityId+"-"+originalFileName;
+        String fileName = folder + "/" +"-"+originalFileName;
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)

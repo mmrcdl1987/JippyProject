@@ -8,13 +8,16 @@ import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.CoCustomerMapper;
 import com.jippy.customerandorder.repository.*;
+import com.jippy.customerandorder.entity.CoCustomerReferral;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.jippy.customerandorder.exception.CoBadRequestException;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,71 +44,363 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
     private final CoCustomerMapper customerMapper;
 
+    private final CoCustomerReferralRepository customerReferralRepository;
+
     private final FMFeignClient fmFeignClient;
 
+    private final S3ImageService s3ImageService;
+
+
+    // QUALIFY REFERRAL ON FIRST ORDER
+    @Override
+    @Transactional
+    public void qualifyReferralOnFirstOrder(Integer customerId) {
+        log.info("REFERRAL_QUALIFICATION_START | customerId={}", customerId);
+
+        // Check if customer has a pending referral
+        Optional<CoCustomerReferral> referralOpt = customerReferralRepository
+                .findByRefereeCustomerIdAndReferralStatus(customerId, COConstants.REFERRAL_STATUS[0]);
+
+        if (referralOpt.isEmpty()) {
+            log.info("REFERRAL_NO_PENDING | customerId={}", customerId);
+            return;
+        }
+
+        CoCustomerReferral referral = referralOpt.get();
+
+        try {
+            // Update referral status to qualified
+            referral.setReferralStatus(COConstants.REFERRAL_STATUS[1]);
+            referral.setUpdatedAt(LocalDateTime.now());
+            referral.setUpdatedBy(1);
+            customerReferralRepository.save(referral);
+
+            log.info("REFERRAL_QUALIFIED_SUCCESS | referralId={} | referrerId={} | refereeCustomerId={}",
+                    referral.getReferralId(), referral.getReferrerCustomerId(), customerId);
+
+        } catch (Exception ex) {
+            log.error("REFERRAL_QUALIFICATION_FAILED | customerId={} | error={}", customerId, ex.getMessage(), ex);
+            // Don't fail order placement if referral qualification fails
+        }
+    }
+
+    // PROCESS REFERRAL REWARD
+    @Override
+    @Transactional
+    public void processReferralReward(Integer customerId, String orderId) {
+        log.info("REFERRAL_REWARD_PROCESS_START | customerId={} | orderId={}", customerId, orderId);
+
+        // Check if customer has a pending referral reward
+        Optional<CoCustomerReferral> referralOpt = customerReferralRepository
+                .findByRefereeCustomerIdAndReferralStatus(customerId, COConstants.REFERRAL_STATUS[1]);
+
+        if (referralOpt.isEmpty()) {
+            log.info("REFERRAL_REWARD_NO_QUALIFIED | customerId={}", customerId);
+            return;
+        }
+
+        CoCustomerReferral referral = referralOpt.get();
+
+        try {
+            // Get referrer's wallet
+            CoCustomerWallet referrerWallet = walletRepository
+                    .findByCustomerCustomerId(referral.getReferrerCustomerId())
+                    .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+
+            // Add 250 points to referrer's wallet
+            Integer currentBalance = referrerWallet.getBalancePoints() != null ? referrerWallet.getBalancePoints() : 0;
+            referrerWallet.setBalancePoints(currentBalance + COConstants.REFERRAL_REWARD_POINTS);
+            referrerWallet.setUpdatedAt(LocalDateTime.now());
+            referrerWallet.setUpdatedBy(1); // System user
+            walletRepository.save(referrerWallet);
+
+            log.info("REFERRAL_REWARD_WALLET_UPDATED | referrerId={} | pointsAdded={} | newBalance={}",
+                    referral.getReferrerCustomerId(), COConstants.REFERRAL_REWARD_POINTS, referrerWallet.getBalancePoints());
+
+            // Record transaction
+            CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
+            transaction.setWalletId(referrerWallet.getWalletId());
+            transaction.setPointsType(COConstants.REFERRAL_REWARD);
+            transaction.setPoints(COConstants.REFERRAL_REWARD_POINTS);
+            transaction.setCreatedAt(LocalDateTime.now());
+            transaction.setCreatedBy(1);
+            transactionsRepository.save(transaction);
+
+
+            // Update referral record status to rewarded
+            referral.setReferralStatus(COConstants.REFERRAL_STATUS[2]);
+            referral.setUpdatedAt(LocalDateTime.now());
+            referral.setUpdatedBy(1);
+            customerReferralRepository.save(referral);
+
+            log.info("REFERRAL_REWARD_PROCESSED_SUCCESS | referralId={} | referrerId={} | refereeCustomerId={}",
+                    referral.getReferralId(), referral.getReferrerCustomerId(), customerId);
+
+        } catch (Exception ex) {
+            log.error("REFERRAL_REWARD_PROCESS_FAILED | customerId={} | error={}", customerId, ex.getMessage(), ex);
+            throw new CoBusinessException("Failed to process referral reward");
+        }
+    }
 
     // CREATE CUSTOMER
     @Override
+    @Transactional
     public CoCustomer createCustomer(CoCustomerRequestDto dto) {
 
-        log.info("Customer creation started");
+        log.info("CUSTOMER_REGISTRATION_COMPLETION_START | customerId={}", dto.getCustomerId());
 
+        // ==========================================
+        // GET EXISTING VERIFIED CUSTOMER
+        // ==========================================
+
+        CoCustomer customer = customerRepository
+                .findById(dto.getCustomerId())
+                .orElseThrow(() -> {
+
+                    log.error("CUSTOMER_NOT_FOUND | customerId={}", dto.getCustomerId());
+
+                    return new CoBadRequestException(COConstants.MSG_CUSTOMER_NOT_FOUND);
+                });
+
+        // ==========================================
+        // VERIFY PHONE NUMBER
+        // ==========================================
+
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isBlank()) {
+
+            String requestPhone = dto.getPhoneNumber().trim();
+            String verifiedPhone = customer.getPhoneNumber();
+
+            if (verifiedPhone == null || !requestPhone.equals(verifiedPhone)) {
+
+                log.warn(
+                        "PHONE_NUMBER_MISMATCH | customerId={} | " +
+                                "verifiedPhone={} | requestPhone={}",
+                        customer.getCustomerId(),
+                        verifiedPhone,
+                        requestPhone
+                );
+                throw new CoBadRequestException("Phone number mismatch");
+            }
+
+            log.info(
+                    "PHONE_NUMBER_VERIFIED | customerId={} | phone={}",
+                    customer.getCustomerId(),
+                    requestPhone
+            );
+        }
+
+        // ==========================================
         // CHECK EMAIL
+        // ==========================================
 
-        Optional<CoCustomer> existingEmail = customerRepository.findByEmail(dto.getEmail());
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
 
-        if (existingEmail.isPresent()) {
+            Optional<CoCustomer> existingEmail = customerRepository.findByEmail(
+                            dto.getEmail().trim());
 
-            log.error("Email already exists");
+            if (existingEmail.isPresent() &&
+                    !existingEmail.get().getCustomerId()
+                            .equals(customer.getCustomerId())) {
 
-            throw new CoBadRequestException(COConstants.EMAIL_ALREADY_EXISTS);
+                log.error(
+                        "EMAIL_ALREADY_EXISTS | email={} | existingCustomerId={}",
+                        dto.getEmail(),
+                        existingEmail.get().getCustomerId()
+                );
+                throw new CoBadRequestException(
+                        COConstants.EMAIL_ALREADY_EXISTS);
+            }
         }
 
-        // CHECK PHONE
+        // ==========================================
+        // UPDATE EXISTING CUSTOMER
+        // ==========================================
 
-        Optional<CoCustomer> existingPhone = customerRepository.findByPhoneNumber(dto.getPhoneNumber());
-        if (existingPhone.isPresent()) {
-            log.error("Phone number already exists");
-            throw new CoBadRequestException(COConstants.PHONE_ALREADY_EXISTS);
+        customer.setFirstName(dto.getFirstName());
+        customer.setLastName(dto.getLastName());
+        customer.setEmail(dto.getEmail());
+        customer.setPhoneNumber(dto.getPhoneNumber());
+        customer.setDateOfBirth(dto.getDOB());
+
+        // Generate referral code for this customer
+        if (customer.getReferralCode() == null ||
+                customer.getReferralCode().isBlank()) {
+
+            String referralCode =
+                    CoCustomerMapper.generateReferral(
+                            dto.getFirstName(),
+                            dto.getLastName(),
+                            dto.getPhoneNumber()
+                    );
+
+            customer.setReferralCode(referralCode);
+
+            log.info("REFERRAL_CODE_GENERATED | customerId={} | referralCode={}",
+                    customer.getCustomerId(), referralCode);
         }
 
-        // SAVE CUSTOMER
+        customer.setUpdatedAt(LocalDateTime.now());
+        customer.setUpdatedBy(dto.getCreatedBy());
 
-        CoCustomer customer = CoCustomerMapper.mapToCustomer(dto);
         CoCustomer savedCustomer = customerRepository.save(customer);
-        log.info("Customer saved successfully");
 
-        // FETCH WALLET SETTINGS
+        log.info(
+                "CUSTOMER_UPDATED | customerId={}",
+                savedCustomer.getCustomerId()
+        );
 
-        CoWalletSettings walletSettings = walletSettingsRepository.findByPointsType(COConstants.WELCOME_POINTS).orElseThrow(() -> {
-            log.error("WELCOME_POINTS not configured");
+        // ==========================================
+        // PROCESS REFERRAL
+        // ==========================================
 
-            return new CoBusinessException(COConstants.WELCOME_POINTS_NOT_CONFIGURED);
-        });
+        if (dto.getReferralCodeUsed() != null && !dto.getReferralCodeUsed().isBlank()) {
+            String referralCode = dto.getReferralCodeUsed().trim();
 
-        // CREATE WALLET
+            try {
+                CoCustomer referrer =
+                        customerRepository
+                                .findByReferralCode(referralCode)
+                                .orElseThrow(() ->
+                                        new CoBadRequestException(
+                                                "Invalid referral code")
+                                );
+                // Prevent self referral
+                if (referrer.getCustomerId()
+                        .equals(savedCustomer.getCustomerId())) {
 
-        CoCustomerWallet wallet = CoCustomerMapper.mapToWallet(savedCustomer, walletSettings.getNumOfPoints(), dto.getCreatedBy());
-        walletRepository.save(wallet);
-        log.info("Wallet created successfully");
+                    throw new CoBadRequestException(
+                            "Customer cannot use own referral code"
+                    );
+                }
 
-        // SAVE WELCOME TRANSACTION
+                Optional<CoCustomerReferral> existingReferral =
+                        customerReferralRepository
+                                .findByRefereeCustomerId(
+                                        savedCustomer.getCustomerId()
+                                );
 
-        CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
-        transaction.setWalletId(wallet.getWalletId());
-        transaction.setPointsType(COConstants.WELCOME_POINTS);
-        transaction.setPoints(walletSettings.getNumOfPoints());
-        transaction.setCreatedAt(LocalDateTime.now());
-        transaction.setCreatedBy(dto.getCreatedBy());
-        transactionsRepository.save(transaction);
+                if (existingReferral.isPresent()) {
 
-        log.info("Welcome points transaction saved");
+                    log.info(
+                            "REFERRAL_ALREADY_EXISTS | customerId={} | referralId={}",
+                            savedCustomer.getCustomerId(),
+                            existingReferral.get().getReferralId()
+                    );
+
+                } else {
+
+                    CoCustomerReferral referral = new CoCustomerReferral();
+
+                    referral.setReferrerCustomerId(referrer.getCustomerId());
+                    referral.setRefereeCustomerId(savedCustomer.getCustomerId());
+                    referral.setReferralCode(referralCode);
+                    referral.setReferralStatus(COConstants.REFERRAL_STATUS[0]);
+                    referral.setReferralType("customer");
+                    referral.setCreatedAt(LocalDateTime.now());
+                    referral.setCreatedBy(dto.getCreatedBy());
+                    customerReferralRepository.save(referral);
+                    savedCustomer.setUsedReferral(referralCode);
+                    customerRepository.save(savedCustomer);
+                    log.info(
+                            "REFERRAL_CREATED | referralId={} | " +
+                                    "referrerId={} | refereeId={}",
+                            referral.getReferralId(),
+                            referrer.getCustomerId(),
+                            savedCustomer.getCustomerId()
+                    );
+                }
+            } catch (CoBadRequestException ex) {
+                log.error(
+                        "REFERRAL_FAILED | customerId={} | " +
+                                "referralCode={} | error={}",
+                        savedCustomer.getCustomerId(),
+                        referralCode,
+                        ex.getMessage()
+                );
+                throw ex;
+            }
+        }
+
+        // ==========================================
+        // CREATE WALLET IF NOT EXISTS
+        // ==========================================
+
+        Optional<CoCustomerWallet> existingWallet =
+                walletRepository.findByCustomerCustomerId(savedCustomer.getCustomerId());
+
+        if (existingWallet.isEmpty()) {
+            log.info("WALLET_NOT_FOUND | customerId={} | creating wallet",
+                    savedCustomer.getCustomerId()
+            );
+
+            CoWalletSettings walletSettings =
+                    walletSettingsRepository
+                            .findByPointsType(
+                                    COConstants.WELCOME_POINTS
+                            )
+                            .orElseThrow(() ->
+                                    new CoBusinessException(
+                                            COConstants.WELCOME_POINTS_NOT_CONFIGURED
+                                    )
+                            );
+
+            CoCustomerWallet wallet =
+                    CoCustomerMapper.mapToWallet(
+                            savedCustomer,
+                            walletSettings.getNumOfPoints(),
+                            dto.getCreatedBy()
+                    );
+
+            CoCustomerWallet savedWallet = walletRepository.save(wallet);
+
+            log.info(
+                    "WALLET_CREATED | customerId={} | walletId={} | points={}",
+                    savedCustomer.getCustomerId(),
+                    savedWallet.getWalletId(),
+                    savedWallet.getBalancePoints()
+            );
+
+            // ==========================================
+            // WELCOME TRANSACTION
+            // ==========================================
+
+            CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
+            transaction.setWalletId(savedWallet.getWalletId());
+            transaction.setPointsType(COConstants.WELCOME_POINTS);
+            transaction.setPoints(walletSettings.getNumOfPoints());
+            transaction.setCreatedAt(LocalDateTime.now());
+            transaction.setCreatedBy(dto.getCreatedBy());
+            transactionsRepository.save(transaction);
+            log.info(
+                    "WELCOME_TRANSACTION_CREATED | " +
+                            "customerId={} | walletId={} | points={}",
+                    savedCustomer.getCustomerId(),
+                    savedWallet.getWalletId(),
+                    walletSettings.getNumOfPoints()
+            );
+
+        } else {
+
+            log.info(
+                    "WALLET_ALREADY_EXISTS | customerId={} | walletId={}",
+                    savedCustomer.getCustomerId(),
+                    existingWallet.get().getWalletId()
+            );
+        }
+
+        log.info(
+                "CUSTOMER_REGISTRATION_COMPLETION_SUCCESS | customerId={}",
+                savedCustomer.getCustomerId()
+        );
 
         return savedCustomer;
     }
 
-
+    //===============
     // CONVERT POINTS
+    //===============
+
 
     @Override
     public CoWalletResponseDto convertPoints(Integer customerId) {
@@ -497,12 +792,143 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         customer.setLastName(requestDto.getLastName());
         customer.setEmail(requestDto.getEmail());
         customer.setPhoneNumber(requestDto.getPhoneNumber());
+
+        // ==============================
+        // GENERATE REFERRAL CODE
+        // ==============================
+
+        if (customer.getReferralCode() == null || customer.getReferralCode().isBlank()) {
+
+            String referral = CoCustomerMapper.generateReferral(
+                    requestDto.getFirstName(),
+                    requestDto.getLastName(),
+                    requestDto.getPhoneNumber()
+            );
+
+            customer.setReferralCode(referral);
+
+            log.info(
+                    "UPDATE_CUSTOMER_REFERRAL_GENERATED | customerId={} | referral={}",
+                    customerId,
+                    referral
+            );
+        }
+
+        // ==============================
+        // PROCESS REFERRAL CODE USED
+        // ==============================
+
+        if (requestDto.getReferralCodeUsed() != null && !requestDto.getReferralCodeUsed().isBlank()) {
+
+            String referralCodeUsed = requestDto.getReferralCodeUsed().trim();
+
+            log.info("REFERRAL_CODE_PROVIDED_ON_UPDATE | customerId={} | referralCode={}",
+                    customerId,
+                    referralCodeUsed);
+
+            try {
+                // --------------------------------
+                // Find referrer using referral code
+                // --------------------------------
+                CoCustomer referrer = customerRepository
+                        .findByReferralCode(referralCodeUsed)
+                        .orElseThrow(() ->
+                                new CoBadRequestException(
+                                        "Invalid referral code"
+                                )
+                        );
+
+                // --------------------------------
+                // Customer cannot refer himself
+                // --------------------------------
+
+                if (referrer.getCustomerId().equals(customerId)) {
+                    throw new CoBadRequestException("Customer cannot use own referral code");}
+
+                // --------------------------------
+                // Check existing referral
+                // --------------------------------
+
+                Optional<CoCustomerReferral> existingReferral =
+                        customerReferralRepository
+                                .findByRefereeCustomerId(customerId);
+
+                if (existingReferral.isPresent()) {
+
+                    log.warn(
+                            "REFERRAL_ALREADY_EXISTS | customerId={} | referralId={}",
+                            customerId,
+                            existingReferral.get().getReferralId()
+                    );
+
+                } else {
+
+                    // --------------------------------
+                    // Create referral record
+                    // --------------------------------
+
+                    CoCustomerReferral referral = new CoCustomerReferral();
+
+                    referral.setReferrerCustomerId(referrer.getCustomerId());
+                    referral.setRefereeCustomerId(customerId);
+                    referral.setReferralCode(referralCodeUsed);
+                    referral.setReferralStatus(COConstants.REFERRAL_STATUS[0]);
+                    referral.setReferralType("customer");
+                    referral.setCreatedAt(LocalDateTime.now());
+                    referral.setCreatedBy(requestDto.getCreatedBy());
+
+                    customerReferralRepository.save(referral);
+
+                    // --------------------------------
+                    // Store referral code on customer
+                    // --------------------------------
+
+                    customer.setUsedReferral(referralCodeUsed);
+
+                    log.info(
+                            "REFERRAL_TRACKING_CREATED_ON_UPDATE | " +
+                                    "referralId={} | referrerId={} | refereeCustomerId={} | referralCode={}",
+                            referral.getReferralId(),
+                            referrer.getCustomerId(),
+                            customerId,
+                            referralCodeUsed
+                    );
+                }
+
+            } catch (CoBadRequestException ex) {
+
+                log.error(
+                        "REFERRAL_UPDATE_FAILED | customerId={} | referralCode={} | error={}",
+                        customerId,
+                        referralCodeUsed,
+                        ex.getMessage()
+                );
+                throw ex;
+            } catch (Exception ex) {
+
+                log.error(
+                        "REFERRAL_UPDATE_FAILED | customerId={} | referralCode={} | error={}",
+                        customerId,
+                        referralCodeUsed,
+                        ex.getMessage(),
+                        ex
+                );
+                // Do not fail customer update for unexpected referral errors
+            }
+        }
+
+        // ==============================
+        // UPDATE AUDIT INFORMATION
+        // ==============================
+
         customer.setUpdatedAt(LocalDateTime.now());
         customer.setUpdatedBy(requestDto.getCreatedBy());
 
-        try {
+        // ==============================
+        // SAVE CUSTOMER
+        // ==============================
 
-            log.info("UPDATE_CUSTOMER_DB_SAVE_START | customerId={}", customerId);
+        try {
 
             customerRepository.save(customer);
 
@@ -523,7 +949,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     }
 
     @Override
-    public String updateCustomerProfile(CoCustomerRequestDto requestDto) {
+    public String updateCustomerProfile(CoCustomerRequestDto requestDto, MultipartFile profilePic) {
         log.info("UPDATE_PROFILE_STARTED | customerId={}", requestDto.getCustomerId());
 
         CoCustomer customer = customerRepository.findById(requestDto.getCustomerId()).orElseThrow(() -> {
@@ -536,9 +962,20 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         customer.setFirstName(requestDto.getFirstName());
         customer.setLastName(requestDto.getLastName());
         customer.setEmail(requestDto.getEmail());
-       // customer.setProfilePicUrl(requestDto.getProfilePicUrl());
+        customer.setDateOfBirth(requestDto.getDOB());
         customer.setUpdatedAt(LocalDateTime.now());
         customer.setUpdatedBy(requestDto.getCreatedBy());
+
+        if (profilePic != null && !profilePic.isEmpty()) {
+            try {
+                String profilePicUrl = s3ImageService.uploadFile(profilePic, "customerProfilePic"+requestDto.getCustomerId());
+                customer.setProfilePicUrl(profilePicUrl);
+                log.info("UPDATE_PROFILE_PIC_UPLOAD_SUCCESS | customerId={} | url={}", requestDto.getCustomerId(), profilePicUrl);
+            } catch (IOException ex) {
+                log.error("UPDATE_PROFILE_PIC_UPLOAD_FAILED | customerId={} | error={}", requestDto.getCustomerId(), ex.getMessage(), ex);
+                throw new CoBadRequestException("Failed to upload profile picture");
+            }
+        }
 
         try {
             customerRepository.save(customer);
@@ -548,7 +985,6 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         } catch (DataAccessException ex) {
 
             log.error("UPDATE_PROFILE_DB_SAVE_FAILED | customerId={} | error={}", requestDto.getCustomerId(), ex.getMessage(), ex);
-
             throw new CoBadRequestException(COConstants.MSG_DATABASE_ERROR);
         }
     }
@@ -612,27 +1048,18 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     @Override
     public CoCustomerWalletResponseDto getCustomerWallet(Integer customerId) {
 
-        log.info("GET_CUSTOMER_WALLET_SERVICE_START | customerId={}", customerId);
+        log.info("GET_CUSTOMER_WALLET_API_START | customerId={}", customerId);
 
-        CoCustomerWallet wallet = walletRepository
-                .findByCustomerCustomerId(customerId)
-                .orElseThrow(() ->
-                        new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId)
+                .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
         CoCustomerWalletResponseDto response = new CoCustomerWalletResponseDto();
+        response.setWalletId(wallet.getWalletId());
+        response.setCustomerId(wallet.getCustomer().getCustomerId());
+        response.setBalancePoints(wallet.getBalancePoints());
+        response.setBalanceAmount(wallet.getBalanceAmount());
 
-        response.setCustomerId(customerId);
-        response.setBalanceAmount(
-                wallet.getBalanceAmount() != null
-                        ? wallet.getBalanceAmount()
-                        : BigDecimal.ZERO);
-
-        response.setBalancePoints(
-                wallet.getBalancePoints() != null
-                        ? wallet.getBalancePoints()
-                        : 0);
-
-        log.info("GET_CUSTOMER_WALLET_SERVICE_SUCCESS | customerId={}", customerId);
+        log.info("GET_CUSTOMER_WALLET_API_SUCCESS | customerId={}", customerId);
 
         return response;
     }
@@ -640,68 +1067,44 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     @Override
     public List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId) {
 
-        log.info("GET_WALLET_TRANSACTION_HISTORY_SERVICE_START | customerId={}", customerId);
+        log.info("GET_WALLET_TRANSACTION_HISTORY_API_START | customerId={}", customerId);
 
-        if (customerId == null || customerId <= 0) {
+        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId)
+                .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
-            log.error("INVALID_CUSTOMER_ID | customerId={}", customerId);
+        List<CoWalletTransactionHistoryDto> transactions = transactionsRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId()).stream()
+                .map(transaction -> {
+                    CoWalletTransactionHistoryDto dto = new CoWalletTransactionHistoryDto();
+                    dto.setPointsType(transaction.getPointsType());
+                    dto.setPoints(transaction.getPoints());
+                    dto.setCreatedAt(transaction.getCreatedAt());
+                    return dto;
+                })
+                .collect(Collectors.toList());
 
-            throw new CoBadRequestException("Invalid Customer Id");
-        }
+        log.info("GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={}", customerId);
 
-        CoCustomerWallet wallet = walletRepository
-                .findByCustomerCustomerId(customerId)
-                .orElseThrow(() -> {
-
-                    log.error("WALLET_NOT_FOUND | customerId={}", customerId);
-
-                    return new CoBusinessException(COConstants.WALLET_NOT_FOUND);
-                });
-
-        List<CoCustomerWalletTransactions> transactions =
-                transactionsRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId());
-
-        List<CoWalletTransactionHistoryDto> response = transactions.stream()
-                .map(transaction -> new CoWalletTransactionHistoryDto(
-                        transaction.getPointsType(),
-                        transaction.getPoints(),
-                        transaction.getCreatedAt()))
-                .toList();
-
-        log.info("GET_WALLET_TRANSACTION_HISTORY_SERVICE_SUCCESS | customerId={} | transactionCount={}",
-                customerId,
-                response.size());
-
-        return response;
+        return transactions;
     }
+
     @Override
     public List<CoProfileIncompleteCustomer> getProfileIncompleteCustomers() {
 
-        log.info("Fetching customers with incomplete profile.");
+        log.info("Received request to fetch customers with incomplete profiles.");
 
-        List<CoCustomer> customers = customerRepository.findProfileIncompleteCustomers();
+        List<CoProfileIncompleteCustomer> customers = customerRepository.findAll().stream()
+                .filter(customer -> customer.getProfilePicUrl() == null || customer.getProfilePicUrl().isBlank())
+                .map(customer -> {
+                    CoProfileIncompleteCustomer dto = new CoProfileIncompleteCustomer();
+                    dto.setCustomerId(customer.getCustomerId());
+                    dto.setFirstName(customer.getFirstName());
+                    dto.setLastName(customer.getLastName());
+                    dto.setEmail(customer.getEmail());
+                    dto.setPhoneNumber(customer.getPhoneNumber());
+                    return dto;
+                })
+                .collect(Collectors.toList());
 
-        List<CoProfileIncompleteCustomer> responseList = new ArrayList<>();
-
-        for (CoCustomer customer : customers) {
-
-            CoProfileIncompleteCustomer response = new CoProfileIncompleteCustomer();
-
-            response.setCustomerId(customer.getCustomerId());
-            response.setFirstName(customer.getFirstName());
-            response.setLastName(customer.getLastName());
-            response.setPhoneNumber(customer.getPhoneNumber());
-            response.setEmail(customer.getEmail());
-
-
-
-            responseList.add(response);
-        }
-
-        log.info("Total incomplete profile customers found: {}", responseList.size());
-
-        return responseList;
+        return customers;
     }
-
 }
-

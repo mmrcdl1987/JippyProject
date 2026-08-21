@@ -2,6 +2,7 @@ package com.jippy.customerandorder.iservice;
 
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -9,6 +10,10 @@ import java.util.List;
 public interface ICoCustomerService {
 
     CoCustomer createCustomer(CoCustomerRequestDto dto);
+
+    void qualifyReferralOnFirstOrder(Integer customerId);
+
+    void processReferralReward(Integer customerId, String orderId);
 
     CoWalletResponseDto convertPoints(Integer customerId);
 
@@ -22,7 +27,7 @@ public interface ICoCustomerService {
 
     CoCustomerResponseDto updateCustomer(Integer customerId, CoCustomerRequestDto requestDto);
 
-    String updateCustomerProfile(CoCustomerRequestDto requestDto);
+    String updateCustomerProfile(CoCustomerRequestDto requestDto, MultipartFile profilePic);
 
     List<CoCustomerListDto> getAllCustomers();
 

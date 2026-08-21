@@ -8,6 +8,7 @@ import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
 import com.jippy.customerandorder.exception.OrderException;
 import com.jippy.customerandorder.iservice.IOrderService;
+import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.COEventMapper;
 import com.jippy.customerandorder.mapper.CoOrderMapper;
 import com.jippy.customerandorder.repository.*;
@@ -40,6 +41,7 @@ public class COOrderService implements IOrderService {
     private final CoOrderMapper orderMapper;
     private final CoOrderSequenceRepository sequenceRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ICoCustomerService customerService;
 
     /*
      * PLACE ORDER
@@ -53,27 +55,26 @@ public class COOrderService implements IOrderService {
         try {
 
             validatePlaceOrderRequest(dto);
-            validateCartOutlet(dto);
-
-
-            /*
-             * NORMAL ORDER
-             */
-            if (COConstants.ORDER_TYPE_NORMAL.equalsIgnoreCase(dto.getOrderType()) || COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType()) || COConstants.COMMUNITY_ORDER_ORDER_TYPE.equals(dto.getOrderType()) || COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE.equals(dto.getOrderType())) {
-
+            // Only cart-based order types should validate the cart
+            if (COConstants.ORDER_TYPE_NORMAL.equalsIgnoreCase(dto.getOrderType())) {
                 return processNormalOrder(dto);
             }
 
-            /*
-             * SCHEDULED ORDER
-             */
-            if (ORDER_TYPE_SCHEDULED_RECURRING.equalsIgnoreCase(dto.getOrderType())) {
+            if (COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType())
+                    || COConstants.COMMUNITY_ORDER_ORDER_TYPE.equals(dto.getOrderType())
+                    || COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE.equals(dto.getOrderType())) {
 
+                validateCartOutlet(dto);
+                return processNormalOrder(dto);
+            }
+
+            if (ORDER_TYPE_SCHEDULED_RECURRING.equalsIgnoreCase(dto.getOrderType())) {
+                validateCartOutlet(dto);
                 return processRecurringOrders(dto);
             }
 
             if (ORDER_TYPE_SCHEDULED_CUSTOM_PLAN.equalsIgnoreCase(dto.getOrderType())) {
-
+                validateCartOutlet(dto);
                 return processCustomPlanOrders(dto);
             }
 
@@ -93,25 +94,36 @@ public class COOrderService implements IOrderService {
      * NORMAL ORDER
      */
     private CoPlaceOrderResponseDto processNormalOrder(CoPlaceOrderRequestDto dto) {
-
         log.info("SERVICE_START | PROCESS_NORMAL_ORDER | customerId={}", dto.getCustomerId());
 
         String orderId = generateOrderId();
-
         CoOrder order = orderMapper.mapToOrder(dto);
-
         order.setOrderId(orderId);
         CoOrder savedOrder = orderRepository.save(order);
 
+        // Save items directly from request
         saveOrderItems(dto.getItems(), orderId);
 
-        CoOrderPriceBreakup savedOrderPriceBreakUp = priceRepository.save(orderMapper.mapToPrice(dto, orderId));
+        CoOrderPriceBreakup savedOrderPriceBreakUp =
+                priceRepository.save(
+                        orderMapper.mapToPrice(dto, orderId)
+                );
+        // DO NOT clear cart for direct NORMAL order
+        // Qualify referral if this is the first order
+        try {
+            customerService.qualifyReferralOnFirstOrder(
+                    dto.getCustomerId()
+            );
+        } catch (Exception ex) {
+            log.error(
+                    "REFERRAL_QUALIFICATION_FAILED | " +
+                            "orderId={} | customerId={} | error={}",
+                    orderId,
+                    dto.getCustomerId(),
+                    ex.getMessage()
+            );
+        }
 
-        /*
-         * Clear customer's cart only after the order
-         * and its related data have been successfully saved.
-         */
-        clearCustomerCart(dto.getCustomerId());
         CoPlaceOrderRequestDto updatedDto = new CoPlaceOrderRequestDto();
 
         updatedDto.setOrderId(savedOrder.getOrderId());
@@ -121,22 +133,24 @@ public class COOrderService implements IOrderService {
         updatedDto.setOrderType(savedOrder.getOrderType());
         updatedDto.setOrderStatus(savedOrder.getOrderStatus());
         updatedDto.setPaymentModeId(savedOrder.getPaymentModeId());
-
         publishOrderEvent(order);
 
         log.info("SERVICE_END | PROCESS_NORMAL_ORDER_SUCCESS | orderId={}", orderId);
 
-        return buildResponse(COConstants.MSG_ORDER_CREATED, null, List.of(orderId), updatedDto);
+        return buildResponse(
+                COConstants.MSG_ORDER_CREATED,
+                null,
+                List.of(orderId),
+                updatedDto
+        );
     }
 
-    private void clearCustomerCart(Integer customerId) {
-
-        log.info("SERVICE_START | CLEAR_CUSTOMER_CART | customerId={}", customerId);
-
-        cartRepository.deleteByCustomerId(customerId);
-
-        log.info("SERVICE_END | CLEAR_CUSTOMER_CART_SUCCESS | customerId={}", customerId);
-    }
+//    private void clearCustomerCart(Integer customerId) {
+//
+//        log.info("SERVICE_START | CLEAR_CUSTOMER_CART | customerId={}", customerId);
+//        cartRepository.deleteByCustomerId(customerId);
+//        log.info("SERVICE_END | CLEAR_CUSTOMER_CART_SUCCESS | customerId={}", customerId);
+//    }
 
     private CoPlaceOrderResponseDto processRecurringOrders(CoPlaceOrderRequestDto dto) {
 
@@ -546,18 +560,64 @@ public class COOrderService implements IOrderService {
     }
 
     @Override
+    @Transactional
     public void updateOrderStatus(CoOrderDto orderDto) {
 
-        log.info("SERVICE_START | UPDATE_ORDER_STATUS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
+        log.info(
+                "SERVICE_START | UPDATE_ORDER_STATUS | orderId={} | newStatus={}",
+                orderDto.getOrderId(),
+                orderDto.getOrderStatus()
+        );
 
-        CoOrder order = orderRepository.findById(orderDto.getOrderId()).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        CoOrder order = orderRepository
+                .findById(orderDto.getOrderId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found")
+                );
 
+        // Update order status
         order.setOrderStatus(orderDto.getOrderStatus());
         order.setUpdatedAt(LocalDateTime.now());
 
         orderRepository.save(order);
 
-        log.info("SERVICE_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
+        // ==========================================
+        // PROCESS REFERRAL REWARD AFTER DELIVERY
+        // ==========================================
+
+        if ("DELIVERED".equalsIgnoreCase(orderDto.getOrderStatus())) {
+
+            log.info(
+                    "REFERRAL_REWARD_TRIGGER | orderId={} | customerId={}",
+                    order.getOrderId(),
+                    order.getCustomerId()
+            );
+            try {
+                customerService.processReferralReward(
+                        order.getCustomerId(),
+                        order.getOrderId()
+                );
+                log.info(
+                        "REFERRAL_REWARD_SUCCESS | orderId={} | customerId={}",
+                        order.getOrderId(),
+                        order.getCustomerId()
+                );
+            } catch (Exception ex) {
+                log.error(
+                        "REFERRAL_REWARD_FAILED | orderId={} | customerId={} | error={}",
+                        order.getOrderId(),
+                        order.getCustomerId(),
+                        ex.getMessage(),
+                        ex
+                );
+                throw ex;
+            }
+        }
+        log.info(
+                "SERVICE_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={} | newStatus={}",
+                orderDto.getOrderId(),
+                orderDto.getOrderStatus()
+        );
     }
 
     private void validateCartOutlet(CoPlaceOrderRequestDto dto) {

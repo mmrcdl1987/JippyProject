@@ -18,6 +18,12 @@ public interface CoCustomerRepository extends JpaRepository<CoCustomer, Integer>
 
     Optional<CoCustomer> findByPhoneNumber(String phoneNumber);
 
+    Optional<CoCustomer> findByReferralCode(String referralCode);
+
+    boolean existsByPhoneNumberAndCustomerId(String phoneNumber, Integer customerId);
+
+    boolean existsByPhoneNumberAndCustomerIdNot(String phoneNumber, Integer customerId);
+
     boolean existsByPhoneNumber(String phoneNumber);
 
     @Query(value = """
