@@ -1,28 +1,33 @@
 package com.jippy.driver.serviceImpl;
 
 import com.jippy.driver.constants.DConstants;
-import com.jippy.driver.dto.DeliveryChargeCalculationRequestDto;
-import com.jippy.driver.dto.DeliveryChargeCalculationResponseDto;
-import com.jippy.driver.dto.DriverChargeCalculationRequestDto;
-import com.jippy.driver.dto.DriverChargeCalculationResponseDto;
-import com.jippy.driver.dto.DriveCustomerLocationDto;
-import com.jippy.driver.dto.OutletLocationResponseDto;
+import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.DriverDeliveryChargeSettings;
 import com.jippy.driver.exception.DriverBadRequestException;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
-
 import com.jippy.driver.mapper.DriverDeliveryChargeSettingsMapper;
 import com.jippy.driver.repositary.DriverDeliveryChargeSettingsRepository;
 import com.jippy.driver.service.DriverChargeService;
 import com.jippy.driver.utils.DistanceUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+
+import com.jippy.driver.dto.FMAreaDto;
+import com.jippy.driver.dto.FMCityDto;
+import com.jippy.driver.dto.FMStateDto;
+import org.springframework.http.ResponseEntity;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,12 +36,10 @@ import java.math.RoundingMode;
 public class DriverChargeServiceImpl implements DriverChargeService {
 
     private final FMFeignClient fmFeignClient;
-
     private final COFeignClient coFeignClient;
-
     private final DriverDeliveryChargeSettingsRepository chargeSettingsRepository;
-
     private final DriverDeliveryChargeSettingsMapper driverChargeMapper;
+
 
     // DRIVER PAYOUT CALCULATION
     @Override
@@ -60,9 +63,13 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
             DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(deliveryDistanceKm);
 
-            BigDecimal pickupCharge = calculateCharge(pickupDistanceKm, pickupSlab.getUnitPricePerPickKm());
+//            BigDecimal pickupCharge = calculateCharge(pickupDistanceKm, pickupSlab.getUnitPricePerPickKm());
+//
+//            BigDecimal deliveryCharge = calculateCharge(deliveryDistanceKm, deliverySlab.getUnitPricePerDeliverKm());
 
-            BigDecimal deliveryCharge = calculateCharge(deliveryDistanceKm, deliverySlab.getUnitPricePerDeliverKm());
+            BigDecimal pickupCharge = calculateCharge(pickupDistanceKm, pickupSlab.getUnitPricePerKm());
+
+            BigDecimal deliveryCharge = calculateCharge(deliveryDistanceKm, deliverySlab.getUnitPricePerKm());
 
             BigDecimal subtotal = pickupCharge.add(deliveryCharge);
 
@@ -90,57 +97,179 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         }
     }
 
-    // CHECKOUT DELIVERY CHARGE
-    @Override
-    public DeliveryChargeCalculationResponseDto calculateDeliveryCharge(DeliveryChargeCalculationRequestDto requestDto) {
 
-        log.info("SERVICE_START | CALCULATE_DELIVERY_CHARGE | outletId={} | customerAddressId={}", requestDto.getOutletId(), requestDto.getCustomerAddressId());
+    // =========================================================
+    // CHECKOUT DELIVERY CHARGE
+    // =========================================================
+
+//    @Override
+//    public DeliveryChargeCalculationResponseDto calculateDeliveryCharge(DeliveryChargeCalculationRequestDto requestDto) {
+//
+//        log.info("SERVICE_START | CALCULATE_DELIVERY_CHARGE | outletId={} | customerAddressId={}", requestDto.getOutletId(), requestDto.getCustomerAddressId());
+//
+//        validateDeliveryChargeRequest(requestDto);
+//
+//        try {
+//            OutletLocationResponseDto outletLocation = getOutletLocation(requestDto.getOutletId());
+//
+//            DriveCustomerLocationDto customerLocation = getCustomerLocation(requestDto.getCustomerAddressId());
+//
+//            BigDecimal deliveryDistanceKm = calculateDistance(outletLocation.getLatitude().doubleValue(), outletLocation.getLongitude().doubleValue(), customerLocation.getLatitude(), customerLocation.getLongitude());
+//
+//            log.info("DELIVERY_DISTANCE_KM = {}", deliveryDistanceKm);
+//
+//            DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(deliveryDistanceKm);
+//
+//            // BigDecimal deliveryCharge = calculateCharge(deliveryDistanceKm, deliverySlab.getUnitPricePerDeliverKm());
+//
+//            // BigDecimal taxAmount = calculateTax(deliveryCharge);
+//
+//            // BigDecimal totalDeliveryCharge = deliveryCharge.add(taxAmount).setScale(2, RoundingMode.HALF_UP);
+//
+//            //DeliveryChargeCalculationResponseDto response = driverChargeMapper.mapToDeliveryChargeResponse(deliveryDistanceKm, deliveryCharge, taxAmount, totalDeliveryCharge, isCodAvailable(requestDto.getOrderAmount()));
+//
+//            // log.info("SERVICE_END | CALCULATE_DELIVERY_CHARGE_SUCCESS | totalDeliveryCharge={}", totalDeliveryCharge);
+//
+//            // return response;
+//
+//        } catch (DriverBadRequestException ex) {
+//
+//            log.error("BUSINESS_EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}", ex.getMessage(), ex);
+//
+//            throw ex;
+//
+//        } catch (Exception ex) {
+//            log.error("EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}", ex.getMessage(), ex);
+//
+//            throw new DriverBadRequestException(DConstants.MSG_DISTANCE_CALCULATION_FAILED);
+//        }
+//    }
+
+    @Override
+    public DeliveryChargeCalculationResponseDto calculateDeliveryCharge(
+            DeliveryChargeCalculationRequestDto requestDto) {
+
+        log.info(
+                "SERVICE_START | CALCULATE_DELIVERY_CHARGE | outletId={} | customerAddressId={}",
+                requestDto != null ? requestDto.getOutletId() : null,
+                requestDto != null ? requestDto.getCustomerAddressId() : null
+        );
 
         validateDeliveryChargeRequest(requestDto);
 
         try {
 
-            OutletLocationResponseDto outletLocation = getOutletLocation(requestDto.getOutletId());
+            // =========================================================
+            // STEP 1: GET OUTLET LOCATION
+            // =========================================================
 
-            DriveCustomerLocationDto customerLocation = getCustomerLocation(requestDto.getCustomerAddressId());
+            OutletLocationResponseDto outletLocation =
+                    getOutletLocation(requestDto.getOutletId());
+
+            // =========================================================
+            // STEP 2: GET CUSTOMER LOCATION
+            // =========================================================
+
+            DriveCustomerLocationDto customerLocation =
+                    getCustomerLocation(requestDto.getCustomerAddressId());
+
+            // =========================================================
+            // STEP 3: CALCULATE DELIVERY DISTANCE
+            // =========================================================
 
             BigDecimal deliveryDistanceKm = calculateDistance(
                     outletLocation.getLatitude().doubleValue(),
                     outletLocation.getLongitude().doubleValue(),
                     customerLocation.getLatitude(),
-                    customerLocation.getLongitude());
+                    customerLocation.getLongitude()
+            );
 
-            log.info("DELIVERY_DISTANCE_KM = {}", deliveryDistanceKm);
+            log.info(
+                    "DELIVERY_DISTANCE_KM = {} | outletId={} | customerAddressId={}",
+                    deliveryDistanceKm,
+                    requestDto.getOutletId(),
+                    requestDto.getCustomerAddressId()
+            );
 
-            DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(deliveryDistanceKm);
+            // =========================================================
+            // STEP 4: FIND DELIVERY SLAB
+            // =========================================================
 
-            BigDecimal deliveryCharge = calculateCharge(deliveryDistanceKm, deliverySlab.getUnitPricePerDeliverKm());
+            DriverDeliveryChargeSettings deliverySlab =
+                    getDeliverySlab(deliveryDistanceKm);
+
+            // =========================================================
+            // STEP 5: CALCULATE DELIVERY CHARGE
+            // =========================================================
+
+            BigDecimal deliveryCharge = calculateCharge(
+                    deliveryDistanceKm,
+                    deliverySlab.getUnitPricePerKm()
+            );
+
+            // =========================================================
+            // STEP 6: CALCULATE TAX
+            // =========================================================
 
             BigDecimal taxAmount = calculateTax(deliveryCharge);
 
-            BigDecimal totalDeliveryCharge = deliveryCharge.add(taxAmount).setScale(2, RoundingMode.HALF_UP);
+            // =========================================================
+            // STEP 7: TOTAL DELIVERY CHARGE
+            // =========================================================
 
-            DeliveryChargeCalculationResponseDto response = driverChargeMapper.mapToDeliveryChargeResponse(deliveryDistanceKm, deliveryCharge, taxAmount, totalDeliveryCharge, isCodAvailable(requestDto.getOrderAmount()));
+            BigDecimal totalDeliveryCharge = deliveryCharge
+                    .add(taxAmount)
+                    .setScale(2, RoundingMode.HALF_UP);
 
-            log.info("SERVICE_END | CALCULATE_DELIVERY_CHARGE_SUCCESS | totalDeliveryCharge={}", totalDeliveryCharge);
+            // =========================================================
+            // STEP 8: BUILD RESPONSE
+            // =========================================================
+
+            DeliveryChargeCalculationResponseDto response =
+                    driverChargeMapper.mapToDeliveryChargeResponse(
+                            deliveryDistanceKm,
+                            deliveryCharge,
+                            taxAmount,
+                            totalDeliveryCharge,
+                            isCodAvailable(requestDto.getOrderAmount())
+                    );
+
+            log.info(
+                    "SERVICE_END | CALCULATE_DELIVERY_CHARGE_SUCCESS | " +
+                            "distanceKm={} | deliveryCharge={} | taxAmount={} | totalDeliveryCharge={}",
+                    deliveryDistanceKm,
+                    deliveryCharge,
+                    taxAmount,
+                    totalDeliveryCharge
+            );
 
             return response;
 
         } catch (DriverBadRequestException ex) {
 
-            log.error("BUSINESS_EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}", ex.getMessage(), ex);
+            log.error(
+                    "BUSINESS_EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}",
+                    ex.getMessage(),
+                    ex
+            );
 
             throw ex;
 
         } catch (Exception ex) {
 
-            log.error("EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}", ex.getMessage(), ex);
+            log.error(
+                    "EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}",
+                    ex.getMessage(),
+                    ex
+            );
 
-            throw new DriverBadRequestException(DConstants.MSG_DISTANCE_CALCULATION_FAILED);
+            throw new DriverBadRequestException(
+                    DConstants.MSG_DISTANCE_CALCULATION_FAILED
+            );
         }
     }
 
-    // ================= VALIDATIONS =================
+    // VALIDATIONS
 
     private void validateDriverChargeRequest(DriverChargeCalculationRequestDto requestDto) {
 
@@ -161,6 +290,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         }
     }
 
+
     private void validateDeliveryChargeRequest(DeliveryChargeCalculationRequestDto requestDto) {
 
         if (requestDto == null) {
@@ -172,6 +302,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
         validateCommonRequest(requestDto.getOutletId(), requestDto.getCustomerAddressId(), requestDto.getOrderAmount());
     }
+
 
     private void validateCommonRequest(Integer outletId, Integer customerAddressId, BigDecimal orderAmount) {
 
@@ -197,7 +328,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         }
     }
 
-    // ================= HELPER METHODS =================
+    // HELPER METHODS
 
     private OutletLocationResponseDto getOutletLocation(Integer outletId) {
 
@@ -215,6 +346,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         return outletLocation;
     }
 
+
     private DriveCustomerLocationDto getCustomerLocation(Integer customerAddressId) {
 
         log.info("FETCH_CUSTOMER_LOCATION | customerAddressId={}", customerAddressId);
@@ -231,12 +363,14 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         return customerLocation;
     }
 
+
     private BigDecimal calculateDistance(double sourceLatitude, double sourceLongitude, double destinationLatitude, double destinationLongitude) {
 
         double distance = DistanceUtils.calculateDistance(sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude);
 
         return BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP);
     }
+
 
     private DriverDeliveryChargeSettings getPickupSlab(BigDecimal pickupDistanceKm) {
 
@@ -248,31 +382,229 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         });
     }
 
+
     private DriverDeliveryChargeSettings getDeliverySlab(BigDecimal deliveryDistanceKm) {
 
         log.info("Finding delivery slab for distance: {} KM", deliveryDistanceKm);
 
-        return chargeSettingsRepository.findDeliverySlab(deliveryDistanceKm)
-                .orElseThrow(() -> {
+        return chargeSettingsRepository.findDeliverySlab(deliveryDistanceKm).orElseThrow(() -> {
 
-                    log.error("DELIVERY_SLAB_NOT_FOUND | deliveryDistanceKm={}", deliveryDistanceKm);
+            log.error("DELIVERY_SLAB_NOT_FOUND | deliveryDistanceKm={}", deliveryDistanceKm);
 
-                    return new DriverBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
-                });
+            return new DriverBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
+        });
     }
+
 
     private BigDecimal calculateCharge(BigDecimal distance, BigDecimal unitPrice) {
 
         return distance.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
     }
 
+
     private BigDecimal calculateTax(BigDecimal amount) {
 
         return amount.multiply(new BigDecimal(DConstants.TAX_PERCENTAGE)).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
     }
 
+
     private boolean isCodAvailable(BigDecimal orderAmount) {
 
         return orderAmount.compareTo(new BigDecimal(DConstants.COD_LIMIT)) <= 0;
     }
+
+
+// GET DELIVERY CHARGE SETTINGS
+// STATE + CITY + AREA + PAGINATION
+
+
+//    @Override
+//    public DriverDeliveryChargeSettingsPageResponseDto getDeliveryChargeSettings(Pageable pageable) {
+//
+//        log.info("SERVICE_START | GET_DELIVERY_CHARGE_SETTINGS | page={} | size={}", pageable.getPageNumber(), pageable.getPageSize());
+//
+//        // FETCH PAGINATED DATA FROM DRIVER DATABASE
+//
+//        Page<DriverDeliveryChargeSettings> settingsPage = chargeSettingsRepository.findAll(pageable);
+//
+//        // LOCATION MAPS
+//
+//        // stateId -> stateName
+//        Map<Integer, String> stateNameMap = new HashMap<>();
+//
+//        // cityId -> cityName
+//        Map<Integer, String> cityNameMap = new HashMap<>();
+//
+//        // cityId -> stateId
+//        Map<Integer, Integer> cityStateMap = new HashMap<>();
+//
+//        // areaId -> areaName
+//        Map<Integer, String> areaNameMap = new HashMap<>();
+//
+//        // areaId -> cityId
+//        Map<Integer, Integer> areaCityMap = new HashMap<>();
+//
+//        // STEP 1: FETCH STATES FROM FM
+//
+//        try {
+//
+//            ResponseEntity<List<FMStateDto>> stateResponse = fmFeignClient.fetchStates();
+//
+//            if (stateResponse.getBody() != null) {
+//
+//                for (FMStateDto state : stateResponse.getBody()) {
+//
+//                    if (state.getStateId() == null) {
+//                        continue;
+//                    }
+//
+//                    stateNameMap.put(state.getStateId(), state.getStateName());
+//                }
+//            }
+//
+//            log.info("FM_LOCATION_SUCCESS | States fetched | count={}", stateNameMap.size());
+//
+//        } catch (Exception e) {
+//
+//            log.error("FM_LOCATION_ERROR | Failed to fetch states", e);
+//        }
+//
+//        // STEP 2: FETCH CITIES FOR EACH STATE
+//        //
+//        // API:
+//        // /fetchCityInState?stateId=1
+//        //
+//        // Response:
+//        // cityId + cityName
+//        //
+//        // We manually maintain:
+//        // cityId -> stateId
+//
+//        for (Integer stateId : stateNameMap.keySet()) {
+//
+//            try {
+//
+//                ResponseEntity<List<FMCityDto>> cityResponse = fmFeignClient.fetchCitiesByState(stateId);
+//
+//                if (cityResponse.getBody() == null) {
+//                    continue;
+//                }
+//
+//                for (FMCityDto city : cityResponse.getBody()) {
+//
+//                    if (city.getCityId() == null) {
+//                        continue;
+//                    }
+//
+//                    // City name
+//                    cityNameMap.put(city.getCityId(), city.getCityName());
+//
+//                    // City belongs to this state
+//                    cityStateMap.put(city.getCityId(), stateId);
+//                }
+//
+//            } catch (Exception e) {
+//
+//                log.error("FM_LOCATION_ERROR | Failed to fetch cities | stateId={}", stateId, e);
+//            }
+//        }
+//
+//        log.info("FM_LOCATION_SUCCESS | Cities fetched | count={}", cityNameMap.size());
+//
+//
+//        // STEP 3: FETCH AREAS FOR EACH CITY
+//        //
+//        // API:
+//        // /fetchAreaInCity?cityId=1
+//        //
+//        // Response:
+//        // areaId + areaName
+//        //
+//        // We manually maintain:
+//        // areaId -> cityId
+//
+//        for (Integer cityId : cityNameMap.keySet()) {
+//
+//            try {
+//
+//                ResponseEntity<List<FMAreaDto>> areaResponse = fmFeignClient.fetchAreasByCity(cityId);
+//
+//                if (areaResponse.getBody() == null) {
+//                    continue;
+//                }
+//
+//                for (FMAreaDto area : areaResponse.getBody()) {
+//
+//                    if (area.getAreaId() == null) {
+//                        continue;
+//                    }
+//
+//                    // Area name
+//                    areaNameMap.put(area.getAreaId(), area.getAreaName());
+//
+//                    // Area belongs to this city
+//                    areaCityMap.put(area.getAreaId(), cityId);
+//                }
+//
+//            } catch (Exception e) {
+//
+//                log.error("FM_LOCATION_ERROR | Failed to fetch areas | cityId={}", cityId, e);
+//            }
+//        }
+//
+//        log.info("FM_LOCATION_SUCCESS | Areas fetched | count={}", areaNameMap.size());
+//
+//        // STEP 4: MAP DRIVER ENTITY -> RESPONSE DTO
+//
+//        List<DriverDeliveryChargeSettingsListResponseDto> content = settingsPage.getContent().stream().map(setting -> {
+//
+//            DriverDeliveryChargeSettingsListResponseDto dto = driverChargeMapper.mapToListResponseDto(setting);
+//
+//            // AREA
+//
+//            Integer areaId = setting.getAreaId();
+//
+//            dto.setAreaId(areaId);
+//
+//            String areaName = areaNameMap.get(areaId);
+//
+//            dto.setAreaName(areaName);
+//
+//            // CITY
+//
+//           // Integer cityId = areaCityMap.get(areaId);
+//
+//            dto.setCityId(cityId);
+//
+//            if (cityId != null) {
+//
+//                dto.setCityName(cityNameMap.get(cityId));
+//            }
+//
+//            // STATE
+//
+//            Integer stateId = cityStateMap.get(cityId);
+//
+//            dto.setStateId(stateId);
+//
+//            if (stateId != null) {
+//
+//                dto.setStateName(stateNameMap.get(stateId));
+//            }
+//
+//
+//            return dto;
+//
+//        }).toList();
+//
+//        // STEP 5: BUILD PAGINATION RESPONSE
+//
+//        DriverDeliveryChargeSettingsPageResponseDto response = DriverDeliveryChargeSettingsPageResponseDto.builder().content(content).page(settingsPage.getNumber()).size(settingsPage.getSize()).totalElements(settingsPage.getTotalElements()).totalPages(settingsPage.getTotalPages()).first(settingsPage.isFirst()).last(settingsPage.isLast()).build();
+//
+//        // SUCCESS LOG
+//
+//        log.info("SERVICE_SUCCESS | GET_DELIVERY_CHARGE_SETTINGS | page={} | size={} | totalElements={} | totalPages={}", settingsPage.getNumber(), settingsPage.getSize(), settingsPage.getTotalElements(), settingsPage.getTotalPages());
+//
+//        return response;
+//    }
 }

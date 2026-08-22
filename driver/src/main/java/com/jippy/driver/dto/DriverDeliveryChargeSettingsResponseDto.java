@@ -14,6 +14,8 @@ public class DriverDeliveryChargeSettingsResponseDto {
 
     private Integer deliveryChargeSettingId;
 
+    private Long areaId;
+
     private BigDecimal pickUpKmsRangeFrom;
 
     private BigDecimal pickUpKmsRangeTo;

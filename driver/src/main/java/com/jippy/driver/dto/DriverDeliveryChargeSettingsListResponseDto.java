@@ -1,38 +1,50 @@
 package com.jippy.driver.dto;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
-public class DriverDeliveryChargeSettingsRequestDto {
+public class DriverDeliveryChargeSettingsListResponseDto {
 
-    @NotNull(message = "Area ID cannot be null")
+    private Integer deliveryChargeSettingId;
+
     private Integer areaId;
 
-    @DecimalMin(value = "0.0", inclusive = true)
+    private Integer stateId;
+
+    private String stateName;
+
+    private Integer cityId;
+
+    private String cityName;
+
+    private String areaName;
+
     private BigDecimal pickUpKmsRangeFrom;
 
-    @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal pickUpKmsRangeTo;
 
-    @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal unitPricePerPickKm;
 
-    @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal deliveryKmsRangeFrom;
 
-    @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal deliveryKmsRangeTo;
 
-    @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal unitPricePerDeliverKm;
 
+    private LocalDateTime createdAt;
+
     private Integer createdBy;
+
+    private LocalDateTime updatedAt;
+
+    private Integer updatedBy;
 }

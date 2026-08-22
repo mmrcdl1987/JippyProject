@@ -6,6 +6,7 @@ import com.jippy.customerandorder.entity.CoWalletSettings;
 import com.jippy.customerandorder.iservice.CoWalletSettingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,21 +20,58 @@ public class CoWalletSettingsController {
     @Autowired
     private CoWalletSettingsService walletSettingsService;
 
+    /**
+     * Create / Update Wallet Settings
+     *
+     * POST /api/co/wallet-settings/save
+     */
     @PostMapping("/save")
     public ResponseEntity<CoWalletSettingsResponseDto> saveWalletSettings(
             @RequestBody CoWalletSettingsRequestDto requestDto) {
 
-        log.info("Received request for save wallet settings");
+        log.info("Received request to save wallet settings");
 
         CoWalletSettingsResponseDto responseDto =
-                walletSettingsService
-                        .saveWalletSettings(requestDto);
+                walletSettingsService.saveWalletSettings(requestDto);
 
         return ResponseEntity.ok(responseDto);
     }
 
+    /**
+     * Get all Wallet Settings without pagination.
+     *
+     * GET /api/co/wallet-settings
+     */
     @GetMapping
     public ResponseEntity<List<CoWalletSettings>> getWalletSettings() {
-        return ResponseEntity.ok(walletSettingsService.getWalletSettings());
+
+        log.info("Received request to get all wallet settings");
+
+        return ResponseEntity.ok(
+                walletSettingsService.getWalletSettings()
+        );
+    }
+
+    /**
+     * Get Wallet Settings with Pagination.
+     *
+     * Example:
+     * GET /api/co/wallet-settings/get?page=0&size=10
+     */
+    @GetMapping("/get")
+    public ResponseEntity<Page<CoWalletSettingsResponseDto>> getWalletSettings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        log.info(
+                "Received request to get wallet settings. page={}, size={}",
+                page,
+                size
+        );
+
+        Page<CoWalletSettingsResponseDto> response =
+                walletSettingsService.getWalletSettings(page, size);
+
+        return ResponseEntity.ok(response);
     }
 }

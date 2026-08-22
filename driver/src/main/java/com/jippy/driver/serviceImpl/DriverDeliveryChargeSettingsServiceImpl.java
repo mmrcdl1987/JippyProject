@@ -1,6 +1,5 @@
 package com.jippy.driver.serviceImpl;
 
-
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.DriverDeliveryChargeSettingsRequestDto;
 import com.jippy.driver.dto.DriverDeliveryChargeSettingsResponseDto;
@@ -29,7 +28,8 @@ public class DriverDeliveryChargeSettingsServiceImpl
     public DriverDeliveryChargeSettingsResponseDto createDriverDeliveryChargeSetting(
             DriverDeliveryChargeSettingsRequestDto requestDto) {
 
-        log.info("SERVICE START: Create driver delivery charge setting | pickUpKmsFrom={}, pickUpKmsTo={}, deliveryKmsFrom={}, deliveryKmsTo={}",
+        log.info("SERVICE START: Create driver delivery charge setting | areaId={}, pickUpKmsFrom={}, pickUpKmsTo={}, deliveryKmsFrom={}, deliveryKmsTo={}",
+                requestDto.getAreaId(),
                 requestDto.getPickUpKmsRangeFrom(), requestDto.getPickUpKmsRangeTo(),
                 requestDto.getDeliveryKmsRangeFrom(), requestDto.getDeliveryKmsRangeTo());
 
@@ -39,36 +39,42 @@ public class DriverDeliveryChargeSettingsServiceImpl
             throw new CartException("Invalid request data");
         }
 
+        // VALIDATE AREA ID
+        if (requestDto.getAreaId() == null) {
+            log.warn("Area ID is null");
+            throw new CartException("Area ID cannot be null");
+        }
+
         // VALIDATE PICKUP KMS RANGE
         if (requestDto.getPickUpKmsRangeFrom() == null || requestDto.getPickUpKmsRangeTo() == null) {
-            log.warn("Invalid pickup KMS range | from={}, to={}", 
+            log.warn("Invalid pickup KMS range | from={}, to={}",
                     requestDto.getPickUpKmsRangeFrom(), requestDto.getPickUpKmsRangeTo());
             throw new CartException("Pickup KMS range cannot be null");
         }
 
         if (requestDto.getPickUpKmsRangeFrom().compareTo(requestDto.getPickUpKmsRangeTo()) >= 0) {
-            log.warn("Invalid pickup KMS range | from={}, to={}", 
+            log.warn("Invalid pickup KMS range | from={}, to={}",
                     requestDto.getPickUpKmsRangeFrom(), requestDto.getPickUpKmsRangeTo());
             throw new CartException(DConstants.MSG_INVALID_KMS_RANGE);
         }
 
-        log.debug("Pickup KMS range validation passed | from={}, to={}", 
+        log.debug("Pickup KMS range validation passed | from={}, to={}",
                 requestDto.getPickUpKmsRangeFrom(), requestDto.getPickUpKmsRangeTo());
 
         // VALIDATE DELIVERY KMS RANGE
         if (requestDto.getDeliveryKmsRangeFrom() == null || requestDto.getDeliveryKmsRangeTo() == null) {
-            log.warn("Invalid delivery KMS range | from={}, to={}", 
+            log.warn("Invalid delivery KMS range | from={}, to={}",
                     requestDto.getDeliveryKmsRangeFrom(), requestDto.getDeliveryKmsRangeTo());
             throw new CartException("Delivery KMS range cannot be null");
         }
 
         if (requestDto.getDeliveryKmsRangeFrom().compareTo(requestDto.getDeliveryKmsRangeTo()) >= 0) {
-            log.warn("Invalid delivery KMS range | from={}, to={}", 
+            log.warn("Invalid delivery KMS range | from={}, to={}",
                     requestDto.getDeliveryKmsRangeFrom(), requestDto.getDeliveryKmsRangeTo());
             throw new CartException(DConstants.MSG_INVALID_KMS_RANGE);
         }
 
-        log.debug("Delivery KMS range validation passed | from={}, to={}", 
+        log.debug("Delivery KMS range validation passed | from={}, to={}",
                 requestDto.getDeliveryKmsRangeFrom(), requestDto.getDeliveryKmsRangeTo());
 
         // VALIDATE UNIT PRICES
@@ -77,14 +83,14 @@ public class DriverDeliveryChargeSettingsServiceImpl
             throw new CartException("Unit prices cannot be null");
         }
 
-        if (requestDto.getUnitPricePerPickKm().compareTo(BigDecimal.ZERO) < 0 || 
-            requestDto.getUnitPricePerDeliverKm().compareTo(BigDecimal.ZERO) < 0) {
-            log.warn("Invalid unit prices | pickPrice={}, deliveryPrice={}", 
+        if (requestDto.getUnitPricePerPickKm().compareTo(BigDecimal.ZERO) < 0 ||
+                requestDto.getUnitPricePerDeliverKm().compareTo(BigDecimal.ZERO) < 0) {
+            log.warn("Invalid unit prices | pickPrice={}, deliveryPrice={}",
                     requestDto.getUnitPricePerPickKm(), requestDto.getUnitPricePerDeliverKm());
             throw new CartException(DConstants.MSG_INVALID_UNIT_PRICE);
         }
 
-        log.debug("Unit prices validation passed | pickPrice={}, deliveryPrice={}", 
+        log.debug("Unit prices validation passed | pickPrice={}, deliveryPrice={}",
                 requestDto.getUnitPricePerPickKm(), requestDto.getUnitPricePerDeliverKm());
 
         // MAP DTO TO ENTITY
@@ -105,7 +111,7 @@ public class DriverDeliveryChargeSettingsServiceImpl
             savedEntity = repository.save(entity);
             log.debug("Entity saved successfully | id={}", savedEntity.getDeliveryChargeSettingId());
         } catch (Exception ex) {
-            log.error("Database error while saving delivery charge settings | error={}", 
+            log.error("Database error while saving delivery charge settings | error={}",
                     ex.getMessage(), ex);
             throw new CartException(DConstants.MSG_DATABASE_ERROR);
         }
@@ -115,8 +121,9 @@ public class DriverDeliveryChargeSettingsServiceImpl
 
         DriverDeliveryChargeSettingsResponseDto responseDto = mapper.mapToResponseDto(savedEntity);
 
-        log.info("SERVICE END: Driver delivery charge setting created successfully | id={}, pickUpRange={}-{}, deliveryRange={}-{}",
+        log.info("SERVICE END: Driver delivery charge setting created successfully | id={}, areaId={}, pickUpRange={}-{}, deliveryRange={}-{}",
                 responseDto.getDeliveryChargeSettingId(),
+                responseDto.getAreaId(),
                 requestDto.getPickUpKmsRangeFrom(), requestDto.getPickUpKmsRangeTo(),
                 requestDto.getDeliveryKmsRangeFrom(), requestDto.getDeliveryKmsRangeTo());
 

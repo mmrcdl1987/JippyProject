@@ -1,0 +1,51 @@
+package com.jippy.driver.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+
+@Getter
+@Setter
+public class DriverDeliveryChargeSettingsGetAllResponseDto {
+
+    private Integer deliveryChargeSettingId;
+
+    private BigDecimal kmsRangeFrom;
+
+    private BigDecimal kmsRangeTo;
+
+    private BigDecimal unitPricePerKm;
+
+    private String chargeType;
+
+    private String deliveryType;
+
+    private String driverType;
+
+    private String serviceType;
+
+    private String vehicleType;
+
+    private String fuelType;
+
+    private Integer zoneId;
+
+    private String currencyCode;
+
+    private Integer waitingFreeMinutes;
+
+    private BigDecimal waitingPerMinute;
+
+    private BigDecimal nightCharge;
+
+    private BigDecimal peakCharge;
+
+    private BigDecimal weatherSurcharge;
+
+    private BigDecimal remoteAreaCharge;
+
+    private BigDecimal remoteZoneSurcharge;
+
+    private String status;
+}

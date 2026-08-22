@@ -1,6 +1,8 @@
 package com.jippy.driver.repositary;
 
 import com.jippy.driver.entity.DriverDeliveryChargeSettings;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,21 +12,48 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Repository
-public interface DriverDeliveryChargeSettingsRepository extends JpaRepository<DriverDeliveryChargeSettings, Integer> {
+public interface DriverDeliveryChargeSettingsRepository
+        extends JpaRepository<DriverDeliveryChargeSettings, Integer> {
+
+    // =========================================================
+    // PICKUP SLAB
+    // =========================================================
 
     @Query("""
             SELECT d
             FROM DriverDeliveryChargeSettings d
-            WHERE :pickupDistance >= d.pickUpKmsRangeFrom
-            AND :pickupDistance < d.pickUpKmsRangeTo
+            WHERE :pickupDistance >= d.kmsRangeFrom
+              AND :pickupDistance < d.kmsRangeTo
+              AND UPPER(d.chargeType) = 'PICKUP'
             """)
-    Optional<DriverDeliveryChargeSettings> findPickupSlab(@Param("pickupDistance") BigDecimal pickupDistance);
+    Optional<DriverDeliveryChargeSettings> findPickupSlab(
+            @Param("pickupDistance") BigDecimal pickupDistance
+    );
+
+
+    // =========================================================
+    // DELIVERY SLAB
+    // =========================================================
 
     @Query("""
             SELECT d
             FROM DriverDeliveryChargeSettings d
-            WHERE :deliveryDistance >= d.deliveryKmsRangeFrom
-            AND :deliveryDistance < d.deliveryKmsRangeTo
+            WHERE :deliveryDistance >= d.kmsRangeFrom
+              AND :deliveryDistance < d.kmsRangeTo
+              AND UPPER(d.chargeType) = 'DELIVERY'
             """)
-    Optional<DriverDeliveryChargeSettings> findDeliverySlab(@Param("deliveryDistance") BigDecimal deliveryDistance);
+    Optional<DriverDeliveryChargeSettings> findDeliverySlab(
+            @Param("deliveryDistance") BigDecimal deliveryDistance
+    );
+
+
+    // =========================================================
+    // GET DELIVERY CHARGE SETTINGS
+    // SERVER-SIDE PAGINATION
+    // =========================================================
+
+    @Override
+    Page<DriverDeliveryChargeSettings> findAll(
+            Pageable pageable
+    );
 }

@@ -1,10 +1,7 @@
 package com.jippy.driver.controller;
 
 
-import com.jippy.driver.dto.DriverIncentiveHistoryResponseDto;
-import com.jippy.driver.dto.DriverIncentiveSettingsDto;
-import com.jippy.driver.dto.DriverDeliveryChargeSettingsRequestDto;
-import com.jippy.driver.dto.DriverDeliveryChargeSettingsResponseDto;
+import com.jippy.driver.dto.*;
 import com.jippy.driver.service.DriverIncentiveSettingsService;
 import com.jippy.driver.service.DriverDeliveryChargeSettingsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,8 +26,7 @@ public class DriverSettingsController {
     private final DriverIncentiveSettingsService incentiveSettingsService;
 
     @PostMapping
-    public ResponseEntity<DriverDeliveryChargeSettingsResponseDto> createDriverDeliveryChargeSetting
-            (@Valid @RequestBody DriverDeliveryChargeSettingsRequestDto requestDto) {
+    public ResponseEntity<DriverDeliveryChargeSettingsResponseDto> createDriverDeliveryChargeSetting(@Valid @RequestBody DriverDeliveryChargeSettingsRequestDto requestDto) {
 
         log.info("API START: POST /api/v1/driver-delivery-charge-settings | pickUpRange={}-{}, deliveryRange={}-{}", requestDto.getPickUpKmsRangeFrom(), requestDto.getPickUpKmsRangeTo(), requestDto.getDeliveryKmsRangeFrom(), requestDto.getDeliveryKmsRangeTo());
 
@@ -44,30 +40,35 @@ public class DriverSettingsController {
     }
 
 
-    @Operation(summary = "Create or Update Incentive", description = "If ID is null → create, else update existing incentive")
-    @PostMapping("/CreateOrUpdateIncentives")
-    public ResponseEntity<DriverIncentiveSettingsDto> saveOrUpdate(@Valid @RequestBody DriverIncentiveSettingsDto dto) {
-
-        log.info("Save/Update Incentives request: {}", dto);
-
-        DriverIncentiveSettingsDto response = incentiveSettingsService.saveOrUpdateIncentives(dto);
-
-        return ResponseEntity.ok(response);
-    }
+//    @Operation(summary = "Create or Update Incentive", description = "If ID is null → create, else update existing incentive")
+//    @PostMapping("/CreateOrUpdateIncentives")
+//    public ResponseEntity<DriverIncentiveSettingsDto> saveOrUpdate(@Valid @RequestBody DriverIncentiveSettingsDto dto) {
+//
+//        log.info("Save/Update Incentives request: {}", dto);
+//
+//        DriverIncentiveSettingsDto response = incentiveSettingsService.saveOrUpdateIncentives(dto);
+//
+//        return ResponseEntity.ok(response);
+//    }
 
     @GetMapping("/getDriverIncentiveHistory")
-    @Operation(summary = "Get Driver Incentive History"
-            ,description = "Get incentive history for a driver based on filter" +
-            " (currentMonth, ALL) filter value can be monthly or " +
-            "ALL ex:filter=all/currentMonth")
-    public Page<DriverIncentiveHistoryResponseDto >getDriverIncentiveHistory
-            (@RequestParam Integer driverId, @RequestParam String filter,
-             @RequestParam(defaultValue = "0") int page,
-             @RequestParam(defaultValue = "2") int size) {
+    @Operation(summary = "Get Driver Incentive History", description = "Get incentive history for a driver based on filter" + " (currentMonth, ALL) filter value can be monthly or " + "ALL ex:filter=all/currentMonth")
+    public Page<DriverIncentiveHistoryResponseDto> getDriverIncentiveHistory(@RequestParam Integer driverId, @RequestParam String filter, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "2") int size) {
         log.info("Get Driver Incentive History request | driverId={}, filter={}", driverId, filter);
 
         log.info("to get incentive details filter value can be monthly or ALL");
-        return incentiveSettingsService.getDriverIncentiveHistory(driverId, filter,page,
-                size);
+        return incentiveSettingsService.getDriverIncentiveHistory(driverId, filter, page, size);
     }
+
+//    @GetMapping("/incentive-settings")
+//    public ResponseEntity<Page<DriverIncentiveSettingsResponseDto>> getAllIncentiveSettings(@RequestParam(defaultValue = "0") Integer page, @RequestParam(defaultValue = "20") Integer size) {
+//
+//        log.info("API START: GET /api/driver/incentive-settings | page={} | size={}", page, size);
+//
+//        Page<DriverIncentiveSettingsResponseDto> response = incentiveSettingsService.getAllIncentiveSettings(page, size);
+//
+//        log.info("API END: GET /api/driver/incentive-settings | totalElements={} | totalPages={} | currentPage={}", response.getTotalElements(), response.getTotalPages(), response.getNumber());
+//
+//        return ResponseEntity.ok(response);
+//    }
 }

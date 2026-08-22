@@ -7,6 +7,8 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @FeignClient(name = "foodandmart",configuration = FeignClientConfig.class)
 public interface FMFeignClient {
 
@@ -42,5 +44,25 @@ public interface FMFeignClient {
     void createApprovalRequest(@RequestBody DriverApprovalRequestDTO requestDTO);
 
 
+// =====================================================
+// LOCATION APIs
+// =====================================================
 
+    @GetMapping("/api/fm/location/fetchStates")
+    ResponseEntity<List<FMStateDto>> fetchStates();
+
+    @GetMapping("/api/fm/location/fetchCityInState")
+    ResponseEntity<List<FMCityDto>> fetchCitiesByState(
+            @RequestParam("stateId") Integer stateId
+    );
+
+    @GetMapping("/api/fm/location/fetchAreaInCity")
+    ResponseEntity<List<FMAreaDto>> fetchAreasByCity(
+            @RequestParam("cityId") Integer cityId
+    );
+
+    @GetMapping("/api/fm/location/findAreaById")
+    ResponseEntity<FMAreaDto> findAreaById(
+            @RequestParam("areaId") Integer areaId
+    );
 }

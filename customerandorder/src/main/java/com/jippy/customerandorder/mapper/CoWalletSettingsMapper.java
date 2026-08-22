@@ -6,34 +6,53 @@ import com.jippy.customerandorder.entity.CoWalletSettings;
 
 import java.time.LocalDateTime;
 
-public class CoWalletSettingsMapper {
+public final class CoWalletSettingsMapper {
 
     private CoWalletSettingsMapper() {
+        // Utility class
     }
 
-    // Request DTO -> Entity
+    /**
+     * Request DTO -> Entity
+     */
     public static CoWalletSettings mapToEntity(
             CoWalletSettingsRequestDto requestDto) {
 
+        if (requestDto == null) {
+            return null;
+        }
+
         CoWalletSettings entity = new CoWalletSettings();
 
-        entity.setSettingType(requestDto.getSettingType());
-        entity.setSettingValue(requestDto.getSettingValue());
+        entity.setPointsType(
+                requestDto.getPointsType() != null
+                        ? requestDto.getPointsType().trim()
+                        : null
+        );
+
+        entity.setNumOfPoints(requestDto.getNumOfPoints());
         entity.setCreatedBy(requestDto.getCreatedBy());
         entity.setCreatedAt(LocalDateTime.now());
 
         return entity;
     }
 
-    // Entity -> Response DTO
+    /**
+     * Entity -> Response DTO
+     */
     public static CoWalletSettingsResponseDto mapToResponseDto(
             CoWalletSettings entity) {
 
-        CoWalletSettingsResponseDto responseDto = new CoWalletSettingsResponseDto();
+        if (entity == null) {
+            return null;
+        }
+
+        CoWalletSettingsResponseDto responseDto =
+                new CoWalletSettingsResponseDto();
 
         responseDto.setWalletSettingsId(entity.getWalletSettingsId());
-        responseDto.setSettingType(entity.getSettingType());
-        responseDto.setSettingValue(entity.getSettingValue());
+        responseDto.setPointsType(entity.getPointsType());
+        responseDto.setNumOfPoints(entity.getNumOfPoints());
         responseDto.setCreatedAt(entity.getCreatedAt());
         responseDto.setCreatedBy(entity.getCreatedBy());
         responseDto.setUpdatedAt(entity.getUpdatedAt());

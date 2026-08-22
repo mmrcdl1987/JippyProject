@@ -20,31 +20,77 @@ public class DriverChargeController {
 
     private final DriverChargeService driverChargeService;
 
+
+    // =========================================================
     // DRIVER PAYOUT CALCULATION
+    // =========================================================
+
     @PostMapping("/driver-charge/calculate")
-    @Operation(summary = "Calculate Driver Charge", description = "Calculate pickup and delivery charge for driver payout")
+    @Operation(
+            summary = "Calculate Driver Charge",
+            description = "Calculate pickup and delivery charge for driver payout"
+    )
     public ResponseEntity<DriverChargeCalculationResponseDto>
-    calculateDriverCharge(@Valid @RequestBody DriverChargeCalculationRequestDto requestDto) {
+    calculateDriverCharge(
+            @Valid
+            @RequestBody DriverChargeCalculationRequestDto requestDto) {
 
         log.info("API_START | CALCULATE_DRIVER_CHARGE");
 
-        DriverChargeCalculationResponseDto response = driverChargeService.calculateDriverCharge(requestDto);
+        DriverChargeCalculationResponseDto response =
+                driverChargeService.calculateDriverCharge(requestDto);
 
         log.info("API_SUCCESS | DRIVER_CHARGE_CALCULATED");
 
         return ResponseEntity.ok(response);
     }
 
-    // CHECKOUT DELIVERY CHARGE
-    @PostMapping("/delivery-charge/calculate/checkout")
-    @Operation(summary = "Calculate Delivery Charge", description = "Calculate delivery charge during customer checkout")
-    public ResponseEntity<DeliveryChargeCalculationResponseDto> calculateDeliveryCharge(@Valid @RequestBody DeliveryChargeCalculationRequestDto requestDto) {
+
+    // =========================================================
+    // CHECKOUT DELIVERY CHARGE - EXISTING ENDPOINT
+    // =========================================================
+
+    @PostMapping("/delivery-charge/calculate")
+    @Operation(
+            summary = "Calculate Delivery Charge",
+            description = "Calculate delivery charge during customer checkout"
+    )
+    public ResponseEntity<DeliveryChargeCalculationResponseDto>
+    calculateDeliveryCharge(
+            @Valid
+            @RequestBody DeliveryChargeCalculationRequestDto requestDto) {
 
         log.info("API_START | CALCULATE_DELIVERY_CHARGE");
 
-        DeliveryChargeCalculationResponseDto response = driverChargeService.calculateDeliveryCharge(requestDto);
+        DeliveryChargeCalculationResponseDto response =
+                driverChargeService.calculateDeliveryCharge(requestDto);
 
         log.info("API_SUCCESS | DELIVERY_CHARGE_CALCULATED");
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    // =========================================================
+    // CHECKOUT DELIVERY CHARGE - NEW CHECKOUT ENDPOINT
+    // =========================================================
+
+    @PostMapping("/delivery-charge/calculate/checkout")
+    @Operation(
+            summary = "Calculate Delivery Charge - Checkout",
+            description = "Calculate delivery charge specifically during customer checkout"
+    )
+    public ResponseEntity<DeliveryChargeCalculationResponseDto>
+    calculateDeliveryChargeCheckout(
+            @Valid
+            @RequestBody DeliveryChargeCalculationRequestDto requestDto) {
+
+        log.info("API_START | CALCULATE_DELIVERY_CHARGE_CHECKOUT");
+
+        DeliveryChargeCalculationResponseDto response =
+                driverChargeService.calculateDeliveryCharge(requestDto);
+
+        log.info("API_SUCCESS | DELIVERY_CHARGE_CHECKOUT_CALCULATED");
 
         return ResponseEntity.ok(response);
     }

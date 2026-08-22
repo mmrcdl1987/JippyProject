@@ -23,6 +23,9 @@ public class DriverIncentiveSettings {
     @Column(nullable = false)
     private BigDecimal incentiveAmount;
 
+    @Column(name = "zone_id")
+    private Integer zoneId;
+
     private LocalDateTime createdAt;
     private Integer createdBy;
 
