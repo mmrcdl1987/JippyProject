@@ -17,27 +17,43 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
+public interface FmProductRepository
+        extends JpaRepository<FmProduct, Integer> {
 
     // ============================================================
     // BASIC PRODUCT METHODS
     // ============================================================
 
-    List<FmProduct> findByOutletCategoryId(Integer outletCategoryId);
+    List<FmProduct> findByOutletCategoryId(
+            Integer outletCategoryId
+    );
+
 
     Optional<FmProduct> findByOutletCategoryIdAndProductNameIgnoreCase(
             Integer outletCategoryId,
-            String productName);
+            String productName
+    );
+
 
     boolean existsByOutletCategoryIdAndProductNameIgnoreCase(
             Integer outletCategoryId,
-            String productName);
+            String productName
+    );
 
-    long countByOutletCategoryId(Integer outletCategoryId);
 
-    Optional<FmProduct> findById(Integer productId);
+    long countByOutletCategoryId(
+            Integer outletCategoryId
+    );
 
-    boolean existsByProductId(Integer productId);
+
+    Optional<FmProduct> findById(
+            Integer productId
+    );
+
+
+    boolean existsByProductId(
+            Integer productId
+    );
 
 
     // ============================================================
@@ -59,7 +75,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             WHERE oc.outlet_id IN (:outletIds)
             """, nativeQuery = true)
     List<Object[]> findProducts(
-            @Param("outletIds") List<Integer> outletIds);
+            @Param("outletIds") List<Integer> outletIds
+    );
 
 
     // ============================================================
@@ -78,7 +95,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             WHERE oc.outlet_id IN (:outletIds)
             """, nativeQuery = true)
     List<Object[]> findProductsWithoutPricing(
-            @Param("outletIds") List<Integer> outletIds);
+            @Param("outletIds") List<Integer> outletIds
+    );
 
 
     // ============================================================
@@ -86,12 +104,14 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     // ============================================================
 
     @Query(value = """
-            SELECT p.outlet_category_id
+            SELECT
+                p.outlet_category_id
             FROM jippy_fm.products p
             WHERE p.product_id = :productId
             """, nativeQuery = true)
     Integer findOutletCategoryId(
-            @Param("productId") Integer productId);
+            @Param("productId") Integer productId
+    );
 
 
     @Query("""
@@ -103,7 +123,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             """)
     List<FmProduct> findByOutletIdAndOutletCategoryIds(
             @Param("outletId") Integer outletId,
-            @Param("categoryIds") List<Integer> categoryIds);
+            @Param("categoryIds") List<Integer> categoryIds
+    );
 
 
     @Query("""
@@ -112,7 +133,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             WHERE p.outletCategoryId IN :categoryIds
             """)
     List<FmProduct> findByOutletCategoryIds(
-            @Param("categoryIds") List<Integer> categoryIds);
+            @Param("categoryIds") List<Integer> categoryIds
+    );
 
 
     // ============================================================
@@ -127,7 +149,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             WHERE p.productId = :productId
             """)
     void disableProduct(
-            @Param("productId") Integer productId);
+            @Param("productId") Integer productId
+    );
 
 
     @Modifying
@@ -138,7 +161,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             WHERE p.productId = :productId
             """)
     void enableProduct(
-            @Param("productId") Integer productId);
+            @Param("productId") Integer productId
+    );
 
 
     // ============================================================
@@ -155,12 +179,14 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             """)
     void permanentlyCloseProduct(
             @Param("productId") Integer productId,
-            @Param("status") String status);
+            @Param("status") String status
+    );
 
 
     Optional<FmProduct> findByProductIdAndIsActive(
             Integer productId,
-            String isActive);
+            String isActive
+    );
 
 
     // ============================================================
@@ -177,7 +203,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             """)
     boolean existsByProductIdAndOutletId(
             @Param("productId") Integer productId,
-            @Param("outletId") Integer outletId);
+            @Param("outletId") Integer outletId
+    );
 
 
     @Query("""
@@ -191,8 +218,13 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             """)
     boolean existsProductInOutlet(
             @Param("outletId") Integer outletId,
-            @Param("productId") Integer productId);
+            @Param("productId") Integer productId
+    );
 
+
+    // ============================================================
+    // ACTIVE PRODUCTS
+    // ============================================================
 
     @Query("""
             SELECT p.productId
@@ -204,7 +236,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             ORDER BY p.productId
             """)
     List<Integer> findActiveProductIdsByOutlet(
-            @Param("outletId") Integer outletId);
+            @Param("outletId") Integer outletId
+    );
 
 
     // ============================================================
@@ -215,7 +248,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
      * Fetch all products whose image and description are not updated.
      */
     Page<FmProduct> findByIsImageDescUpdatedFalse(
-            Pageable pageable);
+            Pageable pageable
+    );
 
 
     // ============================================================
@@ -241,7 +275,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             ORDER BY p.product_name
             """, nativeQuery = true)
     List<FmProductPriceProjection> findProductsByOutletId(
-            @Param("outletId") Integer outletId);
+            @Param("outletId") Integer outletId
+    );
 
 
     // ============================================================
@@ -252,6 +287,7 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
      * Fetch all products for multiple outlets in a single query.
      *
      * Returns:
+     *
      * [0] productId
      * [1] productName
      * [2] merchantPrice
@@ -274,7 +310,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             ORDER BY oc.outlet_id, p.product_id
             """, nativeQuery = true)
     List<Object[]> findProductsForBulkPricing(
-            @Param("outletIds") List<Integer> outletIds);
+            @Param("outletIds") List<Integer> outletIds
+    );
 
 
     // ============================================================
@@ -307,7 +344,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     boolean existsActiveProductAndVariantInOutlet(
             @Param("productId") Integer productId,
             @Param("outletId") Integer outletId,
-            @Param("variantId") Integer variantId);
+            @Param("variantId") Integer variantId
+    );
 
 
     // ============================================================
@@ -345,13 +383,17 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
               AND o.is_active = 'Y'
             """, nativeQuery = true)
     List<FmProductCategoryProjection> findProductCategoryDetails(
-            @Param("productName") String productName);
+            @Param("productName") String productName
+    );
 
 
     // ============================================================
     // MASTER PRODUCT CATEGORY DETAILS
     // ============================================================
 
+    /**
+     * Fetch master product category information.
+     */
     @Query(value = """
             SELECT
                 mp.master_product_id AS masterProductId,
@@ -361,8 +403,10 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             FROM jippy_fm.master_products mp
             WHERE LOWER(mp.master_product_name) = LOWER(:productName)
             """, nativeQuery = true)
-    List<FmMasterProductCategoryProjection> findMasterProductCategoryDetails(
-            @Param("productName") String productName);
+    List<FmMasterProductCategoryProjection>
+    findMasterProductCategoryDetails(
+            @Param("productName") String productName
+    );
 
 
     // ============================================================
@@ -370,13 +414,15 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     // ============================================================
 
     @Query(value = """
-            SELECT p.outlet_category_id
+            SELECT
+                p.outlet_category_id
             FROM jippy_fm.products p
             WHERE LOWER(p.product_name) = LOWER(:productName)
               AND p.is_active = 'Y'
             """, nativeQuery = true)
     List<Integer> findOutletCategoryIdsByProductName(
-            @Param("productName") String productName);
+            @Param("productName") String productName
+    );
 
 
     // ============================================================
@@ -394,7 +440,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             """, nativeQuery = true)
     int updateOutletCategoryId(
             @Param("outletCategoryId") Integer outletCategoryId,
-            @Param("updatedCategoryId") Integer updatedCategoryId);
+            @Param("updatedCategoryId") Integer updatedCategoryId
+    );
 
 
     // ============================================================
@@ -415,7 +462,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             """, nativeQuery = true)
     int updateMasterProductCategoryId(
             @Param("productName") String productName,
-            @Param("updatedCategoryId") Integer updatedCategoryId);
+            @Param("updatedCategoryId") Integer updatedCategoryId
+    );
 
 
     // ============================================================
@@ -428,7 +476,8 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             WHERE category_id = :categoryId
             """, nativeQuery = true)
     long countCategoryById(
-            @Param("categoryId") Integer categoryId);
+            @Param("categoryId") Integer categoryId
+    );
 
 
     // ============================================================
@@ -441,7 +490,9 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             JOIN jippy_fm.outlet_categories oc
                 ON oc.outlet_category_id = p.outlet_category_id
             WHERE p.product_id = :productId
+            LIMIT 1
             """, nativeQuery = true)
     Integer fetchOutletIdForProductId(
-            @Param("productId") Integer productId);
+            @Param("productId") Integer productId
+    );
 }
