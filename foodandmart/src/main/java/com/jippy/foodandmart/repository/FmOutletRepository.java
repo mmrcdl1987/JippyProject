@@ -365,7 +365,6 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 o.is_active,
                 o.is_approved,
                 o.employee_id,
-            
                 od.opening_time,
                 od.closing_time,
                 od.outlet_day_id,
@@ -387,7 +386,13 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 ST_Y(o.outlet_location::geometry) AS latitude,
                 ST_X(o.outlet_location::geometry) AS longitude,
                 o.is_veg_outlet,
-                o.outlet_pic_url
+                o.outlet_pic_url,
+                 -- Returns true if outlet exists in best_restaurants, otherwise false
+                    EXISTS (
+                        SELECT 1 
+                        FROM jippy_fm.best_restaurants br 
+                        WHERE br.outlet_id = o.outlet_id
+                    ) AS is_best_restaurant
             
             FROM jippy_fm.outlets o
             
