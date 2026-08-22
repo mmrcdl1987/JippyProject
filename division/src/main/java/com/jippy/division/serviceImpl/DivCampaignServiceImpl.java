@@ -7,7 +7,7 @@ import com.jippy.division.entity.DivPromotionDate;
 import com.jippy.division.exception.DivInvalidDateException;
 import com.jippy.division.exception.DivInvalidRequestException;
 import com.jippy.division.exception.DivResourceNotFoundException;
-import com.jippy.division.feignClients.FMFeignClient;
+import com.jippy.division.feignclients.FMFeignClient;
 import com.jippy.division.mapper.DivCampaignMapper;
 import com.jippy.division.projection.DivActiveDiscountsProjection;
 import com.jippy.division.repositary.*;
@@ -616,7 +616,7 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
 
         log.info("Validating outlet belongs to location. outletId={}, locationType={}, locationId={}", outletId, locationType, locationId);
 
-        DivOutletDetailsDto outlet = fmClient.getOutletDetails(outletId, "MERCHANT", null);
+        DivOutletDetailsDto outlet = fmClient.getOutletAddressDetails(outletId);
 
         if (outlet == null) {
 

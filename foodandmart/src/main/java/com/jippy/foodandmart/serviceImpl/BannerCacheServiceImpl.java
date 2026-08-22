@@ -197,7 +197,7 @@ public class BannerCacheServiceImpl implements BannerCacheService {
 
             // Take first record for outlet metadata (Lat, Lng, Name, Radius)
             ActiveBannerResponseDto primaryRecord = outletBannerRows.get(0);
-            System.out.println("===================primaryRecord========"+primaryRecord);
+           System.out.println("===================primaryRecord========"+primaryRecord);
 
             if (primaryRecord.getLatitude() == null || primaryRecord.getLongitude() == null) {
                 log.warn("[INDEX SKIP] Skipping outletId: {} due to missing Lat/Lng coordinates", outletId);

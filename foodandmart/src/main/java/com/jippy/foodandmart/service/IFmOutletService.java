@@ -68,4 +68,6 @@ public interface IFmOutletService {
     public String fetchOutletName(Integer outletId);
 
     List<FmOutlet> getOutletsByAreaId(Integer areaId);
+
+    OutletLocationResponseDto getOutletAddressDetails(Integer outletId);
 }

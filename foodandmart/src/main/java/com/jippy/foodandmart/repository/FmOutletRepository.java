@@ -2,10 +2,7 @@ package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.dto.OutletLocationProjection;
 import com.jippy.foodandmart.entity.FmOutlet;
-import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
-import com.jippy.foodandmart.projections.FmOutletMenuProjection;
-import com.jippy.foodandmart.projections.FmOutletSettlementProjection;
-import com.jippy.foodandmart.projections.FmPendingOutletApprovalProjection;
+import com.jippy.foodandmart.projections.*;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -355,7 +352,11 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 o.outlet_id,
                 o.outlet_name,
                 o.merchant_id,
-                o.cuisine_type,
+                (
+                    SELECT STRING_AGG(ct.cuisine_types_name, ', ')
+                    FROM jippy_fm.cuisine_types ct
+                    WHERE ct.cuisine_types_id = ANY(o.cuisine_type)
+                ) AS cuisine_names,
                 o.outlet_phone,
                 o.radius,
                 o.review,
@@ -391,10 +392,10 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             FROM jippy_fm.outlets o
             
             LEFT JOIN jippy_fm.outlet_subscription_plans osp
-                   ON o.outlet_id = osp.outlet_id 
-           
+                   ON o.outlet_id = osp.outlet_id
+            
             LEFT JOIN jippy_fm.week_slot_days wsd on wsd.week_slot_days_id = osp.banner_slot_days_id
-                  AND CURRENT_DATE BETWEEN wsd.slot_start_date AND wsd.slot_end_date and slot_type ='banner_slot' 
+                  AND CURRENT_DATE BETWEEN wsd.slot_start_date AND wsd.slot_end_date and slot_type ='banner_slot'
             
             LEFT JOIN jippy_fm.subscription_plans sp
                    ON osp.subscription_plan_id = sp.subscription_plan_id
@@ -435,7 +436,6 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
               )
             
             ORDER BY distance_km ASC;
-            
             """, nativeQuery = true)
     List<Object[]> findCustomerNearbyOutlets(@Param("customerLat") double customerLat,
             @Param("customerLng") double customerLng, @Param("categoryId") Integer categoryId);
@@ -636,6 +636,12 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
     int approveOutlet(
             @Param("outletId") Integer outletId);
 
+
+    @Query(value = """
+            SELECT o.outlet_id,a.state_id,a.city_id,a.area_id FROM "jippy_fm"."outlets" o
+            join "jippy_fm"."address" a on  o.outlet_id = a.jippy_address_id and address_type = 'OUTLET'
+            where outlet_id =:outletId """,nativeQuery = true)
+    OutletAddressProjection getOutletAddressDetails(@Param("outletId") Integer outletId);
 }
 
 
