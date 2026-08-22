@@ -966,7 +966,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                     log.info("Zero active promotions or coupons found. Proceeding with standard menu pricing.");
 
                     // Cache the raw menu in Redis with standard 10-minute TTL so subsequent calls hit Redis Step 1
-//                    saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
+                   saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
 
                     return outletDtoresponse;
                 }
@@ -1035,13 +1035,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 // Safety guard: ensure TTL is at least 30 seconds
                 ttlSeconds = Math.max(30, ttlSeconds);
 
-//                saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
+               saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
 
                 //redisTemplate.opsForValue().set(cacheKey, jsonPayload, ttlSeconds, TimeUnit.SECONDS);
                 // log.info("Cached CUSTOMER view [{}] in Redis with offer/slot TTL: {}s", cacheKey, ttlSeconds);
             } else {
                 // Merchant view or No-Offer Customer view: Standard 10 min TTL
-//                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
+                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
                 //  redisTemplate.opsForValue().set(cacheKey, jsonPayload, 5, TimeUnit.MINUTES);
                 //  log.info("Cached [{}] in Redis with standard TTL: 300s", cacheKey);
             }
@@ -1706,6 +1706,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
             if (row[20] != null) {
                 dto.setOutletPicUrl(row[20].toString());
+            }
+            if (row[21] != null) {
+                dto.setIsBestRestaurant((Boolean) row[21]);
             }
 
             /*
