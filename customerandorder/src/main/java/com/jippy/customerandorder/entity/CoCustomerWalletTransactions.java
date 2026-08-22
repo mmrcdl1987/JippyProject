@@ -3,6 +3,7 @@ package com.jippy.customerandorder.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -15,8 +16,7 @@ public class CoCustomerWalletTransactions {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name =
-            "customer_wallet_transactions_id")
+    @Column(name = "customer_wallet_transactions_id")
     private Integer customerWalletTransactionsId;
 
     @Column(name = "wallet_id")
@@ -30,11 +30,14 @@ public class CoCustomerWalletTransactions {
     @Column(name = "order_id")
     private String orderId;
 
-    @Column(name = "points_type")
-    private String pointsType;
+    @Column(name = "transaction_type")
+    private String transactionType;
 
     @Column(name = "points")
     private Integer points;
+
+    @Column(name = "amount")
+    private BigDecimal amount;
 
     @Column(name = "created_by")
     private Integer createdBy;

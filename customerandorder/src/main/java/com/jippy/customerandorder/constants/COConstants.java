@@ -27,7 +27,7 @@ public class COConstants {
     public static final String ORDER_STATUS_PLACED = "PLACED";
     public static final String MSG_ORDER_ITEMS_EMPTY = "Order items cannot be empty";
 
-    // ── Cart Messages ──────────────────────────────────────────────────────────
+    // ── Cart Messages ────────────────────────────────────────────────────────────
     public static final String MSG_CART_ADDED = "Item added to cart";
     public static final String MSG_CART_UPDATED = "Cart updated";
     public static final String MSG_CART_REMOVED = "Item removed from cart";
@@ -48,7 +48,7 @@ public class COConstants {
     public static final String MSG_DELIVERY_CHARGE_NOT_FOUND = "Delivery charge setting not found";
     public static final String MSG_DATABASE_ERROR = "Database operation failed";
     public static final String MSG_DRIVER_CHARGE_CALCULATED = "Driver charge calculated successfully";
-    // ── Driver Charge Messages ──────────────────────────────────────
+    // ── Driver Charge Messages ─────────────────────────────────────────────────
     public static final String MSG_PICKUP_SLAB_NOT_FOUND = "Pickup charge slab not found";
     public static final String MSG_DELIVERY_SLAB_NOT_FOUND = "Delivery charge slab not found";
     public static final String MSG_CUSTOMER_LOCATION_NOT_FOUND = "Customer location not found";
@@ -57,7 +57,7 @@ public class COConstants {
     public static final String TAX_PERCENTAGE = "5";
 
 
-    // ── Driver Charge Constants ──────────────────────────────────────
+    // ── Driver Charge Constants ────────────────────────────────────────────────
     public static final String COD_LIMIT = "499";
     public static final String STATUS_DELIVERED = "DELIVERED";
     public static final BigDecimal DRIVER_DEFAULT_COD_AMOUNT = BigDecimal.valueOf(1000);
@@ -89,6 +89,11 @@ public class COConstants {
     public static final String CANNOT_TRANSFER_SELF = "Cannot transfer points to same customer";
     public static final String CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String POINTS_TRANSFER_SUCCESS = "Wallet points transferred successfully";
+    public static final String WALLET_DEBIT = "WALLET_DEBIT";
+    public static final String WALLET_CREDIT = "WALLET_CREDIT";
+    public static final String WALLET_REFUND = "WALLET_REFUND";
+    public static final BigDecimal MAX_WALLET_UTILIZATION_PERCENTAGE = BigDecimal.valueOf(0.25);
+
     // SCHEDULED ORDER
     public static final String ORDER_TYPE_NORMAL = "NORMAL";
 
@@ -140,6 +145,8 @@ public class COConstants {
     public static final String ORDER_STATUS_FINAL_REJECTED = "FINAL_REJECTED";
 
     public static final String REJECTION_TYPE_CUSTOMER = "CUSTOMER";
+    public static final String REJECTION_TYPE_OUTLET = "OUTLET";
+    public static final String REJECTION_TYPE_DRIVER = "DRIVER";
 
     public static final Integer FINAL_REJECTION_WAIT_MINUTES = 2;
 
@@ -197,5 +204,5 @@ public class COConstants {
     // REFERRAL SYSTEM
     public static final String REFERRAL_REWARD = "REFERRAL_REWARD";
     public static final Integer REFERRAL_REWARD_POINTS = 250;
-    public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};}
-
+    public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};
+}

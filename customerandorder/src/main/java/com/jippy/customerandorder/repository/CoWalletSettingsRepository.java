@@ -9,5 +9,5 @@ import java.util.Optional;
 
 public interface CoWalletSettingsRepository extends JpaRepository<CoWalletSettings, Integer> {
 
-    Optional<CoWalletSettings> findByPointsType(String pointsType);
+    Optional<CoWalletSettings> findBySettingType(String settingType);
 }

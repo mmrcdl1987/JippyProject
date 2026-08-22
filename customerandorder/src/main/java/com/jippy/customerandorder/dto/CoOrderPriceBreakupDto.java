@@ -24,4 +24,6 @@ public class CoOrderPriceBreakupDto {
     private BigDecimal orderTotalAmount;
 
     private BigDecimal couponDiscount;
+
+    private BigDecimal orderAmountDiscounted;
 }

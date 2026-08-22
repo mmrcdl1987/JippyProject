@@ -120,7 +120,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             // Record transaction
             CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
             transaction.setWalletId(referrerWallet.getWalletId());
-            transaction.setPointsType(COConstants.REFERRAL_REWARD);
+            transaction.setTransactionType(COConstants.REFERRAL_REWARD);
             transaction.setPoints(COConstants.REFERRAL_REWARD_POINTS);
             transaction.setCreatedAt(LocalDateTime.now());
             transaction.setCreatedBy(1);
@@ -290,6 +290,10 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
                 } else {
 
+                    // --------------------------------
+                    // Create referral record
+                    // --------------------------------
+
                     CoCustomerReferral referral = new CoCustomerReferral();
 
                     referral.setReferrerCustomerId(referrer.getCustomerId());
@@ -336,7 +340,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
             CoWalletSettings walletSettings =
                     walletSettingsRepository
-                            .findByPointsType(
+                            .findBySettingType(
                                     COConstants.WELCOME_POINTS
                             )
                             .orElseThrow(() ->
@@ -348,7 +352,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             CoCustomerWallet wallet =
                     CoCustomerMapper.mapToWallet(
                             savedCustomer,
-                            walletSettings.getNumOfPoints(),
+                            walletSettings.getSettingValue(),
                             dto.getCreatedBy()
                     );
 
@@ -367,8 +371,8 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
             CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
             transaction.setWalletId(savedWallet.getWalletId());
-            transaction.setPointsType(COConstants.WELCOME_POINTS);
-            transaction.setPoints(walletSettings.getNumOfPoints());
+            transaction.setTransactionType(COConstants.WELCOME_POINTS);
+            transaction.setPoints(walletSettings.getSettingValue());
             transaction.setCreatedAt(LocalDateTime.now());
             transaction.setCreatedBy(dto.getCreatedBy());
             transactionsRepository.save(transaction);
@@ -377,7 +381,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                             "customerId={} | walletId={} | points={}",
                     savedCustomer.getCustomerId(),
                     savedWallet.getWalletId(),
-                    walletSettings.getNumOfPoints()
+                    walletSettings.getSettingValue()
             );
 
         } else {
@@ -454,8 +458,9 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         // SAVE CONVERT TRANSACTION
         CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
         transaction.setWalletId(wallet.getWalletId());
-        transaction.setPointsType(COConstants.POINTS_CONVERTED);
+        transaction.setTransactionType(COConstants.POINTS_CONVERTED);
         transaction.setPoints(-(eligibleBlocks * COConstants.MINIMUM_POINTS_REQUIRED));
+        transaction.setAmount(convertedAmount);
         transaction.setCreatedAt(LocalDateTime.now());
         transaction.setCreatedBy(1);
         transactionsRepository.save(transaction);
@@ -495,15 +500,15 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // FETCH SETTINGS
 
-        CoWalletSettings streakSettings = walletSettingsRepository.findByPointsType(COConstants.DAILY_STREAK_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
+        CoWalletSettings streakSettings = walletSettingsRepository.findBySettingType(COConstants.DAILY_STREAK_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
 
         // DAILY POINTS
 
-        Integer streakPoints = streakSettings.getNumOfPoints();
+        Integer streakPoints = streakSettings.getSettingValue();
 
         // MINIMUM STREAK DAYS
 
-        Integer streakDays = streakSettings.getStreakMinDays();
+        Integer streakDays = streakSettings.getSettingValue();
 
         Integer currentStreak;
 
@@ -677,7 +682,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         senderTransaction.setWalletId(senderWallet.getWalletId());
 
-        senderTransaction.setPointsType(COConstants.POINTS_TRANSFERRED);
+        senderTransaction.setTransactionType(COConstants.POINTS_TRANSFERRED);
 
         senderTransaction.setPoints(-requestDto.getTransferPoints());
 
@@ -695,7 +700,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         receiverTransaction.setWalletId(receiverWallet.getWalletId());
 
-        receiverTransaction.setPointsType(COConstants.POINTS_RECEIVED);
+        receiverTransaction.setTransactionType(COConstants.POINTS_RECEIVED);
 
         receiverTransaction.setPoints(requestDto.getTransferPoints());
 
@@ -917,7 +922,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             }
         }
 
-        // ==============================
+        // ==============================\
         // UPDATE AUDIT INFORMATION
         // ==============================
 
@@ -1075,8 +1080,9 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         List<CoWalletTransactionHistoryDto> transactions = transactionsRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId()).stream()
                 .map(transaction -> {
                     CoWalletTransactionHistoryDto dto = new CoWalletTransactionHistoryDto();
-                    dto.setPointsType(transaction.getPointsType());
+                    dto.setTransactionType(transaction.getTransactionType());
                     dto.setPoints(transaction.getPoints());
+                    dto.setAmount(transaction.getAmount());
                     dto.setCreatedAt(transaction.getCreatedAt());
                     return dto;
                 })

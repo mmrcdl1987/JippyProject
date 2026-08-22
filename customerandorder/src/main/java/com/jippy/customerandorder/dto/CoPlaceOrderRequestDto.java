@@ -47,6 +47,13 @@ public class CoPlaceOrderRequestDto {
     private BigDecimal couponDiscount;
 
     /*
+     * WALLET USAGE
+     */
+    private Boolean useWallet;
+
+    private BigDecimal walletAmount;
+
+    /*
      * DELIVERY DISTANCE
      */
     private BigDecimal pickUpDistanceKms;

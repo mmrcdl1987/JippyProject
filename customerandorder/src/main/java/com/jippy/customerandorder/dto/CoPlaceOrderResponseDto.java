@@ -47,6 +47,8 @@ public class CoPlaceOrderResponseDto {
 
     private BigDecimal orderTotalAmount;
 
+    private BigDecimal walletDiscount;
+
     private String orderStatus;
 
     private Integer paymentModeId;

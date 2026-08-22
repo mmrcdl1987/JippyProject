@@ -3,6 +3,8 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomerCart;
+import com.jippy.customerandorder.entity.CoCustomerWallet;
+import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
 import com.jippy.customerandorder.entity.CoMealSubscription;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
@@ -19,6 +21,8 @@ import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -42,6 +46,8 @@ public class COOrderService implements IOrderService {
     private final CoOrderSequenceRepository sequenceRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ICoCustomerService customerService;
+    private final CoCustomerWalletRepository walletRepository;
+    private final CoCustomerWalletTransactionsRepository transactionsRepository;
 
     /*
      * PLACE ORDER
@@ -104,6 +110,18 @@ public class COOrderService implements IOrderService {
         // Save items directly from request
         saveOrderItems(dto.getItems(), orderId);
 
+        BigDecimal currentTotal = dto.getOrderTotalAmount() != null ? dto.getOrderTotalAmount() : BigDecimal.ZERO;
+        BigDecimal walletDeduction = processWalletDeduction(dto, orderId, currentTotal);
+
+        BigDecimal finalOrderTotal = currentTotal.subtract(walletDeduction).setScale(2, RoundingMode.HALF_UP);
+        if (finalOrderTotal.compareTo(BigDecimal.ZERO) < 0) {
+            finalOrderTotal = BigDecimal.ZERO;
+        }
+
+        // Set wallet amount discounted and updated total on DTO before mapping to Price
+        dto.setWalletAmount(walletDeduction);
+        dto.setOrderTotalAmount(finalOrderTotal);
+
         CoOrderPriceBreakup savedOrderPriceBreakUp =
                 priceRepository.save(
                         orderMapper.mapToPrice(dto, orderId)
@@ -133,24 +151,182 @@ public class COOrderService implements IOrderService {
         updatedDto.setOrderType(savedOrder.getOrderType());
         updatedDto.setOrderStatus(savedOrder.getOrderStatus());
         updatedDto.setPaymentModeId(savedOrder.getPaymentModeId());
+        updatedDto.setWalletAmount(walletDeduction);
         publishOrderEvent(order);
 
         log.info("SERVICE_END | PROCESS_NORMAL_ORDER_SUCCESS | orderId={}", orderId);
 
-        return buildResponse(
+        CoPlaceOrderResponseDto response = buildResponse(
                 COConstants.MSG_ORDER_CREATED,
                 null,
                 List.of(orderId),
                 updatedDto
         );
+        response.setWalletDiscount(walletDeduction);
+        return response;
     }
 
-//    private void clearCustomerCart(Integer customerId) {
-//
-//        log.info("SERVICE_START | CLEAR_CUSTOMER_CART | customerId={}", customerId);
-//        cartRepository.deleteByCustomerId(customerId);
-//        log.info("SERVICE_END | CLEAR_CUSTOMER_CART_SUCCESS | customerId={}", customerId);
-//    }
+    /*
+     * WALLET DEDUCTION (Up to 25% of wallet balance amount)
+     */
+    private BigDecimal processWalletDeduction(
+            CoPlaceOrderRequestDto dto,
+            String orderId,
+            BigDecimal currentTotalAmount) {
+
+        // Customer did not request wallet usage
+        if ((dto.getUseWallet() == null || !dto.getUseWallet())
+                && (dto.getWalletAmount() == null
+                || dto.getWalletAmount().compareTo(BigDecimal.ZERO) <= 0)) {
+
+            return BigDecimal.ZERO;
+        }
+
+        // ==========================================
+        // GET CUSTOMER WALLET
+        // ==========================================
+
+        CoCustomerWallet wallet =
+                walletRepository
+                        .findByCustomerCustomerId(dto.getCustomerId())
+                        .orElseThrow(() ->
+                                new OrderException(
+                                        COConstants.WALLET_NOT_FOUND
+                                    )
+                        );
+
+        BigDecimal walletBalance =
+                wallet.getBalanceAmount() != null
+                        ? wallet.getBalanceAmount()
+                        : BigDecimal.ZERO;
+
+        if (walletBalance.compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new OrderException(
+                    "Insufficient wallet balance"
+            );
+        }
+
+        // ==========================================
+        // MAXIMUM WALLET USAGE = 25% OF ORDER VALUE
+        // ==========================================
+
+        BigDecimal maxAllowedFromWallet =
+                currentTotalAmount
+                        .multiply(
+                                COConstants.MAX_WALLET_UTILIZATION_PERCENTAGE
+                        )
+                        .setScale(2, RoundingMode.HALF_UP);
+
+        log.info(
+                "WALLET_LIMIT_CALCULATED | customerId={} | " +
+                        "orderId={} | orderAmount={} | walletBalance={} | " +
+                        "maxWalletUsage={}",
+                dto.getCustomerId(),
+                orderId,
+                currentTotalAmount,
+                walletBalance,
+                maxAllowedFromWallet
+        );
+
+        // ==========================================
+        // DETERMINE DEDUCTION
+        // ==========================================
+
+        BigDecimal deductionAmount;
+
+        if (dto.getWalletAmount() != null
+                && dto.getWalletAmount()
+                .compareTo(BigDecimal.ZERO) > 0) {
+
+            BigDecimal requestedWalletAmount =
+                    dto.getWalletAmount()
+                            .setScale(2, RoundingMode.HALF_UP);
+
+            // Cannot exceed 25% of order value
+            if (requestedWalletAmount.compareTo(
+                    maxAllowedFromWallet) > 0) {
+
+                throw new OrderException(
+                        "Wallet utilization cannot exceed 25% " +
+                                "of order value. Maximum allowed: ₹"
+                                + maxAllowedFromWallet
+                );
+            }
+
+            // Cannot exceed wallet balance
+            if (requestedWalletAmount.compareTo(
+                    walletBalance) > 0) {
+
+                throw new OrderException(
+                        "Insufficient wallet balance. " +
+                                "Available balance: ₹"
+                                + walletBalance
+                );
+            }
+
+            // Cannot exceed order amount
+            deductionAmount = requestedWalletAmount.min(currentTotalAmount);
+
+        } else {
+            // useWallet = true
+            // Automatically use maximum allowed amount
+            deductionAmount = walletBalance
+                    .min(maxAllowedFromWallet)
+                    .min(currentTotalAmount);
+        }
+
+        // ==========================================
+        // DEDUCT WALLET
+        // ==========================================
+
+        if (deductionAmount.compareTo(BigDecimal.ZERO) > 0) {
+
+            BigDecimal newBalance =
+                    walletBalance
+                            .subtract(deductionAmount)
+                            .setScale(2, RoundingMode.HALF_UP);
+
+            wallet.setBalanceAmount(newBalance);
+            wallet.setUpdatedAt(LocalDateTime.now());
+            wallet.setUpdatedBy(dto.getCustomerId());
+
+            walletRepository.save(wallet);
+
+            log.info(
+                    "WALLET_DEDUCTED | customerId={} | " +
+                            "orderId={} | deductedAmount={} | " +
+                            "remainingBalance={}",
+                    dto.getCustomerId(),
+                    orderId,
+                    deductionAmount,
+                    newBalance
+            );
+
+            // ==========================================
+            // SAVE WALLET TRANSACTION
+            // ==========================================
+
+            CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
+
+            transaction.setWalletId(wallet.getWalletId());
+            transaction.setOrderId(orderId);
+            transaction.setTransactionType(COConstants.WALLET_DEBIT);
+            transaction.setAmount(deductionAmount.negate());
+            transaction.setCreatedAt(LocalDateTime.now());
+            transaction.setCreatedBy(dto.getCustomerId());
+            transactionsRepository.save(transaction);
+
+            log.info(
+                    "WALLET_TRANSACTION_SAVED | orderId={} | " +
+                            "walletId={} | transactionPoints={}",
+                    orderId,
+                    wallet.getWalletId(),
+                    transaction.getPoints()
+            );
+        }
+        return deductionAmount;
+    }
 
     private CoPlaceOrderResponseDto processRecurringOrders(CoPlaceOrderRequestDto dto) {
 

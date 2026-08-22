@@ -33,8 +33,8 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
             if (optionalWalletSettings.isPresent()) {
                 log.info("Updating existing wallet settings");
                 walletSettings = optionalWalletSettings.get();
-                walletSettings.setPointsType(requestDto.getPointsType());
-                walletSettings.setNumOfPoints(requestDto.getNumOfPoints());
+                walletSettings.setSettingType(requestDto.getPointsType());
+                walletSettings.setSettingValue(requestDto.getNumOfPoints());
                 walletSettings.setUpdatedBy(requestDto.getUpdatedBy());
                 walletSettings.setUpdatedAt(LocalDateTime.now());
 

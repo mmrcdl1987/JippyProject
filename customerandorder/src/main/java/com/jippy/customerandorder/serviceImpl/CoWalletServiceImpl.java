@@ -12,6 +12,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 @Service
@@ -57,37 +59,67 @@ public class CoWalletServiceImpl implements CoWalletService {
                                 )
                         );
 
-        Integer oldPoints = existingWallet.getBalancePoints();
-        Integer newPoints = walletDetails.getBalancePoints();
+        int oldPoints = existingWallet.getBalancePoints() != null
+                ? existingWallet.getBalancePoints()
+                : 0;
+
+        int newPoints = walletDetails.getBalancePoints() != null
+                ? walletDetails.getBalancePoints()
+                : 0;
+
+        BigDecimal oldAmount = existingWallet.getBalanceAmount() != null
+                ? existingWallet.getBalanceAmount()
+                : BigDecimal.ZERO;
+
+        BigDecimal newAmount = walletDetails.getBalanceAmount() != null
+                ? walletDetails.getBalanceAmount()
+                : BigDecimal.ZERO;
+
+        // Calculate differences
+        int pointsDifference = newPoints - oldPoints;
+        BigDecimal amountDifference = newAmount.subtract(oldAmount);
 
         // Update wallet
-        existingWallet.setBalanceAmount(walletDetails.getBalanceAmount());
         existingWallet.setBalancePoints(newPoints);
+        existingWallet.setBalanceAmount(newAmount);
         existingWallet.setUpdatedBy(walletDetails.getUpdatedBy());
         existingWallet.setUpdatedAt(LocalDateTime.now());
 
-        CoCustomerWallet updatedWallet = walletRepository.save(existingWallet);
+        CoCustomerWallet updatedWallet =
+                walletRepository.save(existingWallet);
 
-        // Calculate points difference
-        int pointsDifference = newPoints - oldPoints;
+        // Create transaction if points or amount changed
+        if (pointsDifference != 0 || amountDifference.compareTo(BigDecimal.ZERO) != 0) {
 
-        // Create transaction only if points changed
-        if (pointsDifference != 0) {
+            CoCustomerWalletTransactions transaction =
+                    new CoCustomerWalletTransactions();
 
-            CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
             transaction.setWalletId(existingWallet.getWalletId());
 
-            if (pointsDifference > 0) {
-                transaction.setPointsType("CREDIT");
-                transaction.setPoints(pointsDifference);
-            } else {
-                transaction.setPointsType("DEBIT");
+            // Store absolute values
+            if (pointsDifference != 0) {
                 transaction.setPoints(Math.abs(pointsDifference));
             }
-            transaction.setCreatedBy(walletDetails.getUpdatedBy());
+
+            if (amountDifference.compareTo(BigDecimal.ZERO) != 0) {
+                transaction.setAmount(amountDifference.abs());
+            }
+
+            // Determine transaction type
+            if (pointsDifference > 0
+                    || amountDifference.compareTo(BigDecimal.ZERO) > 0) {
+
+                transaction.setTransactionType("CREDIT");
+
+            } else {
+
+                transaction.setTransactionType("DEBIT");
+            }
+
+            transaction.setCreatedBy(walletDetails.getCreatedBy());
+            transaction.setUpdatedBy(walletDetails.getUpdatedBy());
             transaction.setCreatedAt(LocalDateTime.now());
             transaction.setUpdatedAt(LocalDateTime.now());
-            transaction.setUpdatedBy(walletDetails.getUpdatedBy());
 
             transactionsRepository.save(transaction);
         }
