@@ -2,12 +2,8 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
-import com.jippy.customerandorder.entity.CoCustomerCart;
-import com.jippy.customerandorder.entity.CoCustomerWallet;
-import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
-import com.jippy.customerandorder.entity.CoMealSubscription;
-import com.jippy.customerandorder.entity.CoOrder;
-import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
+import com.jippy.customerandorder.entity.*;
+import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.exception.OrderException;
 import com.jippy.customerandorder.iservice.IOrderService;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
@@ -47,6 +43,7 @@ public class COOrderService implements IOrderService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ICoCustomerService customerService;
     private final CoCustomerWalletRepository walletRepository;
+    private final CoWalletSettingsRepository walletSettingsRepository;
     private final CoCustomerWalletTransactionsRepository transactionsRepository;
 
     /*
@@ -208,15 +205,29 @@ public class COOrderService implements IOrderService {
         }
 
         // ==========================================
-        // MAXIMUM WALLET USAGE = 25% OF ORDER VALUE
+        // GET MAX WALLET USAGE SETTINGS
         // ==========================================
 
-        BigDecimal maxAllowedFromWallet =
-                currentTotalAmount
-                        .multiply(
-                                COConstants.MAX_WALLET_UTILIZATION_PERCENTAGE
-                        )
-                        .setScale(2, RoundingMode.HALF_UP);
+        CoWalletSettings walletUsageSettings =
+                walletSettingsRepository
+                        .findBySettingType(COConstants.MAX_WALLET_USAGE_PER_ORDER)
+                        .orElseThrow(() ->
+                                new CoBusinessException(
+                                        "Maximum wallet usage percentage not configured"
+                                ));
+
+        Integer maxWalletUsagePercentage =
+                walletUsageSettings.getSettingValue();
+
+        // ==========================================
+        // MAXIMUM WALLET USAGE
+        // ==========================================
+
+        BigDecimal maxAllowedFromWallet = currentTotalAmount.multiply(
+                                BigDecimal.valueOf(maxWalletUsagePercentage).divide(
+                                                BigDecimal.valueOf(100), 4,
+                                                RoundingMode.HALF_UP)
+                        ).setScale(2, RoundingMode.HALF_UP);
 
         log.info(
                 "WALLET_LIMIT_CALCULATED | customerId={} | " +

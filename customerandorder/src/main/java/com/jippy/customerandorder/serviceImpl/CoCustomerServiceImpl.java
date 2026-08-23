@@ -107,9 +107,17 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                     .findByCustomerCustomerId(referral.getReferrerCustomerId())
                     .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
+            CoWalletSettings referralSettings =
+                    walletSettingsRepository
+                            .findBySettingType(COConstants.REFERRAL_REWARD_POINTS)
+                            .orElseThrow(() ->
+                                    new CoBusinessException("Referral reward points not configured"));
+
+            Integer referralPoints = referralSettings.getSettingValue();
+
             // Add 250 points to referrer's wallet
             Integer currentBalance = referrerWallet.getBalancePoints() != null ? referrerWallet.getBalancePoints() : 0;
-            referrerWallet.setBalancePoints(currentBalance + COConstants.REFERRAL_REWARD_POINTS);
+            referrerWallet.setBalancePoints(currentBalance + referralPoints);
             referrerWallet.setUpdatedAt(LocalDateTime.now());
             referrerWallet.setUpdatedBy(1); // System user
             walletRepository.save(referrerWallet);
@@ -120,8 +128,8 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             // Record transaction
             CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
             transaction.setWalletId(referrerWallet.getWalletId());
-            transaction.setTransactionType(COConstants.REFERRAL_REWARD);
-            transaction.setPoints(COConstants.REFERRAL_REWARD_POINTS);
+            transaction.setTransactionType(COConstants.REFERRAL_REWARD_POINTS);
+            transaction.setPoints(referralPoints);
             transaction.setCreatedAt(LocalDateTime.now());
             transaction.setCreatedBy(1);
             transactionsRepository.save(transaction);
@@ -500,7 +508,13 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // FETCH SETTINGS
 
-        CoWalletSettings streakSettings = walletSettingsRepository.findBySettingType(COConstants.DAILY_STREAK_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
+        CoWalletSettings streakSettings = walletSettingsRepository
+                .findBySettingType(COConstants.DAILY_STREAK_POINTS)
+                .orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
+
+        CoWalletSettings streakDaySettings = walletSettingsRepository
+                .findBySettingType(COConstants.MINIMUM_STREAK_DAYS)
+                .orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
 
         // DAILY POINTS
 
@@ -508,7 +522,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // MINIMUM STREAK DAYS
 
-        Integer streakDays = streakSettings.getSettingValue();
+        Integer streakDays = streakDaySettings.getSettingValue();
 
         Integer currentStreak;
 

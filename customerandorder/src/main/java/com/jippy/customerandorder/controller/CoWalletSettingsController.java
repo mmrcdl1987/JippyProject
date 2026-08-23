@@ -2,14 +2,14 @@ package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.dto.CoWalletSettingsRequestDto;
 import com.jippy.customerandorder.dto.CoWalletSettingsResponseDto;
+import com.jippy.customerandorder.entity.CoWalletSettings;
 import com.jippy.customerandorder.iservice.CoWalletSettingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/co/wallet-settings")
@@ -20,8 +20,7 @@ public class CoWalletSettingsController {
     private CoWalletSettingsService walletSettingsService;
 
     @PostMapping("/save")
-    public ResponseEntity<CoWalletSettingsResponseDto>
-    saveWalletSettings(
+    public ResponseEntity<CoWalletSettingsResponseDto> saveWalletSettings(
             @RequestBody CoWalletSettingsRequestDto requestDto) {
 
         log.info("Received request for save wallet settings");
@@ -31,5 +30,10 @@ public class CoWalletSettingsController {
                         .saveWalletSettings(requestDto);
 
         return ResponseEntity.ok(responseDto);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<CoWalletSettings>> getWalletSettings() {
+        return ResponseEntity.ok(walletSettingsService.getWalletSettings());
     }
 }

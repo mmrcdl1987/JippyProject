@@ -68,7 +68,6 @@ public class COConstants {
     public static final Integer MINIMUM_POINTS_REQUIRED = 1000;
     // WALLET MESSAGES
     public static final Integer AMOUNT_PER_1000_POINTS = 100;
-    public static final String WELCOME_POINTS = "WELCOME_POINTS";
     public static final String WALLET_NOT_FOUND = "Wallet not found";
     public static final String MINIMUM_POINTS_REQUIRED_MESSAGE = "Minimum 1000 points needed to convert";
     public static final String POINTS_CONVERTED_SUCCESS = "Points converted successfully";
@@ -77,7 +76,6 @@ public class COConstants {
     public static final String PHONE_ALREADY_EXISTS = "Phone number already exists";
     public static final String WELCOME_POINTS_NOT_CONFIGURED = "WELCOME_POINTS not configured";
     public static final String POINTS_CONVERTED = "POINTS_CONVERTED";
-    public static final String DAILY_STREAK_POINTS = "DAILY_STREAK_POINTS";
     public static final String STREAK_UPDATED = "Daily streak updated";
     public static final String STREAK_REWARD = "STREAK_REWARD";
     public static final String ALREADY_CHECKED_IN = "Already checked in today";
@@ -92,7 +90,6 @@ public class COConstants {
     public static final String WALLET_DEBIT = "WALLET_DEBIT";
     public static final String WALLET_CREDIT = "WALLET_CREDIT";
     public static final String WALLET_REFUND = "WALLET_REFUND";
-    public static final BigDecimal MAX_WALLET_UTILIZATION_PERCENTAGE = BigDecimal.valueOf(0.25);
 
     // SCHEDULED ORDER
     public static final String ORDER_TYPE_NORMAL = "NORMAL";
@@ -202,7 +199,11 @@ public class COConstants {
     public static final String HIGH_VALUE_CART = "HIGH_VALUE_CART";
 
     // REFERRAL SYSTEM
-    public static final String REFERRAL_REWARD = "REFERRAL_REWARD";
-    public static final Integer REFERRAL_REWARD_POINTS = 250;
+    public static final String WELCOME_POINTS = "WELCOME_POINTS";
+    public static final String DAILY_STREAK_POINTS = "DAILY_STREAK_POINTS";
+    public static final String REFERRAL_REWARD_POINTS = "REFERRAL_REWARD_POINTS";
+    public static final String MAX_WALLET_USAGE_PER_ORDER = "MAX_WALLET_USAGE_PER_ORDER(%)";
+    public static final String MINIMUM_STREAK_DAYS = "MINIMUM_STREAK_DAYS";
+
     public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};
 }

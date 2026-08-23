@@ -7,11 +7,9 @@ public class CoWalletSettingsRequestDto {
 
     private Integer walletSettingsId;
 
-    private String pointsType;
+    private String settingType;
 
-    private Integer numOfPoints;
-
-    private Integer streakMinDays;
+    private Integer settingValue;
 
     private Integer createdBy;
 
