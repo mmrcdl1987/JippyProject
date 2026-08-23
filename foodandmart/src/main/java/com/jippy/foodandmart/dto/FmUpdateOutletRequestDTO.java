@@ -40,10 +40,13 @@ public class FmUpdateOutletRequestDTO {
     @NotNull(message = "Merchant ID is required")
     private Integer merchantId;
 
-    @Schema(description = "Cuisine Type", example = "Indian")
-    @NotBlank(message = "Cuisine type is required")
-    @Size(max = 100, message = "Cuisine type must not exceed 100 characters")
-    private String cuisineType;
+    @Schema(
+            description = "Cuisine type IDs",
+            example = "[1, 2, 5]"
+    )
+    @NotNull(message = "Cuisine type is required")
+    @Size(min = 1, message = "At least one cuisine type is required")
+    private Integer[] cuisineType;
 
     @Schema(description = "Outlet Email", example = "friendsrestaurant@gmail.com")
     @NotBlank(message = "Outlet email is required")

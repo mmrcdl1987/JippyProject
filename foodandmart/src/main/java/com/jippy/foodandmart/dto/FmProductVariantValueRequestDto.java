@@ -19,14 +19,4 @@ public class FmProductVariantValueRequestDto {
     @NotBlank(message = "Variant name is required")
     private String variantName;
 
-    /**
-     * Will be used in Module 3
-     */
-    private String priceType;
-
-    /**
-     * Will be used in Module 3
-     */
-    @DecimalMin(value = "0.0", inclusive = true)
-    private BigDecimal variantPrice;
 }

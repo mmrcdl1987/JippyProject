@@ -19,10 +19,7 @@ import java.util.List;
 @RequestMapping("/api/div/campaign")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(
-        name = "Campaign API",
-        description = "REST APIs to create and manage Coupon and Price Drop campaigns"
-)
+@Tag(name = "Campaign API", description = "REST APIs to create and manage Coupon and Price Drop campaigns")
 public class DivCampaignController {
 
     private final IDivCampaignService divCampaignService;
@@ -31,8 +28,7 @@ public class DivCampaignController {
      * Create Campaign
      */
     @PostMapping("/campaign/create")
-    public ResponseEntity<DivResponseDto> createCampaign(
-            @Valid @RequestBody DivCampaignRequestDto dto) {
+    public ResponseEntity<DivResponseDto> createCampaign(@Valid @RequestBody DivCampaignRequestDto dto) {
 
         log.info("Campaign Create API Started");
 
@@ -40,100 +36,66 @@ public class DivCampaignController {
 
         log.info("Campaign Create API Completed");
 
-        return ResponseEntity.ok(
-                new DivResponseDto(
-                        DivAppConstants.STATUS_200,
-                        response
-                )
-        );
+        return ResponseEntity.ok(new DivResponseDto(DivAppConstants.STATUS_200, response));
     }
 
     /**
      * Update Campaign
      */
     @PutMapping("/campaign/{campaignId}")
-    public ResponseEntity<DivResponseDto> updateCampaign(
-            @PathVariable Integer campaignId,
-            @Valid @RequestBody DivCampaignRequestDto dto) {
+    public ResponseEntity<DivResponseDto> updateCampaign(@PathVariable Integer campaignId, @Valid @RequestBody DivCampaignRequestDto dto) {
 
-        log.info(
-                "Campaign Update API Started. campaignId={}",
-                campaignId);
+        log.info("Campaign Update API Started. campaignId={}", campaignId);
 
-        String response =
-                divCampaignService.updateCampaign(
-                        campaignId,
-                        dto);
+        String response = divCampaignService.updateCampaign(campaignId, dto);
 
-        log.info(
-                "Campaign Update API Completed. campaignId={}",
-                campaignId);
+        log.info("Campaign Update API Completed. campaignId={}", campaignId);
 
-        return ResponseEntity.ok(
-                new DivResponseDto(
-                        DivAppConstants.STATUS_200,
-                        response
-                )
-        );
+        return ResponseEntity.ok(new DivResponseDto(DivAppConstants.STATUS_200, response));
     }
 
     /**
      * Delete Campaign
      */
     @DeleteMapping("/campaign/{campaignType}/{campaignId}")
-    public ResponseEntity<DivResponseDto> deleteCampaign(
-            @PathVariable String campaignType,
-            @PathVariable Integer campaignId) {
+    public ResponseEntity<DivResponseDto> deleteCampaign(@PathVariable String campaignType, @PathVariable Integer campaignId) {
 
-        log.info(
-                "Campaign Delete API Started. campaignType={}, campaignId={}",
-                campaignType,
-                campaignId);
+        log.info("Campaign Delete API Started. campaignType={}, campaignId={}", campaignType, campaignId);
 
-        String response =
-                divCampaignService.deleteCampaign(
-                        campaignType,
-                        campaignId);
+        String response = divCampaignService.deleteCampaign(campaignType, campaignId);
 
-        log.info(
-                "Campaign Delete API Completed. campaignType={}, campaignId={}",
-                campaignType,
-                campaignId);
+        log.info("Campaign Delete API Completed. campaignType={}, campaignId={}", campaignType, campaignId);
 
-        return ResponseEntity.ok(
-                new DivResponseDto(
-                        DivAppConstants.STATUS_200,
-                        response
-                )
-        );
+        return ResponseEntity.ok(new DivResponseDto(DivAppConstants.STATUS_200, response));
     }
+
     /**
      * Get Available Outlets
      */
     @GetMapping("/available-outlets/{areaId}")
-    public ResponseEntity<List<DivOutletDto>> getAvailableOutlets(
-            @PathVariable Integer areaId) {
+    public ResponseEntity<List<DivOutletDto>> getAvailableOutlets(@PathVariable Integer areaId) {
 
         log.info("Get Available Outlets API Started. areaId={}", areaId);
 
-        List<DivOutletDto> outlets =
-                divCampaignService.getAvailableOutlets(areaId);
+        List<DivOutletDto> outlets = divCampaignService.getAvailableOutlets(areaId);
 
         log.info("Get Available Outlets API Completed. count={}", outlets.size());
 
         return ResponseEntity.ok(outlets);
     }
 
+    /**
+     * Get Active Discounts
+     */
     @GetMapping("/getActiveDiscounts")
     public ResponseEntity<List<DivActiveDiscountsResponseDto>> getActiveDiscounts() {
 
-        log.info("Get Active discounts API called ");
+        log.info("Get Active Discounts API Started");
 
-        List<DivActiveDiscountsResponseDto> activeDiscounts =
-                divCampaignService.getActiveDiscounts();
+        List<DivActiveDiscountsResponseDto> activeDiscounts = divCampaignService.getActiveDiscounts();
+
+        log.info("Get Active Discounts API Completed. count={}", activeDiscounts.size());
 
         return ResponseEntity.ok(activeDiscounts);
     }
-
-
 }

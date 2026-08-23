@@ -43,7 +43,9 @@ public class COCartController {
         log.info("Cart fetched successfully | customerId={}, items={}, grandTotal={}", customerId, response.getItems().size(), response.getGrandTotal());
 
         return ResponseEntity.ok(response);
+
     }
+
     @GetMapping("/internal/reminders")
     public ResponseEntity<List<CoCartReminderDto>> getCartReminderCustomers() {
 

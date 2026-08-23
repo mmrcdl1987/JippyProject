@@ -57,48 +57,51 @@ public interface DivPriceDropMappingRepository extends JpaRepository<DivPriceDro
 
     void deleteByPriceDropMappingOutletsProductsId(Integer priceDropMappingOutletsProductsId);
 
-    @Query(value = """
-            SELECT COUNT(*)
-            FROM jippy_division.price_drop_mapping_outlets_products pm
-            
-            JOIN jippy_division.promotion_date pd
-              ON pm.promotion_date_id = pd.promotion_date_id
-            
-            WHERE pm.price_drop_mapping_outlets_products_id <> :campaignId
-              AND pm.location_id = :locationId
-              AND pm.location_type = :locationType
-              AND pd.meal_type_slot_id = :mealTypeSlotId
-            
-              AND (
-                    CAST(pd.promotion_from_date AS DATE) <= :toDate
-                AND CAST(pd.promotion_to_date AS DATE) >= :fromDate
-              )
-            """, nativeQuery = true)
-    Integer countPriceDropCampaignForUpdate(@Param("campaignId") Integer campaignId, @Param("locationId") Integer locationId, @Param("locationType") String locationType, @Param("mealTypeSlotId") Integer mealTypeSlotId, @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
-
 
     @Query("""
-            SELECT COUNT(p)
-            FROM DivPriceDropMappingOutletsProduct p
-            JOIN DivPromotionDate pd
-                 ON pd.promotionDateId = p.promotionDateId
-            WHERE p.outletId = :outletId
-              AND p.productId = :productId
-              AND pd.promotionFromDate <= :endDate
-              AND pd.promotionToDate >= :startDate
-            """)
-    Long countPriceDropOverlap(@Param("outletId") Integer outletId, @Param("productId") Integer productId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+        SELECT COUNT(p)
+        FROM DivPriceDropMappingOutletsProduct p
+        JOIN DivPromotionDate pd
+             ON pd.promotionDateId = p.promotionDateId
+        WHERE p.outletId = :outletId
+          AND p.productId = :productId
+          AND pd.mealTypeSlotId = :mealTypeSlotId
+          AND pd.promotionFromDate <= :endDate
+          AND pd.promotionToDate >= :startDate
+        """)
+    Long countPriceDropOverlap(
+            @Param("outletId") Integer outletId,
+            @Param("productId") Integer productId,
+            @Param("mealTypeSlotId") Integer mealTypeSlotId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
+    /**
+     * Check Price Drop product overlap during multi-meal campaign update.
+     *
+     * All promotion_date records belonging to the same campaign
+     * share the same createdAt value.
+     */
     @Query("""
-            SELECT COUNT(p)
-            FROM DivPriceDropMappingOutletsProduct p
-            JOIN DivPromotionDate pd
-            ON pd.promotionDateId = p.promotionDateId
-            WHERE p.priceDropMappingOutletsProductsId <> :campaignId
-            AND p.outletId = :outletId
-            AND p.productId = :productId
-            AND pd.promotionFromDate <= :endDate
-            AND pd.promotionToDate >= :startDate
-            """)
-    Long countPriceDropOverlapForUpdate(@Param("campaignId") Integer campaignId, @Param("outletId") Integer outletId, @Param("productId") Integer productId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    SELECT COUNT(p)
+    FROM DivPriceDropMappingOutletsProduct p
+    JOIN DivPromotionDate pd
+         ON pd.promotionDateId = p.promotionDateId
+    WHERE p.outletId = :outletId
+      AND p.productId = :productId
+      AND pd.mealTypeSlotId = :mealTypeSlotId
+      AND pd.promotionFromDate <= :endDate
+      AND pd.promotionToDate >= :startDate
+      AND pd.createdAt <> :campaignCreatedAt
+    """)
+    Long countPriceDropOverlapForUpdate(
+            @Param("outletId") Integer outletId,
+            @Param("productId") Integer productId,
+            @Param("mealTypeSlotId") Integer mealTypeSlotId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("campaignCreatedAt") LocalDateTime campaignCreatedAt);
+
+    List<DivPriceDropMappingOutletsProduct> findByPromotionDateId(
+            Integer promotionDateId);
 }

@@ -15,9 +15,11 @@ import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.projections.FmActivePromotionDiscountsProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
+import com.jippy.foodandmart.projections.OutletAddressProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmGoogleMapsService;
 import com.jippy.foodandmart.service.IFmOutletService;
+import com.jippy.foodandmart.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -29,8 +31,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -71,13 +73,14 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmMerchantBankDetailsRepository merchantBankDetailsRepository;
     private final FmOutletDayRepository outletDayRepository;
     private final FmCityRepository cityRepository;
-   // private final IFmApprovalRequestService approvalRequestService;
+    // private final IFmApprovalRequestService approvalRequestService;
     private final FmUserKycRepository userKycRepository;
     private final DivisionFeignClient divisionFeignClient;
     private final PromotionPlanRepository promotionPlanRepository;
     private final ObjectMapper objectMapper;
     private final StringRedisTemplate redisTemplate;
     private final MealTypeTimingRepository mealTypeTimingRepository;
+    private final S3Service s3Service;
 
     @Override
     @Transactional
@@ -108,8 +111,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Check Username.
          */
-        if (userRepository.findByUsernameAndUserType(dto.getUsername(),
-                FmAppConstants.TYPE_OUTLET).isPresent()) {
+        if (userRepository.findByUsernameAndUserType(dto.getUsername(), FmAppConstants.TYPE_OUTLET).isPresent()) {
 
             throw new IllegalArgumentException("Username already exists.");
         }
@@ -122,14 +124,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Same Merchant + Same Outlet Name + Same Area -> Not Allowed
          * Same Merchant + Same Outlet Name + Different Area -> Allowed
          */
-        if (outletRepository.existsByMerchantAndOutletNameAndArea(dto.getMerchantId(),
-                dto.getOutletName(), dto.getAreaId())) {
+        if (outletRepository.existsByMerchantAndOutletNameAndArea(dto.getMerchantId(), dto.getOutletName(), dto.getAreaId())) {
 
-            log.error("Outlet '{}' already exists for merchantId {} in areaId {}", dto.getOutletName(),
-                    dto.getMerchantId(), dto.getAreaId());
+            log.error("Outlet '{}' already exists for merchantId {} in areaId {}", dto.getOutletName(), dto.getMerchantId(), dto.getAreaId());
 
-            throw new IllegalArgumentException(
-                    "Outlet already exists for this merchant in the selected area.");
+            throw new IllegalArgumentException("Outlet already exists for this merchant in the selected area.");
         }
 
 
@@ -177,14 +176,73 @@ public class FmOutletServiceImpl implements IFmOutletService {
          */
         saveOutletBankDetails(dto, outlet.getOutletId());
 
-        log.info("Outlet '{}' created successfully for merchantId {}",
-                outlet.getOutletName(), outlet.getMerchantId());
+        log.info("Outlet '{}' created successfully for merchantId {}", outlet.getOutletName(), outlet.getMerchantId());
 
         FmOutletCreateResponseDTO createOutlet = FmOutletMapper.toCreateResponseDto(dto, outlet);
 
         return createOutlet;
     }
-//---------------------------------------------------------------------------------------
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String uploadOrUpdateOutletImage(Integer outletId, MultipartFile image) {
+
+        log.info("Updating outlet image. outletId={}", outletId);
+
+        // 1. Validate outlet
+        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> {
+
+            log.warn("Outlet not found. outletId={}", outletId);
+
+            return new ResourceNotFoundException("Outlet not found with id: " + outletId);
+        });
+
+        // 2. Validate image
+        if (image == null || image.isEmpty()) {
+
+            throw new BadRequestException("Outlet image is required.");
+        }
+
+        // 3. Keep old S3 URL
+        String oldImageUrl = outlet.getOutletPicUrl();
+
+        // 4. Get merchant ID for S3 path
+        Integer merchantId = outlet.getMerchantId();
+
+        // 5. Upload new image to S3
+        String newImageUrl = s3Service.uploadOutletImage(image, merchantId);
+
+        try {
+
+            // 6. Update outlet image URL
+            outlet.setOutletPicUrl(newImageUrl);
+
+            outletRepository.save(outlet);
+
+            log.info("Outlet image URL updated successfully. outletId={}, newImageUrl={}", outletId, newImageUrl);
+
+            // 7. Delete old image after DB update
+            if (StringUtils.hasText(oldImageUrl) && !oldImageUrl.equals(newImageUrl)) {
+
+                s3Service.deleteFile(oldImageUrl);
+
+                log.info("Old outlet image deleted successfully. outletId={}", outletId);
+            }
+
+            return newImageUrl;
+
+        } catch (Exception ex) {
+
+            log.error("Failed to update outlet image. outletId={}", outletId, ex);
+
+            // DB update failed, remove newly uploaded S3 image
+            s3Service.deleteFile(newImageUrl);
+
+            throw ex;
+        }
+    }
+
+    //---------------------------------------------------------------------------------------
     @Override
     @Transactional
     public FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto) {
@@ -194,51 +252,37 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Validate Outlet.
          */
-        FmOutlet outlet = outletRepository.findById(outletId)
-                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found with id : "
-                        + outletId));
+        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet not found with id : " + outletId));
 
         /*
          * Validate Merchant.
          */
-        merchantRepository.findById(dto.getMerchantId())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Merchant not found with id : " +
-                                "" + dto.getMerchantId()));
+        merchantRepository.findById(dto.getMerchantId()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found with id : " + "" + dto.getMerchantId()));
 
         /*  comment during live
          * Validate State.
          */
-        stateRepository.findById(dto.getStateId()).orElseThrow(() ->
-             new ResourceNotFoundException("State not found with id : " + dto.getStateId()));
+        stateRepository.findById(dto.getStateId()).orElseThrow(() -> new ResourceNotFoundException("State not found with id : " + dto.getStateId()));
 
         /* comment during live
          * Validate City.
          */
-        cityRepository.findById(dto.getCityId()).orElseThrow(() ->
-        new ResourceNotFoundException("City not found with id : " + dto.getCityId()));
+        cityRepository.findById(dto.getCityId()).orElseThrow(() -> new ResourceNotFoundException("City not found with id : " + dto.getCityId()));
 
         /* comment during live
          * Validate Area.
          */
-        areaRepository.findById(dto.getAreaId()).orElseThrow(() ->
-           new ResourceNotFoundException("Area not found with id : " + dto.getAreaId()));
+        areaRepository.findById(dto.getAreaId()).orElseThrow(() -> new ResourceNotFoundException("Area not found with id : " + dto.getAreaId()));
 
         /*
          * Validate Address.
          */
-        FmOutletAddress address =
-                addressRepository.findByJippyAddressIdAndAddressType(outletId,
-                        FmAppConstants.TYPE_OUTLET).orElseThrow(
-                   () -> new ResourceNotFoundException("Outlet address not found."));
+        FmOutletAddress address = addressRepository.findByJippyAddressIdAndAddressType(outletId, FmAppConstants.TYPE_OUTLET).orElseThrow(() -> new ResourceNotFoundException("Outlet address not found."));
 
         /*
          * Validate Bank Details.
          */
-        FmMerchantBankDetails bankDetails =
-        merchantBankDetailsRepository.findByRecipientIdAndUserType
-                (outletId, FmAppConstants.TYPE_OUTLET).orElseThrow(
-                        () -> new ResourceNotFoundException("Outlet bank details not found."));
+        FmMerchantBankDetails bankDetails = merchantBankDetailsRepository.findByRecipientIdAndUserType(outletId, FmAppConstants.TYPE_OUTLET).orElseThrow(() -> new ResourceNotFoundException("Outlet bank details not found."));
 
         /*
          * Validate duplicate account number.
@@ -247,11 +291,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Same Merchant + Different Account Number -> Allowed
          * Different Merchant + Same Account Number -> Not Allowed
          */
-        if (merchantBankDetailsRepository.existsAccountNumberForAnotherMerchant(
-                dto.getAccountNumber(), dto.getMerchantId())) {
+        if (merchantBankDetailsRepository.existsAccountNumberForAnotherMerchant(dto.getAccountNumber(), dto.getMerchantId())) {
 
-            throw new DuplicateResourceException(
-                    "Account number already belongs to another merchant.");
+            throw new DuplicateResourceException("Account number already belongs to another merchant.");
         }
 
         /*
@@ -309,26 +351,24 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     /**
      * Saves Outlet KYC Details.
-     *
+     * <p>
      * Every newly created outlet stores its
      * FSSAI and GST details in user_kyc table.
      *
-     * @param dto Outlet Request DTO.
+     * @param dto      Outlet Request DTO.
      * @param outletId Newly created Outlet Id.
      */
-    private void saveOutletKyc(FmOutletRequestDTO dto,
-                               Integer outletId) {
+    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId) {
 
         log.info("Saving Outlet KYC Details for Outlet Id: {}", outletId);
 
-        FmUserKyc kyc =
-                FmMerchantMapper.toOutletKycEntity(dto, outletId);
+        FmUserKyc kyc = FmMerchantMapper.toOutletKycEntity(dto, outletId);
 
         userKycRepository.save(kyc);
 
-        log.info("Outlet KYC Details saved successfully for Outlet Id: {}",
-                outletId);
+        log.info("Outlet KYC Details saved successfully for Outlet Id: {}", outletId);
     }
+
     /**
      * Saves outlet bank details into user_bank_details table.
      * Every outlet should have its own bank account details.
@@ -341,17 +381,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Check whether bank details already exist for this outlet.
          */
-        Optional<FmMerchantBankDetails> bankDetails =
-                merchantBankDetailsRepository.findByRecipientIdAndUserType(
-                        outletId,
-                        FmAppConstants.TYPE_OUTLET);
+        Optional<FmMerchantBankDetails> bankDetails = merchantBankDetailsRepository.findByRecipientIdAndUserType(outletId, FmAppConstants.TYPE_OUTLET);
 
         if (bankDetails.isPresent()) {
 
             log.error("Bank details already exist for outletId : {}", outletId);
 
-            throw new DuplicateResourceException(
-                    "Bank details already exist for this outlet.");
+            throw new DuplicateResourceException("Bank details already exist for this outlet.");
         }
 
         /*
@@ -361,20 +397,16 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Same Merchant + Different Account Number -> Allowed
          * Different Merchant + Same Account Number -> Not Allowed
          */
-        if (merchantBankDetailsRepository.existsAccountNumberForAnotherMerchant(
-                dto.getAccountNumber(),
-                dto.getMerchantId())) {
+        if (merchantBankDetailsRepository.existsAccountNumberForAnotherMerchant(dto.getAccountNumber(), dto.getMerchantId())) {
 
-            throw new DuplicateResourceException(
-                    "Account number already belongs to another merchant.");
+            throw new DuplicateResourceException("Account number already belongs to another merchant.");
         }
 
 
         /*
          * Convert DTO to Entity.
          */
-        FmMerchantBankDetails outletBankDetails =
-                FmOutletMapper.toOutletBankEntity(dto, outletId);
+        FmMerchantBankDetails outletBankDetails = FmOutletMapper.toOutletBankEntity(dto, outletId);
         /*
          * Save bank details.
          */
@@ -400,7 +432,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         List<FmOutlet> outlets = outletRepository.findAll();
         List<FmOutletSummaryDTO> result = new ArrayList<>();
         for (FmOutlet o : outlets) {
-            FmOutletAddress addr = addressRepository.findByJippyAddressIdAndAddressType(o.getOutletId(),FmAppConstants.ADDRESS_TYPE_OUTLET).orElse(null);
+            FmOutletAddress addr = addressRepository.findByJippyAddressIdAndAddressType(o.getOutletId(), FmAppConstants.ADDRESS_TYPE_OUTLET).orElse(null);
             result.add(FmOutletSummaryDTO.from(o, 0, addr));
         }
         return result;
@@ -422,9 +454,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         for (FmOutlet outlet : outlets) {
 
-            FmOutletAddress address = addressRepository
-                    .findByJippyAddressId(outlet.getOutletId())
-                    .orElse(null);
+            FmOutletAddress address = addressRepository.findByJippyAddressId(outlet.getOutletId()).orElse(null);
 
             result.add(FmOutletSummaryDTO.from(outlet, 0, address));
         }
@@ -576,62 +606,42 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     @Override
     public FmOutletCreatedDTO createOutletBulkUpload(FmOutletRequestDTO dto) {
-        log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}",
-                dto.getOutletName(),
-                dto.getMerchantId(),
-                dto.getOutletPhone());
+        log.info("[OUTLET] Creating outlet: name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
 
         validateOutletRequest(dto);
 
         if (!merchantRepository.existsById(dto.getMerchantId())) {
-            throw new IllegalArgumentException(
-                    "Merchant ID " + dto.getMerchantId() + " does not exist");
+            throw new IllegalArgumentException("Merchant ID " + dto.getMerchantId() + " does not exist");
         }
 
         if (outletRepository.existsByOutletPhone(dto.getOutletPhone())) {
-            throw new IllegalArgumentException(
-                    "An outlet with phone " + dto.getOutletPhone() + " already exists");
+            throw new IllegalArgumentException("An outlet with phone " + dto.getOutletPhone() + " already exists");
         }
 
-        if (userRepository.findByUsernameAndUserType(
-                dto.getUsername(),
-                FmAppConstants.TYPE_OUTLET
-        ).isPresent()) {
+        if (userRepository.findByUsernameAndUserType(dto.getUsername(), FmAppConstants.TYPE_OUTLET).isPresent()) {
 
-            throw new IllegalArgumentException(
-                    "Username already exists.");
+            throw new IllegalArgumentException("Username already exists.");
         }
 
-        if (outletRepository.existsByMerchantIdAndOutletName(
-                dto.getMerchantId(),
-                dto.getOutletName())) {
+        if (outletRepository.existsByMerchantIdAndOutletName(dto.getMerchantId(), dto.getOutletName())) {
 
-            throw new IllegalArgumentException(
-                    "Outlet '" + dto.getOutletName() + "' already exists for this merchant");
+            throw new IllegalArgumentException("Outlet '" + dto.getOutletName() + "' already exists for this merchant");
         }
 
-        Point location = buildPoint(
-                dto.getLatitude(),
-                dto.getLongitude());
+        Point location = buildPoint(dto.getLatitude(), dto.getLongitude());
 
-        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Merchant not found."));
+        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId()).orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
 
         // Merchant email and outlet email must be same
         if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getOutletEmail())) {
 
-            throw new IllegalArgumentException(
-                    "Merchant email and outlet email must be same."
-            );
+            throw new IllegalArgumentException("Merchant email and outlet email must be same.");
         }
 
         FmOutlet outlet = FmOutletMapper.toEntity(dto);
 
         // Always use merchant email
-        outlet.setOutletEmail(
-                merchant.getMerchantEmail()
-        );
+        outlet.setOutletEmail(merchant.getMerchantEmail());
 
         outlet.setOutletLocation(location);
 
@@ -643,15 +653,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         saveOperatingDays(dto, outlet.getOutletId());
 
-        saveOutletUser(
-                dto.getUsername(),
-                dto.getPassword(),
-                outlet.getOutletId()
-        );
+        saveOutletUser(dto.getUsername(), dto.getPassword(), outlet.getOutletId());
 
         return FmOutletMapper.toCreatedDTO(outlet);
     }
-
 
 
     // ── Bulk Upload ───────────────────────────────────────────────────────────
@@ -704,10 +709,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
         else if (dto.getOutletName().length() > 100) errs.add("Outlet name must not exceed 100 characters");
 
         if (dto.getMerchantId() == null) errs.add("Merchant ID is required");
-
-        if (isBlank(dto.getCuisineType())) errs.add("Cuisine type is required");
-        else if (dto.getCuisineType().length() > 100) errs.add("Cuisine type must not exceed 100 characters");
-
+        if (dto.getCuisineType() == null || dto.getCuisineType().length == 0) {
+            errs.add("Cuisine type is required");
+        } else if (Arrays.stream(dto.getCuisineType()).anyMatch(Objects::isNull)) {
+            errs.add("Cuisine type contains an invalid value");
+        }
         if (isBlank(dto.getOutletPhone())) errs.add("Outlet phone is required");
         else if (!dto.getOutletPhone().trim().matches("^[6-9]\\d{9}$"))
             errs.add("Outlet phone must be a valid 10-digit Indian mobile number, got: '" + dto.getOutletPhone().trim() + "'");
@@ -731,7 +737,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
-//    not used for creating single outlet used in bulk upload only
+    //    not used for creating single outlet used in bulk upload only
     private Integer resolveStateId(String stateName) {
         if (isBlank(stateName)) throw new IllegalArgumentException("State name is required");
         return stateRepository.findByStateNameIgnoreCase(stateName.trim()).orElseThrow(() -> new IllegalArgumentException("State '" + stateName.trim() + "' not found in states table.")).getStateId();
@@ -780,26 +786,22 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /* comment during live
          * Validate State.
          */
-        stateRepository.findById(dto.getStateId()).orElseThrow(() ->
-            new ResourceNotFoundException("State not found with id : " + dto.getStateId()));
+        stateRepository.findById(dto.getStateId()).orElseThrow(() -> new ResourceNotFoundException("State not found with id : " + dto.getStateId()));
 
         /* comment during live
          * Validate City.
          */
-        cityRepository.findById(dto.getCityId()).orElseThrow(() ->
-       new ResourceNotFoundException("City not found with id : " + dto.getCityId()));
+        cityRepository.findById(dto.getCityId()).orElseThrow(() -> new ResourceNotFoundException("City not found with id : " + dto.getCityId()));
 
         /* comment during live
          * Validate Area.
          */
-        areaRepository.findById(dto.getAreaId()).orElseThrow(() ->
-            new ResourceNotFoundException("Area not found with id : " + dto.getAreaId()));
+        areaRepository.findById(dto.getAreaId()).orElseThrow(() -> new ResourceNotFoundException("Area not found with id : " + dto.getAreaId()));
 
         /*
          * Convert DTO to Address DTO.
          */
-        FmAddressRequestDto addressReqDto = FmOutletMapper.convertToAddressReqDto(
-                        dto, outletId, dto.getStateId(), dto.getAreaId());
+        FmAddressRequestDto addressReqDto = FmOutletMapper.convertToAddressReqDto(dto, outletId, dto.getStateId(), dto.getAreaId());
         /*
          * Convert Address DTO to Entity.
          */
@@ -831,8 +833,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
              * If slotType is not provided,
              * treat it as a normal/full-day slot.
              */
-            boolean isEvening = d.getSlotType() != null &&
-                    "evening".equalsIgnoreCase(d.getSlotType());
+            boolean isEvening = d.getSlotType() != null && "evening".equalsIgnoreCase(d.getSlotType());
 
 //            boolean isEvening = "evening".equalsIgnoreCase(d.getSlotType());
             LocalTime defOpen = isEvening ? LocalTime.of(17, 0) : LocalTime.of(9, 0);
@@ -912,7 +913,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         // 1. Construct userType-specific Redis Key
         String cacheKey = String.format("menu:outlet:%d:type:%s", outletId, userType.toUpperCase());
-        try{
+        try {
             // =========================================================================
             // STEP 1: CHECK REDIS FIRST (Fast Path)
             // =========================================================================
@@ -934,12 +935,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
             }
 
             LocalDateTime earliestEndTime = null;
-            
-             outletDtoresponse = FmOutletMapper.mapToOutletDto(rows, userType);
 
-             log.info("============outletDtoresponse================"+outletDtoresponse);
+            outletDtoresponse = FmOutletMapper.mapToOutletDto(rows, userType);
 
-            if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)){
+            log.info("============outletDtoresponse================" + outletDtoresponse);
+
+            if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
 
                 // =========================================================================
                 // STEP 3: Fetch active discounts
@@ -948,14 +949,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 List<Integer> outletIds = new ArrayList<>();
                 outletIds.add(outletId);
                 //Get active promotions
-                List<FmActivePromotionDiscountsProjection> activePromotionDiscountsProjections =
-                        promotionPlanRepository.getActivePromtionDiscounts(LocalDateTime.now(),outletIds);
+                List<FmActivePromotionDiscountsProjection> activePromotionDiscountsProjections = promotionPlanRepository.getActivePromtionDiscounts(LocalDateTime.now(), outletIds);
 
-                log.info("Active Promotion Discounts {}",activePromotionDiscountsProjections);
+                log.info("Active Promotion Discounts {}", activePromotionDiscountsProjections);
 
                 //Get active coupons and price drops
-                ResponseEntity<List<FmActiveDiscountsResponseDto>> rawActiveDiscountsResponse =
-                        divisionFeignClient.getActiveDiscounts();
+                ResponseEntity<List<FmActiveDiscountsResponseDto>> rawActiveDiscountsResponse = divisionFeignClient.getActiveDiscounts();
 
                 List<FmActiveDiscountsResponseDto> rawActiveDiscounts = rawActiveDiscountsResponse.getBody();
 
@@ -967,7 +966,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                     log.info("Zero active promotions or coupons found. Proceeding with standard menu pricing.");
 
                     // Cache the raw menu in Redis with standard 10-minute TTL so subsequent calls hit Redis Step 1
-//                    saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
+                   saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
 
                     return outletDtoresponse;
                 }
@@ -977,20 +976,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 // -------------------------------------------------------------------------
                 LocalTime currentTime = LocalTime.now();
 
-                List<FmActiveDiscountsResponseDto> activeDiscountsResponseDtoList = Optional.ofNullable(rawActiveDiscounts)
-                        .orElse(Collections.emptyList())
-                        .stream()
-                        .filter(discount -> isDiscountActiveInCurrentSlot(discount, currentTime))
-                        .collect(Collectors.toList());
+                List<FmActiveDiscountsResponseDto> activeDiscountsResponseDtoList = Optional.ofNullable(rawActiveDiscounts).orElse(Collections.emptyList()).stream().filter(discount -> isDiscountActiveInCurrentSlot(discount, currentTime)).collect(Collectors.toList());
 
                 log.info("Division discounts valid for current meal slot ({}): {}", currentTime, activeDiscountsResponseDtoList);
 
                 // Index Merchant Promotion Projections by outletId (Priority 2)
-                Map<Integer, List<FmActivePromotionDiscountsProjection>> merchantPromotionsMap = Optional.ofNullable(activePromotionDiscountsProjections)
-                        .orElse(Collections.emptyList())
-                        .stream()
-                        .filter(p -> p.getOutletId() != null)
-                        .collect(Collectors.groupingBy(FmActivePromotionDiscountsProjection::getOutletId));
+                Map<Integer, List<FmActivePromotionDiscountsProjection>> merchantPromotionsMap = Optional.ofNullable(activePromotionDiscountsProjections).orElse(Collections.emptyList()).stream().filter(p -> p.getOutletId() != null).collect(Collectors.groupingBy(FmActivePromotionDiscountsProjection::getOutletId));
 
                 // =========================================================================
                 // STEP 4: APPLY PRIORITY LOGIC & MAP TO RESPONSE
@@ -999,29 +990,21 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
                 if (merchantPromotionsMap.containsKey(outletId)) {
 
-                    log.info("Given Outlet :{} has merchant promotions",outletId);
+                    log.info("Given Outlet :{} has merchant promotions", outletId);
                     // PRIORITY 1: Merchant Promotion
                     List<FmActivePromotionDiscountsProjection> promos = merchantPromotionsMap.get(outletId);
                     applyMerchantPromotions(outletDtoresponse, promos);
 
                     // Capture end time for TTL
-                    earliestEndTime = promos.stream()
-                            .map(FmActivePromotionDiscountsProjection::getEndDateTime)
-                            .filter(Objects::nonNull)
-                            .min(LocalDateTime::compareTo)
-                            .orElse(null);
+                    earliestEndTime = promos.stream().map(FmActivePromotionDiscountsProjection::getEndDateTime).filter(Objects::nonNull).min(LocalDateTime::compareTo).orElse(null);
 
-                } else  {
+                } else {
 
-                    log.info("Given Outlet :{} has coupons/price drops ",outletId);
+                    log.info("Given Outlet :{} has coupons/price drops ", outletId);
 
                     // Index Division Active Discounts by outletId (Priority 1)
                     // (Grouping by outletId in case an outlet has multiple discounts, or toMap if 1 discount per outlet)
-                    Map<Integer, List<FmActiveDiscountsResponseDto>> divisionDiscountsMap = Optional.ofNullable(activeDiscountsResponseDtoList)
-                            .orElse(Collections.emptyList())
-                            .stream()
-                            .filter(d -> d.getOutletId() != null)
-                            .collect(Collectors.groupingBy(FmActiveDiscountsResponseDto::getOutletId));
+                    Map<Integer, List<FmActiveDiscountsResponseDto>> divisionDiscountsMap = Optional.ofNullable(activeDiscountsResponseDtoList).orElse(Collections.emptyList()).stream().filter(d -> d.getOutletId() != null).collect(Collectors.groupingBy(FmActiveDiscountsResponseDto::getOutletId));
 
                     // PRIORITY 2: Division Coupon / Price Drop
                     List<FmActiveDiscountsResponseDto> feignDiscounts = divisionDiscountsMap.get(outletId);
@@ -1031,11 +1014,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                         applyDivisionDiscounts(outletDtoresponse, feignDiscounts);
 
                         // Calculate the earliest slot end time among active discounts
-                        earliestEndTime = feignDiscounts.stream()
-                                .map(discount -> getActiveMealSlotEndTime(discount, LocalDateTime.now()))
-                                .filter(Objects::nonNull)
-                                .min(LocalDateTime::compareTo)
-                                .orElse(null);
+                        earliestEndTime = feignDiscounts.stream().map(discount -> getActiveMealSlotEndTime(discount, LocalDateTime.now())).filter(Objects::nonNull).min(LocalDateTime::compareTo).orElse(null);
                     } else {
                         log.info("No division discounts match outletId={}", outletId);
                     }
@@ -1047,7 +1026,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
             // STEP 5: PUSH DATA TO REDIS (Lazy Write)
             // =========================================================================
 
-          LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now();
 
             if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && earliestEndTime != null && earliestEndTime.isAfter(now)) {
                 // TTL matches either current meal slot end time OR merchant plan end date
@@ -1056,15 +1035,15 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 // Safety guard: ensure TTL is at least 30 seconds
                 ttlSeconds = Math.max(30, ttlSeconds);
 
-//                saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
+               saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
 
                 //redisTemplate.opsForValue().set(cacheKey, jsonPayload, ttlSeconds, TimeUnit.SECONDS);
-               // log.info("Cached CUSTOMER view [{}] in Redis with offer/slot TTL: {}s", cacheKey, ttlSeconds);
+                // log.info("Cached CUSTOMER view [{}] in Redis with offer/slot TTL: {}s", cacheKey, ttlSeconds);
             } else {
                 // Merchant view or No-Offer Customer view: Standard 10 min TTL
-//                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
-              //  redisTemplate.opsForValue().set(cacheKey, jsonPayload, 5, TimeUnit.MINUTES);
-              //  log.info("Cached [{}] in Redis with standard TTL: 300s", cacheKey);
+                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
+                //  redisTemplate.opsForValue().set(cacheKey, jsonPayload, 5, TimeUnit.MINUTES);
+                //  log.info("Cached [{}] in Redis with standard TTL: 300s", cacheKey);
             }
 
 
@@ -1083,10 +1062,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 log.info("Checking favourite status for customerId={} and outletId={}", customerId, outletId);
 
 //      ----------------------------------------------------------------------------
-                Optional<FmFavoriteOutlet> favourite =
-                        favoriteOutletRepository.findByCustomerIdAndFavoriteIdAndFavouriteType(customerId, outletId, FmAppConstants.TYPE_OUTLET);
+                Optional<FmFavoriteOutlet> favourite = favoriteOutletRepository.findByCustomerIdAndFavoriteIdAndFavouriteType(customerId, outletId, FmAppConstants.TYPE_OUTLET);
 
-        //  favourite.isPresent() --> returns true if record exists in the favourite table
+                //  favourite.isPresent() --> returns true if record exists in the favourite table
                 outletDtoresponse.setIsFavourite(favourite.isPresent());
 
                 log.info("Favourite status: {}", favourite.isPresent());
@@ -1108,20 +1086,20 @@ public class FmOutletServiceImpl implements IFmOutletService {
             log.error("Corrupted cache payload for key: {}, fetching from DB", cacheKey, e);
         }
 
-        return  outletDtoresponse;
+        return outletDtoresponse;
 
     }
 
     private void saveToRedis(String cacheKey, FmOutletDetailsDto outletDtoresponse, long time, TimeUnit timeUnit) {
-       try{
-           String jsonPayload = objectMapper.writeValueAsString(outletDtoresponse);
-           LocalDateTime now = LocalDateTime.now();
+        try {
+            String jsonPayload = objectMapper.writeValueAsString(outletDtoresponse);
+            LocalDateTime now = LocalDateTime.now();
 
-           redisTemplate.opsForValue().set(cacheKey, jsonPayload, time, timeUnit);
-           log.info("Cached [{}] in Redis with standard TTL:{} {} ", cacheKey,time,timeUnit);
-       }catch (Exception e){
-           log.error("An unexpected error occurs in redis push {} ",e.getMessage());
-       }
+            redisTemplate.opsForValue().set(cacheKey, jsonPayload, time, timeUnit);
+            log.info("Cached [{}] in Redis with standard TTL:{} {} ", cacheKey, time, timeUnit);
+        } catch (Exception e) {
+            log.error("An unexpected error occurs in redis push {} ", e.getMessage());
+        }
 
 
     }
@@ -1180,19 +1158,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
 
         // 1. Separate Product-Specific Discounts (Price Drops) and Outlet-Level Discounts (Coupons)
-        Map<Integer, FmActiveDiscountsResponseDto> productDiscountsMap = feignDiscounts.stream()
-                .filter(d -> d.getProductId() != null)
-                .collect(Collectors.toMap(
-                        FmActiveDiscountsResponseDto::getProductId,
-                        d -> d,
-                        (existing, replacement) -> existing
-                ));
+        Map<Integer, FmActiveDiscountsResponseDto> productDiscountsMap = feignDiscounts.stream().filter(d -> d.getProductId() != null).collect(Collectors.toMap(FmActiveDiscountsResponseDto::getProductId, d -> d, (existing, replacement) -> existing));
 
         // Find outlet-wide coupon (where productId is null)
-        Optional<FmActiveDiscountsResponseDto> outletDiscountsDto = feignDiscounts.stream()
-                .filter(d -> d.getProductId() == null && ("COUPON".equalsIgnoreCase(d.getSourceType())
-                || "PRICE_DROP" .equalsIgnoreCase(d.getSourceType()) ))
-                .findFirst();
+        Optional<FmActiveDiscountsResponseDto> outletDiscountsDto = feignDiscounts.stream().filter(d -> d.getProductId() == null && ("COUPON".equalsIgnoreCase(d.getSourceType()) || "PRICE_DROP".equalsIgnoreCase(d.getSourceType()))).findFirst();
 
         // 2. Attach Outlet-Level Offer if present
         if (outletDiscountsDto.isPresent()) {
@@ -1201,7 +1170,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
             log.info("Outlet level discounts are there  ");
 
             // Map to activeOffer DTO on root outlet object
-           // FmActiveDiscountsResponseDto activeOffer = new FmActiveDiscountsResponseDto();
+            // FmActiveDiscountsResponseDto activeOffer = new FmActiveDiscountsResponseDto();
 
             FmActiveDiscountsDto activeOffer = FmOutletMapper.mapToActiveDiscounts(outletDiscounts);
 
@@ -1237,13 +1206,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
 
         // Index promotions by productId for fast O(1) lookup
-        Map<Integer, FmActivePromotionDiscountsProjection> promoByProductMap = promos.stream()
-                .filter(p -> p.getProductId() != null)
-                .collect(Collectors.toMap(
-                        FmActivePromotionDiscountsProjection::getProductId,
-                        p -> p,
-                        (existing, replacement) -> existing // Keep first in case of duplicates
-                ));
+        Map<Integer, FmActivePromotionDiscountsProjection> promoByProductMap = promos.stream().filter(p -> p.getProductId() != null).collect(Collectors.toMap(FmActivePromotionDiscountsProjection::getProductId, p -> p, (existing, replacement) -> existing // Keep first in case of duplicates
+        ));
 
         // Iterate through categories and products to apply discounts
         for (FmCategoryDto category : outletDtoresponse.getCategories()) {
@@ -1289,9 +1253,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
             if (startTime == null || endTime == null) continue;
 
-            boolean isActive = (endTime.isBefore(startTime))
-                    ? (!currentTime.isBefore(startTime) || !currentTime.isAfter(endTime))
-                    : (!currentTime.isBefore(startTime) && !currentTime.isAfter(endTime));
+            boolean isActive = (endTime.isBefore(startTime)) ? (!currentTime.isBefore(startTime) || !currentTime.isAfter(endTime)) : (!currentTime.isBefore(startTime) && !currentTime.isAfter(endTime));
 
             if (isActive) {
                 // Determine if the active slot ends today or tomorrow morning
@@ -1339,15 +1301,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         log.info("Fetching outlets for merchantId={}", merchantId);
 
-        List<FmOutletByMerchantProjection> rows =
-                outletRepository.getOutletsByMerchantId(merchantId);
+        List<FmOutletByMerchantProjection> rows = outletRepository.getOutletsByMerchantId(merchantId);
 
         if (rows.isEmpty()) {
 
             log.warn("No outlets found for merchantId={}", merchantId);
 
-            throw new ResourceNotFoundException(
-                    "No outlets found for merchantId: " + merchantId);
+            throw new ResourceNotFoundException("No outlets found for merchantId: " + merchantId);
         }
         log.info("Merchant approved: {}", rows.get(0).getMerchantApproved());
 
@@ -1356,12 +1316,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
             log.warn("Merchant is not approved. merchantId={}", merchantId);
 
-            throw new BadRequestException(
-                    "Merchant is not approved. Please complete the approval process.");
+            throw new BadRequestException("Merchant is not approved. Please complete the approval process.");
         }
 
-        log.info("Successfully fetched {} outlets for merchantId={}",
-                rows.size(), merchantId);
+        log.info("Successfully fetched {} outlets for merchantId={}", rows.size(), merchantId);
 
         return FmOutletMapper.mapToOutletByMerchantDto(rows);
     }
@@ -1376,8 +1334,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         // Fetch the outlet from database using outletId
         // If not found, throw exception
-        FmOutlet outlet = outletRepository.findById(outletId)
-                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
+        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
 
         log.info("SERVICE: Outlet found for outletId={}", outletId);
 
@@ -1400,16 +1357,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
                     if (outletDay.getDayOfWeekId().equals(dayId)) {
 
                         // Update isOpen only if value is provided
-                        if (timingDto.getIsOpen() != null)
-                            outletDay.setIsOpen(timingDto.getIsOpen());
+                        if (timingDto.getIsOpen() != null) outletDay.setIsOpen(timingDto.getIsOpen());
 
                         // Update opening time only if value is provided
-                        if (timingDto.getOpeningTime() != null)
-                            outletDay.setOpeningTime(timingDto.getOpeningTime());
+                        if (timingDto.getOpeningTime() != null) outletDay.setOpeningTime(timingDto.getOpeningTime());
 
                         // Update closing time only if value is provided
-                        if (timingDto.getClosingTime() != null)
-                            outletDay.setClosingTime(timingDto.getClosingTime());
+                        if (timingDto.getClosingTime() != null) outletDay.setClosingTime(timingDto.getClosingTime());
                     }
                 }
             }
@@ -1480,8 +1434,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                         if (productDto.getProductTimings() != null) {
 
                             // Fetch existing product timing records
-                            List<FmProductAvailableTiming> timings =
-                                    productAvailableTimingRepository.findByProductId(productDto.getProductId());
+                            List<FmProductAvailableTiming> timings = productAvailableTimingRepository.findByProductId(productDto.getProductId());
 
                             // Loop through each timing from request
                             for (FmProductTimingDto timingDto : productDto.getProductTimings()) {
@@ -1561,23 +1514,17 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Transactional
     public FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto) {
 
-        boolean exists = addressRepository.existsByJippyAddressIdAndAddressType(
-                fmAddressRequestDto.getJippyAddressId(),
-                fmAddressRequestDto.getAddressType());
+        boolean exists = addressRepository.existsByJippyAddressIdAndAddressType(fmAddressRequestDto.getJippyAddressId(), fmAddressRequestDto.getAddressType());
 
         if (exists) {
-            throw new DuplicateResourceException(
-                    String.format("%s address already exists for Jippy Address Id %d",
-                            fmAddressRequestDto.getAddressType(),
-                            fmAddressRequestDto.getJippyAddressId()));
+            throw new DuplicateResourceException(String.format("%s address already exists for Jippy Address Id %d", fmAddressRequestDto.getAddressType(), fmAddressRequestDto.getJippyAddressId()));
         }
 
         FmOutletAddress address = FmOutletMapper.toAddressEntity(fmAddressRequestDto);
 
         FmOutletAddress savedAddress = addressRepository.save(address);
 
-        log.info("Address saved successfully with addressId={}",
-                savedAddress.getAddressId());
+        log.info("Address saved successfully with addressId={}", savedAddress.getAddressId());
 
         return FmOutletMapper.toAddressRequestDto(savedAddress);
     }
@@ -1657,11 +1604,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         // =========================================================================
         // STEP 1: COLLECT ALL OUTLET IDs FROM ROWS
         // =========================================================================
-        List<Integer> outletIds = rows.stream()
-                .map(row -> row[0] != null ? ((Number) row[0]).intValue() : null)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
+        List<Integer> outletIds = rows.stream().map(row -> row[0] != null ? ((Number) row[0]).intValue() : null).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
         LocalDateTime now = LocalDateTime.now();
         LocalTime curTime = now.toLocalTime();
@@ -1672,22 +1615,15 @@ public class FmOutletServiceImpl implements IFmOutletService {
         // STEP 2: BULK FETCH MERCHANT PROMOTIONS (PRIORITY 1)
         // =========================================================================
         // Querying active promotions for all fetched nearby outlets in a single DB call
-        List<FmActivePromotionDiscountsProjection> activePromos =
-                promotionPlanRepository.getActivePromtionDiscounts(now, outletIds);
+        List<FmActivePromotionDiscountsProjection> activePromos = promotionPlanRepository.getActivePromtionDiscounts(now, outletIds);
 
-        Map<Integer, List<FmActivePromotionDiscountsProjection>> merchantPromotionsMap = Optional.ofNullable(activePromos)
-                .orElse(Collections.emptyList())
-                .stream()
-                .filter(p -> p.getOutletId() != null)
-                .collect(Collectors.groupingBy(FmActivePromotionDiscountsProjection::getOutletId));
+        Map<Integer, List<FmActivePromotionDiscountsProjection>> merchantPromotionsMap = Optional.ofNullable(activePromos).orElse(Collections.emptyList()).stream().filter(p -> p.getOutletId() != null).collect(Collectors.groupingBy(FmActivePromotionDiscountsProjection::getOutletId));
 
         // =========================================================================
         // STEP 3: BULK FETCH DIVISION DISCOUNTS VIA FEIGN (PRIORITY 2 FALLBACK)
         // =========================================================================
         // Fetch active division coupons/price drops only for outlets that DON'T have merchant promotions
-        List<Integer> outletsNeedingDivisionDiscounts = outletIds.stream()
-                .filter(id -> !merchantPromotionsMap.containsKey(id))
-                .collect(Collectors.toList());
+        List<Integer> outletsNeedingDivisionDiscounts = outletIds.stream().filter(id -> !merchantPromotionsMap.containsKey(id)).collect(Collectors.toList());
 
         Map<Integer, List<FmActiveDiscountsResponseDto>> divisionDiscountsMap = Collections.emptyMap();
 
@@ -1697,10 +1633,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 List<FmActiveDiscountsResponseDto> rawDivisionDiscounts = feignResponse.getBody();
 
                 if (rawDivisionDiscounts != null && !rawDivisionDiscounts.isEmpty()) {
-                    divisionDiscountsMap = rawDivisionDiscounts.stream()
-                            .filter(d -> d.getOutletId() != null && outletsNeedingDivisionDiscounts.contains(d.getOutletId()))
-                            .filter(discount -> isDiscountActiveInCurrentSlot(discount, curTime))
-                            .collect(Collectors.groupingBy(FmActiveDiscountsResponseDto::getOutletId));
+                    divisionDiscountsMap = rawDivisionDiscounts.stream().filter(d -> d.getOutletId() != null && outletsNeedingDivisionDiscounts.contains(d.getOutletId())).filter(discount -> isDiscountActiveInCurrentSlot(discount, curTime)).collect(Collectors.groupingBy(FmActiveDiscountsResponseDto::getOutletId));
                 }
             } catch (Exception e) {
                 log.error("Failed to fetch division discounts via Feign client in nearby outlets API", e);
@@ -1771,8 +1704,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 }
             }
 
-            if(row[20] != null){
+            if (row[20] != null) {
                 dto.setOutletPicUrl(row[20].toString());
+            }
+            if (row[21] != null) {
+                dto.setIsBestRestaurant((Boolean) row[21]);
             }
 
             /*
@@ -1855,7 +1791,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                     // Set offer badge text (e.g., "FLAT ₹80 OFF" or "20% OFF")
                     FmActivePromotionDiscountsProjection promotionDiscountsProjection = promos.get(0);
 
-                   FmActiveDiscountsDto activeDiscountsDto = new FmActiveDiscountsDto();
+                    FmActiveDiscountsDto activeDiscountsDto = new FmActiveDiscountsDto();
 
                     // Set discounted details on product DTO
                     activeDiscountsDto.setPlanType(promotionDiscountsProjection.getPlanType());
@@ -1871,7 +1807,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
                     List<FmActiveDiscountsResponseDto> divisionDiscounts = divisionDiscountsMap.get(outletId);
                     FmActiveDiscountsResponseDto activeDiscounts = divisionDiscounts.get(0);
 
-                    FmActiveDiscountsDto activeDiscountsDto= FmOutletMapper.mapToActiveDiscounts(activeDiscounts);
+                    FmActiveDiscountsDto activeDiscountsDto = FmOutletMapper.mapToActiveDiscounts(activeDiscounts);
                     dto.setActiveDiscountsDto(activeDiscountsDto);
                 }
             }
@@ -1906,6 +1842,32 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("Fetching outlets by areaId={}", areaId);
 
         return outletRepository.getOutletsByAreaId(areaId);
+    }
+
+    @Override
+    public OutletLocationResponseDto getOutletAddressDetails(Integer outletId) {
+
+        // Use parameterized logging to avoid unnecessary String concatenation
+        log.info("Fetching address details  for outletId: {}", outletId);
+
+        OutletAddressProjection outletAddressProjection = outletRepository.getOutletAddressDetails(outletId);
+
+        if (outletAddressProjection == null) {
+            // Log the error locally before throwing to capture the failure context in the server logs
+            log.error("Location retrieval failed: Outlet with ID {} does not exist or has no coordinates", outletId);
+
+            throw new ResourceNotFoundException("Outlet not found with ID: " + outletId);
+        }
+
+        OutletLocationResponseDto response = new OutletLocationResponseDto();
+        response.setOutletId(outletAddressProjection.getOutletId());
+        response.setStateId(outletAddressProjection.getStateId());
+        response.setCityId(outletAddressProjection.getCityId());
+        response.setAreaId(outletAddressProjection.getAreaId());
+
+        log.info("Successfully mapped address data for outletId: {}", outletId);
+
+        return response;
     }
 
 

@@ -1,4 +1,4 @@
-package com.jippy.division.feignClients;
+package com.jippy.division.feignclients;
 
 import com.jippy.division.config.FeignClientConfig;
 import com.jippy.division.dto.*;
@@ -29,13 +29,13 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/campaign/{mealTypeTimingsId}/exists")
     Boolean existsMealTypeTiming(@PathVariable Integer mealTypeTimingsId);
 
-    @GetMapping("/api/fm/outlets/getOutletDetails")
-    DivOutletDetailsDto getOutletDetails(@RequestParam Integer outletId, @RequestParam String userType, @RequestParam(required = false) Integer customerId);
-
     @GetMapping("/api/fm/products/exists")
     Boolean existsProductInOutlet(@RequestParam Integer outletId, @RequestParam Integer productId);
 
     @GetMapping("/api/fm/products/active-product-ids")
     List<Integer> getActiveProductIdsByOutlet(
             @RequestParam Integer outletId);
+
+    @GetMapping("/api/fm/outlets/getOutletAddressDetails")
+    DivOutletDetailsDto getOutletAddressDetails(@RequestParam Integer outletId);
 }

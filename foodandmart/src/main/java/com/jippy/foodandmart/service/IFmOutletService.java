@@ -3,13 +3,19 @@ package com.jippy.foodandmart.service;
 import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface IFmOutletService {
 
-    FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto);
+    FmOutletCreateResponseDTO createOutlet(
+            FmOutletRequestDTO dto);
 
+    String uploadOrUpdateOutletImage(
+            Integer outletId,
+            MultipartFile image
+    );
 //    this updates the outlet details by merchant id and outlet id, and returns the updated outlet details
 //    and also updates the outlet bank details if provided in the request dto
 //    and also updates the outlet address details if provided in the request dto
@@ -62,4 +68,6 @@ public interface IFmOutletService {
     public String fetchOutletName(Integer outletId);
 
     List<FmOutlet> getOutletsByAreaId(Integer areaId);
+
+    OutletLocationResponseDto getOutletAddressDetails(Integer outletId);
 }

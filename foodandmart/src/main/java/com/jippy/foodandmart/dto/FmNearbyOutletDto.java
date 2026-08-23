@@ -64,5 +64,7 @@
 
                 private Boolean isVegOutlet;
 
+                private Boolean isBestRestaurant;
+
                 private FmActiveDiscountsDto activeDiscountsDto;
             }

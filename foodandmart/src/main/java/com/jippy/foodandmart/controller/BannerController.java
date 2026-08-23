@@ -1,10 +1,10 @@
 package com.jippy.foodandmart.controller;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.foodandmart.dto.BannerSlotDayResponseDto;
 import com.jippy.foodandmart.dto.CustomerBannerDto;
 import com.jippy.foodandmart.dto.GroupedBannerResponseDto;
+import com.jippy.foodandmart.dto.SettlementWeekResponseDto;
 import com.jippy.foodandmart.service.BannerCacheService;
 import com.jippy.foodandmart.service.BannerSlotDayService;
 import com.jippy.foodandmart.service.MealTimeService;
@@ -53,8 +53,7 @@ public class BannerController {
     @GetMapping
     public ResponseEntity<List<BannerSlotDayResponseDto>> getAllSlots() {
 
-        return ResponseEntity.ok(
-                bannerSlotDayService.getAllSlots());
+        return ResponseEntity.ok(bannerSlotDayService.getAllSlots());
     }
 
     @GetMapping("/getActiveBanners")
@@ -65,4 +64,14 @@ public class BannerController {
         GroupedBannerResponseDto response = bannerCacheService.getActiveBannersForLocation(lat, lng);
         return ResponseEntity.ok(response);
     }
+
+
+    @GetMapping("/settlement-weeks")
+    public ResponseEntity<List<SettlementWeekResponseDto>> getSettlementWeeks(@RequestParam Integer year) {
+
+        log.info("Settlement weeks API called | year={}", year);
+
+        return ResponseEntity.ok(bannerSlotDayService.getSettlementWeeks(year));
+    }
+
 }

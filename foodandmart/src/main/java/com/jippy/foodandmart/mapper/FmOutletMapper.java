@@ -187,7 +187,7 @@ public final class FmOutletMapper {
 
         outlet.setOutletName(dto.getOutletName().trim());
         outlet.setMerchantId(dto.getMerchantId());
-        outlet.setCuisineType(dto.getCuisineType().trim());
+        outlet.setCuisineType(dto.getCuisineType());
         outlet.setOutletPhone(dto.getOutletPhone().trim());
         outlet.setOutletEmail(dto.getOutletEmail());
         outlet.setAlternateOutletPhone(dto.getAlternateOutletPhone());
@@ -720,7 +720,11 @@ public final class FmOutletMapper {
         dto.setOutletId(toInt(row[0]));
         dto.setOutletName(row[1] != null ? row[1].toString() : null);
         dto.setMerchantId(toInt(row[2]));
-        dto.setCuisineType(row[3] != null ? row[3].toString() : null);
+        dto.setCuisineType(
+                row[3] != null
+                        ? (Integer[]) row[3]
+                        : null
+        );
         dto.setOutletPhone(row[4] != null ? row[4].toString() : null);
         dto.setRadius(toBigDecimal(row[5]));
         dto.setReview(toDouble(row[6]));
@@ -819,6 +823,9 @@ public final class FmOutletMapper {
         response.setAreaId(request.getAreaId());
         response.setLatitude(request.getLatitude());
         response.setLongitude(request.getLongitude());
+
+        response.setOutletPicUrl(outlet.getOutletPicUrl());
+
 
         // ---------------- Operating Days ----------------
 

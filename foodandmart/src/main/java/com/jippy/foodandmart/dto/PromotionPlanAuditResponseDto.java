@@ -45,6 +45,8 @@ public class PromotionPlanAuditResponseDto {
 
     private List<Integer> outletCategoryIds;
 
+    private Integer maxSelection;
+
     private Integer createdBy;
 
     private LocalDateTime createdAt;

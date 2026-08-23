@@ -7,8 +7,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class
-DivCampaignRequestDto {
+public class DivCampaignRequestDto {
 
     private Integer couponId;
 
@@ -32,11 +31,17 @@ DivCampaignRequestDto {
 
     private String promotionToDate;
 
-    private Integer createdBy; // Stores numeric User ID (e.g. 101)
+    private String promotionMessage;
 
-    // Supports multiple meal slots sent from Frontend
+    private Integer maxSelection;
+
+    private Integer createdBy;
+
+    /**
+     * Meal type slots selected by frontend.
+     *
+     * Example:
+     * [87, 88, 91, 92]
+     */
     private List<Integer> mealTypeSlotIds;
-
-    // Single meal slot ID used internally during processing/saving
-    private Integer mealTypeSlotId;
 }
