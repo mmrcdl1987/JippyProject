@@ -3,22 +3,15 @@ package com.jippy.customerandorder.mapper;
 import com.jippy.customerandorder.dto.CoCustomerRequestDto;
 import com.jippy.customerandorder.dto.CoCustomerResponseDto;
 import com.jippy.customerandorder.dto.CoCustomerStreakResponseDto;
-import com.jippy.customerandorder.dto.CoWalletTransferResponseDto;
-import com.jippy.customerandorder.entity.*;
-import org.springframework.stereotype.Component;
-import com.jippy.customerandorder.entity.CoCustomerWallet;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import com.jippy.customerandorder.dto.CoCustomerStreakResponseDto;
 import com.jippy.customerandorder.dto.CoWalletResponseDto;
 import com.jippy.customerandorder.dto.CoWalletTransferResponseDto;
-
+import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.entity.CoCustomerStreak;
 import com.jippy.customerandorder.entity.CoCustomerWallet;
 import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
+import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -127,15 +120,34 @@ public class CoCustomerMapper {
 
     // WALLET TRANSACTION
 
-    public static CoCustomerWalletTransactions mapToWalletTransaction(Integer walletId, String pointsType, Integer points, Integer createdBy) {
+    public static CoCustomerWalletTransactions mapToWalletTransaction(Integer walletId, String transactionType, Integer points, Integer createdBy) {
 
         CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
 
         transaction.setWalletId(walletId);
 
-        transaction.setPointsType(pointsType);
+        transaction.setTransactionType(transactionType);
 
         transaction.setPoints(points);
+
+        transaction.setCreatedAt(LocalDateTime.now());
+
+        transaction.setCreatedBy(createdBy);
+
+        return transaction;
+    }
+
+    public static CoCustomerWalletTransactions mapToWalletTransaction(Integer walletId, String transactionType, Integer points, BigDecimal amount, Integer createdBy) {
+
+        CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
+
+        transaction.setWalletId(walletId);
+
+        transaction.setTransactionType(transactionType);
+
+        transaction.setPoints(points);
+
+        transaction.setAmount(amount);
 
         transaction.setCreatedAt(LocalDateTime.now());
 

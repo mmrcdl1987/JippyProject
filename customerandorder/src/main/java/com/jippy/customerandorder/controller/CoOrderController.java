@@ -143,6 +143,8 @@ public class CoOrderController {
 
         dto.setCouponDiscount(breakup.getCouponDiscount());
 
+        dto.setOrderAmountDiscounted(breakup.getOrderAmountDiscounted());
+
         return dto;
     }
 

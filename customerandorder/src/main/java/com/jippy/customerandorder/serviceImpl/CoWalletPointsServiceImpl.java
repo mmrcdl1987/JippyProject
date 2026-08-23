@@ -8,6 +8,7 @@ import com.jippy.customerandorder.entity.CoCustomerWallet;
 import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
+import com.jippy.customerandorder.exception.CoResourceNotFoundException;
 import com.jippy.customerandorder.exception.CoValidationException;
 import com.jippy.customerandorder.iservice.CoWalletPointsService;
 import com.jippy.customerandorder.mapper.CoWalletPointsMapper;
@@ -16,10 +17,8 @@ import com.jippy.customerandorder.repository.CoCustomerWalletRepository;
 import com.jippy.customerandorder.repository.CoCustomerWalletTransactionsRepository;
 import com.jippy.customerandorder.repository.CoOrderPriceBreakupRepository;
 import com.jippy.customerandorder.repository.CoOrderRepository;
-import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +52,7 @@ public class CoWalletPointsServiceImpl
         // 1. Fetch order
         CoOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(
+                        new CoResourceNotFoundException(
                                 "Order not found: " + orderId
                         ));
 
@@ -61,7 +60,7 @@ public class CoWalletPointsServiceImpl
         validateDeliveredOrder(order);
 
         // 3. Prevent duplicate wallet points
-        if (transactionRepository.existsByOrderIdAndPointsType(
+        if (transactionRepository.existsByOrderIdAndTransactionType(
                 orderId,
                 COConstants.ORDER_VALUE_POINTS)) {
 
@@ -82,7 +81,7 @@ public class CoWalletPointsServiceImpl
 
         if (priceBreakup == null) {
 
-            throw new ResourceNotFoundException(
+            throw new CoResourceNotFoundException(
                     "Order price breakup not found: " + orderId
             );
         }
@@ -110,7 +109,7 @@ public class CoWalletPointsServiceImpl
                         .findByCustomerCustomerId(
                                 order.getCustomerId())
                         .orElseThrow(() ->
-                                new ResourceNotFoundException(
+                                new CoResourceNotFoundException(
                                         "Wallet not found for customer: "
                                                 + order.getCustomerId()
                                 ));

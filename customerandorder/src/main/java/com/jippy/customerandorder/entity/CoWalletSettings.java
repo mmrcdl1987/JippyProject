@@ -15,14 +15,11 @@ public class CoWalletSettings {
     @Column(name = "wallet_settings_id")
     private Integer walletSettingsId;
 
-    @Column(name = "points_type")
-    private String pointsType;
+    @Column(name = "setting_type")
+    private String settingType;
 
-    @Column(name = "num_of_points")
-    private Integer numOfPoints;
-
-    @Column(name = "streak_min_days")
-    private Integer streakMinDays;
+    @Column(name = "setting_value")
+    private Integer settingValue;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

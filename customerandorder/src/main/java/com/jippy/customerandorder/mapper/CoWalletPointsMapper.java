@@ -43,7 +43,7 @@ public class CoWalletPointsMapper {
         transaction.setPoints(transactionPoints);
 
         // Transaction type
-        transaction.setPointsType(
+        transaction.setTransactionType(
                 COConstants.ORDER_VALUE_POINTS);
 
         // Audit information
@@ -89,7 +89,7 @@ public class CoWalletPointsMapper {
         response.setTransactionPoints(transaction.getPoints());
 
 
-        response.setPointsType(transaction.getPointsType());
+        response.setPointsType(transaction.getTransactionType());
 
         // API response status and message
         response.setStatus(COConstants.MSG_SUCCESS);

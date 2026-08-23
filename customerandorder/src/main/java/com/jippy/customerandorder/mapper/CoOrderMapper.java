@@ -123,6 +123,10 @@ public class CoOrderMapper {
 
         breakup.setCouponDiscount(defaultValue(requestDto.getCouponDiscount()));
 
+        breakup.setOrderAmountDiscounted(defaultValue(requestDto.getWalletAmount()));
+
+        breakup.setWalletAmount(defaultValue(requestDto.getWalletAmount()));
+
         breakup.setCreatedAt(LocalDateTime.now());
 
         breakup.setPickUpDistanceKms(requestDto.getPickUpDistanceKms());

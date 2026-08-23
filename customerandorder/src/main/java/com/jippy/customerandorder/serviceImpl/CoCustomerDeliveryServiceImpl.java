@@ -9,10 +9,12 @@ import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.exception.CoResourceNotFoundException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.CoCustomerDeliveryService;
+import com.jippy.customerandorder.iservice.CoWalletRefundService;
 import com.jippy.customerandorder.mapper.CoCustomerDeliveryMapper;
 import com.jippy.customerandorder.repository.*;
 import com.jippy.customerandorder.constants.COConstants;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 
 
@@ -45,6 +47,8 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
     private final CoOrderWaitingPeriodRepository coOrderWaitingPeriodRepository;
 
     private final CoCustomerDeliveryAddressRepository customerDeliveryAddressRepository;
+
+    private final CoWalletRefundService walletRefundService;
 
 
     @Override
@@ -193,6 +197,28 @@ public class CoCustomerDeliveryServiceImpl implements CoCustomerDeliveryService 
         coOrderRepository.save(order);
 
         log.info("Order final rejected successfully");
+
+        /*
+         * PROCESS WALLET REFUND FOR DRIVER FINAL REJECTION
+         * Since this is driver-initiated rejection due to customer unreachable,
+         * wallet amount should be refunded as per requirement
+         */
+        try {
+            BigDecimal refundAmount = walletRefundService.processWalletRefund(
+                    order.getOrderId(),
+                    order.getCustomerId(),
+                    COConstants.REJECTION_TYPE_DRIVER
+            );
+
+            if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+                log.info("Wallet refund processed for final driver rejection orderId={} amount={}",
+                        order.getOrderId(), refundAmount);
+            }
+        } catch (Exception ex) {
+            log.error("Wallet refund failed for final driver rejection orderId={} error={}",
+                    order.getOrderId(), ex.getMessage(), ex);
+            // Continue with flow even if refund fails
+        }
 
         CoNearbyOutletResponseDto outletResponse = fmFeignClient.fetchNearbySpecializedOutlets(requestDto.getLatitude(), requestDto.getLongitude());
 

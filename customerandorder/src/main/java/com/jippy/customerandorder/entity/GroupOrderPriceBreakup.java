@@ -38,8 +38,14 @@ public class GroupOrderPriceBreakup {
     @Column(name = "gst", nullable = false, precision = 10, scale = 2)
     private BigDecimal gst;
 
+    @Column(name = "platform_fee", precision = 10, scale = 2)
+    private BigDecimal platformFee;
+
     @Column(name = "order_total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal orderTotalAmount;
+
+    @Column(name = "wallet_amount", precision = 10, scale = 2)
+    private BigDecimal walletAmount;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

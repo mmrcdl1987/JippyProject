@@ -27,7 +27,7 @@ public class COConstants {
     public static final String ORDER_STATUS_PLACED = "PLACED";
     public static final String MSG_ORDER_ITEMS_EMPTY = "Order items cannot be empty";
 
-    // ── Cart Messages ──────────────────────────────────────────────────────────
+    // ── Cart Messages ────────────────────────────────────────────────────────────
     public static final String MSG_CART_ADDED = "Item added to cart";
     public static final String MSG_CART_UPDATED = "Cart updated";
     public static final String MSG_CART_REMOVED = "Item removed from cart";
@@ -48,7 +48,7 @@ public class COConstants {
     public static final String MSG_DELIVERY_CHARGE_NOT_FOUND = "Delivery charge setting not found";
     public static final String MSG_DATABASE_ERROR = "Database operation failed";
     public static final String MSG_DRIVER_CHARGE_CALCULATED = "Driver charge calculated successfully";
-    // ── Driver Charge Messages ──────────────────────────────────────
+    // ── Driver Charge Messages ─────────────────────────────────────────────────
     public static final String MSG_PICKUP_SLAB_NOT_FOUND = "Pickup charge slab not found";
     public static final String MSG_DELIVERY_SLAB_NOT_FOUND = "Delivery charge slab not found";
     public static final String MSG_CUSTOMER_LOCATION_NOT_FOUND = "Customer location not found";
@@ -57,7 +57,7 @@ public class COConstants {
     public static final String TAX_PERCENTAGE = "5";
 
 
-    // ── Driver Charge Constants ──────────────────────────────────────
+    // ── Driver Charge Constants ────────────────────────────────────────────────
     public static final String COD_LIMIT = "499";
     public static final String STATUS_DELIVERED = "DELIVERED";
     public static final BigDecimal DRIVER_DEFAULT_COD_AMOUNT = BigDecimal.valueOf(1000);
@@ -68,7 +68,6 @@ public class COConstants {
     public static final Integer MINIMUM_POINTS_REQUIRED = 1000;
     // WALLET MESSAGES
     public static final Integer AMOUNT_PER_1000_POINTS = 100;
-    public static final String WELCOME_POINTS = "WELCOME_POINTS";
     public static final String WALLET_NOT_FOUND = "Wallet not found";
     public static final String MINIMUM_POINTS_REQUIRED_MESSAGE = "Minimum 1000 points needed to convert";
     public static final String POINTS_CONVERTED_SUCCESS = "Points converted successfully";
@@ -77,7 +76,6 @@ public class COConstants {
     public static final String PHONE_ALREADY_EXISTS = "Phone number already exists";
     public static final String WELCOME_POINTS_NOT_CONFIGURED = "WELCOME_POINTS not configured";
     public static final String POINTS_CONVERTED = "POINTS_CONVERTED";
-    public static final String DAILY_STREAK_POINTS = "DAILY_STREAK_POINTS";
     public static final String STREAK_UPDATED = "Daily streak updated";
     public static final String STREAK_REWARD = "STREAK_REWARD";
     public static final String ALREADY_CHECKED_IN = "Already checked in today";
@@ -89,6 +87,10 @@ public class COConstants {
     public static final String CANNOT_TRANSFER_SELF = "Cannot transfer points to same customer";
     public static final String CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String POINTS_TRANSFER_SUCCESS = "Wallet points transferred successfully";
+    public static final String WALLET_DEBIT = "WALLET_DEBIT";
+    public static final String WALLET_CREDIT = "WALLET_CREDIT";
+    public static final String WALLET_REFUND = "WALLET_REFUND";
+
     // SCHEDULED ORDER
     public static final String ORDER_TYPE_NORMAL = "NORMAL";
 
@@ -140,6 +142,8 @@ public class COConstants {
     public static final String ORDER_STATUS_FINAL_REJECTED = "FINAL_REJECTED";
 
     public static final String REJECTION_TYPE_CUSTOMER = "CUSTOMER";
+    public static final String REJECTION_TYPE_OUTLET = "OUTLET";
+    public static final String REJECTION_TYPE_DRIVER = "DRIVER";
 
     public static final Integer FINAL_REJECTION_WAIT_MINUTES = 2;
 
@@ -195,7 +199,11 @@ public class COConstants {
     public static final String HIGH_VALUE_CART = "HIGH_VALUE_CART";
 
     // REFERRAL SYSTEM
-    public static final String REFERRAL_REWARD = "REFERRAL_REWARD";
-    public static final Integer REFERRAL_REWARD_POINTS = 250;
-    public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};}
+    public static final String WELCOME_POINTS = "WELCOME_POINTS";
+    public static final String DAILY_STREAK_POINTS = "DAILY_STREAK_POINTS";
+    public static final String REFERRAL_REWARD_POINTS = "REFERRAL_REWARD_POINTS";
+    public static final String MAX_WALLET_USAGE_PER_ORDER = "MAX_WALLET_USAGE_PER_ORDER(%)";
+    public static final String MINIMUM_STREAK_DAYS = "MINIMUM_STREAK_DAYS";
 
+    public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};
+}

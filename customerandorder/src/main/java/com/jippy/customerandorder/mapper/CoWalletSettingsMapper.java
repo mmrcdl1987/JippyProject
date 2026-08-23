@@ -17,9 +17,8 @@ public class CoWalletSettingsMapper {
 
         CoWalletSettings entity = new CoWalletSettings();
 
-
-        entity.setPointsType(requestDto.getPointsType());
-        entity.setNumOfPoints(requestDto.getNumOfPoints());
+        entity.setSettingType(requestDto.getSettingType());
+        entity.setSettingValue(requestDto.getSettingValue());
         entity.setCreatedBy(requestDto.getCreatedBy());
         entity.setCreatedAt(LocalDateTime.now());
 
@@ -30,12 +29,11 @@ public class CoWalletSettingsMapper {
     public static CoWalletSettingsResponseDto mapToResponseDto(
             CoWalletSettings entity) {
 
-        CoWalletSettingsResponseDto responseDto =
-                new CoWalletSettingsResponseDto();
+        CoWalletSettingsResponseDto responseDto = new CoWalletSettingsResponseDto();
 
         responseDto.setWalletSettingsId(entity.getWalletSettingsId());
-        responseDto.setPointsType(entity.getPointsType());
-        responseDto.setNumOfPoints(entity.getNumOfPoints());
+        responseDto.setSettingType(entity.getSettingType());
+        responseDto.setSettingValue(entity.getSettingValue());
         responseDto.setCreatedAt(entity.getCreatedAt());
         responseDto.setCreatedBy(entity.getCreatedBy());
         responseDto.setUpdatedAt(entity.getUpdatedAt());

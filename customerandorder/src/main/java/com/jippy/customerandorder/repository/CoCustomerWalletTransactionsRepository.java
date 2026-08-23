@@ -9,6 +9,5 @@ public interface CoCustomerWalletTransactionsRepository extends JpaRepository<Co
 
     List<CoCustomerWalletTransactions> findByWalletIdOrderByCreatedAtDesc(Integer walletId);
 
-
-    boolean existsByOrderIdAndPointsType(String orderId, String pointsType);
+    boolean existsByOrderIdAndTransactionType(String orderId, String transactionType);
 }
