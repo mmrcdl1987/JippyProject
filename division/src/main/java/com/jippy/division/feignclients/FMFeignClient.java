@@ -1,5 +1,6 @@
 package com.jippy.division.feignClients;
 
+
 import com.jippy.division.config.FeignClientConfig;
 import com.jippy.division.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -28,6 +29,9 @@ public interface FMFeignClient {
 
     @GetMapping("/api/fm/campaign/{mealTypeTimingsId}/exists")
     Boolean existsMealTypeTiming(@PathVariable Integer mealTypeTimingsId);
+
+    @GetMapping("/api/fm/outlets/getOutletDetails")
+    DivOutletDetailsDto getOutletDetails(@RequestParam Integer outletId, @RequestParam String userType, @RequestParam(required = false) Integer customerId);
 
     @GetMapping("/api/fm/products/exists")
     Boolean existsProductInOutlet(@RequestParam Integer outletId, @RequestParam Integer productId);
