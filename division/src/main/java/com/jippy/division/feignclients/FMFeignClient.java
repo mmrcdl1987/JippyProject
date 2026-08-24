@@ -1,6 +1,5 @@
 package com.jippy.division.feignClients;
 
-
 import com.jippy.division.config.FeignClientConfig;
 import com.jippy.division.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -39,7 +38,6 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/products/active-product-ids")
     List<Integer> getActiveProductIdsByOutlet(
             @RequestParam Integer outletId);
-
     @GetMapping("/api/fm/outlets/getOutletAddressDetails")
     DivOutletDetailsDto getOutletAddressDetails(@RequestParam Integer outletId);
 }
