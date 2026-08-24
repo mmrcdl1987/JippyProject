@@ -7,7 +7,7 @@ import com.jippy.division.entity.DivPromotionDate;
 import com.jippy.division.exception.DivInvalidDateException;
 import com.jippy.division.exception.DivInvalidRequestException;
 import com.jippy.division.exception.DivResourceNotFoundException;
-import com.jippy.division.feignClients.FMFeignClient;
+import com.jippy.division.feignClient.FMFeignClient;
 import com.jippy.division.mapper.DivCampaignMapper;
 import com.jippy.division.projection.DivActiveDiscountsProjection;
 import com.jippy.division.repositary.*;

@@ -1,4 +1,4 @@
-package com.jippy.division.feignClients;
+package com.jippy.division.feignClient;
 
 import com.jippy.division.config.FeignClientConfig;
 import com.jippy.division.dto.*;
@@ -38,4 +38,6 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/products/active-product-ids")
     List<Integer> getActiveProductIdsByOutlet(
             @RequestParam Integer outletId);
+    @GetMapping("/api/fm/outlets/getOutletAddressDetails")
+    DivOutletDetailsDto getOutletAddressDetails(@RequestParam Integer outletId);
 }

@@ -8,7 +8,7 @@ import com.jippy.division.entity.PromotionSchedule;
 import com.jippy.division.enums.LocationType;
 import com.jippy.division.enums.PromotionSourceType;
 import com.jippy.division.exception.DivResourceNotFoundException;
-import com.jippy.division.feignclients.FMFeignClient;
+import com.jippy.division.feignClient.FMFeignClient;
 import com.jippy.division.repositary.DivCouponMappingRepository;
 import com.jippy.division.repositary.DivPriceDropMappingRepository;
 import com.jippy.division.repositary.DivPromotionDateRepository;
