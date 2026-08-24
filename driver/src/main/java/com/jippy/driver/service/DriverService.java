@@ -13,6 +13,8 @@ public interface DriverService {
 
     DriverDto getDriverDetails(Integer driverId);
 
+    List<DriverDto> getAllDrivers();
+
     /**
      * Approves the driver.
      *

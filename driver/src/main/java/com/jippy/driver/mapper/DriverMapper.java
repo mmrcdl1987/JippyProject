@@ -460,4 +460,74 @@ public class DriverMapper {
         return dto;
     }
 
+    public static DriverDto mapToDriverListDto(
+            Driver driver,
+            DriverAddressRequestDto address) {
+
+        if (driver == null) {
+            throw new DriverBadRequestException(
+                    "Driver entity must not be null");
+        }
+
+        DriverDto dto = new DriverDto();
+
+        // Driver details
+        dto.setDriverId(driver.getDriverId());
+        dto.setFirstName(driver.getFirstName());
+        dto.setLastName(driver.getLastName());
+        dto.setPhoneNumber(driver.getPhoneNumber());
+        dto.setEmail(driver.getEmail());
+
+        // Nominee details
+        dto.setNomineeName(driver.getNomineeName());
+        dto.setNomineePhoneNumber(driver.getNomineePhoneNumber());
+        dto.setIsNomineeVerified(driver.getIsNomineeVerified());
+
+        // Family member details
+        dto.setFamilyMemberName(driver.getFamilyMemberName());
+        dto.setFamilyMemberPhoneNumber(
+                driver.getFamilyMemberPhoneNumber());
+        dto.setIsFamilyMemberVerified(
+                driver.getIsFamilyMemberVerified());
+
+        // Driver KYC details
+        if (driver.getDriverKyc() != null) {
+
+            dto.setDriverKycId(
+                    driver.getDriverKyc().getDriverKycId());
+
+            dto.setAadharNumber(
+                    driver.getDriverKyc().getAadharNumber());
+
+            dto.setDrivingLicenseNumber(
+                    driver.getDriverKyc().getDrivingLicenseNumber());
+
+            dto.setRcCopy(
+                    driver.getDriverKyc().getRcCopy());
+        }
+
+        // Driver Address details from FM
+        if (address != null) {
+
+            dto.setBuildingNumber(
+                    address.getBuildingNumber());
+
+            dto.setRoad(
+                    address.getRoad());
+
+            dto.setLandmark(
+                    address.getLandmark());
+
+            dto.setCityId(
+                    address.getCityId());
+
+            dto.setStateId(
+                    address.getStateId());
+
+            dto.setAreaId(
+                    address.getAreaId());
+        }
+
+        return dto;
+    }
 }

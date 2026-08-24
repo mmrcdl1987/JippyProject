@@ -67,6 +67,24 @@
             return ResponseEntity.ok(driverService.getDriverDetails(driverId));
         }
 
+        @GetMapping("/getAllDrivers")
+        @Operation(
+                summary = "Get All Drivers",
+                description = "Fetches all drivers along with their address details"
+        )
+        @ApiResponse(
+                responseCode = "200",
+                description = "Drivers fetched successfully"
+        )
+        public ResponseEntity<List<DriverDto>> getAllDrivers() {
+
+            log.info("GET_ALL_DRIVERS_API_CALLED");
+
+            return ResponseEntity.ok(
+                    driverService.getAllDrivers()
+            );
+        }
+
         //    update driver details ,driver kyc from this this(Co Microservice)
     //    and address Details from (FM microservices)
         @PutMapping("/updateDriverDetails")
