@@ -14,6 +14,7 @@ import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.mapper.FmOutletDayMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.projections.FmActivePromotionDiscountsProjection;
+import com.jippy.foodandmart.projections.FmMerchantOutletMenuProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import com.jippy.foodandmart.projections.OutletAddressProjection;
@@ -924,9 +925,28 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
 
         log.info("Fetching outlet details for outletId={}, userType={}, customerId={}", outletId, userType, customerId);
 
+        boolean outletExists =
+                outletRepository.existsByOutletIdAndIsApprovedTrue(outletId);
+
+        // =========================================================
+        // STEP 1: Check outlet existence
+        // =========================================================
+
+        if (!outletExists) {
+
+            log.warn(
+                    "Outlet not found | outletId={}",
+                    outletId
+            );
+
+            throw new ResourceNotFoundException(
+                    "Outlet not found with id: " + outletId
+            );
+        }
+//---------------------------------------------------------------------------------------------------
         FmOutletDetailsDto outletDtoresponse = new FmOutletDetailsDto();
 
-        // 1. Construct userType-specific Redis Key
+        // 1.1 Construct userType-specific Redis Key
         String cacheKey = String.format("menu:outlet:%d:type:%s", outletId, userType.toUpperCase());
         try {
             // =========================================================================
@@ -939,21 +959,116 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
             }
 
             // =========================================================================
-            // STEP 2: FETCH BASE DATA
+            // STEP 2: FETCH BASE DATA BASED ON USER TYPE
             // =========================================================================
-
-            List<FmOutletMenuProjection> rows = outletRepository.getOutletMenu(outletId);
-
-            if (rows == null || rows.isEmpty()) {
-                log.error("No data found for outletId={}", outletId);
-                throw new ResourceNotFoundException("Outlet not found with id: " + outletId);
-            }
 
             LocalDateTime earliestEndTime = null;
 
-            outletDtoresponse = FmOutletMapper.mapToOutletDto(rows, userType);
+            if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
 
-            log.info("============outletDtoresponse================" + outletDtoresponse);
+                // ---------------------------------------------------------------------
+                // MERCHANT FLOW
+                // Fetch complete outlet menu using the merchant-specific query.
+                //
+                // Merchant query also fetches:
+                // outlets.cuisine_type
+                //        ↓
+                // cuisine_types.cuisine_types_id
+                // cuisine_types.cuisine_types_name
+                // ---------------------------------------------------------------------
+
+                log.info(
+                        "Fetching merchant outlet menu | outletId={}",
+                        outletId
+                );
+
+                List<FmMerchantOutletMenuProjection> merchantRows =
+                        outletRepository.getMerchantOutletMenu(outletId);
+
+                // Validate merchant outlet menu data
+                if (merchantRows == null || merchantRows.isEmpty()) {
+
+                    log.warn(
+                            "No merchant menu available | outletId={}",
+                            outletId
+                    );
+
+                    throw new ResourceNotFoundException(
+                            "No menu available for outlet: " + outletId
+                    );
+                }
+
+                log.info(
+                        "Merchant outlet menu fetched | outletId={} | rows={}",
+                        outletId,
+                        merchantRows.size()
+                );
+
+                // Map merchant projection → Outlet Details DTO
+                outletDtoresponse =
+                        FmOutletMapper.mapMerchantToOutletDto(merchantRows);
+
+            } else {
+
+                // ---------------------------------------------------------------------
+                // CUSTOMER FLOW
+                // Use the existing outlet menu query.
+                //
+                // Customer response contains the existing product/menu details
+                // including customer-specific online pricing.
+                // ---------------------------------------------------------------------
+
+                log.info(
+                        "Fetching customer outlet menu | outletId={}",
+                        outletId
+                );
+
+                List<FmOutletMenuProjection> rows =
+                        outletRepository.getCustomerOutletMenu(outletId);
+
+                // Validate customer outlet menu data
+                if (rows == null || rows.isEmpty()) {
+
+                    log.warn(
+                            "No customer menu available for outlet ID: " + outletId + ".\n" +
+                                    "Required menu data is missing.\n" +
+                                    "Data must exist in the following DB tables:\n" +
+                                    "1. jippy_fm.outlets\n" +
+                                    "2. jippy_fm.outlet_days (Outlet Timings)\n" +
+                                    "3. jippy_fm.outlet_categories\n" +
+                                    "4. jippy_fm.categories\n" +
+                                    "5. jippy_fm.products\n"+
+                                    "6. jippy_fm.product_available_timings(product timings)"
+                    );
+
+
+                    throw new ResourceNotFoundException(
+                            "No customer menu available for outlet ID: " + outletId + ".   \n" +
+                                    "  Required menu data is missing.  \n" +
+                                    "  Data must exist in the following DB tables:  \n" +
+                                    "  1. jippy_fm.outlets  \n" +
+                                    "  2. jippy_fm.outlet_days (Outlet Timings)  \n" +
+                                    "  3. jippy_fm.outlet_categories  \n" +
+                                    "  4. jippy_fm.categories  \n" +
+                                    "  5. jippy_fm.products\n"+
+                                    "  6. jippy_fm.product_available_timings(product timings)"
+                    );
+                }
+
+                log.info(
+                        "Customer outlet menu fetched | outletId={} | rows={}",
+                        outletId,
+                        rows.size()
+                );
+
+                // Map existing customer projection → Outlet Details DTO
+                outletDtoresponse =
+                        FmOutletMapper.mapCustomerToOutletDto(rows, userType);
+            }
+
+//           ================================================================================
+
+            log.info("============ OutletDtoResponse ================" + outletDtoresponse);
 
             if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
 
@@ -1097,13 +1212,31 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
             log.info("Successfully fetched outlet details for outletId={}", outletId);
 
             return outletDtoresponse;
+        }
+//        catch (Exception e) {
+//            log.error("Corrupted cache payload for key: {}, fetching from DB", cacheKey, e);
+//        }
+//
+//        return outletDtoresponse;
+//
+//    }
+        catch (ResourceNotFoundException e) {
+
+            // Business exception → do not swallow it.
+            // Let it reach the global exception handler.
+            throw e;
+
         } catch (Exception e) {
-            log.error("Corrupted cache payload for key: {}, fetching from DB", cacheKey, e);
+
+            // Unexpected exception → log it.
+            log.error("Unexpected error while fetching outlet details | cacheKey={}",
+                    cacheKey, e
+            );
         }
 
         return outletDtoresponse;
-
     }
+//    ============================================================================================
 
     private void saveToRedis(String cacheKey, FmOutletDetailsDto outletDtoresponse, long time, TimeUnit timeUnit) {
         try {

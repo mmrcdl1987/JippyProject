@@ -5,7 +5,7 @@
 //import com.jippy.foodandmart.entity.FmOutlet;
 //import com.jippy.foodandmart.entity.FmOutletAddress;
 //
-///**
+/// **
 // * Static utility class for converting between {@link FmOutletRequestDTO} /
 // * {@link FmOutletCreatedDTO} and the {@link FmOutlet} / {@link FmOutletAddress} entities.
 // *
@@ -137,10 +137,14 @@
 package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
-import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.dto.FmOutletDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.entity.FmMerchantBankDetails;
+import com.jippy.foodandmart.entity.FmOutlet;
+import com.jippy.foodandmart.entity.FmOutletAddress;
+import com.jippy.foodandmart.entity.FmOutletDay;
+import com.jippy.foodandmart.projections.FmMerchantOutletMenuProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import lombok.extern.slf4j.Slf4j;
@@ -151,12 +155,9 @@ import org.locationtech.jts.geom.Point;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.apache.commons.configuration.PropertyConverter.toBigDecimal;
+import java.time.LocalTime;
+import java.time.format.TextStyle;
+import java.util.*;
 
 /**
  * Static utility class for converting between Entities, DTOs, and Projections
@@ -196,43 +197,42 @@ public final class FmOutletMapper {
     }
 
 
-// OUTLET ENTITY -> OUTLET RESPONSE DTO
-
     public static FmOutletResponseDto toOutletResponseDto(FmOutlet outlet) {
 
-        if (outlet == null) {
-            return null;
-        }
-
         FmOutletResponseDto dto = new FmOutletResponseDto();
-        // Outlet Details
+
         dto.setOutletId(outlet.getOutletId());
         dto.setOutletName(outlet.getOutletName());
         dto.setOutletEmail(outlet.getOutletEmail());
         dto.setMerchantId(outlet.getMerchantId());
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
-        dto.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
-
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());
         dto.setOutletPicUrl(outlet.getOutletPicUrl());
-        // Outlet Location
-        //
-        // JTS Point:
-        // X = Longitude
-        // Y = Latitude
+
+        // Convert Point -> Latitude X & Longitude Y
         if (outlet.getOutletLocation() != null) {
-
             dto.setLongitude(outlet.getOutletLocation().getX());
-
             dto.setLatitude(outlet.getOutletLocation().getY());
         }
 
         return dto;
     }
 
+    public static FmAddressRequestDto toAddressRequestDto(FmOutletAddress fmOutletAddress) {
+        FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
+        fmAddressRequestDto.setJippyAddressId(fmOutletAddress.getJippyAddressId());
+        fmAddressRequestDto.setBuildingNumber(fmOutletAddress.getBuildingNumber());
+        fmAddressRequestDto.setRoad(fmOutletAddress.getRoad());
+        fmAddressRequestDto.setLandmark(fmOutletAddress.getLandmark());
+        fmAddressRequestDto.setCityId(fmOutletAddress.getCityId());
+        fmAddressRequestDto.setStateId(fmOutletAddress.getStateId());
+        fmAddressRequestDto.setAreaId(fmOutletAddress.getAreaId());
+        fmAddressRequestDto.setAddressType(fmOutletAddress.getAddressType());
+        return fmAddressRequestDto;
+    }
     // ADDRESS -> OUTLET RESPONSE DTO
     public static void mapAddressToOutletResponse(FmOutletResponseDto response, FmOutletAddress address) {
 
@@ -263,18 +263,18 @@ public final class FmOutletMapper {
 
         response.setAccountHolderName(bankDetails.getAccountHolderName());
     }
-
-// KYC -> OUTLET RESPONSE DTO
-
-    public static void mapKycToOutletResponse(FmOutletResponseDto response, FmUserKyc kyc) {
-
-        if (response == null || kyc == null) {
-            return;
-        }
-
-        response.setFssaiNumber(kyc.getFssaiNumber());
-
-        response.setGstNumber(kyc.getGstNumber());
+    //    for feign client to map the address details from Outletdto to AddressRequestdto to send to address microservice
+    public static FmAddressRequestDto convertToAddressReqDto(FmOutletRequestDTO dto, Integer outletId, Integer stateId, Integer areaId) {
+        FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
+        fmAddressRequestDto.setAddressType(FmAppConstants.TYPE_OUTLET);
+        fmAddressRequestDto.setJippyAddressId(outletId);
+        fmAddressRequestDto.setBuildingNumber(dto.getBuildingNumber());
+        fmAddressRequestDto.setRoad(dto.getRoad());
+        fmAddressRequestDto.setLandmark(dto.getLandmark());
+        fmAddressRequestDto.setCityId(dto.getCityId() != null ? dto.getCityId() : 0);
+        fmAddressRequestDto.setStateId(stateId);
+        fmAddressRequestDto.setAreaId(areaId);
+        return fmAddressRequestDto;
     }
 // OUTLET DAYS -> OUTLET RESPONSE DTO
 
@@ -291,43 +291,12 @@ public final class FmOutletMapper {
 
         response.setOperatingDays(outletDays.stream().map(FmOutletDayMapper::toDTO).toList());
     }
-
-    public static  FmAddressRequestDto toAddressRequestDto(FmOutletAddress fmOutletAddress){
-        FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
-        fmAddressRequestDto.setJippyAddressId(fmOutletAddress.getJippyAddressId());
-        fmAddressRequestDto.setBuildingNumber(fmOutletAddress.getBuildingNumber());
-        fmAddressRequestDto.setRoad(fmOutletAddress.getRoad());
-        fmAddressRequestDto.setLandmark(fmOutletAddress.getLandmark());
-        fmAddressRequestDto.setCityId(fmOutletAddress.getCityId());
-        fmAddressRequestDto.setStateId(fmOutletAddress.getStateId());
-        fmAddressRequestDto.setAreaId(fmOutletAddress.getAreaId());
-        fmAddressRequestDto.setAddressType(fmOutletAddress.getAddressType());
-        return fmAddressRequestDto;
-
-    }
-
-//    for feign client to map the address details from Outletdto to AddressRequestdto to send to address microservice
-    public static  FmAddressRequestDto convertToAddressReqDto(FmOutletRequestDTO dto, Integer outletId, Integer stateId,Integer areaId){
- FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
- fmAddressRequestDto.setAddressType(FmAppConstants.TYPE_OUTLET);
- fmAddressRequestDto.setJippyAddressId(outletId);
- fmAddressRequestDto.setBuildingNumber(dto.getBuildingNumber());
- fmAddressRequestDto.setRoad(dto.getRoad());
- fmAddressRequestDto.setLandmark(dto.getLandmark());
- fmAddressRequestDto.setCityId(dto.getCityId()!=null?dto.getCityId():0);
-    fmAddressRequestDto.setStateId(stateId);
-    fmAddressRequestDto.setAreaId(areaId);
- return fmAddressRequestDto;
-
-
-    }
-
     /**
      * Builds an {@link FmOutletAddress} from the DTO plus resolved integer FKs.
      */
 
 
-    public static FmOutletAddress toAddressEntity(FmAddressRequestDto dto){
+    public static FmOutletAddress toAddressEntity(FmAddressRequestDto dto) {
 
         FmOutletAddress address = new FmOutletAddress();
         address.setJippyAddressId(dto.getJippyAddressId());
@@ -339,7 +308,7 @@ public final class FmOutletMapper {
         address.setAreaId(dto.getAreaId());
         address.setAddressType(dto.getAddressType());
         return address;
-}
+    }
 
     // ── Entity → DTO ──────────────────────────────────────────────────────────
 
@@ -363,10 +332,11 @@ public final class FmOutletMapper {
 
     // ── Projection → DTO (Complex Menu Mapping) ───────────────────────────────
 
+
     /**
      * Maps flat database result sets (Projections) into a nested Outlet Hierarchy.
      */
-    public static FmOutletDetailsDto mapToOutletDto(List<FmOutletMenuProjection> rows, String userType) {
+    public static FmOutletDetailsDto mapCustomerToOutletDto(List<FmOutletMenuProjection> rows, String userType) {
         if (rows == null || rows.isEmpty()) {
             log.warn("No data found to map");
             return null;
@@ -380,7 +350,7 @@ public final class FmOutletMapper {
         for (FmOutletMenuProjection row : rows) {
             if (row != null) {
                 // Set basic outlet info (repeated in rows)
-//                outlet.setOutletId(row.getOutletId());
+                outlet.setOutletId(row.getOutletId());
                 outlet.setOutletName(row.getOutletName());
                 outlet.setOutletPhone(row.getOutletPhone());
                 outlet.setAlternateOutletPhone(row.getAlternateOutletPhone());
@@ -394,7 +364,7 @@ public final class FmOutletMapper {
                 if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
 
                     // Outlet Details
-                    outlet.setCuisineType(row.getCuisineType());
+//                    outlet.setCuisineType(row.getCuisineType());
                     outlet.setLatitude(row.getLatitude());
                     outlet.setLongitude(row.getLongitude());
 
@@ -445,13 +415,10 @@ public final class FmOutletMapper {
 
                     // Map Products
                     if (row.getProductId() != null) {
-                        FmProductDto product = category.getProducts().stream()
-                                .filter(p -> p.getProductId().equals(row.getProductId()))
-                                .findFirst()
-                                .orElse(null);
+                        FmProductDto product = category.getProducts().stream().filter(p -> p.getProductId().equals(row.getProductId())).findFirst().orElse(null);
 
                         if (product == null) {
-                            product = new FmProductDto( );
+                            product = new FmProductDto();
                             product.setProductId(row.getProductId());
                             product.setProductName(row.getProductName());
                             product.setDescription(row.getDescription());
@@ -515,9 +482,7 @@ public final class FmOutletMapper {
 
                             for (FmProductTimingDto existingTiming : product.getProductTimings()) {
 
-                                if (existingTiming.getDay().equals(row.getProductDay())
-                                        && existingTiming.getStartTime().equals(row.getStartTime())
-                                        && existingTiming.getEndTime().equals(row.getEndTime())) {
+                                if (existingTiming.getDay().equals(row.getProductDay()) && existingTiming.getStartTime().equals(row.getStartTime()) && existingTiming.getEndTime().equals(row.getEndTime())) {
 
                                     timingExists = true;
                                     break;
@@ -545,154 +510,492 @@ public final class FmOutletMapper {
                         /*
                          * Map Product Variants.
                          */
-                        if (Boolean.TRUE.equals(row.getHasProductVariants())
-                                && row.getProductVariantId() != null) {
+                if (Boolean.TRUE.equals(row.getHasProductVariants()) && row.getProductVariantId() != null) {
 
-                                boolean variantExists = false;
+                    boolean variantExists = false;
 
-                            // ---------------------------------------------------------
-                            // Check whether this variant was already added
-                            // ---------------------------------------------------------
-                                for (FmProductVariantDTO existingVariant : product.getVariants()) {
+                    // ---------------------------------------------------------
+                    // Check whether this variant was already added
+                    // ---------------------------------------------------------
+                    for (FmProductVariantDTO existingVariant : product.getVariants()) {
 
-                                    if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
+                        if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
 
-                                        variantExists = true;
-                                        break;
-                                    }
-                                }
+                            variantExists = true;
+                            break;
+                        }
+                    }
 
-                                // ---------------------------------------------------------
-                                // Add variant only if it does not already exist
-                                // ---------------------------------------------------------
-                                if (!variantExists) {
+            // ---------------------------------------------------------
+            // Add variant only if it does not already exist
+            // ---------------------------------------------------------
+                    if (!variantExists) {
 
-                                    FmProductVariantDTO variant = new FmProductVariantDTO();
+                        FmProductVariantDTO variant = new FmProductVariantDTO();
 
-    //                                variant.setVariantId(row.getProductVariantId());
-    //                                variant.setVariantName(row.getVariantName());
-    //
-    //                                /*
-    //                                 * Customer sees online price.
-    //                                 * Merchant sees merchant price.
-    //                                 */
-    //                                if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
-    //                                        && row.getOnlinePrice() != null) {
-    //
-    //                                    variant.setPrice(row.getOnlinePrice());
-    //
-    //                                } else {
-    //
-    //                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
-    //                                }
-    //
-    //                                product.getVariants().add(variant);
-
-
-                                    // =========================================================
-                                    // Variant Option
-                                    // =========================================================
-
-                                    variant.setVariantId(row.getProductVariantId());
+            //                                variant.setVariantId(row.getProductVariantId());
+            //                                variant.setVariantName(row.getVariantName());
+            //
+            //                                /*
+            //                                 * Customer sees online price.
+            //                                 * Merchant sees merchant price.
+            //                                 */
+            //                                if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
+            //                                        && row.getOnlinePrice() != null) {
+            //
+            //                                    variant.setPrice(row.getOnlinePrice());
+            //
+            //                                } else {
+            //
+            //                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+            //                                }
+            //
+            //                                product.getVariants().add(variant);
 
 
-                                    // =========================================================
-                                    // Variant Group Value
-                                    // =========================================================
+                // =========================================================
+                // Variant Option
+                // =========================================================
 
-  //                                   commented for UI
-//                                    variant.setVariantValueId(row.getVariantValueId());
-
-                                    variant.setVariantName(row.getVariantName());
+                variant.setVariantId(row.getProductVariantId());
 
 
-                                    // =========================================================
-                                    // Variant Group
-                                    // =========================================================
+                // =========================================================
+                // Variant Group Value
+                // =========================================================
 
-//                                    commented for UI
-//                                    variant.setVariantGroupId(row.getVariantGroupId());
+//                commented for UI
+//              variant.setVariantValueId(row.getVariantValueId());
 
-                                    variant.setGroupName(row.getVariantGroupName());
-
-//                                    variant.setSelectionType(row.getVariantSelectionType());
-
-//                                    commented for UI
-//                                    variant.setMinSelection(row.getVariantMinSelection());
-
-//                                    variant.setMaxSelection(row.getVariantMaxSelection());
+                        variant.setVariantName(row.getVariantName());
 
 
-                                    // =========================================================
-                                    // Price Type
-                                    // MAIN / ADD
-                                    // =========================================================
+                    // =========================================================
+                    // Variant Group
+                    // =========================================================
 
-                                    variant.setPriceType(row.getVariantPriceType());
+//                  commented for UI
+//                  variant.setVariantGroupId(row.getVariantGroupId());
 
-                                    // =========================================================
-                                    // Variant Pricing
-                                    // =========================================================
-                                    //
-                                    // MERCHANT:
-                                    //     merchantPrice = variant_price
-                                    //     price         = null
-                                    //
-                                    // CUSTOMER:
-                                    //     If variant online price exists:
-                                    //         merchantPrice = null
-                                    //         price = variant online price
-                                    //
-                                    //     If variant online price does NOT exist:
-                                    //         merchantPrice = variant merchant price
-                                    //         price = null
-                                    // =========================================================
+                    variant.setGroupName(row.getVariantGroupName());
 
-                                    if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
+//                  variant.setSelectionType(row.getVariantSelectionType());
 
-                                        // Merchant gets variant merchant price
-                                        variant.setMerchantPrice(row.getVariantMerchantPrice());
-                                        variant.setOnlinePrice(null);
+//                   commented for UI
+//                  variant.setMinSelection(row.getVariantMinSelection());
 
-                                    } else if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
+//                  variant.setMaxSelection(row.getVariantMaxSelection());
 
-                                        if (row.getVariantOnlinePrice() != null) {
 
-                                            // Customer gets variant online price
-                                            variant.setMerchantPrice(null);
-                                            variant.setOnlinePrice(row.getVariantOnlinePrice());
+                        // =========================================================
+                        // Price Type
+                        // MAIN / ADD
+                        // =========================================================
 
-                                        } else {
+                        variant.setPriceType(row.getVariantPriceType());
 
-                                            // No variant online price → fallback to merchant price
-                                            variant.setMerchantPrice(row.getVariantMerchantPrice());
-                                            variant.setOnlinePrice(null);
-                                        }
-                                    }
-                                // =========================================================
-                                // Add to product
-                                // =========================================================
+                        // =========================================================
+                        // Variant Pricing
+                        // =========================================================
+                        //
+                        // MERCHANT:
+                        //     merchantPrice = variant_price
+                        //     price         = null
+                        //
+                        // CUSTOMER:
+                        //     If variant online price exists:
+                        //         merchantPrice = null
+                        //         price = variant online price
+                        //
+                        //     If variant online price does NOT exist:
+                        //         merchantPrice = variant merchant price
+                        //         price = null
+                        // =========================================================
 
-                                    product.getVariants().add(variant);
-                                }
+                        if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
+
+                            // Merchant gets variant merchant price
+                            variant.setMerchantPrice(row.getVariantMerchantPrice());
+                            variant.setOnlinePrice(null);
+
+            } else if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
+
+                if (row.getVariantOnlinePrice() != null) {
+
+                    // Customer gets variant online price
+                    variant.setMerchantPrice(null);
+                    variant.setOnlinePrice(row.getVariantOnlinePrice());
+
+                } else {
+
+                    // No variant online price → fallback to merchant price
+                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+                    variant.setOnlinePrice(null);
+                }
+            }
+                    // =========================================================
+                    // Add to product
+                    // =========================================================
+
+                    product.getVariants().add(variant);
+                            }
                         }
                     }
                 }
             }
         }
 
-        outlet.setOutletTimings(new ArrayList<>(outletTimingMap.values()));
-        outlet.setCategories(new ArrayList<>(categoryMap.values()));
+        // =========================================================
+        // FINAL OUTLET RESPONSE
+        // =========================================================
+
+        outlet.setOutletTimings(
+                new ArrayList<>(outletTimingMap.values())
+        );
+
+        outlet.setCategories(
+                new ArrayList<>(categoryMap.values())
+        );
+
         return outlet;
     }
 
+    //    ==============================================================================================
+//    ==============================================================================================
+    public static FmOutletDetailsDto mapMerchantToOutletDto(List<FmMerchantOutletMenuProjection> rows) {
+
+        log.info("MERCHANT_OUTLET_MAPPING_START | rows={}", rows == null ? 0 : rows.size());
+
+        FmOutletDetailsDto outlet = new FmOutletDetailsDto();
+
+        // =========================================================
+        // Validate merchant outlet data
+        // =========================================================
+
+        if (rows == null || rows.isEmpty()) {
+
+            log.warn("No merchant outlet menu data found");
+
+            return outlet;
+        }
+
+        // =========================================================
+        // STEP 1: Map outlet-level details
+        // From: jippy_fm.outlets
+        // =========================================================
+
+        FmMerchantOutletMenuProjection firstRow = rows.get(0);
+
+        outlet.setOutletId(firstRow.getOutletId());
+        outlet.setOutletName(firstRow.getOutletName());
+        outlet.setOutletEmail(firstRow.getOutletEmail());
+        outlet.setOutletPhone(firstRow.getOutletPhone());
+        outlet.setAlternateOutletPhone(firstRow.getAlternateOutletPhone());
+
+        outlet.setLatitude(firstRow.getLatitude());
+        outlet.setLongitude(firstRow.getLongitude());
+        outlet.setIsAvailable(firstRow.getOutletAvailable());
+
+        // =========================================================
+        // STEP 2: Map outlet bank details
+        // From: jippy_fm.user_bank_details
+        // =========================================================
+
+        outlet.setAccountNumber(firstRow.getAccountNumber());
+        outlet.setIfscCode(firstRow.getIfscCode());
+        outlet.setBankName(firstRow.getBankName());
+        outlet.setAccountHolderName(firstRow.getAccountHolderName());
+
+        // =========================================================
+        // STEP 3: Map outlet address
+        // From: jippy_fm.address
+        // =========================================================
+
+        outlet.setBuildingNumber(firstRow.getBuildingNumber());
+        outlet.setRoad(firstRow.getRoad());
+        outlet.setLandmark(firstRow.getLandmark());
+
+        outlet.setCityId(firstRow.getCityId());
+        outlet.setCityName(firstRow.getCityName());
+
+        outlet.setStateId(firstRow.getStateId());
+        outlet.setStateName(firstRow.getStateName());
+
+        outlet.setAreaId(firstRow.getAreaId());
+        outlet.setAreaName(firstRow.getAreaName());
+
+        // =========================================================
+        // STEP 4: Maps used to avoid duplicate data
+        // =========================================================
+
+        Map<Integer, FmCategoryDto> categoryMap = new LinkedHashMap<>();
+
+        Map<String, FmOutletTimingDto> outletTimingMap = new LinkedHashMap<>();
+
+        // Cuisine can appear multiple times because of
+        // Category × Product × Variant × Timing joins.
+        Map<Integer, FmCuisineTypeResponseDTO> cuisineTypeMap = new LinkedHashMap<>();
+
+        // =========================================================
+        // STEP 5: Process every query row
+        // =========================================================
+
+        for (FmMerchantOutletMenuProjection row : rows) {
+
+            // =====================================================
+            // Cuisine Type
+            // From: jippy_fm.cuisine_types
+            //
+            // outlets.cuisine_type contains INTEGER[]
+            // Example: [1,2]
+            //
+            // cuisine_types:
+            // 1 -> INDIAN
+            // 2 -> CHINESE
+            // =====================================================
+
+            if (row.getCuisineTypeId() != null) {
+
+                Integer cuisineTypeId = row.getCuisineTypeId();
+
+                // Prevent duplicate cuisine types
+                if (!cuisineTypeMap.containsKey(cuisineTypeId)) {
+
+                    FmCuisineTypeResponseDTO cuisineDto = new FmCuisineTypeResponseDTO();
+
+                    cuisineDto.setCuisineTypeId(cuisineTypeId);
+
+                    cuisineDto.setCuisineTypeName(row.getCuisineTypeName());
+
+                    cuisineTypeMap.put(cuisineTypeId, cuisineDto);
+                }
+            }
+
+            // =====================================================
+            // Outlet Timings
+            // From: jippy_fm.outlet_days
+            // =====================================================
+
+            if (row.getOutletDay() != null) {
+
+                String timingKey = row.getOutletDay() + "_" + row.getOpeningTime() + "_" + row.getClosingTime();
+
+                if (!outletTimingMap.containsKey(timingKey)) {
+
+                    FmOutletTimingDto timing = new FmOutletTimingDto();
+
+                    timing.setDay(row.getOutletDay());
+                    timing.setOpeningTime(row.getOpeningTime());
+                    timing.setClosingTime(row.getClosingTime());
+                    timing.setIsOpen(row.getIsOpen());
+
+                    outletTimingMap.put(timingKey, timing);
+                }
+            }
+
+            // =====================================================
+            // Category
+            // From: jippy_fm.categories
+            // =====================================================
+
+            if (row.getCategoryId() == null) {
+                continue;
+            }
+
+            FmCategoryDto category = categoryMap.get(row.getCategoryId());
+
+            if (category == null) {
+
+                category = new FmCategoryDto();
+
+                category.setCategoryId(row.getCategoryId());
+
+                category.setCategoryName(row.getCategoryName());
+
+                category.setIsAvailable(row.getCategoryAvailable());
+
+                category.setProducts(new ArrayList<>());
+
+                categoryMap.put(row.getCategoryId(), category);
+            }
+
+            // =====================================================
+            // Product
+            // From: jippy_fm.products
+            // =====================================================
+
+            if (row.getProductId() == null) {
+                continue;
+            }
+
+            FmProductDto product = null;
+
+            // Check whether product is already mapped
+            // because the same product can appear in multiple
+            // variant/timing rows.
+
+            for (FmProductDto existingProduct : category.getProducts()) {
+
+                if (existingProduct.getProductId().equals(row.getProductId())) {
+
+                    product = existingProduct;
+
+                    break;
+                }
+            }
+
+            // Create product only once
+            if (product == null) {
+
+                product = new FmProductDto();
+
+                product.setProductId(row.getProductId());
+
+                product.setProductName(row.getProductName());
+
+                product.setDescription(row.getDescription());
+
+                product.setImageLink(row.getImageLink());
+
+                // =================================================
+                // Merchant Product Price
+                // From: jippy_fm.products.merchant_price
+                // =================================================
+
+                product.setMerchantPrice(row.getMerchantPrice());
+
+                // Merchant should not receive online price
+                product.setOnlinePrice(null);
+
+                product.setIsVeg(row.getIsVeg());
+
+                product.setHasProductVariants(row.getHasProductVariants());
+
+                product.setIsAvailable(row.getProductAvailable());
+
+                product.setProductTimings(new ArrayList<>());
+
+                product.setVariants(new ArrayList<>());
+
+                category.getProducts().add(product);
+            }
+
+            // =====================================================
+            // Product Timings
+            // From: jippy_fm.product_available_timings
+            // =====================================================
+
+            if (row.getStartTime() != null) {
+
+                boolean timingExists = false;
+
+                for (FmProductTimingDto existingTiming : product.getProductTimings()) {
+
+                    if (existingTiming.getDay().equals(row.getProductDay()) && existingTiming.getStartTime().equals(row.getStartTime()) && existingTiming.getEndTime().equals(row.getEndTime())) {
+
+                        timingExists = true;
+
+                        break;
+                    }
+                }
+
+                if (!timingExists) {
+
+                    FmProductTimingDto timing = new FmProductTimingDto();
+
+                    timing.setDay(row.getProductDay());
+
+                    timing.setStartTime(row.getStartTime());
+
+                    timing.setEndTime(row.getEndTime());
+
+                    product.getProductTimings().add(timing);
+                }
+            }
+
+            // =====================================================
+            // Product Variants
+            // From:
+            // jippy_fm.product_variant_options
+            // jippy_fm.product_variant_group_values
+            // jippy_fm.product_variant_groups
+            // =====================================================
+
+            if (Boolean.TRUE.equals(row.getHasProductVariants()) && row.getProductVariantId() != null) {
+
+                boolean variantExists = false;
+
+                for (FmProductVariantDTO existingVariant : product.getVariants()) {
+
+                    if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
+
+                        variantExists = true;
+
+                        break;
+                    }
+                }
+
+                // Create variant only once
+                if (!variantExists) {
+
+                    FmProductVariantDTO variant = new FmProductVariantDTO();
+
+                    variant.setVariantId(row.getProductVariantId());
+
+                    variant.setVariantName(row.getVariantName());
+
+                    variant.setGroupName(row.getVariantGroupName());
+
+                    variant.setPriceType(row.getVariantPriceType());
+
+                    // =================================================
+                    // Merchant Variant Price
+                    // From:
+                    // jippy_fm.product_variant_options.variant_price
+                    // =================================================
+
+                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+
+                    // Merchant should not receive online price
+                    variant.setOnlinePrice(null);
+
+                    product.getVariants().add(variant);
+                }
+            }
+        }
+
+        // =========================================================
+        // STEP 6: Set final outlet-level collections
+        // =========================================================
+
+        outlet.setCuisineTypes(new ArrayList<>(cuisineTypeMap.values())
+
+        );
+
+        outlet.setOutletTimings(new ArrayList<>(outletTimingMap.values()));
+
+        outlet.setCategories(new ArrayList<>(categoryMap.values()));
+
+        // =========================================================
+        // STEP 7: Mapping completed
+        // =========================================================
+
+        log.info("MERCHANT_OUTLET_MAPPING_COMPLETED | " + "outletId={} | cuisines={} | categories={}", outlet.getOutletId(), cuisineTypeMap.size(), categoryMap.size());
+
+        return outlet;
+    }
+//    ==============================================================================================
+//    ==============================================================================================
+
+//    ==============================================================================================
 //    ------------update outlet details mapping to dto for merchant userType ONLY-----------------
+//    ==============================================================================================
 
     /**
      * Updates outlet details.
      *
      * @param outlet Existing outlet entity
-     * @param dto Update request DTO
+     * @param dto    Update request DTO
      */
     public static void updateOutletEntity(FmOutlet outlet, FmUpdateOutletRequestDTO dto) {
 
@@ -713,21 +1016,19 @@ public final class FmOutletMapper {
 
             GeometryFactory geometryFactory = new GeometryFactory();
 
-            Point point = geometryFactory.createPoint(new Coordinate(
-            Double.parseDouble(dto.getLongitude()), Double.parseDouble(dto.getLatitude())));
+            Point point = geometryFactory.createPoint(new Coordinate(Double.parseDouble(dto.getLongitude()), Double.parseDouble(dto.getLatitude())));
             point.setSRID(4326);
             outlet.setOutletLocation(point);
         }
     }
+
     /**
      * Updates outlet address details.
      *
      * @param address Existing outlet address entity
-     * @param dto Update request DTO
+     * @param dto     Update request DTO
      */
-    public static void updateOutletAddressEntity(
-            FmOutletAddress address,
-            FmUpdateOutletRequestDTO dto) {
+    public static void updateOutletAddressEntity(FmOutletAddress address, FmUpdateOutletRequestDTO dto) {
 
         address.setBuildingNumber(dto.getBuildingNumber());
         address.setRoad(dto.getRoad());
@@ -737,15 +1038,14 @@ public final class FmOutletMapper {
         address.setCityId(dto.getCityId());
         address.setAreaId(dto.getAreaId());
     }
+
     /**
      * Updates outlet bank details.
      *
      * @param bankDetails Existing bank details entity
-     * @param dto Update request DTO
+     * @param dto         Update request DTO
      */
-    public static void updateOutletBankEntity(
-            FmMerchantBankDetails bankDetails,
-            FmUpdateOutletRequestDTO dto) {
+    public static void updateOutletBankEntity(FmMerchantBankDetails bankDetails, FmUpdateOutletRequestDTO dto) {
 
         bankDetails.setAccountNumber(dto.getAccountNumber());
 
@@ -756,6 +1056,7 @@ public final class FmOutletMapper {
         bankDetails.setAccountHolderName(dto.getAccountHolderName());
     }
 //    ------------------------------------------------------------------------------------------------
+
     /**
      * Maps projection results to a list of DTOs for Merchant-view outlet listings.
      */
@@ -790,11 +1091,7 @@ public final class FmOutletMapper {
         dto.setOutletId(toInt(row[0]));
         dto.setOutletName(row[1] != null ? row[1].toString() : null);
         dto.setMerchantId(toInt(row[2]));
-        dto.setCuisineType(
-                row[3] != null
-                        ? (Integer[]) row[3]
-                        : null
-        );
+        dto.setCuisineType(row[3] != null ? (Integer[]) row[3] : null);
         dto.setOutletPhone(row[4] != null ? row[4].toString() : null);
         dto.setRadius(toBigDecimal(row[5]));
         dto.setReview(toDouble(row[6]));
@@ -821,12 +1118,11 @@ public final class FmOutletMapper {
 
     /**
      * Converts outlet bank details from request DTO to User Bank Details entity.
-     *
+     * <p>
      * Why:
      * Keeps all entity mapping inside the mapper instead of the service.
      */
-    public static FmMerchantBankDetails toOutletBankEntity(
-            FmOutletRequestDTO dto, Integer outletId) {
+    public static FmMerchantBankDetails toOutletBankEntity(FmOutletRequestDTO dto, Integer outletId) {
 
         FmMerchantBankDetails bankDetails = new FmMerchantBankDetails();
 
@@ -851,9 +1147,7 @@ public final class FmOutletMapper {
      * the response DTO returned after successful outlet creation.
      */
 
-    public static FmOutletCreateResponseDTO toCreateResponseDto(
-            FmOutletRequestDTO request,
-            FmOutlet outlet) {
+    public static FmOutletCreateResponseDTO toCreateResponseDto(FmOutletRequestDTO request, FmOutlet outlet) {
 
         FmOutletCreateResponseDTO response = new FmOutletCreateResponseDTO();
 
@@ -909,16 +1203,15 @@ public final class FmOutletMapper {
     }
 
 //    ------------------------------------------------------------------------------------------
+
     /**
      * Converts the updated outlet entity and request DTO into
      * the response returned after successful outlet update.
-     *
+     * <p>
      * Note:
      * Username and Password are not part of the update API.
      */
-    public static FmUpdateOutletRequestDTO toUpdateResponseDto(
-            FmUpdateOutletRequestDTO request,
-            FmOutlet outlet) {
+    public static FmUpdateOutletRequestDTO toUpdateResponseDto(FmUpdateOutletRequestDTO request, FmOutlet outlet) {
 
         FmUpdateOutletRequestDTO response = new FmUpdateOutletRequestDTO();
 
@@ -963,8 +1256,7 @@ public final class FmOutletMapper {
         return response;
     }
 
-    public static FmOutletDay toOutletDayEntity(FmOutletDayDTO dto,
-            Integer outletId) {
+    public static FmOutletDay toOutletDayEntity(FmOutletDayDTO dto, Integer outletId) {
 
         FmOutletDay day = new FmOutletDay();
 
@@ -976,6 +1268,7 @@ public final class FmOutletMapper {
 
         return day;
     }
+
     private static BigDecimal toBigDecimal(Object o) {
 
         if (o == null) {
@@ -1004,7 +1297,7 @@ public final class FmOutletMapper {
         activeOffer.setPromotionScheduleId(outletDiscounts.getPromotionScheduleId());
         activeOffer.setUsageLimitPerUser(outletDiscounts.getUsageLimitPerUser());
 
-        if(outletDiscounts.getSourceType().equals("PRICE_DROP")){
+        if (outletDiscounts.getSourceType().equals("PRICE_DROP")) {
 
             log.info("Outlet has price drop ");
             Duration duration = Duration.between(LocalDateTime.now(), outletDiscounts.getEndDateTime());
@@ -1016,10 +1309,9 @@ public final class FmOutletMapper {
 
             activeOffer.setRemainingTime(remainingTimeStr);
 
-            log.info("===================={} ",remainingTimeStr);
+            log.info("===================={} ", remainingTimeStr);
         }
 
         return activeOffer;
     }
-
 }

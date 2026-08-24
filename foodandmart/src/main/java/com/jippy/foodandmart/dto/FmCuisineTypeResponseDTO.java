@@ -1,18 +1,19 @@
 package com.jippy.foodandmart.dto;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
+
 @NoArgsConstructor
+@Data
 public class FmCuisineTypeResponseDTO {
 
-    private Integer cuisineTypesId;
+    private Integer cuisineTypeId;
 
-    private String cuisineTypesName;
+    private String cuisineTypeName;
 
 }

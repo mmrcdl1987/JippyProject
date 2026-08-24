@@ -44,11 +44,11 @@ public final class FmCuisineTypeMapper {
         FmCuisineTypeResponseDTO dto =
                 new FmCuisineTypeResponseDTO();
 
-        dto.setCuisineTypesId(
+        dto.setCuisineTypeId(
                 entity.getCuisineTypesId()
         );
 
-        dto.setCuisineTypesName(
+        dto.setCuisineTypeName(
                 entity.getCuisineTypesName()
         );
 
