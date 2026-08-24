@@ -7,7 +7,8 @@ import java.util.List;
 
 @Data
 public class FmOutletDetailsDto {
-//    private Integer outletId;
+
+    private Integer outletId;
 
     @Schema(example = "Friends Restaurant")
     private String outletName;
@@ -19,8 +20,11 @@ public class FmOutletDetailsDto {
     @Schema(example = "9848022339")
     private String alternateOutletPhone;
 
-    private Integer[] cuisineType;
-
+    // =========================================================
+    // Cuisine Types
+    // Only populated for MERCHANT userType
+    // =========================================================
+    private List<FmCuisineTypeResponseDTO> cuisineTypes;
     @Schema(example = "17.4940")
     private Double latitude;
 

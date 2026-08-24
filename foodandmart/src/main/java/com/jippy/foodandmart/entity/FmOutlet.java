@@ -85,9 +85,9 @@ public class FmOutlet {
     @Column(name = "is_toggle")
     private Boolean isToggle;
 
-    @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(name = "cuisine_type", columnDefinition = "integer[]")
-    private Integer[] cuisineType;
+        @JdbcTypeCode(SqlTypes.ARRAY)
+        @Column(name = "cuisine_type", columnDefinition = "integer[]")
+        private Integer[] cuisineType;
 
 
 //    @JsonIgnore

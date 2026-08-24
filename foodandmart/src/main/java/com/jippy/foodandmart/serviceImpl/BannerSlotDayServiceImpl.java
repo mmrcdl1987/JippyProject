@@ -20,10 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
+@Service
 public class BannerSlotDayServiceImpl implements BannerSlotDayService {
 
     public static final String SETTLEMENT_WEEK = "settlement_week";
