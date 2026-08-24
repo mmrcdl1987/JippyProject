@@ -273,6 +273,58 @@ public class DriverServiceImpl implements DriverService {
         return DriverMapper.mapToDriverDto(driver, address);
     }
 
+    @Override
+    @Transactional
+    public List<DriverDto> getAllDrivers() {
+
+        log.info("GET_ALL_DRIVERS_API_START");
+
+        List<Driver> drivers = driverRepository.findAll();
+
+        if (drivers.isEmpty()) {
+            log.info("NO_DRIVERS_FOUND");
+            return new ArrayList<>();
+        }
+
+        List<DriverDto> response = new ArrayList<>();
+
+        for (Driver driver : drivers) {
+
+            DriverAddressRequestDto address = null;
+
+            try {
+
+                log.info(
+                        "FETCHING_DRIVER_ADDRESS | driverId={}",
+                        driver.getDriverId());
+
+                address = fmFeignClient
+                        .getAddressDetails(driver.getDriverId())
+                        .getBody();
+
+            } catch (Exception e) {
+
+                log.error(
+                        "FAILED_TO_FETCH_DRIVER_ADDRESS | driverId={}",
+                        driver.getDriverId(),
+                        e);
+            }
+
+            DriverDto dto = DriverMapper.mapToDriverListDto(
+                    driver,
+                    address
+            );
+
+            response.add(dto);
+        }
+
+        log.info(
+                "GET_ALL_DRIVERS_API_SUCCESS | totalDrivers={}",
+                response.size());
+
+        return response;
+    }
+
     /**
      * Approves the driver.
      */

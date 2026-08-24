@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.MealTypeTiming;
 import com.jippy.foodandmart.mapper.CustomerBannerMapper;
-import com.jippy.foodandmart.projections.ActiveBannerProjection;
 import com.jippy.foodandmart.repository.MealTypeTimingRepository;
 import com.jippy.foodandmart.service.BannerCacheService;
 import com.jippy.foodandmart.service.OutletSubscriptionPlanService;
@@ -63,7 +62,7 @@ public class BannerCacheServiceImpl implements BannerCacheService {
     // In-Memory cache for S3 banner URLs to avoid hitting S3 on every user request
     private final List<String> cachedDefaultS3Urls = new CopyOnWriteArrayList<>();
 
-// 1. MAIN LOCATION BANNER QUERY (Called by API Controller)
+    // 1. MAIN LOCATION BANNER QUERY (Called by API Controller)
     @Override
     public GroupedBannerResponseDto getActiveBannersForLocation(double lat, double lng) {
         log.info("[FETCH START] Requesting active banners for Lat: {}, Lng: {}", lat, lng);
@@ -197,7 +196,7 @@ public class BannerCacheServiceImpl implements BannerCacheService {
 
             // Take first record for outlet metadata (Lat, Lng, Name, Radius)
             ActiveBannerResponseDto primaryRecord = outletBannerRows.get(0);
-           System.out.println("===================primaryRecord========"+primaryRecord);
+            System.out.println("===================primaryRecord========"+primaryRecord);
 
             if (primaryRecord.getLatitude() == null || primaryRecord.getLongitude() == null) {
                 log.warn("[INDEX SKIP] Skipping outletId: {} due to missing Lat/Lng coordinates", outletId);

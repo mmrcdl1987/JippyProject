@@ -140,10 +140,7 @@ import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.dto.FmOutletDto;
 import com.jippy.foodandmart.dto.*;
-import com.jippy.foodandmart.entity.FmMerchantBankDetails;
-import com.jippy.foodandmart.entity.FmOutlet;
-import com.jippy.foodandmart.entity.FmOutletAddress;
-import com.jippy.foodandmart.entity.FmOutletDay;
+import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import lombok.extern.slf4j.Slf4j;
@@ -198,28 +195,101 @@ public final class FmOutletMapper {
         return outlet;
     }
 
+
+// OUTLET ENTITY -> OUTLET RESPONSE DTO
+
     public static FmOutletResponseDto toOutletResponseDto(FmOutlet outlet) {
 
-        FmOutletResponseDto dto = new FmOutletResponseDto();
+        if (outlet == null) {
+            return null;
+        }
 
+        FmOutletResponseDto dto = new FmOutletResponseDto();
+        // Outlet Details
         dto.setOutletId(outlet.getOutletId());
         dto.setOutletName(outlet.getOutletName());
         dto.setOutletEmail(outlet.getOutletEmail());
         dto.setMerchantId(outlet.getMerchantId());
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
+        dto.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
+
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());
         dto.setOutletPicUrl(outlet.getOutletPicUrl());
-
-        // Convert Point -> Latitude X & Longitude Y
+        // Outlet Location
+        //
+        // JTS Point:
+        // X = Longitude
+        // Y = Latitude
         if (outlet.getOutletLocation() != null) {
+
             dto.setLongitude(outlet.getOutletLocation().getX());
+
             dto.setLatitude(outlet.getOutletLocation().getY());
         }
 
         return dto;
+    }
+
+    // ADDRESS -> OUTLET RESPONSE DTO
+    public static void mapAddressToOutletResponse(FmOutletResponseDto response, FmOutletAddress address) {
+
+        if (response == null || address == null) {
+            return;
+        }
+
+        response.setBuildingNumber(address.getBuildingNumber());
+
+        response.setRoad(address.getRoad());
+
+        response.setLandmark(address.getLandmark());
+
+    }
+
+    // BANK DETAILS -> OUTLET RESPONSE DTO
+    public static void mapBankDetailsToOutletResponse(FmOutletResponseDto response, FmMerchantBankDetails bankDetails) {
+
+        if (response == null || bankDetails == null) {
+            return;
+        }
+
+        response.setAccountNumber(bankDetails.getAccountNumber());
+
+        response.setIfscCode(bankDetails.getIfscCode());
+
+        response.setBankName(bankDetails.getBankName());
+
+        response.setAccountHolderName(bankDetails.getAccountHolderName());
+    }
+
+// KYC -> OUTLET RESPONSE DTO
+
+    public static void mapKycToOutletResponse(FmOutletResponseDto response, FmUserKyc kyc) {
+
+        if (response == null || kyc == null) {
+            return;
+        }
+
+        response.setFssaiNumber(kyc.getFssaiNumber());
+
+        response.setGstNumber(kyc.getGstNumber());
+    }
+// OUTLET DAYS -> OUTLET RESPONSE DTO
+
+    public static void mapOperatingDaysToOutletResponse(FmOutletResponseDto response, List<FmOutletDay> outletDays) {
+
+        if (response == null) {
+            return;
+        }
+
+        if (outletDays == null || outletDays.isEmpty()) {
+            response.setOperatingDays(new ArrayList<>());
+            return;
+        }
+
+        response.setOperatingDays(outletDays.stream().map(FmOutletDayMapper::toDTO).toList());
     }
 
     public static  FmAddressRequestDto toAddressRequestDto(FmOutletAddress fmOutletAddress){
@@ -951,4 +1021,5 @@ public final class FmOutletMapper {
 
         return activeOffer;
     }
+
 }

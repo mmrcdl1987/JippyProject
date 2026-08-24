@@ -113,15 +113,12 @@ public class FmUpdateOutletRequestDTO {
     private String landmark;
 
     @Schema(description = "State Id", example = "2")
-    @NotNull(message = "State ID is required")
     private Integer stateId;
 
     @Schema(description = "City Id", example = "3")
-    @NotNull(message = "City ID is required")
     private Integer cityId;
 
     @Schema(description = "Area Id", example = "13")
-    @NotNull(message = "Area ID is required")
     private Integer areaId;
 
     // ------------------------------------------------------------------

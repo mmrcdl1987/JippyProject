@@ -11,6 +11,7 @@ import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
+import com.jippy.foodandmart.mapper.FmOutletDayMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.projections.FmActivePromotionDiscountsProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
@@ -470,25 +471,39 @@ public class FmOutletServiceImpl implements IFmOutletService {
 //                .orElseThrow(() -> new IllegalArgumentException
 //                        ("Outlet ID " + id + " does not exist"));
 //    }
+@Override
+@Transactional(readOnly = true)
+public FmOutletResponseDto getOutletById(Integer outletId) {
 
-    //    -----------------------------------------------
-    @Override
-    public FmOutletResponseDto getOutletById(Integer outletId) {
+    log.info("Fetching complete outlet details for outletId={}", outletId);
 
-        log.info("Fetching outlet details for outletId: {}", outletId);
+    // 1. Fetch outlet
+    FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> {
 
-        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> {
-            log.error("Outlet not found with outletId: {}", outletId);
-            return new ResourceNotFoundException("Outlet not found with id: " + outletId);
-        });
+        log.error("Outlet not found with outletId={}", outletId);
 
-        FmOutletResponseDto outletResponseDto = FmOutletMapper.toOutletResponseDto(outlet);
-        log.info("Successfully fetched outlet details for outletId: {}", outletId);
+        return new ResourceNotFoundException("Outlet not found with id: " + outletId);
+    });
+    // 2. Basic outlet + location
 
-        return outletResponseDto;
+    FmOutletResponseDto response = FmOutletMapper.toOutletResponseDto(outlet);
+    // 3. Address
+    FmOutletAddress address = addressRepository.findByJippyAddressIdAndAddressType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
 
-    }
+    FmOutletMapper.mapAddressToOutletResponse(response, address);
+    // 4. Bank details
+    FmMerchantBankDetails bankDetails = merchantBankDetailsRepository.findByRecipientIdAndUserType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
 
+    FmOutletMapper.mapBankDetailsToOutletResponse(response, bankDetails);
+    // 6. Operating days
+    List<FmOutletDay> outletDays = dayRepository.findByOutletId(outletId);
+
+    FmOutletMapper.mapOperatingDaysToOutletResponse(response, outletDays);
+    // 7. Final log
+    log.info("Successfully fetched complete outlet details for outletId={}", outletId);
+
+    return response;
+}
     @Override
     public FmOutletCreatedDTO createOutletForBulkUploadAndOtpValidation(FmOutletRequestDTO dto) {
 //    public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {

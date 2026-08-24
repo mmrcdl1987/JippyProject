@@ -286,14 +286,16 @@ public class FmOutletController {
 //                (FmApiResponse.success("Outlet fetched", outletService.getOutletById(id)));
 //    }
     @GetMapping("/getOutletById/{outletId}")
-    @Operation(summary = "Get outlet details by outlet ID")
+    @Operation(summary = "Get outlet details by outlet ID", description = "Fetches complete outlet details including outlet information, KYC, bank details, address, location and operating days")
+    @ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
+    @ApiResponse(responseCode = "404", description = "Outlet not found")
     public ResponseEntity<FmApiResponse<FmOutletResponseDto>> getOutletById(@PathVariable Integer outletId) {
 
-        log.info("[OUTLET] GET /api/fm/outlets/{}", outletId);
+        log.info("[OUTLET] GET /api/fm/outlets/getOutletById/{}", outletId);
 
         FmOutletResponseDto response = outletService.getOutletById(outletId);
 
-        log.info("Successfully returned outlet details for outletId: {}", outletId);
+        log.info("Successfully returned outlet details for outletId={}", outletId);
 
         return ResponseEntity.ok(FmApiResponse.success("Outlet fetched successfully", response));
     }
