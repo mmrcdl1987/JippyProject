@@ -1,7 +1,7 @@
 package com.jippy.notification.serviceImpl;
 
-import com.jippy.notification.dto.request.NDeviceTokenRequest;
-import com.jippy.notification.dto.response.NApiResponse;
+import com.jippy.notification.dto.NDeviceTokenRequest;
+import com.jippy.notification.dto.NApiResponse;
 import com.jippy.notification.entity.NDeviceToken;
 import com.jippy.notification.repository.DeviceTokenRepository;
 import com.jippy.notification.service.NDeviceTokenService;
@@ -29,18 +29,38 @@ public class NDeviceTokenServiceImpl implements NDeviceTokenService {
         try {
 
             Optional<NDeviceToken> optionalDeviceToken =
-                    deviceTokenRepository.findByUserIdAndUserTypeAndDeviceType(
-                            request.getUserId(),
-                            request.getUserType(),
-                            request.getDeviceType());
+                    deviceTokenRepository.findByFcmToken(request.getFcmToken());
+
+            if (optionalDeviceToken.isEmpty()) {
+
+                optionalDeviceToken =
+                        deviceTokenRepository.findByUserIdAndUserTypeAndDeviceType(
+                                request.getUserId(),
+                                request.getUserType(),
+                                request.getDeviceType());
+            }
+
+            if (optionalDeviceToken.isEmpty()) {
+
+                optionalDeviceToken =
+                        deviceTokenRepository.findByUserIdAndUserType(
+                                request.getUserId(),
+                                request.getUserType());
+            }
 
             if (optionalDeviceToken.isPresent()) {
 
-                log.info("Device Token already exists. Updating FCM Token.");
+                log.info("Device Token already exists. Updating token row.");
 
                 NDeviceToken deviceToken = optionalDeviceToken.get();
 
+                deviceToken.setUserId(request.getUserId());
+                deviceToken.setUserType(request.getUserType());
+                deviceToken.setDeviceType(request.getDeviceType());
                 deviceToken.setFcmToken(request.getFcmToken());
+                if (deviceToken.getCreatedAt() == null) {
+                    deviceToken.setCreatedAt(LocalDateTime.now());
+                }
 
                 deviceTokenRepository.save(deviceToken);
 

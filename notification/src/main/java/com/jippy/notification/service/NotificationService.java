@@ -8,11 +8,13 @@ import com.jippy.notification.dto.NWalletPointsEvent;
 import com.jippy.notification.entity.NDeviceToken;
 import com.jippy.notification.entity.Notification;
 import com.jippy.notification.entity.OrderNotificationStatus;
+import com.jippy.notification.entity.WalletNotificationStatus;
 import com.jippy.notification.exception.NotificationException;
 import com.jippy.notification.mapper.NWalletNotificationMapper;
 import com.jippy.notification.repository.DeviceTokenRepository;
 import com.jippy.notification.repository.NotificationRepository;
 import com.jippy.notification.repository.OrderNotificationStatusRepository;
+import com.jippy.notification.repository.WalletNotificationStatusRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +29,13 @@ import java.time.LocalDateTime;
 @Slf4j
 public class NotificationService {
 
+    private static final String DEVICE_USER_TYPE_CUSTOMER = "CUSTOMER";
+
     private final NotificationRepository notificationRepository;
 
     private final OrderNotificationStatusRepository statusRepository;
+
+    private final WalletNotificationStatusRepository walletStatusRepository;
 
     private final DeviceTokenRepository deviceTokenRepository;
     @Transactional
@@ -229,7 +235,6 @@ public class NotificationService {
             String body) {
 
         try {
-
             Message message = Message.builder()
                     .setToken(token)
                     .setNotification(
@@ -250,7 +255,6 @@ public class NotificationService {
         } catch (Exception ex) {
 
             log.error("NOTIFICATION_SEND_FAILED", ex);
-
             throw new NotificationException("Unable to send notification");
         }
     }
@@ -276,9 +280,10 @@ public void processWalletPointsNotification(NWalletPointsEvent event) {
 
     log.info(
             "PROCESS_WALLET_POINTS_NOTIFICATION_START | " +
-                    "orderId={} | customerId={}",
+                    "orderId={} | customerId={} | pointsType={}",
             event.getOrderId(),
-            event.getCustomerId()
+            event.getCustomerId(),
+            event.getPointsType()
     );
 
     // 1. Get notification template checks for the notification type and role
@@ -288,9 +293,22 @@ public void processWalletPointsNotification(NWalletPointsEvent event) {
                     event.getNotificationType()
             );
 
-    // 2. Prevent duplicate notification
-//     checks if a notification for the same order, notification type,
-//     and customer has already been sent
+    // 2. Save or update the device token when the create-customer flow passes one.
+    NDeviceToken deviceToken = upsertCustomerDeviceToken(event);
+
+    if (deviceToken == null) {
+
+        log.warn(
+                "CUSTOMER_DEVICE_TOKEN_NOT_FOUND | customerId={}",
+                event.getCustomerId()
+        );
+
+        return;
+    }
+
+    // 3. Prevent duplicate notification
+    // checks if a notification for the same order, notification type,
+    // and customer has already been sent
     boolean alreadyExists =
             statusRepository
                     .existsByOrderIdAndNotificationIdAndNotificationRecipientId(
@@ -303,28 +321,10 @@ public void processWalletPointsNotification(NWalletPointsEvent event) {
 
         log.info(
                 "DUPLICATE_WALLET_NOTIFICATION_SKIPPED | " +
-                        "orderId={} | customerId={}",
+                        "orderId={} | customerId={} | pointsType={}",
                 event.getOrderId(),
-                event.getCustomerId()
-        );
-
-        return;
-    }
-
-    // 3. Fetch customer's device token
-    NDeviceToken deviceToken =
-            deviceTokenRepository
-                    .findByUserIdAndUserType(
-                            event.getCustomerId(),
-                            NConstants.ROLE_CUSTOMER
-                    )
-                    .orElse(null);
-
-    if (deviceToken == null) {
-
-        log.warn(
-                "CUSTOMER_DEVICE_TOKEN_NOT_FOUND | customerId={}",
-                event.getCustomerId()
+                event.getCustomerId(),
+                event.getPointsType()
         );
 
         return;
@@ -345,38 +345,86 @@ public void processWalletPointsNotification(NWalletPointsEvent event) {
     );
 
     // 5. Create notification history record in to the database
-    OrderNotificationStatus status =
+    WalletNotificationStatus status =
             NWalletNotificationMapper.toNotificationStatus(
                     event,
                     notification,
                     deviceToken
             );
 
-    statusRepository.save(status);
+    walletStatusRepository.save(status);
 
-    // 6. Send Firebase notification and get the message ID
+    try {
 
-//    String firebaseMessageId =
-//            sendNotification(
-//                    deviceToken.getFcmToken(),
-//                    notification.getSubject(),
-//                    message
-//            );
-//
-//    // 7. Mark notification as sent when Firebase notification is successfully sent
-//    status.setNotificationStatus(true);
-//    status.setFirebaseMessageId(firebaseMessageId);
-//    status.setDeliveredAt(LocalDateTime.now());
-//    status.setUpdatedAt(LocalDateTime.now());
-//
-//    statusRepository.save(status);
+        // 6. Send Firebase notification and get the message ID
+        String firebaseMessageId =
+                sendNotification(
+                        deviceToken.getFcmToken(),
+                        notification.getSubject(),
+                        message
+                );
 
-//    log.info(
-//            "WALLET_POINTS_NOTIFICATION_SENT | " +
-//                    "orderId={} | customerId={} | firebaseMessageId={}",
-//            event.getOrderId(),
-//            event.getCustomerId(),
-//            firebaseMessageId
-//    );
+        // 7. Mark notification as sent when Firebase notification is successfully sent
+        status.setNotificationStatus(true);
+        status.setFirebaseMessageId(firebaseMessageId);
+        status.setDeliveredAt(LocalDateTime.now());
+        status.setUpdatedAt(LocalDateTime.now());
+        walletStatusRepository.save(status);
+
+        log.info(
+                "WALLET_POINTS_NOTIFICATION_SENT | " +
+                        "orderId={} | customerId={} | firebaseMessageId={}",
+                event.getOrderId(),
+                event.getCustomerId(),
+                firebaseMessageId
+        );
+
+    } catch (Exception ex) {
+
+        log.error(
+                "WALLET_POINTS_NOTIFICATION_SEND_FAILED | orderId={} | customerId={} | error={}",
+                event.getOrderId(),
+                event.getCustomerId(),
+                ex.getMessage(),
+                ex
+        );
+
+        status.setNotificationStatus(false);
+        status.setFirebaseMessageId("FIREBASE_SEND_FAILED");
+        status.setUpdatedAt(LocalDateTime.now());
+        walletStatusRepository.save(status);
+    }
 }
+
+    private NDeviceToken upsertCustomerDeviceToken(NWalletPointsEvent event) {
+
+        if (event.getFcmToken() == null || event.getFcmToken().isBlank()) {
+
+            return deviceTokenRepository
+                    .findByUserIdAndUserType(
+                            event.getCustomerId(),
+                            DEVICE_USER_TYPE_CUSTOMER
+                    )
+                    .orElse(null);
+        }
+
+        NDeviceToken deviceToken = deviceTokenRepository
+                .findByFcmToken(event.getFcmToken())
+                .or(() -> deviceTokenRepository.findByUserIdAndUserType(
+                        event.getCustomerId(),
+                        DEVICE_USER_TYPE_CUSTOMER
+                ))
+                .orElseGet(NDeviceToken::new);
+
+        deviceToken.setUserId(event.getCustomerId());
+        deviceToken.setUserType(DEVICE_USER_TYPE_CUSTOMER);
+        deviceToken.setDeviceType("ANDROID");
+        deviceToken.setFcmToken(event.getFcmToken());
+
+        if (deviceToken.getCreatedAt() == null) {
+            deviceToken.setCreatedAt(LocalDateTime.now());
+        }
+
+        return deviceTokenRepository.save(deviceToken);
+    }
 }

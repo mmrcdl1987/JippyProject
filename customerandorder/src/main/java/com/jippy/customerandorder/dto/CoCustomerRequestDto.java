@@ -28,4 +28,6 @@ public class CoCustomerRequestDto {
 
     private Integer customerId;
 
+    private String fcmToken;
+
 }

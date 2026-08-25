@@ -1,7 +1,7 @@
 package com.jippy.notification.service;
 
-import com.jippy.notification.dto.request.NDeviceTokenRequest;
-import com.jippy.notification.dto.response.NApiResponse;
+import com.jippy.notification.dto.NDeviceTokenRequest;
+import com.jippy.notification.dto.NApiResponse;
 
 /**
  * Service Interface for Device Token Operations.
