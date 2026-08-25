@@ -2,10 +2,20 @@ package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.service.FmProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/fm/products")
 @RequiredArgsConstructor
+@Validated
 public class FmProductController {
 
     private final FmProductService productMappingService;
@@ -67,13 +78,244 @@ public class FmProductController {
     /**
      * PUT /api/fm/products/{productId}
      */
-    @PutMapping("/{productId}")
-    public ResponseEntity<FmProductUpdateResponseDto> updateProduct(@PathVariable Integer productId, @Valid @RequestBody FmProductUpdateRequestDto request) {
+    @PutMapping("/updateCategoryAndProductDetails/{productId}")
+    public ResponseEntity<FmProductUpdateResponseDto>
+        updateProduct(@PathVariable Integer productId,
+                       @Valid @RequestBody FmProductUpdateRequestDto request) {
 
         log.info("[PRODUCT] UPDATE Product. ProductId={}", productId);
 
         return ResponseEntity.ok(productMappingService.updateProduct(productId, request));
     }
+
+//    ==================================================================================================
+//    ============================ getCategoryForProductByProductType =====================================
+//    ==================================================================================================
+@Operation(
+        summary = "Get Category For Product By Product Type",
+        description = """
+                Fetch category and outlet details based on product name and product type.
+
+                Supported product types:
+                - PRODUCT
+                - MASTERPRODUCT
+
+                For PRODUCT:
+                Returns productId, productName, outletCategoryId, outletId,
+                categoryId, categoryName and outletName.
+
+                For MASTERPRODUCT:
+                Returns masterProductId, masterProductName, categoryId
+                and categoryName.
+
+                Product name matching is case-insensitive and leading/trailing
+                spaces are removed before searching.
+                """
+)
+@ApiResponses({
+
+        @ApiResponse(
+                responseCode = "200",
+                description = "Details fetched successfully",
+                content = @Content(
+                        mediaType = "application/json",
+                        examples = {
+
+                                @ExampleObject(
+                                        name = "PRODUCT Response",
+                                        summary = "Response for PRODUCT type",
+                                        value = """
+                                                [
+                                                  {
+                                                    "productId": 160,
+                                                    "productName": "Lemon Soda",
+                                                    "outletCategoryId": 80,
+                                                    "outletId": 220,
+                                                    "categoryId": 5,
+                                                    "categoryName": "Mediterranean",
+                                                    "outletName": "Sample Restaurantt"
+                                                  }
+                                                ]
+                                                """
+                                ),
+
+                                @ExampleObject(
+                                        name = "MASTERPRODUCT Response",
+                                        summary = "Response for MASTERPRODUCT type",
+                                        value = """
+                                                [
+                                                  {
+                                                    "masterProductId": 22,
+                                                    "masterProductName": "Premium Cold Coffee",
+                                                    "categoryId": 1,
+                                                    "categoryName": "Beve"
+                                                  },
+                                                  {
+                                                    "masterProductId": 24,
+                                                    "masterProductName": "Premium Cold Coffee",
+                                                    "categoryId": 1,
+                                                    "categoryName": "Beve"
+                                                  }
+                                                ]
+                                                """
+                                )
+                        }
+                )
+        ),
+
+        @ApiResponse(
+                responseCode = "400",
+                description = "Invalid product name or product type",
+                content = @Content(
+                        mediaType = "application/json",
+                        examples = @ExampleObject(
+                                value = """
+                                        {
+                                          "success": false,
+                                          "message": "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT.",
+                                          "timestamp": "2026-08-25T10:30:00"
+                                        }
+                                        """
+                        )
+                )
+        ),
+
+        @ApiResponse(
+                responseCode = "404",
+                description = "Product or Master Product not found",
+                content = @Content(
+                        mediaType = "application/json",
+                        examples = @ExampleObject(
+                                value = """
+                                        {
+                                          "success": false,
+                                          "message": "Product not found with name : ABC Product",
+                                          "timestamp": "2026-08-25T10:30:00"
+                                        }
+                                        """
+                        )
+                )
+        )
+})
+
+        @GetMapping("/getCategoryForProductByProductType")
+        public ResponseEntity<FmApiResponse<Object>> getCategoryForProductByProductType(
+
+        @Parameter(
+                description = "Product name to search",
+                required = true,
+                example = "Lemon Soda",
+                schema = @Schema(
+                        type = "string",
+                        example = "Lemon Soda"
+                )
+        )
+        @NotBlank(message = "Product name is required.")
+        @RequestParam String productName,
+        @Parameter(
+                description = "Product type. Allowed values: PRODUCT or MASTERPRODUCT",
+                required = true,
+                example = "PRODUCT",
+                schema = @Schema(
+                        type = "string",
+                        allowableValues = {
+                                "PRODUCT",
+                                "MASTERPRODUCT"
+                        },
+                        example = "PRODUCT"
+                )
+        )
+        @Pattern(
+                regexp = "PRODUCT|MASTERPRODUCT",
+                message = "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT."
+        )
+        @RequestParam String productType) {
+
+    log.info(
+            "[GET_CATEGORY_FOR_PRODUCT] Controller request | productName={} | productType={}",
+            productName,
+            productType
+    );
+
+    Object response = productMappingService.getCategoryForProductByProductType(
+                    productName,
+                    productType
+            );
+
+    return ResponseEntity.ok(
+            FmApiResponse.success(
+                    "Category details fetched successfully.",
+                    response
+            )
+    );
+
+}
+
+//=====================================================================================================
+//===============================updateCategoryForProductByProductType==================================
+//=====================================================================================================
+@PutMapping("/updateCategoryForProductByProductType")
+@Operation(
+        summary = "Update Category For Product By Product Type",
+        description = """
+                Updates the category for a Product or Master Product.
+
+                PRODUCT:
+                1. Finds the product using productName.
+                2. Gets the outletCategoryId from products.
+                3. Updates category_id in outlet_categories.
+
+                MASTERPRODUCT:
+                1. Finds all master products using masterProductName.
+                2. Updates category_id in all matching master_products records.
+
+                Supported product types:
+                - PRODUCT
+                - MASTERPRODUCT
+                """
+)
+@ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "Category updated successfully"
+        ),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Invalid request"
+        ),
+
+        @ApiResponse(
+                responseCode = "404",
+                description = "Product, Master Product or Category not found"
+
+        )
+})
+
+        public ResponseEntity<FmApiResponse<FmProductCategoryUpdateResponseDto>> updateCategoryForProductByProductType(
+                                @Valid @RequestBody FmProductCategoryUpdateRequestDto request) {
+
+    log.info(
+            "[UPDATE_CATEGORY_FOR_PRODUCT] Controller request | productName={} | productType={} | updatedCategoryId={}",
+            request.getProductName(),
+            request.getProductType(),
+            request.getUpdatedCategoryId()
+    );
+
+    FmProductCategoryUpdateResponseDto response =
+            productMappingService.updateCategoryForProductByProductType(
+                    request
+            );
+
+    return ResponseEntity.ok(
+            FmApiResponse.success(
+                    "Category updated successfully.",
+                    response
+            )
+    );
+}
+
+//=================================================================================================
+//=================================================================================================
 
     @GetMapping("/exists")
     public ResponseEntity<Boolean> existsProductInOutlet(

@@ -1,6 +1,8 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProduct;
+import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
+import com.jippy.foodandmart.projections.FmProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductPriceProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -235,6 +237,145 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
             @Param("outletId") Integer outletId,
             @Param("variantId") Integer variantId
     );
+
+
+    /*
+     * ============================================================
+     * PRODUCT
+     * ============================================================
+     *
+     * products
+     *      ↓
+     * outlet_categories
+     *      ↓
+     * outlets
+     *      ↓
+     * categories
+     */
+    @Query(value = """
+            SELECT
+                p.product_id AS productId,
+                p.product_name AS productName,
+                oc.outlet_category_id AS outletCategoryId,
+                oc.outlet_id AS outletId,
+                c.category_id AS categoryId,
+                c.category_name AS categoryName,
+                o.outlet_name AS outletName
+            FROM jippy_fm.products p
+            LEFT JOIN jippy_fm.outlet_categories oc
+                ON p.outlet_category_id = oc.outlet_category_id
+            LEFT JOIN jippy_fm.outlets o
+                ON oc.outlet_id = o.outlet_id
+            LEFT JOIN jippy_fm.categories c
+                ON oc.category_id = c.category_id
+            WHERE LOWER(p.product_name) = LOWER(:productName)
+              AND p.is_active = 'Y'
+              AND oc.is_active = 'Y'
+              AND o.is_active = 'Y'
+            """,
+            nativeQuery = true)
+    List<FmProductCategoryProjection> findProductCategoryDetails(
+            @Param("productName") String productName
+    );
+
+
+    /*
+     * ============================================================
+     * MASTER PRODUCT
+     * ============================================================
+     *
+     * master_products already contains:
+     *
+     * master_product_id
+     * master_product_name
+     * category_id
+     * category_name
+     */
+    @Query(value = """
+            SELECT
+                mp.master_product_id AS masterProductId,
+                mp.master_product_name AS masterProductName,
+                mp.category_id AS categoryId,
+                mp.category_name AS categoryName
+            FROM jippy_fm.master_products mp
+            WHERE LOWER(mp.master_product_name) = LOWER(:productName)
+            """,
+            nativeQuery = true)
+    List<FmMasterProductCategoryProjection> findMasterProductCategoryDetails(
+            @Param("productName") String productName
+    );
+
+    /*
+     * ============================================================
+     * Find outlet category ID for a product
+     * ============================================================
+     */
+    @Query(value = """
+        SELECT p.outlet_category_id
+        FROM jippy_fm.products p
+        WHERE LOWER(p.product_name) = LOWER(:productName)
+          AND p.is_active = 'Y'
+        """,
+            nativeQuery = true)
+    List<Integer> findOutletCategoryIdsByProductName(
+            @Param("productName") String productName
+    );
+
+    /*
+     * ============================================================
+     * Update category ID in outlet_categories
+     * ============================================================
+     */
+    @Modifying
+    @Query(value = """
+        UPDATE jippy_fm.outlet_categories
+        SET category_id = :updatedCategoryId,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE outlet_category_id = :outletCategoryId
+          AND is_active = 'Y'
+        """,
+            nativeQuery = true)
+    int updateOutletCategoryId(
+            @Param("outletCategoryId") Integer outletCategoryId,
+            @Param("updatedCategoryId") Integer updatedCategoryId
+    );
+
+    /*
+     * ============================================================
+     * Update category ID for Master Product
+     *
+     * All records having the same master_product_name
+     * will be updated.
+     * ============================================================
+     */
+    @Modifying
+    @Query(value = """
+        UPDATE jippy_fm.master_products
+        SET category_id = :updatedCategoryId,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE LOWER(master_product_name) = LOWER(:productName)
+        """,
+            nativeQuery = true)
+    int updateMasterProductCategoryId(
+            @Param("productName") String productName,
+            @Param("updatedCategoryId") Integer updatedCategoryId
+    );
+    /*
+     * ============================================================
+     * Check whether category exists
+     * ============================================================
+     */
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM jippy_fm.categories
+        WHERE category_id = :categoryId
+        """,
+            nativeQuery = true)
+    long countCategoryById(
+            @Param("categoryId") Integer categoryId
+    );
+//    ===========================================================================================
+//    ===========================================================================================
 }
 
 

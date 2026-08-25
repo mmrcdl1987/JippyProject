@@ -20,8 +20,17 @@ public final class FmAppConstants {
     public static final String APPROVAL_STATUS_PENDING = "PENDING";
     public static final String APPROVAL_STATUS_APPROVED = "APPROVED";
     public static final String APPROVAL_STATUS_REJECTED = "REJECTED";
+    /*
+     * ============================================================
+     * PRODUCT TYPES
+     * ============================================================
+     */
+    public static final String PRODUCT_TYPE_PRODUCT = "PRODUCT";
 
-//  -------------------------Response messages------------------------------
+    public static final String PRODUCT_TYPE_MASTER_PRODUCT = "MASTERPRODUCT";
+
+
+    //  -------------------------Response messages------------------------------
 public static final String MSG_APPROVAL_REQUEST_UPDATED =
         "Approval Requests Updated Successfully.";
     public static final String MSG_REJECTED_REASON_REQUIRED =

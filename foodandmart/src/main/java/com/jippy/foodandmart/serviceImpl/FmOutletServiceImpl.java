@@ -86,6 +86,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final S3Service s3Service;
     private final EmailService emailService;
 
+
     @Override
     @Transactional
     public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto) {
@@ -760,6 +761,7 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
 
         return FmOutletMapper.toCreatedDTO(outlet);
     }
+
 
     // ── Bulk Upload ───────────────────────────────────────────────────────────
 

@@ -9,8 +9,7 @@ import java.util.List;
 
 public interface IFmOutletService {
 
-    FmOutletCreateResponseDTO createOutlet(
-            FmOutletRequestDTO dto);
+    FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto);
 
     String uploadOrUpdateOutletImage(
             Integer outletId,
