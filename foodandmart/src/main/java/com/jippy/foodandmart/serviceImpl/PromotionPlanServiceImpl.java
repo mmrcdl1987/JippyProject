@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.enums.PromotionStatus;
@@ -14,6 +15,7 @@ import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.IPromotionPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.jippy.foodandmart.specification.PromotionPlanSpecification;
@@ -47,6 +49,7 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
     private final PromotionPlanMapper promotionPlanMapper;
     private final PromotionEventProducer promotionEventProducer;
     private final FmOutletAddressRepository outletAddressRepository;
+    private final CacheInvalidateServiceImpl cacheInvalidateService;
 
     /**
      * Create Promotion Plan
@@ -110,6 +113,7 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
 
         log.info("[PROMOTION-PLAN] Promotion plan created successfully | promotionPlanId={} | outletId={} | products={} | categories={}", savedPromotionPlan.getPromotionPlanId(), savedPromotionPlan.getOutletId(), response.getProductIds().size(), response.getOutletCategoryIds().size());
 
+        cacheInvalidateService.invalidateCache(outlet.getOutletId());
         return response;
     }
 
@@ -279,6 +283,8 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
         );
 
         log.info("[PROMOTION-PLAN] Promotion plan updated successfully | " + "promotionPlanId={} | outletId={} | products={} | categories={}", updatedPromotionPlan.getPromotionPlanId(), updatedPromotionPlan.getOutletId(), response.getProductIds().size(), response.getOutletCategoryIds().size());
+
+        cacheInvalidateService.invalidateCache(outlet.getOutletId());
 
         return response;
     }

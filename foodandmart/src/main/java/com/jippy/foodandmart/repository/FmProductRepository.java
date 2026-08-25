@@ -374,8 +374,14 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     long countCategoryById(
             @Param("categoryId") Integer categoryId
     );
-//    ===========================================================================================
-//    ===========================================================================================
+
+
+    @Query(value = """
+            SELECT oc.outlet_id FROM "jippy_fm"."products" p 
+            join "jippy_fm"."outlet_categories" oc on oc.outlet_category_id = p.outlet_category_id 
+            where p.product_id = :productId
+            """, nativeQuery = true)
+    Integer fetchOutletIdForProductId(@Param("productId") Integer productId);
 }
 
 

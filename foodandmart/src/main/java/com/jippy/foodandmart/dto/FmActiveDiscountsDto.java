@@ -37,4 +37,7 @@ public class FmActiveDiscountsDto {
     private String planType;
     private  String offerName;
 
+    private Integer maxSelection;
+    private String promotionMessage;
+
 }

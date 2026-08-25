@@ -1,9 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
-import com.jippy.foodandmart.entity.FmOutlet;
-import com.jippy.foodandmart.entity.FmProduct;
-import com.jippy.foodandmart.entity.FmProductOnlinePricing;
+import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.PricingException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
@@ -13,7 +11,6 @@ import com.jippy.foodandmart.repository.FmOutletRepository;
 import com.jippy.foodandmart.repository.FmPricingRepository;
 import com.jippy.foodandmart.repository.FmProductRepository;
 import com.jippy.foodandmart.repository.FmProductVariantOptionRepository;
-import com.jippy.foodandmart.entity.FmProductVariantOption;
 import com.jippy.foodandmart.service.IPricingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +38,7 @@ public class FmPricingServiceImpl implements IPricingService {
     private final DivisionFeignClient divisionFeignClient;
     private final FmProductMapper productMapper;
     private final FmProductVariantOptionRepository variantOptionRepo;
+    private final CacheInvalidateServiceImpl cacheInvalidateService;
 
 
     //  GET OUTLETS BASED ON CONDITION IS_APPROVED
@@ -114,6 +112,10 @@ public class FmPricingServiceImpl implements IPricingService {
                 log.info("Updating price | outletId={} | productId={} | variantId={} | outletCategoryId={} | price={}", outletId, productId, productVariantId, outletCategoryId, item.getNewPrice());
 
                 upsertPrice(productId, outletCategoryId, productVariantId, item.getNewPrice());
+
+                // Invalidate outlet details cache
+                cacheInvalidateService.invalidateCache(outletId);
+
             }
         }
 
@@ -305,6 +307,10 @@ public class FmPricingServiceImpl implements IPricingService {
 
                 variantCount++;
             }
+
+            // Invalidate outlet details cache
+            Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+            cacheInvalidateService.invalidateCache(outletId);
         }
 
         /*

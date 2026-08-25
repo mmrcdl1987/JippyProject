@@ -85,6 +85,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final MealTypeTimingRepository mealTypeTimingRepository;
     private final S3Service s3Service;
     private final EmailService emailService;
+    private final CacheInvalidateServiceImpl cacheInvalidateService;
 
 
     @Override
@@ -366,6 +367,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         log.info("Outlet operating days updated successfully.");
 
+        // invalidate outlet details cache
+        cacheInvalidateService.invalidateCache(outlet.getOutletId());
 
         /*
          * Return updated response.
@@ -1184,7 +1187,7 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
                     log.info("Zero active promotions or coupons found. Proceeding with standard menu pricing.");
 
                     // Cache the raw menu in Redis with standard 10-minute TTL so subsequent calls hit Redis Step 1
-                   saveToRedis(cacheKey, outletDtoresponse, 10, TimeUnit.MINUTES);
+                   saveToRedis(cacheKey, outletDtoresponse, 30, TimeUnit.MINUTES);
 
                     return outletDtoresponse;
                 }
@@ -1259,7 +1262,7 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
                 // log.info("Cached CUSTOMER view [{}] in Redis with offer/slot TTL: {}s", cacheKey, ttlSeconds);
             } else {
                 // Merchant view or No-Offer Customer view: Standard 10 min TTL
-                saveToRedis(cacheKey,outletDtoresponse,10,TimeUnit.MINUTES);
+                saveToRedis(cacheKey,outletDtoresponse,30,TimeUnit.MINUTES);
                 //  redisTemplate.opsForValue().set(cacheKey, jsonPayload, 5, TimeUnit.MINUTES);
                 //  log.info("Cached [{}] in Redis with standard TTL: 300s", cacheKey);
             }
