@@ -3,6 +3,7 @@ package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.AvailabilityActionRequestDto;
 import com.jippy.foodandmart.dto.CreateOutletUnavailabilityRequestDto;
+import com.jippy.foodandmart.entity.FmOutletCategory;
 import com.jippy.foodandmart.entity.OutletUnavailability;
 import com.jippy.foodandmart.exception.OutletUnavailabilityException;
 import com.jippy.foodandmart.mapper.OutletUnavailabilityMapper;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -32,6 +34,8 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
     private final FmOutletCategoryRepository outletCategoryRepository;
 
     private final OutletUnavailabilityMapper unavailabilityMapper;
+
+    private final CacheInvalidateServiceImpl cacheInvalidateService;
 
     @Override
     @Transactional
@@ -251,6 +255,10 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     productRepository.disableProduct(id);
 
                     log.info("PRODUCT_DISABLE SUCCESS | productId={}", id);
+
+                    // Invalidate outlet details cache
+                    Integer outletId = cacheInvalidateService.getOutletIdForProduct(id);
+                    cacheInvalidateService.invalidateCache(outletId);
                 }
 
                 case FmAppConstants.OUTLET -> {
@@ -258,6 +266,9 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     outletRepository.disableOutlet(id);
 
                     log.info("OUTLET_DISABLE SUCCESS | outletId={}", id);
+
+                    // Invalidate outlet details cache
+                    cacheInvalidateService.invalidateCache(id);
                 }
 
                 case FmAppConstants.OUTLET_CATEGORY -> {
@@ -265,6 +276,11 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     outletCategoryRepository.disableOutletCategory(id);
 
                     log.info("OUTLET_CATEGORY_DISABLE SUCCESS | outletCategoryId={}", id);
+
+                    // Invalidate outlet details cache
+                     Optional<FmOutletCategory> outletCategory =outletCategoryRepository.findByOutletCategoryId(id);
+                    outletCategory.ifPresent(fmOutletCategory -> cacheInvalidateService.invalidateCache(fmOutletCategory.getOutletId()));
+
                 }
 
                 default -> {
@@ -296,6 +312,10 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     productRepository.permanentlyCloseProduct(id, FmAppConstants.FLAG_NO);
 
                     log.info("PRODUCT_PERMANENT_CLOSE SUCCESS | productId={}", id);
+
+                    // Invalidate outlet details cache
+                    Integer outletId = cacheInvalidateService.getOutletIdForProduct(id);
+                    cacheInvalidateService.invalidateCache(outletId);
                 }
 
                 case FmAppConstants.OUTLET -> {
@@ -303,6 +323,9 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     outletRepository.permanentlyCloseOutlet(id, FmAppConstants.FLAG_NO);
 
                     log.info("OUTLET_PERMANENT_CLOSE SUCCESS | outletId={}", id);
+
+                    // Invalidate outlet details cache
+                    cacheInvalidateService.invalidateCache(id);
                 }
 
                 case FmAppConstants.OUTLET_CATEGORY -> {
@@ -310,6 +333,11 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     outletCategoryRepository.permanentlyCloseOutletCategory(id, FmAppConstants.FLAG_NO);
 
                     log.info("OUTLET_CATEGORY_PERMANENT_CLOSE SUCCESS | outletCategoryId={}", id);
+
+                    // Invalidate outlet details cache
+                    Optional<FmOutletCategory> outletCategory =outletCategoryRepository.findByOutletCategoryId(id);
+                    outletCategory.ifPresent(fmOutletCategory -> cacheInvalidateService.invalidateCache(fmOutletCategory.getOutletId()));
+
                 }
 
                 default -> {
@@ -353,6 +381,10 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     productRepository.enableProduct(id);
 
                     log.info("PRODUCT_ENABLE SUCCESS | productId={}", id);
+
+                    // Invalidate outlet details cache
+                    Integer outletId = cacheInvalidateService.getOutletIdForProduct(id);
+                    cacheInvalidateService.invalidateCache(outletId);
                 }
 
                 case FmAppConstants.OUTLET -> {
@@ -360,6 +392,9 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     outletRepository.enableOutlet(id);
 
                     log.info("OUTLET_ENABLE SUCCESS | outletId={}", id);
+
+                    // Invalidate outlet details cache
+                    cacheInvalidateService.invalidateCache(id);
                 }
 
                 case FmAppConstants.OUTLET_CATEGORY -> {
@@ -367,6 +402,11 @@ public class OutletUnavailabilityServiceImpl implements OutletUnavailabilityServ
                     outletCategoryRepository.enableOutletCategory(id);
 
                     log.info("OUTLET_CATEGORY_ENABLE SUCCESS | outletCategoryId={}", id);
+
+                    // Invalidate outlet details cache
+                    Optional<FmOutletCategory> outletCategory =outletCategoryRepository.findByOutletCategoryId(id);
+                    outletCategory.ifPresent(fmOutletCategory -> cacheInvalidateService.invalidateCache(fmOutletCategory.getOutletId()));
+
                 }
 
                 default -> {

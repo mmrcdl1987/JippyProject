@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS jippy_customer_and_order.customer(
     first_name character varying(50) NOT NULL,
     last_name character varying(50),
     email character varying(100),
-    phone_number character varying(15) NOT NULL,
+    phone_number character varying(15) NOT NULL UNIQUE,
     date_of_birth date,
     customer_status_id integer,
     referral_code character varying(20),

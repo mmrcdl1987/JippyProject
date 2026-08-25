@@ -1324,6 +1324,8 @@ public final class FmOutletMapper {
         activeOffer.setStartDateTime(outletDiscounts.getStartDateTime());
         activeOffer.setPromotionScheduleId(outletDiscounts.getPromotionScheduleId());
         activeOffer.setUsageLimitPerUser(outletDiscounts.getUsageLimitPerUser());
+        activeOffer.setMaxSelection(outletDiscounts.getMaxSelection());
+        activeOffer.setPromotionMessage(outletDiscounts.getPromotionMessage());
 
         if (outletDiscounts.getSourceType().equals("PRICE_DROP")) {
 

@@ -53,4 +53,6 @@ public interface FmOutletCategoryRepository extends JpaRepository<FmOutletCatego
     boolean existsByOutletCategoryIdAndOutletId(
             Integer outletCategoryId,
             Integer outletId);
+
+    Optional<FmOutletCategory> findByOutletCategoryId(Integer outletCategoryId);
 }

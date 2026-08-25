@@ -54,7 +54,8 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
                     cm.max_selection,
                     pdm.max_selection,
                     -1
-                ) AS "maxSelection"
+                ) AS "maxSelection",
+                cm.promotion_message
             
             FROM jippy_division.promotion_schedules ps
             
@@ -104,7 +105,8 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
                 ps.promotion_schedule_id,
                 ps.source_id,
                 cm.max_selection,
-                pdm.max_selection
+                pdm.max_selection,
+                cm.promotion_message
             
             ORDER BY "startDateTime" DESC
             """, nativeQuery = true)

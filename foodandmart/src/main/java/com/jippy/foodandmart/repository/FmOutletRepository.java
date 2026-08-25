@@ -722,7 +722,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                         ST_Distance(
                             o.outlet_location::geography,
                             ST_SetSRID(
-                                ST_MakePoint(:customerLng, :customerLat),
+                                ST_MakePoint(78.447721, 17.415397),
                                 4326
                             )::geography
                         ) / 1000.0 AS numeric
@@ -734,20 +734,21 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 ST_X(o.outlet_location::geometry) AS longitude,
                 o.is_veg_outlet,
                 o.outlet_pic_url,
-                 -- Returns true if outlet exists in best_restaurants, otherwise false
-                    EXISTS (
-                        SELECT 1 
-                        FROM jippy_fm.best_restaurants br 
-                        WHERE br.outlet_id = o.outlet_id
-                    ) AS is_best_restaurant
+                EXISTS (
+                    SELECT 1 
+                    FROM jippy_fm.best_restaurants br 
+                    WHERE br.outlet_id = o.outlet_id
+                ) AS is_best_restaurant
             
             FROM jippy_fm.outlets o
             
             LEFT JOIN jippy_fm.outlet_subscription_plans osp
                    ON o.outlet_id = osp.outlet_id
             
-            LEFT JOIN jippy_fm.week_slot_days wsd on wsd.week_slot_days_id = osp.banner_slot_days_id
-                  AND CURRENT_DATE BETWEEN wsd.slot_start_date AND wsd.slot_end_date and slot_type ='banner_slot'
+            LEFT JOIN jippy_fm.week_slot_days wsd 
+                   ON wsd.week_slot_days_id = osp.banner_slot_days_id
+                  AND CURRENT_DATE BETWEEN wsd.slot_start_date AND wsd.slot_end_date 
+                  AND slot_type ='banner_slot'
             
             LEFT JOIN jippy_fm.subscription_plans sp
                    ON osp.subscription_plan_id = sp.subscription_plan_id
@@ -766,25 +767,28 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
               AND ST_DWithin(
                     o.outlet_location::geography,
                     ST_SetSRID(
-                        ST_MakePoint(:customerLng, :customerLat),
+                        ST_MakePoint(78.447721, 17.415397),
                         4326
                     )::geography,
                     COALESCE(sp.radius_in_kms * 1000, 3000)
                   )
             
-              -- Day & Time filter
+              -- Outlet Day & Time filter
               AND od.day_of_week_id = EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'))
               AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time BETWEEN od.opening_time AND od.closing_time
             
-              -- MUST HAVE AT LEAST ONE CATEGORY AND ONE PRODUCT
-              -- ALSO APPLIES THE OPTIONAL CATEGORY FILTER IF PASSED
+              -- Product timing check without duplicating rows
               AND EXISTS (
                   SELECT 1
                   FROM jippy_fm.outlet_categories oc
-                  JOIN jippy_fm.products p
+                  JOIN jippy_fm.products p 
                     ON p.outlet_category_id = oc.outlet_category_id
+                  JOIN jippy_fm.product_available_timings pat 
+                    ON p.product_id = pat.product_id 
+                   AND pat.day_of_week_id = od.day_of_week_id
                   WHERE oc.outlet_id = o.outlet_id
-                    AND (:categoryId IS NULL OR oc.category_id = :categoryId)
+                    AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time BETWEEN pat.start_time AND pat.end_time
+                     AND (:categoryId IS NULL OR oc.category_id = :categoryId)
               )
             
             ORDER BY distance_km ASC;

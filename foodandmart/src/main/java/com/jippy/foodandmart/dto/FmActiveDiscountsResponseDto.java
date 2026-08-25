@@ -25,6 +25,8 @@ public class FmActiveDiscountsResponseDto {
     private LocalDateTime startDateTime;
     private LocalDateTime endDateTime;
     private String mealTypeSlotIdsStr;
+    private Integer maxSelection;
+    private String promotionMessage;
 
 
     // Helper getter to parse "1,5" into List<Integer> [1, 5]

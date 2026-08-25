@@ -36,4 +36,8 @@ public class DivAppConstants {
     public static final String PAYMENT_MODE_RAZOR_PAY="RAZOR PAY";
 
     public static final String PAYMENT_MODE_PAYTM="PAYTM";
+
+    public static final String TYPE_MERCHANT="MERCHANT";
+
+    public static final String TYPE_CUSTOMER="CUSTOMER";
 }

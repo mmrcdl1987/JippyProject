@@ -46,6 +46,8 @@ public class FmProductServiceImpl implements FmProductService {
 
     private final FmCategoryRepository categoryRepository;
 
+    private final CacheInvalidateServiceImpl cacheInvalidateService;
+
 
     private final FmDaysOfWeekRepository daysOfWeekRepository;
     @Override
@@ -255,6 +257,9 @@ public class FmProductServiceImpl implements FmProductService {
                     savedProduct.getProductId(),
                     savedProduct.getProductName());
         }
+
+        //Invalidate outlet details cache
+        cacheInvalidateService.invalidateCache(request.getOutletId());
 
         FmMapToProductResult response = new FmMapToProductResult();
 
@@ -648,6 +653,11 @@ public class FmProductServiceImpl implements FmProductService {
 
         log.info("Product updated successfully. ProductId={}", productId);
 
+        //Invalidate outlet details cache
+        Optional<FmOutletCategory> outletCategory =outletCategoryRepository.findByOutletCategoryId(product.getOutletCategoryId());
+
+        outletCategory.ifPresent(fmOutletCategory -> cacheInvalidateService.invalidateCache(fmOutletCategory.getOutletId()));
+
         return getProductById(productId);
     }
 
@@ -740,6 +750,11 @@ public class FmProductServiceImpl implements FmProductService {
                 log.info("Variant Option saved. ProductId={}, VariantValueId={}", productId, option.getProductVariantGroupValuesId());
             }
         }
+
+        // Invalidate outlet details cache
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        cacheInvalidateService.invalidateCache(outletId);
+
 
         log.info("Completed saving Variant Options. ProductId={}", productId);
     }
@@ -837,6 +852,10 @@ public class FmProductServiceImpl implements FmProductService {
                 productVariantOptionRepository.delete(existing);
             }
         }
+
+        // Invalidate outlet details cache
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        cacheInvalidateService.invalidateCache(outletId);
     }
     private void updateProductTimings(
             Integer productId,
@@ -940,6 +959,9 @@ public class FmProductServiceImpl implements FmProductService {
                 productAvailableTimingRepository.delete(timing);
             }
         }
+        // Invalidate outlet details cache
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        cacheInvalidateService.invalidateCache(outletId);
     }
 
     /**
@@ -1126,6 +1148,10 @@ public class FmProductServiceImpl implements FmProductService {
 
             productAvailableTimingRepository.save(entity);
         }
+
+        // Invalidate outlet details cache
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        cacheInvalidateService.invalidateCache(outletId);
     }
 
     private LocalTime parseTime(String value) {

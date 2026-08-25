@@ -37,6 +37,7 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
     private final PromotionScheduleService promotionScheduleService;
     private final FMFeignClient fmClient;
     private final PromotionScheduleRepository promotionScheduleRepository;
+    private final  CacheInvalidateServiceImpl cacheInvalidateService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -84,6 +85,10 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
                 for (Integer productId : campaignProducts) {
 
                     saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
+
+                    // Invalidate outlet details cache
+                    cacheInvalidateService.invalidateCache(outletId);
+
                 }
             }
         }
@@ -224,6 +229,9 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
                     for (Integer productId : campaignProducts) {
 
                         saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
+
+                        // Invalidate outlet details cache
+                        cacheInvalidateService.invalidateCache(outletId);
                     }
                 }
             }
@@ -304,6 +312,9 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
                     for (Integer productId : campaignProducts) {
 
                         saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
+
+                        // Invalidate outlet details cache
+                        cacheInvalidateService.invalidateCache(outletId);
                     }
                 }
             }

@@ -31,10 +31,9 @@ public class FmProductVariantOptionServiceImpl
     private static final String ADD = "ADD";
 
     private final FmProductRepository productRepository;
-
     private final FmProductVariantGroupValueRepository productVariantGroupValueRepository;
-
     private final FmProductVariantOptionRepository productVariantOptionRepository;
+    private final CacheInvalidateServiceImpl cacheInvalidateService;
 
     @Override
     public FmProductVariantOptionResponseDto saveProductVariantOption(
@@ -164,6 +163,10 @@ public class FmProductVariantOptionServiceImpl
                 productId,
                 entity.getProductVariantGroupValuesId());
 
+        // Invalidate outlet details cache
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        cacheInvalidateService.invalidateCache(outletId);
+
         return FmProductVariantOptionMapper.toResponseDto(entity);
     }
     private FmProductVariantOptionResponseDto updateProductVariantOption(
@@ -201,6 +204,10 @@ public class FmProductVariantOptionServiceImpl
 
         log.info("Product Variant Option updated successfully. OptionId={}",
                 entity.getProductVariantOptionsId());
+
+        // Invalidate outlet details cache
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        cacheInvalidateService.invalidateCache(outletId);
 
         return FmProductVariantOptionMapper.toResponseDto(entity);
     }
