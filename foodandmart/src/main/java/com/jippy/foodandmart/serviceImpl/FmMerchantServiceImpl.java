@@ -1,6 +1,4 @@
 package com.jippy.foodandmart.serviceImpl;
-
-import com.jippy.foodandmart.config.FmPasswordConfig;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
@@ -10,6 +8,7 @@ import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 import com.jippy.foodandmart.repository.*;
+import com.jippy.foodandmart.service.EmailService;
 import com.jippy.foodandmart.service.IFmApprovalRequestService;
 import com.jippy.foodandmart.service.IFmMerchantService;
 import com.jippy.foodandmart.validation.FmFileParser;
@@ -17,7 +16,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.sql.Update;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +40,7 @@ import java.util.Set;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class FmMerchantServiceImpl implements IFmMerchantService {
+public class  FmMerchantServiceImpl implements IFmMerchantService {
 
     private final FmMerchantRepository merchantRepository;
     private final FmUserKycRepository userKycRepository;
@@ -54,6 +51,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     private final FmRoleRepository roleRepository;
     private final FmRolePermissionsRepository rolePermissionsRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
    // private final IFmApprovalRequestService approvalRequestService;
     @Lazy
     @Autowired
@@ -84,13 +82,15 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public FmMerchant createMerchant(FmMerchantRequestDTO dto) {
+
         log.info("[MERCHANT] Creating merchant: email={}, phone={}", dto.getEmail(), dto.getPhone());
 
-        validateUniqueness(dto.getEmail(), dto.getPhone(), dto.getPan(), dto.getAdhar(),
-                dto.getFssai(), dto.getAccountNumber());
+        validateUniqueness(dto.getEmail(), dto.getPhone(), dto.getPan(), dto.getAdhar(), dto.getFssai(), dto.getAccountNumber());
 
         FmMerchant merchant = FmMerchantMapper.toEntity(dto);
+
         merchant = merchantRepository.save(merchant);
+
         log.info("[MERCHANT] Saved: merchantId={}, name={}", merchant.getMerchantId(), merchant.getMerchantName());
 
         /**
@@ -99,16 +99,25 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
          * Every new Merchant enters the approval workflow
          * at Level 1 with PENDING status.
          */
-//        approvalRequestService.createApprovalRequest(
-//                FmAppConstants.TYPE_MERCHANT,
-//                merchant.getMerchantId(),
-//                merchant.getMerchantId());
+//    approvalRequestService.createApprovalRequest(
+//            FmAppConstants.TYPE_MERCHANT,
+//            merchant.getMerchantId(),
+//            merchant.getMerchantId()
+//    );
 
         saveKyc(dto, merchant);
+
         saveBankDetails(dto, merchant.getMerchantId());
+
         createMerchantUser(dto, merchant.getMerchantId());
 
         log.info("[MERCHANT] Onboarding complete: merchantId={}", merchant.getMerchantId());
+
+        // Send merchant registration email
+        emailService.sendMerchantRegistrationEmail(merchant.getMerchantEmail(), merchant.getMerchantName());
+
+        log.info("[MERCHANT] Registration email triggered: merchantId={}, email={}", merchant.getMerchantId(), merchant.getMerchantEmail());
+
         return merchant;
     }
 

@@ -65,4 +65,6 @@ public class DConstants {
     public static final String MSG_ORDER_SETTINGS_CREATED = "Order settings created successfully";
 
     public static final String COMMUNITY_TYPE = "COMMUNITY";
+
+    public static final String FROM_EMAIL = "accounts@jippymart.in";
 }

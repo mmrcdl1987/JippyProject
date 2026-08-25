@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.MealTypeTiming;
 import com.jippy.foodandmart.mapper.CustomerBannerMapper;
+import com.jippy.foodandmart.projections.ActiveBannerProjection;
 import com.jippy.foodandmart.repository.MealTypeTimingRepository;
 import com.jippy.foodandmart.service.BannerCacheService;
 import com.jippy.foodandmart.service.OutletSubscriptionPlanService;
@@ -30,7 +31,6 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.net.URI;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -62,7 +62,7 @@ public class BannerCacheServiceImpl implements BannerCacheService {
     // In-Memory cache for S3 banner URLs to avoid hitting S3 on every user request
     private final List<String> cachedDefaultS3Urls = new CopyOnWriteArrayList<>();
 
-    // 1. MAIN LOCATION BANNER QUERY (Called by API Controller)
+// 1. MAIN LOCATION BANNER QUERY (Called by API Controller)
     @Override
     public GroupedBannerResponseDto getActiveBannersForLocation(double lat, double lng) {
         log.info("[FETCH START] Requesting active banners for Lat: {}, Lng: {}", lat, lng);
