@@ -5,7 +5,7 @@
 //import com.jippy.foodandmart.entity.FmOutlet;
 //import com.jippy.foodandmart.entity.FmOutletAddress;
 //
-/// **
+///**
 // * Static utility class for converting between {@link FmOutletRequestDTO} /
 // * {@link FmOutletCreatedDTO} and the {@link FmOutlet} / {@link FmOutletAddress} entities.
 // *
@@ -137,8 +137,10 @@
 package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
+import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.dto.FmOutletDto;
 import com.jippy.foodandmart.dto.*;
+import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.entity.FmMerchantBankDetails;
 import com.jippy.foodandmart.entity.FmOutlet;
@@ -197,29 +199,56 @@ public final class FmOutletMapper {
     }
 
 
+// OUTLET ENTITY -> OUTLET RESPONSE DTO
+
     public static FmOutletResponseDto toOutletResponseDto(FmOutlet outlet) {
 
-        FmOutletResponseDto dto = new FmOutletResponseDto();
+        if (outlet == null) {
+            return null;
+        }
 
+        FmOutletResponseDto dto = new FmOutletResponseDto();
+        // Outlet Details
         dto.setOutletId(outlet.getOutletId());
         dto.setOutletName(outlet.getOutletName());
         dto.setOutletEmail(outlet.getOutletEmail());
         dto.setMerchantId(outlet.getMerchantId());
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
+        dto.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
+
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());
         dto.setOutletPicUrl(outlet.getOutletPicUrl());
-
-        // Convert Point -> Latitude X & Longitude Y
+        // Outlet Location
+        //
+        // JTS Point:
+        // X = Longitude
+        // Y = Latitude
         if (outlet.getOutletLocation() != null) {
+
             dto.setLongitude(outlet.getOutletLocation().getX());
+
             dto.setLatitude(outlet.getOutletLocation().getY());
         }
 
         return dto;
     }
+
+// KYC -> OUTLET RESPONSE DTO
+
+    public static void mapKycToOutletResponse(FmOutletResponseDto response, FmUserKyc kyc) {
+
+        if (response == null || kyc == null) {
+            return;
+        }
+
+        response.setFssaiNumber(kyc.getFssaiNumber());
+
+        response.setGstNumber(kyc.getGstNumber());
+    }
+// OUTLET DAYS -> OUTLET RESPONSE DT
 
     public static FmAddressRequestDto toAddressRequestDto(FmOutletAddress fmOutletAddress) {
         FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
@@ -308,7 +337,7 @@ public final class FmOutletMapper {
         address.setAreaId(dto.getAreaId());
         address.setAddressType(dto.getAddressType());
         return address;
-    }
+}
 
     // ── Entity → DTO ──────────────────────────────────────────────────────────
 
@@ -331,7 +360,6 @@ public final class FmOutletMapper {
     }
 
     // ── Projection → DTO (Complex Menu Mapping) ───────────────────────────────
-
 
     /**
      * Maps flat database result sets (Projections) into a nested Outlet Hierarchy.
@@ -1203,15 +1231,16 @@ public final class FmOutletMapper {
     }
 
 //    ------------------------------------------------------------------------------------------
-
     /**
      * Converts the updated outlet entity and request DTO into
      * the response returned after successful outlet update.
-     * <p>
+     *
      * Note:
      * Username and Password are not part of the update API.
      */
-    public static FmUpdateOutletRequestDTO toUpdateResponseDto(FmUpdateOutletRequestDTO request, FmOutlet outlet) {
+    public static FmUpdateOutletRequestDTO toUpdateResponseDto(
+            FmUpdateOutletRequestDTO request,
+            FmOutlet outlet) {
 
         FmUpdateOutletRequestDTO response = new FmUpdateOutletRequestDTO();
 
@@ -1268,7 +1297,6 @@ public final class FmOutletMapper {
 
         return day;
     }
-
     private static BigDecimal toBigDecimal(Object o) {
 
         if (o == null) {
@@ -1309,7 +1337,7 @@ public final class FmOutletMapper {
 
             activeOffer.setRemainingTime(remainingTimeStr);
 
-            log.info("===================={} ", remainingTimeStr);
+            log.info("===================={} ",remainingTimeStr);
         }
 
         return activeOffer;

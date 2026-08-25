@@ -1,6 +1,4 @@
 package com.jippy.driver.serviceImpl;
-
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
@@ -16,6 +14,7 @@ import com.jippy.driver.projection.DriverOrderHistoryProjection;
 import com.jippy.driver.projection.DriverTotalEarningsProjection;
 import com.jippy.driver.repositary.*;
 import com.jippy.driver.service.DriverService;
+import com.jippy.driver.service.EmailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,6 @@ import org.locationtech.jts.geom.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -55,6 +53,7 @@ public class DriverServiceImpl implements DriverService {
     private final S3ImageService s3ImageService;
     private final GeometryFactory geometryFactory = new GeometryFactory();
     private final ObjectMapper objectMapper;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -124,8 +123,23 @@ public class DriverServiceImpl implements DriverService {
         Driver driver = DriverMapper.mapToDriverEntity(dto);
 
 
-        // Save driver
         Driver savedDriver = driverRepository.save(driver);
+
+        log.info(
+                "Driver saved with id: {}",
+                savedDriver.getDriverId()
+        );
+
+        emailService.sendDriverRegistrationEmail(
+                savedDriver.getEmail(),
+                savedDriver.getFirstName() + " " + savedDriver.getLastName()
+        );
+
+        log.info(
+                "Driver Registration Email Sent Successfully. Driver Id : {}, Email : {}",
+                savedDriver.getDriverId(),
+                savedDriver.getEmail()
+        );
 
         // for creating user in FM microservice, we will receive the user details from CO microservice and
 // then we will save the user details in FM microservice users table
@@ -333,19 +347,35 @@ public class DriverServiceImpl implements DriverService {
 
         log.info("Started Driver Approval. Driver Id : {}", driverId);
 
-        // Validate Driver
-        if (!driverRepository.existsById(driverId)) {
+        // Validate and fetch Driver
+        Driver driver = driverRepository.findById(driverId)
+                .orElseThrow(() -> {
 
-            log.error("Driver Not Found. Driver Id : {}", driverId);
+                    log.error("Driver Not Found. Driver Id : {}", driverId);
 
-            throw new ResourceNotFoundException(
-                    "Driver Not Found : " + driverId);
-        }
+                    return new ResourceNotFoundException(
+                            "Driver Not Found : " + driverId);
+                });
 
         // Update approval status
         driverRepository.approveDriver(driverId);
 
-        log.info("Driver Approval Completed Successfully. Driver Id : {}", driverId);
+        log.info(
+                "Driver Approval Completed Successfully. Driver Id : {}",
+                driverId
+        );
+
+        // Send Driver Approval Email
+        emailService.sendDriverApprovedEmail(
+                driver.getEmail(),
+                driver.getFirstName() + " " + driver.getLastName()
+        );
+
+        log.info(
+                "Driver Approval Email Sent Successfully. Driver Id : {}, Email : {}",
+                driverId,
+                driver.getEmail()
+        );
     }
 
     //    updating driver details, only editable fields (not phone, email, or KYC)

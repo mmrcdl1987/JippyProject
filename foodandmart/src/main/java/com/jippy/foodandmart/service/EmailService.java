@@ -42,4 +42,26 @@ public interface EmailService {
             File csvFile);
 
 
+    void sendMerchantRegistrationEmail(
+            String merchantEmail,
+            String merchantName
+    );
+
+    void sendMerchantApprovedEmail(
+            String merchantEmail,
+            String merchantName
+    );
+
+    void sendOutletRegistrationEmail(
+            String outletEmail,
+            String outletName,
+            String merchantName
+    );
+
+    void sendOutletOnlineEmail(
+            String outletEmail,
+            String outletName,
+            String merchantName
+    );
+
 }

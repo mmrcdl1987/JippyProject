@@ -186,5 +186,25 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(EmailSendingException.class)
+    public ResponseEntity<DriverErrorResponseDto> handleEmailSendingException(
+            EmailSendingException ex,
+            HttpServletRequest request) {
+
+        log.error(
+                "EMAIL_SENDING_FAILED | path={} | message={}",
+                request.getRequestURI(),
+                ex.getMessage(),
+                ex
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new DriverErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        ex.getMessage(),
+                        LocalDateTime.now()
+                ));
+    }
 
 }

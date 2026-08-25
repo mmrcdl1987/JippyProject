@@ -3,12 +3,11 @@ package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmApprovalRequestUpdateRequestDTO;
 import com.jippy.foodandmart.dto.FmApprovalRequestUpdateResponseDTO;
-import com.jippy.foodandmart.entity.FmApprovalRequest;
-import com.jippy.foodandmart.entity.FmApprovalSettings;
-import com.jippy.foodandmart.entity.FmApprovalTransaction;
+import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DriverFeignClient;
 import com.jippy.foodandmart.repository.*;
+import com.jippy.foodandmart.service.EmailService;
 import com.jippy.foodandmart.service.IFmApprovalRequestUpdateService;
 import com.jippy.foodandmart.service.IFmUsersService;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +76,10 @@ public class FmApprovalRequestUpdateServiceImpl
      *
      * Updates Approval Requests.
      */
+
+    private final EmailService emailService;
+
+
     @Override
     public FmApprovalRequestUpdateResponseDTO updateApprovalRequestsToApproved(
             FmApprovalRequestUpdateRequestDTO requestDTO) {
@@ -635,25 +638,85 @@ public class FmApprovalRequestUpdateServiceImpl
                 approverId);
 
         // ----------------------- OUTLET APPROVAL -----------------------
-        if (FmAppConstants.TYPE_OUTLET.equalsIgnoreCase(approvalRequest.getEntityType())) {
+        if (FmAppConstants.TYPE_OUTLET.equalsIgnoreCase(
+                approvalRequest.getEntityType())) {
+
+            FmOutlet outlet = outletRepository.findById(
+                    approvalRequest.getEntityId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Outlet not found with id : "
+                                    + approvalRequest.getEntityId()
+                    )
+            );
 
             outletRepository.approveOutlet(
-                    approvalRequest.getEntityId());
+                    approvalRequest.getEntityId()
+            );
 
-            log.info("Outlet Approved Successfully. Outlet Id : {}",
-                    approvalRequest.getEntityId());
+            log.info(
+                    "Outlet Approved Successfully. Outlet Id : {}",
+                    approvalRequest.getEntityId()
+            );
+
+            FmMerchant merchant = merchantRepository.findById(
+                    outlet.getMerchantId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Merchant not found with id : "
+                                    + outlet.getMerchantId()
+                    )
+            );
+
+            // Email #4 - Outlet is Now Online
+            emailService.sendOutletOnlineEmail(
+                    outlet.getOutletEmail(),
+                    outlet.getOutletName(),
+                    merchant.getMerchantName()
+            );
+
+            log.info(
+                    "OUTLET_ONLINE_EMAIL_SENT | outletId={}, email={}",
+                    outlet.getOutletId(),
+                    outlet.getOutletEmail()
+            );
 
             return;
         }
 
         // ----------------------- MERCHANT APPROVAL -----------------------
-        if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(approvalRequest.getEntityType())) {
+        if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(
+                approvalRequest.getEntityType())) {
+
+            FmMerchant merchant = merchantRepository.findById(
+                    approvalRequest.getEntityId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Merchant not found with id : "
+                                    + approvalRequest.getEntityId()
+                    )
+            );
 
             merchantRepository.approveMerchant(
-                    approvalRequest.getEntityId());
+                    approvalRequest.getEntityId()
+            );
 
-            log.info("Merchant Approved Successfully. Merchant Id : {}",
-                    approvalRequest.getEntityId());
+            log.info(
+                    "Merchant Approved Successfully. Merchant Id : {}",
+                    approvalRequest.getEntityId()
+            );
+
+            // Email #2 - Merchant Approved
+            emailService.sendMerchantApprovedEmail(
+                    merchant.getMerchantEmail(),
+                    merchant.getMerchantName()
+            );
+
+            log.info(
+                    "MERCHANT_APPROVED_EMAIL_SENT | merchantId={}, email={}",
+                    merchant.getMerchantId(),
+                    merchant.getMerchantEmail()
+            );
 
             return;
         }
@@ -669,7 +732,6 @@ public class FmApprovalRequestUpdateServiceImpl
 
             log.info("Driver Approved Successfully in Driver Service. Driver Id : {}",
                     approvalRequest.getEntityId());
-
             return;
         }
 
