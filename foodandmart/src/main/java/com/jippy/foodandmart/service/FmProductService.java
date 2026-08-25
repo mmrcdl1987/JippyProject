@@ -80,4 +80,13 @@ public interface FmProductService {
 
     @Transactional(readOnly = true)
     List<FmProductPriceResponse> getProductsByOutlet(Integer outletId);
+
+    public Object getCategoryForProductByProductType(
+            String productName,
+            String productType
+    );
+
+    FmProductCategoryUpdateResponseDto updateCategoryForProductByProductType(
+            FmProductCategoryUpdateRequestDto request
+    );
 }

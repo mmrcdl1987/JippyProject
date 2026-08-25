@@ -1,10 +1,10 @@
 package com.jippy.foodandmart.mapper;
 
-import com.jippy.foodandmart.dto.FmProductDetailResponseDto;
-import com.jippy.foodandmart.dto.FmProductDto;
-import com.jippy.foodandmart.dto.FmProductVariantDTO;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmProduct;
 import com.jippy.foodandmart.entity.FmProductVariant;
+import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
+import com.jippy.foodandmart.projections.FmProductCategoryProjection;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -23,17 +23,87 @@ import java.util.stream.Collectors;
  * mapper avoids a tiny separate VariantMapper file.</p>
  */
 @Component
-public  class FmProductMapper {
+public class FmProductMapper {
+
+
+    /*
+     * ============================================================
+     * CATEGORY UPDATE RESPONSE MAPPER
+     * ============================================================
+     */
+    public static FmProductCategoryUpdateResponseDto
+    mapCategoryUpdateResponse(
+            String productType,
+            String productName,
+            Integer updatedCategoryId,
+            Integer updatedRecords) {
+
+        FmProductCategoryUpdateResponseDto dto = new FmProductCategoryUpdateResponseDto();
+
+        dto.setProductType(productType);
+        dto.setProductName(productName);
+        dto.setUpdatedCategoryId(updatedCategoryId);
+        dto.setUpdatedRecords(updatedRecords);
+        dto.setMessage("Category updated successfully.");
+
+        return dto;
+    }
+    /*
+     * ============================================================
+     * PRODUCT CATEGORY PROJECTION -> RESPONSE DTO
+     * ============================================================
+     */
+    public static FmProductCategoryResponseDto mapProductCategoryProjectionToDto(FmProductCategoryProjection projection) {
+
+        FmProductCategoryResponseDto dto = new FmProductCategoryResponseDto();
+
+        dto.setProductId(projection.getProductId());
+        dto.setProductName(projection.getProductName());
+        dto.setOutletCategoryId(projection.getOutletCategoryId());
+        dto.setOutletId(projection.getOutletId());
+        dto.setCategoryId(projection.getCategoryId());
+        dto.setCategoryName(projection.getCategoryName());
+        dto.setOutletName(projection.getOutletName());
+
+        return dto;
+    }
+
+
+    /*
+     * ============================================================
+     * MASTER PRODUCT CATEGORY PROJECTION -> RESPONSE DTO
+     * ============================================================
+     */
+    public static FmMasterProductCategoryResponseDto mapMasterProductCategoryProjectionToDto(FmMasterProductCategoryProjection projection) {
+
+        FmMasterProductCategoryResponseDto dto = new FmMasterProductCategoryResponseDto();
+
+        dto.setMasterProductId(projection.getMasterProductId());
+
+        dto.setMasterProductName(projection.getMasterProductName());
+
+        dto.setCategoryId(projection.getCategoryId());
+
+        dto.setCategoryName(projection.getCategoryName());
+
+        return dto;
+    }
 
     /**
      * Private constructor — static utility class, must not be instantiated.
      */
-    private FmProductMapper() {}
-    public  static Map<String,Double> priceMapper = new HashMap<String,Double>();
-    /** Maps product name -> day-of-week name (e.g. "Monday") from the CSV daysofaweek column. */
-    public static Map<String,String> dayOfWeekMapper = new HashMap<String,String>();
-    /** Maps product name -> raw CSV timing string (e.g. "9:00-22:00"). */
-    public  static Map<String,String> timingMapper = new HashMap<String,String>();
+    private FmProductMapper() {
+    }
+
+    public static Map<String, Double> priceMapper = new HashMap<String, Double>();
+    /**
+     * Maps product name -> day-of-week name (e.g. "Monday") from the CSV daysofaweek column.
+     */
+    public static Map<String, String> dayOfWeekMapper = new HashMap<String, String>();
+    /**
+     * Maps product name -> raw CSV timing string (e.g. "9:00-22:00").
+     */
+    public static Map<String, String> timingMapper = new HashMap<String, String>();
 
     /**
      * Converts a {@link FmProductDto} into a new {@link FmProduct} entity.
@@ -111,9 +181,7 @@ public  class FmProductMapper {
         dto.setIsVeg(product.getIsVeg());
         dto.setHasProductVariants(product.getHasProductVariants());
         // Map variants; return empty list if the association was not loaded
-        List<FmProductVariantDTO> variants = product.getVariants() != null
-                ? product.getVariants().stream().map(FmProductMapper::toVariantDTO).collect(Collectors.toList())
-                : Collections.emptyList();
+        List<FmProductVariantDTO> variants = product.getVariants() != null ? product.getVariants().stream().map(FmProductMapper::toVariantDTO).collect(Collectors.toList()) : Collections.emptyList();
         dto.setVariants(variants);
         return dto;
     }
@@ -137,20 +205,20 @@ public  class FmProductMapper {
 
     public FmProductDetailResponseDto toDto(FmProduct product) {
 
-            if (product == null) {
-                return null;
-            }
+        if (product == null) {
+            return null;
+        }
 
-            FmProductDetailResponseDto dto = new FmProductDetailResponseDto();
+        FmProductDetailResponseDto dto = new FmProductDetailResponseDto();
 
-            dto.setProductId(product.getProductId());
-            dto.setOutletCategoryId(product.getOutletCategoryId());
-            dto.setProductName(product.getProductName());
-            dto.setDescription(product.getDescription());
-            dto.setMerchantPrice(product.getMerchantPrice());
-            dto.setIsVeg(product.getIsVeg());
-            dto.setHasProductVariants(product.getHasProductVariants());
-            dto.setImageLink(product.getImageLink());
+        dto.setProductId(product.getProductId());
+        dto.setOutletCategoryId(product.getOutletCategoryId());
+        dto.setProductName(product.getProductName());
+        dto.setDescription(product.getDescription());
+        dto.setMerchantPrice(product.getMerchantPrice());
+        dto.setIsVeg(product.getIsVeg());
+        dto.setHasProductVariants(product.getHasProductVariants());
+        dto.setImageLink(product.getImageLink());
 //            dto.setPhotos(product.getPhotos());
 //            dto.setThumbnail(product.getThumbnail());
 
@@ -159,6 +227,6 @@ public  class FmProductMapper {
          */
         dto.setAvailable("Y".equalsIgnoreCase(product.getIsActive()));
 
-            return dto;
-        }
+        return dto;
+    }
 }

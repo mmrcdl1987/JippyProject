@@ -46,8 +46,8 @@
         @ApiResponse(responseCode = "400", description = "Invalid Driver request.")
         @ApiResponse(responseCode = "404", description = "Referenced resource not found.")
         @ApiResponse(responseCode = "500", description = "Internal Server Error.")
-        public ResponseEntity<DriverDto> postDriverDetails
-        ( @Valid @RequestBody DriverDto dto) {
+        public ResponseEntity<DriverDto> postDriverDetails(
+                @Valid @RequestBody DriverDto dto) {
 
             log.info("POST API called that created driver:");
 
