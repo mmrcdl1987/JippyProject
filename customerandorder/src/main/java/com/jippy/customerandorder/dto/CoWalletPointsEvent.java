@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,4 +25,10 @@ public class CoWalletPointsEvent {
 
     // Notification type to be processed by Notification MS
     private String notificationType;
+
+    // FCM token captured during customer creation
+    private String fcmToken;
+
+    // Money credited when points are converted
+    private BigDecimal convertedAmount;
 }

@@ -116,4 +116,64 @@ public class CoWalletPointsMapper {
 
         return event;
     }
+
+    /**
+     * Creates Kafka event for welcome points notification.
+     */
+    public static CoWalletPointsEvent toWelcomePointsEvent(
+            Integer customerId,
+            Integer welcomePoints,
+            String fcmToken) {
+
+        CoWalletPointsEvent event = new CoWalletPointsEvent();
+
+        event.setOrderId("WELCOME-" + customerId); // Use customer ID as order ID for welcome points
+        event.setCustomerId(customerId);
+        event.setTransactionPoints(welcomePoints);
+        event.setPointsType(COConstants.WELCOME_POINTS);
+        event.setNotificationType(COConstants.WELCOME_POINTS_EARNED);
+        event.setFcmToken(fcmToken);
+
+        return event;
+    }
+
+    /**
+     * Creates Kafka event for referral reward points notification.
+     */
+    public static CoWalletPointsEvent toReferralPointsEvent(
+            Integer referrerCustomerId,
+            Integer referralPoints,
+            String orderId) {
+
+        CoWalletPointsEvent event = new CoWalletPointsEvent();
+
+        event.setOrderId(orderId);
+        event.setCustomerId(referrerCustomerId);
+        event.setTransactionPoints(referralPoints);
+        event.setPointsType(COConstants.REFERRAL_REWARD_POINTS);
+        event.setNotificationType(COConstants.REFERRAL_POINTS_EARNED);
+
+        return event;
+    }
+
+    /**
+     * Creates Kafka event for points converted into money notification.
+     */
+    public static CoWalletPointsEvent toPointsConvertedEvent(
+            Integer customerId,
+            Integer convertedPoints,
+            BigDecimal convertedAmount,
+            String referenceId) {
+
+        CoWalletPointsEvent event = new CoWalletPointsEvent();
+
+        event.setOrderId(referenceId);
+        event.setCustomerId(customerId);
+        event.setTransactionPoints(convertedPoints);
+        event.setPointsType(COConstants.POINTS_CONVERTED);
+        event.setNotificationType(COConstants.POINTS_CONVERTED_TO_MONEY);
+        event.setConvertedAmount(convertedAmount);
+
+        return event;
+    }
 }

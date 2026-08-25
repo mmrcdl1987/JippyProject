@@ -12,11 +12,13 @@ public class COConstants {
 
     public static final String ORDER_VALUE_POINTS = "ORDER_VALUE_POINTS";
 
-    public static final String WALLET_POINTS_TOPIC =
-            "wallet-points-earned";
+    public static final String WALLET_POINTS_TOPIC = "wallet-points-earned";
 
-    public static final String WALLET_POINTS_EARNED =
-            "WALLET_POINTS_EARNED";
+    public static final String WALLET_POINTS_EARNED = "WALLET_POINTS_EARNED";
+    public static final String POINTS_CONVERTED_TO_MONEY = "POINTS_CONVERTED_TO_MONEY";
+
+    public static final String WELCOME_POINTS_EARNED = "WELCOME_POINTS_EARNED";
+    public static final String REFERRAL_POINTS_EARNED = "REFERRAL_POINTS_EARNED";
 
     public static final String ROLE_CUSTOMER = "ROLE_CUSTOMER";
     public static final String STATUS_200 = "200";
@@ -71,6 +73,7 @@ public class COConstants {
     public static final String WALLET_NOT_FOUND = "Wallet not found";
     public static final String MINIMUM_POINTS_REQUIRED_MESSAGE = "Minimum 1000 points needed to convert";
     public static final String POINTS_CONVERTED_SUCCESS = "Points converted successfully";
+    public static final String POINTS_CONVERTED_NOTIFICATION_SUBJECT = "POINTS_CONVERTED";
     public static final String CUSTOMER_CREATED_SUCCESS = "Customer created successfully";
     public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
     public static final String PHONE_ALREADY_EXISTS = "Phone number already exists";

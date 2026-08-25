@@ -4,8 +4,9 @@ import com.jippy.notification.constants.NConstants;
 import com.jippy.notification.dto.NWalletPointsEvent;
 import com.jippy.notification.entity.NDeviceToken;
 import com.jippy.notification.entity.Notification;
-import com.jippy.notification.entity.OrderNotificationStatus;
+import com.jippy.notification.entity.WalletNotificationStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class NWalletNotificationMapper {
@@ -17,11 +18,11 @@ public class NWalletNotificationMapper {
      * Creates notification status record
      * before sending the Firebase notification.
      */
-    public static OrderNotificationStatus toNotificationStatus(NWalletPointsEvent event,
-                                                               Notification notification,
-                                                               NDeviceToken deviceToken) {
+    public static WalletNotificationStatus toNotificationStatus(NWalletPointsEvent event,
+                                                                Notification notification,
+                                                                NDeviceToken deviceToken) {
 
-        OrderNotificationStatus status = new OrderNotificationStatus();
+        WalletNotificationStatus status = new WalletNotificationStatus();
 
         status.setOrderId(event.getOrderId());
 
@@ -32,6 +33,10 @@ public class NWalletNotificationMapper {
         status.setRecipientType(NConstants.ROLE_CUSTOMER);
 
         status.setDeviceTokenId(deviceToken.getDeviceTokenId());
+
+        status.setReferenceId(event.getCustomerId());
+
+        status.setReferenceType(event.getPointsType() != null ? event.getPointsType() : "WALLET_POINTS");
 
         status.setNotificationStatus(false);
 
@@ -51,8 +56,14 @@ public class NWalletNotificationMapper {
      */
     public static String buildWalletPointsMessage(Notification notification, NWalletPointsEvent event) {
 
-        return notification.getMessage().
-                replace("{points}",
-                        String.valueOf(event.getTransactionPoints()));
+        String message = notification.getMessage()
+                .replace("{points}", String.valueOf(event.getTransactionPoints()));
+
+        BigDecimal amount = event.getConvertedAmount();
+        if (amount != null) {
+            message = message.replace("{amount}", amount.toPlainString());
+        }
+
+        return message;
     }
 }

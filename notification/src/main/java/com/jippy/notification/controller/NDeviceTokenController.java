@@ -1,7 +1,7 @@
 package com.jippy.notification.controller;
 
-import com.jippy.notification.dto.request.NDeviceTokenRequest;
-import com.jippy.notification.dto.response.NApiResponse;
+import com.jippy.notification.dto.NDeviceTokenRequest;
+import com.jippy.notification.dto.NApiResponse;
 import com.jippy.notification.service.NDeviceTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

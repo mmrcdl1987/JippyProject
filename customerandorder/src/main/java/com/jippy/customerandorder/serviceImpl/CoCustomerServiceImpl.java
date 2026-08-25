@@ -5,8 +5,11 @@ import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
+import com.jippy.customerandorder.feignClients.NotificationFeignClient;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.CoCustomerMapper;
+import com.jippy.customerandorder.mapper.CoWalletPointsMapper;
+import com.jippy.customerandorder.producer.CoWalletPointsKafkaProducer;
 import com.jippy.customerandorder.repository.*;
 import com.jippy.customerandorder.entity.CoCustomerReferral;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +51,11 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
     private final FMFeignClient fmFeignClient;
 
+    private final NotificationFeignClient notificationFeignClient;
+
     private final S3ImageService s3ImageService;
+
+    private final CoWalletPointsKafkaProducer walletPointsKafkaProducer;
 
 
     // QUALIFY REFERRAL ON FIRST ORDER
@@ -134,6 +141,19 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             transaction.setCreatedBy(1);
             transactionsRepository.save(transaction);
 
+            // Publish Kafka event for referral reward points notification
+            CoWalletPointsEvent referralPointsEvent = CoWalletPointsMapper.toReferralPointsEvent(
+                    referral.getReferrerCustomerId(),
+                    referralPoints,
+                    orderId
+            );
+            walletPointsKafkaProducer.sendWalletPointsEvent(referralPointsEvent);
+            log.info(
+                    "REFERRAL_POINTS_EVENT_PUBLISHED | referrerId={} | points={} | orderId={}",
+                    referral.getReferrerCustomerId(),
+                    referralPoints,
+                    orderId
+            );
 
             // Update referral record status to rewarded
             referral.setReferralStatus(COConstants.REFERRAL_STATUS[2]);
@@ -257,6 +277,38 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                 "CUSTOMER_UPDATED | customerId={}",
                 savedCustomer.getCustomerId()
         );
+
+        // ==========================================
+        // SAVE FCM TOKEN IN NOTIFICATION SERVICE
+        // ==========================================
+
+        if (dto.getFcmToken() != null && !dto.getFcmToken().isBlank()) {
+
+            try {
+
+                CoDeviceTokenRequestDto deviceTokenRequest = new CoDeviceTokenRequestDto();
+                deviceTokenRequest.setUserId(savedCustomer.getCustomerId());
+                deviceTokenRequest.setUserType("CUSTOMER");
+                deviceTokenRequest.setDeviceType("ANDROID");
+                deviceTokenRequest.setFcmToken(dto.getFcmToken().trim());
+
+                notificationFeignClient.saveDeviceToken(deviceTokenRequest);
+
+                log.info(
+                        "FCM_TOKEN_SAVED_IN_NOTIFICATION_SERVICE | customerId={}",
+                        savedCustomer.getCustomerId()
+                );
+
+            } catch (Exception ex) {
+
+                log.error(
+                        "FCM_TOKEN_SAVE_FAILED | customerId={} | error={}",
+                        savedCustomer.getCustomerId(),
+                        ex.getMessage(),
+                        ex
+                );
+            }
+        }
 
         // ==========================================
         // PROCESS REFERRAL
@@ -392,6 +444,19 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                     walletSettings.getSettingValue()
             );
 
+            // Publish Kafka event for welcome points notification
+            CoWalletPointsEvent welcomePointsEvent = CoWalletPointsMapper.toWelcomePointsEvent(
+                    savedCustomer.getCustomerId(),
+                    walletSettings.getSettingValue(),
+                    dto.getFcmToken()
+            );
+            walletPointsKafkaProducer.sendWalletPointsEvent(welcomePointsEvent);
+            log.info(
+                    "WELCOME_POINTS_EVENT_PUBLISHED | customerId={} | points={}",
+                    savedCustomer.getCustomerId(),
+                    walletSettings.getSettingValue()
+            );
+
         } else {
 
             log.info(
@@ -471,8 +536,25 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         transaction.setAmount(convertedAmount);
         transaction.setCreatedAt(LocalDateTime.now());
         transaction.setCreatedBy(1);
-        transactionsRepository.save(transaction);
+        CoCustomerWalletTransactions savedTransaction = transactionsRepository.save(transaction);
         log.info("Points conversion transaction saved");
+
+        // PUBLISH CONVERSION NOTIFICATION EVENT
+        CoWalletPointsEvent conversionEvent =
+                CoWalletPointsMapper.toPointsConvertedEvent(
+                        customerId,
+                        eligibleBlocks * COConstants.MINIMUM_POINTS_REQUIRED,
+                        convertedAmount,
+                        "CONVERT-" + customerId + "-" + savedTransaction.getCustomerWalletTransactionsId()
+                );
+        conversionEvent.setFcmToken(null);
+        walletPointsKafkaProducer.sendWalletPointsEvent(conversionEvent);
+        log.info(
+                "POINTS_CONVERTED_EVENT_PUBLISHED | customerId={} | transactionId={} | amount={}",
+                customerId,
+                savedTransaction.getCustomerWalletTransactionsId(),
+                convertedAmount
+        );
 
         // RESPONSE
 
