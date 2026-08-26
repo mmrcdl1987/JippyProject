@@ -29,7 +29,9 @@ public class FmMerchantController {
             @Valid @RequestBody FmMerchantRequestDTO dto) {
 
         log.info("[MERCHANT] POST /api/merchants email={}, phone={}", dto.getEmail(), dto.getPhone());
+
         FmMerchant saved = merchantService.createMerchant(dto);
+
         log.info("[MERCHANT] Created: merchantId={}", saved.getMerchantId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(FmApiResponse.success("Merchant registered successfully", saved));

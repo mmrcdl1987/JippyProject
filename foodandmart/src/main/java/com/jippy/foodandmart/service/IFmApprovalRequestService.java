@@ -30,7 +30,7 @@ public interface IFmApprovalRequestService {
      */
     void createApprovalRequest(String entityType, Integer entityId, Integer createdBy);
 
-//    For Driver Microservice Through Feign Client
+//    For Driver Microservice Through Feign Client(DRIVER)
     void createApprovalRequest(FmApprovalRequestDTO requestDTO);
 
     List<FmLevel1PendingApprovalResponseDTO> getLevel1PendingApprovalRequests(Integer approverId);
