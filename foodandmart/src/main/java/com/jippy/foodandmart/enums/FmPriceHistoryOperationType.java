@@ -1,7 +1,16 @@
 package com.jippy.foodandmart.enums;
 
 public enum FmPriceHistoryOperationType {
+
     APPLY,
+
     RESTORE,
-    UPDATE
+
+    UPDATE,
+
+    BULK_UPDATE,
+
+    INCREASE,
+
+    DECREASE
 }

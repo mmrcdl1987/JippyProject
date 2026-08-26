@@ -4,6 +4,7 @@ import com.jippy.foodandmart.entity.FmProduct;
 import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductPriceProjection;
+import com.jippy.foodandmart.projections.OutletProductPricingProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,28 +31,23 @@ public interface FmProductRepository
             Integer outletCategoryId
     );
 
-
     Optional<FmProduct> findByOutletCategoryIdAndProductNameIgnoreCase(
             Integer outletCategoryId,
             String productName
     );
-
 
     boolean existsByOutletCategoryIdAndProductNameIgnoreCase(
             Integer outletCategoryId,
             String productName
     );
 
-
     long countByOutletCategoryId(
             Integer outletCategoryId
     );
 
-
     Optional<FmProduct> findById(
             Integer productId
     );
-
 
     boolean existsByProductId(
             Integer productId
@@ -73,9 +71,11 @@ public interface FmProductRepository
                 ON pop.product_id = p.product_id
                AND pop.outlet_category_id = oc.outlet_category_id
             WHERE oc.outlet_id IN (:outletIds)
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     List<Object[]> findProducts(
-            @Param("outletIds") List<Integer> outletIds
+            @Param("outletIds")
+            List<Integer> outletIds
     );
 
 
@@ -93,9 +93,11 @@ public interface FmProductRepository
             JOIN jippy_fm.outlet_categories oc
                 ON p.outlet_category_id = oc.outlet_category_id
             WHERE oc.outlet_id IN (:outletIds)
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     List<Object[]> findProductsWithoutPricing(
-            @Param("outletIds") List<Integer> outletIds
+            @Param("outletIds")
+            List<Integer> outletIds
     );
 
 
@@ -103,14 +105,50 @@ public interface FmProductRepository
     // PRODUCT / OUTLET CATEGORY
     // ============================================================
 
+    /**
+     * Gets outlet category ID only from product ID.
+     *
+     * Kept for existing functionality that only supplies productId.
+     */
     @Query(value = """
             SELECT
                 p.outlet_category_id
             FROM jippy_fm.products p
             WHERE p.product_id = :productId
-            """, nativeQuery = true)
+            LIMIT 1
+            """,
+            nativeQuery = true)
     Integer findOutletCategoryId(
-            @Param("productId") Integer productId
+            @Param("productId")
+            Integer productId
+    );
+
+
+    /**
+     * Gets outlet category ID after validating the product
+     * belongs to the requested outlet.
+     *
+     * Used by pricing functionality.
+     */
+    @Query(value = """
+            SELECT
+                p.outlet_category_id
+            FROM jippy_fm.products p
+            INNER JOIN jippy_fm.outlet_categories oc
+                ON oc.outlet_category_id = p.outlet_category_id
+            WHERE p.product_id = :productId
+              AND oc.outlet_id = :outletId
+              AND p.is_active = 'Y'
+              AND oc.is_active = 'Y'
+            LIMIT 1
+            """,
+            nativeQuery = true)
+    Integer findOutletCategoryId(
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletId")
+            Integer outletId
     );
 
 
@@ -122,8 +160,11 @@ public interface FmProductRepository
               AND p.outletCategoryId IN :categoryIds
             """)
     List<FmProduct> findByOutletIdAndOutletCategoryIds(
-            @Param("outletId") Integer outletId,
-            @Param("categoryIds") List<Integer> categoryIds
+            @Param("outletId")
+            Integer outletId,
+
+            @Param("categoryIds")
+            List<Integer> categoryIds
     );
 
 
@@ -133,7 +174,8 @@ public interface FmProductRepository
             WHERE p.outletCategoryId IN :categoryIds
             """)
     List<FmProduct> findByOutletCategoryIds(
-            @Param("categoryIds") List<Integer> categoryIds
+            @Param("categoryIds")
+            List<Integer> categoryIds
     );
 
 
@@ -149,7 +191,8 @@ public interface FmProductRepository
             WHERE p.productId = :productId
             """)
     void disableProduct(
-            @Param("productId") Integer productId
+            @Param("productId")
+            Integer productId
     );
 
 
@@ -161,7 +204,8 @@ public interface FmProductRepository
             WHERE p.productId = :productId
             """)
     void enableProduct(
-            @Param("productId") Integer productId
+            @Param("productId")
+            Integer productId
     );
 
 
@@ -178,8 +222,11 @@ public interface FmProductRepository
             WHERE p.productId = :productId
             """)
     void permanentlyCloseProduct(
-            @Param("productId") Integer productId,
-            @Param("status") String status
+            @Param("productId")
+            Integer productId,
+
+            @Param("status")
+            String status
     );
 
 
@@ -194,7 +241,11 @@ public interface FmProductRepository
     // ============================================================
 
     @Query("""
-            SELECT CASE WHEN COUNT(p) > 0 THEN TRUE ELSE FALSE END
+            SELECT CASE
+                WHEN COUNT(p) > 0
+                THEN TRUE
+                ELSE FALSE
+            END
             FROM FmProduct p
             JOIN FmOutletCategory oc
                 ON p.outletCategoryId = oc.outletCategoryId
@@ -202,23 +253,30 @@ public interface FmProductRepository
               AND oc.outletId = :outletId
             """)
     boolean existsByProductIdAndOutletId(
-            @Param("productId") Integer productId,
-            @Param("outletId") Integer outletId
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletId")
+            Integer outletId
     );
 
 
     @Query("""
             SELECT COUNT(p) > 0
             FROM FmProduct p
-            JOIN p.outletCategory oc
+            JOIN FmOutletCategory oc
+                ON oc.outletCategoryId = p.outletCategoryId
             WHERE oc.outletId = :outletId
               AND p.productId = :productId
               AND p.isActive = 'Y'
               AND p.isToggle = true
             """)
     boolean existsProductInOutlet(
-            @Param("outletId") Integer outletId,
-            @Param("productId") Integer productId
+            @Param("outletId")
+            Integer outletId,
+
+            @Param("productId")
+            Integer productId
     );
 
 
@@ -229,14 +287,16 @@ public interface FmProductRepository
     @Query("""
             SELECT p.productId
             FROM FmProduct p
-            JOIN p.outletCategory oc
+            JOIN FmOutletCategory oc
+                ON oc.outletCategoryId = p.outletCategoryId
             WHERE oc.outletId = :outletId
               AND p.isActive = 'Y'
               AND p.isToggle = true
             ORDER BY p.productId
             """)
     List<Integer> findActiveProductIdsByOutlet(
-            @Param("outletId") Integer outletId
+            @Param("outletId")
+            Integer outletId
     );
 
 
@@ -245,7 +305,8 @@ public interface FmProductRepository
     // ============================================================
 
     /**
-     * Fetch all products whose image and description are not updated.
+     * Fetch all products whose image and description
+     * are not updated.
      */
     Page<FmProduct> findByIsImageDescUpdatedFalse(
             Pageable pageable
@@ -273,9 +334,11 @@ public interface FmProductRepository
                 ON pop.product_id = p.product_id
             WHERE o.outlet_id = :outletId
             ORDER BY p.product_name
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     List<FmProductPriceProjection> findProductsByOutletId(
-            @Param("outletId") Integer outletId
+            @Param("outletId")
+            Integer outletId
     );
 
 
@@ -284,15 +347,20 @@ public interface FmProductRepository
     // ============================================================
 
     /**
-     * Fetch all products for multiple outlets in a single query.
+     * Fetch all active products for multiple outlets.
      *
-     * Returns:
+     * IMPORTANT:
+     *
+     * Returned Object[] order:
      *
      * [0] productId
      * [1] productName
      * [2] merchantPrice
      * [3] outletCategoryId
      * [4] outletId
+     *
+     * The order MUST remain synchronized with the
+     * bulk pricing service implementation.
      */
     @Query(value = """
             SELECT
@@ -308,9 +376,11 @@ public interface FmProductRepository
               AND p.is_active = 'Y'
               AND oc.is_active = 'Y'
             ORDER BY oc.outlet_id, p.product_id
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     List<Object[]> findProductsForBulkPricing(
-            @Param("outletIds") List<Integer> outletIds
+            @Param("outletIds")
+            List<Integer> outletIds
     );
 
 
@@ -324,7 +394,8 @@ public interface FmProductRepository
                     SELECT 1
                     FROM jippy_fm.products p
                     INNER JOIN jippy_fm.outlet_categories oc
-                        ON oc.outlet_category_id = p.outlet_category_id
+                        ON oc.outlet_category_id =
+                           p.outlet_category_id
                     WHERE p.product_id = :productId
                       AND oc.outlet_id = :outletId
                       AND p.is_active = 'Y'
@@ -336,15 +407,111 @@ public interface FmProductRepository
                         SELECT 1
                         FROM jippy_fm.product_variant_options pvo
                         WHERE pvo.product_id = :productId
-                          AND pvo.product_variant_options_id = :variantId
+                          AND pvo.product_variant_options_id =
+                              :variantId
                           AND pvo.is_active = true
                     )
                 )
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     boolean existsActiveProductAndVariantInOutlet(
-            @Param("productId") Integer productId,
-            @Param("outletId") Integer outletId,
-            @Param("variantId") Integer variantId
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletId")
+            Integer outletId,
+
+            @Param("variantId")
+            Integer variantId
+    );
+
+
+    // ============================================================
+    // CURRENT ONLINE PRICE
+    // ============================================================
+
+    @Query(value = """
+            SELECT
+                pop.online_price
+            FROM jippy_fm.product_online_pricing pop
+            WHERE pop.product_id = :productId
+              AND pop.outlet_category_id = :outletCategoryId
+              AND pop.product_variant_id IS NULL
+            LIMIT 1
+            """,
+            nativeQuery = true)
+    BigDecimal findCurrentOnlinePrice(
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletCategoryId")
+            Integer outletCategoryId
+    );
+
+
+    // ============================================================
+    // UPDATE ONLINE PRICE
+    // ============================================================
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+            UPDATE jippy_fm.product_online_pricing
+            SET online_price = :newPrice,
+                updated_at = :updatedAt,
+                updated_by = :updatedBy
+            WHERE product_id = :productId
+              AND outlet_category_id = :outletCategoryId
+              AND product_variant_id IS NULL
+            """,
+            nativeQuery = true)
+    int updateOnlinePrice(
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletCategoryId")
+            Integer outletCategoryId,
+
+            @Param("newPrice")
+            BigDecimal newPrice,
+
+            @Param("updatedAt")
+            LocalDateTime updatedAt,
+
+            @Param("updatedBy")
+            Integer updatedBy
+    );
+
+
+    // ============================================================
+    // PRODUCT PRICING BY OUTLET
+    // ============================================================
+
+    @Query(value = """
+            SELECT
+                p.product_id AS productId,
+                p.product_name AS productName,
+                p.merchant_price AS merchantPrice,
+                pop.online_price AS onlinePrice
+            FROM jippy_fm.outlets o
+            INNER JOIN jippy_fm.outlet_categories oc
+                ON o.outlet_id = oc.outlet_id
+            INNER JOIN jippy_fm.products p
+                ON oc.outlet_category_id =
+                   p.outlet_category_id
+            LEFT JOIN jippy_fm.product_online_pricing pop
+                ON p.product_id = pop.product_id
+               AND p.outlet_category_id =
+                   pop.outlet_category_id
+               AND pop.product_variant_id IS NULL
+            WHERE o.outlet_id = :outletId
+            ORDER BY p.product_name
+            """,
+            nativeQuery = true)
+    List<OutletProductPricingProjection>
+    findProductPricingByOutletId(
+            @Param("outletId")
+            Integer outletId
     );
 
 
@@ -372,18 +539,23 @@ public interface FmProductRepository
                 o.outlet_name AS outletName
             FROM jippy_fm.products p
             LEFT JOIN jippy_fm.outlet_categories oc
-                ON p.outlet_category_id = oc.outlet_category_id
+                ON p.outlet_category_id =
+                   oc.outlet_category_id
             LEFT JOIN jippy_fm.outlets o
                 ON oc.outlet_id = o.outlet_id
             LEFT JOIN jippy_fm.categories c
                 ON oc.category_id = c.category_id
-            WHERE LOWER(p.product_name) = LOWER(:productName)
+            WHERE LOWER(p.product_name) =
+                  LOWER(:productName)
               AND p.is_active = 'Y'
               AND oc.is_active = 'Y'
               AND o.is_active = 'Y'
-            """, nativeQuery = true)
-    List<FmProductCategoryProjection> findProductCategoryDetails(
-            @Param("productName") String productName
+            """,
+            nativeQuery = true)
+    List<FmProductCategoryProjection>
+    findProductCategoryDetails(
+            @Param("productName")
+            String productName
     );
 
 
@@ -401,27 +573,33 @@ public interface FmProductRepository
                 mp.category_id AS categoryId,
                 mp.category_name AS categoryName
             FROM jippy_fm.master_products mp
-            WHERE LOWER(mp.master_product_name) = LOWER(:productName)
-            """, nativeQuery = true)
+            WHERE LOWER(mp.master_product_name) =
+                  LOWER(:productName)
+            """,
+            nativeQuery = true)
     List<FmMasterProductCategoryProjection>
     findMasterProductCategoryDetails(
-            @Param("productName") String productName
+            @Param("productName")
+            String productName
     );
 
 
     // ============================================================
-    // OUTLET CATEGORY ID BY PRODUCT NAME
+    // OUTLET CATEGORY IDS BY PRODUCT NAME
     // ============================================================
 
     @Query(value = """
             SELECT
                 p.outlet_category_id
             FROM jippy_fm.products p
-            WHERE LOWER(p.product_name) = LOWER(:productName)
+            WHERE LOWER(p.product_name) =
+                  LOWER(:productName)
               AND p.is_active = 'Y'
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     List<Integer> findOutletCategoryIdsByProductName(
-            @Param("productName") String productName
+            @Param("productName")
+            String productName
     );
 
 
@@ -437,10 +615,14 @@ public interface FmProductRepository
                 updated_at = CURRENT_TIMESTAMP
             WHERE outlet_category_id = :outletCategoryId
               AND is_active = 'Y'
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     int updateOutletCategoryId(
-            @Param("outletCategoryId") Integer outletCategoryId,
-            @Param("updatedCategoryId") Integer updatedCategoryId
+            @Param("outletCategoryId")
+            Integer outletCategoryId,
+
+            @Param("updatedCategoryId")
+            Integer updatedCategoryId
     );
 
 
@@ -458,11 +640,16 @@ public interface FmProductRepository
             UPDATE jippy_fm.master_products
             SET category_id = :updatedCategoryId,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE LOWER(master_product_name) = LOWER(:productName)
-            """, nativeQuery = true)
+            WHERE LOWER(master_product_name) =
+                  LOWER(:productName)
+            """,
+            nativeQuery = true)
     int updateMasterProductCategoryId(
-            @Param("productName") String productName,
-            @Param("updatedCategoryId") Integer updatedCategoryId
+            @Param("productName")
+            String productName,
+
+            @Param("updatedCategoryId")
+            Integer updatedCategoryId
     );
 
 
@@ -474,9 +661,11 @@ public interface FmProductRepository
             SELECT COUNT(*)
             FROM jippy_fm.categories
             WHERE category_id = :categoryId
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     long countCategoryById(
-            @Param("categoryId") Integer categoryId
+            @Param("categoryId")
+            Integer categoryId
     );
 
 
@@ -485,14 +674,19 @@ public interface FmProductRepository
     // ============================================================
 
     @Query(value = """
-            SELECT oc.outlet_id
+            SELECT
+                oc.outlet_id
             FROM jippy_fm.products p
-            JOIN jippy_fm.outlet_categories oc
-                ON oc.outlet_category_id = p.outlet_category_id
+            INNER JOIN jippy_fm.outlet_categories oc
+                ON oc.outlet_category_id =
+                   p.outlet_category_id
             WHERE p.product_id = :productId
             LIMIT 1
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     Integer fetchOutletIdForProductId(
-            @Param("productId") Integer productId
+            @Param("productId")
+            Integer productId
     );
+
 }

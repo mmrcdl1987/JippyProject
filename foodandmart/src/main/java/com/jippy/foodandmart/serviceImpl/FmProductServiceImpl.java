@@ -9,6 +9,7 @@ import com.jippy.foodandmart.mapper.FmProductVariantOptionMapper;
 import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductPriceProjection;
+import com.jippy.foodandmart.projections.OutletProductPricingProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmProductService;
 import lombok.RequiredArgsConstructor;
@@ -1258,11 +1259,11 @@ public class FmProductServiceImpl implements FmProductService {
 
         return response;
     }
+    //    =================================================================================================
 //    =================================================================================================
-//    =================================================================================================
-        @Override
-        @Transactional(readOnly = true)
-        public Object getCategoryForProductByProductType(String productName, String productType) {
+    @Override
+    @Transactional(readOnly = true)
+    public Object getCategoryForProductByProductType(String productName, String productType) {
 
         log.info(
                 "[GET_CATEGORY_FOR_PRODUCT] START | productName={} | productType={}",
@@ -1270,170 +1271,170 @@ public class FmProductServiceImpl implements FmProductService {
                 productType
         );
 
-    /*
-     * ============================================================
-     * Validate Product Name
-     * ============================================================
-     */
-    if (productName == null || productName.trim().isEmpty()) {
-
-        log.error(
-                "[GET_CATEGORY_FOR_PRODUCT] Product name is empty"
-        );
-
-        throw new IllegalArgumentException(
-                "Product name is required."
-        );
-    }
-
-    /*
-     * ============================================================
-     * Validate Product Type
-     * ============================================================
-     */
-    if (productType == null || productType.trim().isEmpty()) {
-
-        log.error(
-                "[GET_CATEGORY_FOR_PRODUCT] Product type is empty"
-        );
-
-        throw new IllegalArgumentException(
-                "Product type is required."
-        );
-    }
-
-    String normalizedProductName = productName.trim();
-
-    String normalizedProductType = productType.trim().toUpperCase();
-
-
-    /*
-     * ============================================================
-     * PRODUCT
-     * ============================================================
-     */
-    if (FmAppConstants.PRODUCT_TYPE_PRODUCT.equals(normalizedProductType)) {
-
-        log.info(
-                "[GET_CATEGORY_FOR_PRODUCT] Fetching PRODUCT | productName={}",
-                normalizedProductName
-        );
-
-        List<FmProductCategoryProjection> projections =
-                productRepository.findProductCategoryDetails(
-                        normalizedProductName
-                );
-
-        if (projections == null || projections.isEmpty()) {
+        /*
+         * ============================================================
+         * Validate Product Name
+         * ============================================================
+         */
+        if (productName == null || productName.trim().isEmpty()) {
 
             log.error(
-                    "[GET_CATEGORY_FOR_PRODUCT] Product not found | productName={}",
-                    normalizedProductName
+                    "[GET_CATEGORY_FOR_PRODUCT] Product name is empty"
             );
 
-            throw new ResourceNotFoundException(
-                    "Product not found with name : "
-                            + normalizedProductName
+            throw new IllegalArgumentException(
+                    "Product name is required."
             );
         }
 
         /*
-         * ========================================================
-         * Projection -> DTO
-         * ========================================================
+         * ============================================================
+         * Validate Product Type
+         * ============================================================
          */
-        List<FmProductCategoryResponseDto> response = new ArrayList<>();
-
-        for (FmProductCategoryProjection projection : projections) {
-
-            FmProductCategoryResponseDto dto =
-                    FmProductMapper.mapProductCategoryProjectionToDto(
-                                    projection
-                            );
-
-            response.add(dto);
-        }
-
-        log.info(
-                "[GET_CATEGORY_FOR_PRODUCT] PRODUCT SUCCESS | count={}",
-                response.size()
-        );
-
-        return response;
-    }
-
-
-    /*
-     * ============================================================
-     * MASTER PRODUCT
-     * ============================================================
-     */
-    if (FmAppConstants.PRODUCT_TYPE_MASTER_PRODUCT.equals(normalizedProductType)) {
-
-        log.info(
-                "[GET_CATEGORY_FOR_PRODUCT] Fetching MASTERPRODUCT | productName={}",
-                normalizedProductName
-        );
-
-        List<FmMasterProductCategoryProjection> projections =
-                productRepository.findMasterProductCategoryDetails(
-                        normalizedProductName
-                );
-
-        if (projections == null || projections.isEmpty()) {
+        if (productType == null || productType.trim().isEmpty()) {
 
             log.error(
-                    "[GET_CATEGORY_FOR_PRODUCT] Master Product not found | productName={}",
+                    "[GET_CATEGORY_FOR_PRODUCT] Product type is empty"
+            );
+
+            throw new IllegalArgumentException(
+                    "Product type is required."
+            );
+        }
+
+        String normalizedProductName = productName.trim();
+
+        String normalizedProductType = productType.trim().toUpperCase();
+
+
+        /*
+         * ============================================================
+         * PRODUCT
+         * ============================================================
+         */
+        if (FmAppConstants.PRODUCT_TYPE_PRODUCT.equals(normalizedProductType)) {
+
+            log.info(
+                    "[GET_CATEGORY_FOR_PRODUCT] Fetching PRODUCT | productName={}",
                     normalizedProductName
             );
 
-            throw new ResourceNotFoundException(
-                    "Master Product not found with name : "
-                            + normalizedProductName
+            List<FmProductCategoryProjection> projections =
+                    productRepository.findProductCategoryDetails(
+                            normalizedProductName
+                    );
+
+            if (projections == null || projections.isEmpty()) {
+
+                log.error(
+                        "[GET_CATEGORY_FOR_PRODUCT] Product not found | productName={}",
+                        normalizedProductName
+                );
+
+                throw new ResourceNotFoundException(
+                        "Product not found with name : "
+                                + normalizedProductName
+                );
+            }
+
+            /*
+             * ========================================================
+             * Projection -> DTO
+             * ========================================================
+             */
+            List<FmProductCategoryResponseDto> response = new ArrayList<>();
+
+            for (FmProductCategoryProjection projection : projections) {
+
+                FmProductCategoryResponseDto dto =
+                        FmProductMapper.mapProductCategoryProjectionToDto(
+                                projection
+                        );
+
+                response.add(dto);
+            }
+
+            log.info(
+                    "[GET_CATEGORY_FOR_PRODUCT] PRODUCT SUCCESS | count={}",
+                    response.size()
             );
+
+            return response;
         }
+
 
         /*
-         * ========================================================
-         * Projection -> DTO
-         * ========================================================
+         * ============================================================
+         * MASTER PRODUCT
+         * ============================================================
          */
-        List<FmMasterProductCategoryResponseDto> response =
-                new ArrayList<>();
+        if (FmAppConstants.PRODUCT_TYPE_MASTER_PRODUCT.equals(normalizedProductType)) {
 
-        for (FmMasterProductCategoryProjection projection : projections) {
+            log.info(
+                    "[GET_CATEGORY_FOR_PRODUCT] Fetching MASTERPRODUCT | productName={}",
+                    normalizedProductName
+            );
 
-            FmMasterProductCategoryResponseDto dto =
-                    FmProductMapper.mapMasterProductCategoryProjectionToDto(
-                                    projection
-                            );  
+            List<FmMasterProductCategoryProjection> projections =
+                    productRepository.findMasterProductCategoryDetails(
+                            normalizedProductName
+                    );
 
-            response.add(dto);
+            if (projections == null || projections.isEmpty()) {
+
+                log.error(
+                        "[GET_CATEGORY_FOR_PRODUCT] Master Product not found | productName={}",
+                        normalizedProductName
+                );
+
+                throw new ResourceNotFoundException(
+                        "Master Product not found with name : "
+                                + normalizedProductName
+                );
+            }
+
+            /*
+             * ========================================================
+             * Projection -> DTO
+             * ========================================================
+             */
+            List<FmMasterProductCategoryResponseDto> response =
+                    new ArrayList<>();
+
+            for (FmMasterProductCategoryProjection projection : projections) {
+
+                FmMasterProductCategoryResponseDto dto =
+                        FmProductMapper.mapMasterProductCategoryProjectionToDto(
+                                projection
+                        );
+
+                response.add(dto);
+            }
+
+            log.info(
+                    "[GET_CATEGORY_FOR_PRODUCT] MASTERPRODUCT SUCCESS | count={}",
+                    response.size()
+            );
+
+            return response;
         }
 
-        log.info(
-                "[GET_CATEGORY_FOR_PRODUCT] MASTERPRODUCT SUCCESS | count={}",
-                response.size()
+
+        /*
+         * ============================================================
+         * INVALID PRODUCT TYPE
+         * ============================================================
+         */
+        log.error(
+                "[GET_CATEGORY_FOR_PRODUCT] Invalid productType={}",
+                productType
         );
 
-        return response;
+        throw new IllegalArgumentException(
+                "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT."
+        );
     }
-
-
-    /*
-     * ============================================================
-     * INVALID PRODUCT TYPE
-     * ============================================================
-     */
-    log.error(
-            "[GET_CATEGORY_FOR_PRODUCT] Invalid productType={}",
-            productType
-    );
-
-    throw new IllegalArgumentException(
-            "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT."
-    );
-}
     @Override
     @Transactional
     public FmProductCategoryUpdateResponseDto updateCategoryForProductByProductType(
@@ -1471,8 +1472,8 @@ public class FmProductServiceImpl implements FmProductService {
          * ============================================================
          */
         long categoryCount = productRepository.countCategoryById(
-                        updatedCategoryId
-                );
+                updatedCategoryId
+        );
 
         if (categoryCount == 0) {
 
@@ -1482,7 +1483,7 @@ public class FmProductServiceImpl implements FmProductService {
             );
 
             throw new ResourceNotFoundException("Category not found with id : "
-                            + updatedCategoryId
+                    + updatedCategoryId
             );
         }
 
@@ -1516,8 +1517,8 @@ public class FmProductServiceImpl implements FmProductService {
 
             List<Integer> outletCategoryIds =
                     productRepository.findOutletCategoryIdsByProductName(
-                                    productName
-                            );
+                            productName
+                    );
 
             if (outletCategoryIds == null || outletCategoryIds.isEmpty()) {
 
@@ -1554,9 +1555,9 @@ public class FmProductServiceImpl implements FmProductService {
 
                 int updatedRecords =
                         productRepository.updateOutletCategoryId(
-                                        outletCategoryId,
-                                        updatedCategoryId
-                                );
+                                outletCategoryId,
+                                updatedCategoryId
+                        );
 
                 totalUpdatedRecords = totalUpdatedRecords + updatedRecords;
             }
@@ -1694,4 +1695,34 @@ public class FmProductServiceImpl implements FmProductService {
         );
     }
 
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OutletProductPricingDto> getProductPricingByOutletId(
+            Integer outletId
+    ) {
+
+        log.info(
+                "GET_PRODUCT_PRICING_BY_OUTLET | outletId={}",
+                outletId
+        );
+
+        if (outletId == null) {
+            throw new IllegalArgumentException(
+                    "Outlet ID is required"
+            );
+        }
+
+        List<OutletProductPricingProjection> products =
+                productRepository.findProductPricingByOutletId(outletId);
+
+        return products.stream()
+                .map(product -> new OutletProductPricingDto(
+                        product.getProductId(),
+                        product.getProductName(),
+                        product.getMerchantPrice(),
+                        product.getOnlinePrice()
+                ))
+                .toList();
+    }
 }

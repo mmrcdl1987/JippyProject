@@ -347,4 +347,17 @@ public class FmProductController {
         return ResponseEntity.ok(productIds);
     }
 
+    @GetMapping("/outlets/{outletId}/pricing")
+    public ResponseEntity<List<OutletProductPricingDto>> getProductPricingByOutletId(@PathVariable Integer outletId) {
+
+        log.info("GET_PRODUCT_PRICING_BY_OUTLET_START | outletId={}", outletId);
+
+        List<OutletProductPricingDto> products = productMappingService.getProductPricingByOutletId(outletId);
+
+        log.info("GET_PRODUCT_PRICING_BY_OUTLET_SUCCESS | outletId={} | productCount={}", outletId, products.size());
+
+        return ResponseEntity.ok(products);
+    }
+
+
 }

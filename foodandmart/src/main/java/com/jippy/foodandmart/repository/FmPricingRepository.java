@@ -10,7 +10,13 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricing, Integer> {
+public interface FmPricingRepository
+        extends JpaRepository<FmProductOnlinePricing, Integer> {
+
+
+    // =========================================================
+    // EXISTING ROW CHECK
+    // =========================================================
 
     @Query(value = """
             SELECT COUNT(*)
@@ -18,11 +24,27 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
             WHERE product_id = :productId
               AND outlet_category_id = :outletCategoryId
               AND (
-                    (:productVariantId IS NULL AND product_variant_id IS NULL)
+                    (:productVariantId IS NULL
+                        AND product_variant_id IS NULL)
                     OR product_variant_id = :productVariantId
                   )
-            """, nativeQuery = true)
-    int existsRow(@Param("productId") Integer productId, @Param("outletCategoryId") Integer outletCategoryId, @Param("productVariantId") Integer productVariantId);
+            """,
+            nativeQuery = true)
+    int existsRow(
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletCategoryId")
+            Integer outletCategoryId,
+
+            @Param("productVariantId")
+            Integer productVariantId
+    );
+
+
+    // =========================================================
+    // EXISTING PRICE UPDATE
+    // =========================================================
 
     @Modifying
     @Query(value = """
@@ -35,14 +57,47 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
             WHERE product_id = :productId
               AND outlet_category_id = :outletCategoryId
               AND (
-                    (:productVariantId IS NULL AND product_variant_id IS NULL)
+                    (:productVariantId IS NULL
+                        AND product_variant_id IS NULL)
                     OR product_variant_id = :productVariantId
                   )
-            """, nativeQuery = true)
-    int updatePrice(@Param("productId") Integer productId, @Param("outletCategoryId") Integer outletCategoryId, @Param("productVariantId") Integer productVariantId, @Param("price") BigDecimal price, @Param("updatedBy") Integer updatedBy, @Param("approvedBy") Integer approvedBy);
+            """,
+            nativeQuery = true)
+    int updatePrice(
+            @Param("productId")
+            Integer productId,
 
-    Optional<FmProductOnlinePricing> findTopByProductIdAndIsApprovedOrderByCreatedAtDesc(Integer productId, Boolean isApproved);
+            @Param("outletCategoryId")
+            Integer outletCategoryId,
 
+            @Param("productVariantId")
+            Integer productVariantId,
+
+            @Param("price")
+            BigDecimal price,
+
+            @Param("updatedBy")
+            Integer updatedBy,
+
+            @Param("approvedBy")
+            Integer approvedBy
+    );
+
+
+    // =========================================================
+    // LATEST APPROVED PRICE
+    // =========================================================
+
+    Optional<FmProductOnlinePricing>
+    findTopByProductIdAndIsApprovedOrderByCreatedAtDesc(
+            Integer productId,
+            Boolean isApproved
+    );
+
+
+    // =========================================================
+    // PRODUCT + OUTLET
+    // =========================================================
 
     @Query("""
             SELECT pop
@@ -53,7 +108,19 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
               AND oc.outletId = :outletId
               AND oc.isActive = 'Y'
             """)
-    Optional<FmProductOnlinePricing> findByProductIdAndOutletId(@Param("productId") Integer productId, @Param("outletId") Integer outletId);
+    Optional<FmProductOnlinePricing>
+    findByProductIdAndOutletId(
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletId")
+            Integer outletId
+    );
+
+
+    // =========================================================
+    // ONLINE PRICE BY PRODUCT + CATEGORY
+    // =========================================================
 
     @Query(value = """
             SELECT online_price
@@ -62,20 +129,55 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
               AND outlet_category_id = :outletCategoryId
               AND is_approved = true
             LIMIT 1
-            """, nativeQuery = true)
-    Optional<BigDecimal> findOnlinePriceByProductIdAndOutletCategoryId(@Param("productId") Integer productId, @Param("outletCategoryId") Integer outletCategoryId);
+            """,
+            nativeQuery = true)
+    Optional<BigDecimal>
+    findOnlinePriceByProductIdAndOutletCategoryId(
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletCategoryId")
+            Integer outletCategoryId
+    );
+
+
+    // =========================================================
+    // GET OUTLET CATEGORY
+    // =========================================================
 
     @Query("""
             SELECT oc.outletCategoryId
             FROM FmOutletCategory oc
             JOIN FmProduct p
-                ON p.outletCategoryId = oc.outletCategoryId
+                ON p.outletCategoryId =
+                   oc.outletCategoryId
             WHERE p.productId = :productId
               AND oc.outletId = :outletId
               AND oc.isActive = 'Y'
             """)
-    Optional<Integer> findOutletCategoryIdByProductAndOutlet(@Param("productId") Integer productId, @Param("outletId") Integer outletId);
+    Optional<Integer>
+    findOutletCategoryIdByProductAndOutlet(
+            @Param("productId")
+            Integer productId,
 
+            @Param("outletId")
+            Integer outletId
+    );
+
+
+    // =========================================================
+    // BULK UPDATE
+    //
+    // EXISTING METHOD
+    //
+    // [0] product_online_pricing_id
+    // [1] product_id
+    // [2] outlet_category_id
+    // [3] product_variant_id
+    // [4] online_price
+    //
+    // NO OTHER METHOD CHANGED.
+    // =========================================================
 
     @Query(value = """
             SELECT
@@ -86,29 +188,50 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
                 online_price
             FROM jippy_fm.product_online_pricing
             WHERE outlet_category_id IN (:outletCategoryIds)
-            """, nativeQuery = true)
-    List<Object[]> findExistingBulkPricing(@Param("outletCategoryIds") List<Integer> outletCategoryIds);
+            """,
+            nativeQuery = true)
+    List<Object[]> findExistingBulkPricing(
+            @Param("outletCategoryIds")
+            List<Integer> outletCategoryIds
+    );
 
-    /**
-     * Find current online price for a specific product,
-     * outlet category and variant.
-     */
+
+    // =========================================================
+    // CURRENT PRICE FOR SCHEDULED UPDATE
+    // =========================================================
+
     @Query(value = """
             SELECT online_price
             FROM jippy_fm.product_online_pricing
             WHERE product_id = :productId
               AND outlet_category_id = :outletCategoryId
               AND (
-                    (:productVariantId IS NULL AND product_variant_id IS NULL)
+                    (:productVariantId IS NULL
+                        AND product_variant_id IS NULL)
                     OR product_variant_id = :productVariantId
                   )
               AND is_approved = true
             ORDER BY updated_at DESC NULLS LAST,
                      product_online_pricing_id DESC
             LIMIT 1
-            """, nativeQuery = true)
-    Optional<BigDecimal> findCurrentPriceForScheduledUpdate(@Param("productId") Integer productId, @Param("outletCategoryId") Integer outletCategoryId, @Param("productVariantId") Integer productVariantId);
+            """,
+            nativeQuery = true)
+    Optional<BigDecimal>
+    findCurrentPriceForScheduledUpdate(
+            @Param("productId")
+            Integer productId,
 
+            @Param("outletCategoryId")
+            Integer outletCategoryId,
+
+            @Param("productVariantId")
+            Integer productVariantId
+    );
+
+
+    // =========================================================
+    // OUTLET CATEGORIES FOR SCHEDULED PRICES
+    // =========================================================
 
     @Query(value = """
             SELECT
@@ -117,12 +240,26 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
                 oc.outlet_category_id
             FROM jippy_fm.products p
             JOIN jippy_fm.outlet_categories oc
-                ON oc.outlet_category_id = p.outlet_category_id
+                ON oc.outlet_category_id =
+                   p.outlet_category_id
             WHERE p.product_id IN (:productIds)
               AND oc.outlet_id IN (:outletIds)
               AND oc.is_active = 'Y'
-            """, nativeQuery = true)
-    List<Object[]> findOutletCategoriesForScheduledPrices(@Param("productIds") List<Integer> productIds, @Param("outletIds") List<Integer> outletIds);
+            """,
+            nativeQuery = true)
+    List<Object[]>
+    findOutletCategoriesForScheduledPrices(
+            @Param("productIds")
+            List<Integer> productIds,
+
+            @Param("outletIds")
+            List<Integer> outletIds
+    );
+
+
+    // =========================================================
+    // CURRENT PRICES FOR SCHEDULED UPDATES
+    // =========================================================
 
     @Query(value = """
             SELECT
@@ -133,8 +270,42 @@ public interface FmPricingRepository extends JpaRepository<FmProductOnlinePricin
             FROM jippy_fm.product_online_pricing
             WHERE outlet_category_id IN (:outletCategoryIds)
               AND is_approved = true
-            """, nativeQuery = true)
-    List<Object[]> findCurrentPricesForScheduledUpdates(@Param("outletCategoryIds") List<Integer> outletCategoryIds);
+            """,
+            nativeQuery = true)
+    List<Object[]>
+    findCurrentPricesForScheduledUpdates(
+            @Param("outletCategoryIds")
+            List<Integer> outletCategoryIds
+    );
 
 
+    // =========================================================
+    // FIND PRICING RECORD
+    // =========================================================
+
+    @Query(value = """
+            SELECT *
+            FROM jippy_fm.product_online_pricing
+            WHERE product_id = :productId
+              AND outlet_category_id = :outletCategoryId
+              AND (
+                    (:productVariantId IS NULL
+                        AND product_variant_id IS NULL)
+                    OR product_variant_id = :productVariantId
+                  )
+            ORDER BY updated_at DESC NULLS LAST,
+                     product_online_pricing_id DESC
+            LIMIT 1
+            """,
+            nativeQuery = true)
+    Optional<FmProductOnlinePricing> findPricingRecord(
+            @Param("productId")
+            Integer productId,
+
+            @Param("outletCategoryId")
+            Integer outletCategoryId,
+
+            @Param("productVariantId")
+            Integer productVariantId
+    );
 }
