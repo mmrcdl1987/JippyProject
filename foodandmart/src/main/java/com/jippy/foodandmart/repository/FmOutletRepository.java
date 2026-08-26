@@ -66,8 +66,14 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                                   FROM jippy_fm.product_online_pricing vp
                                   WHERE vp.product_id = p.product_id
                                     AND vp.outlet_category_id = p.outlet_category_id
-                                    AND vp.product_variant_id IS NOT NULL
-                                    AND vp.is_approved = true
+                                        AND (
+                                          (p.has_product_variants = true
+                                           AND vp.product_variant_id IS NOT NULL)
+                                           OR
+                                           (p.has_product_variants = false
+                                           AND vp.product_variant_id IS NULL)
+                                           )                                
+                                           AND vp.is_approved = true
                                     AND vp.online_price > 0
                               ) AS online_price,   --product_online_pricing table 
                 

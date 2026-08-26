@@ -11,18 +11,10 @@ import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
-import com.jippy.foodandmart.mapper.FmOutletDayMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
-import com.jippy.foodandmart.projections.FmActivePromotionDiscountsProjection;
-import com.jippy.foodandmart.projections.FmMerchantOutletMenuProjection;
-import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
-import com.jippy.foodandmart.projections.FmOutletMenuProjection;
-import com.jippy.foodandmart.projections.OutletAddressProjection;
+import com.jippy.foodandmart.projections.*;
 import com.jippy.foodandmart.repository.*;
-import com.jippy.foodandmart.service.EmailService;
-import com.jippy.foodandmart.service.FmGoogleMapsService;
-import com.jippy.foodandmart.service.IFmOutletService;
-import com.jippy.foodandmart.service.S3Service;
+import com.jippy.foodandmart.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -36,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -76,7 +69,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmMerchantBankDetailsRepository merchantBankDetailsRepository;
     private final FmOutletDayRepository outletDayRepository;
     private final FmCityRepository cityRepository;
-    // private final IFmApprovalRequestService approvalRequestService;
     private final FmUserKycRepository userKycRepository;
     private final DivisionFeignClient divisionFeignClient;
     private final PromotionPlanRepository promotionPlanRepository;
@@ -86,6 +78,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final S3Service s3Service;
     private final EmailService emailService;
     private final CacheInvalidateServiceImpl cacheInvalidateService;
+    private final IFmApprovalRequestService approvalRequestService;
 
 
     @Override
@@ -167,11 +160,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Every new Outlet enters the approval workflow
          * at Level 1 with PENDING status.
          */
-//    approvalRequestService.createApprovalRequest(
-//            FmAppConstants.TYPE_OUTLET,
-//            outlet.getOutletId(),
-//            outlet.getOutletId()
-//    );
+    approvalRequestService.createApprovalRequest(
+            FmAppConstants.TYPE_OUTLET,
+            outlet.getOutletId(),
+            outlet.getOutletId()
+    );
 
         /*
          * Save Address.
