@@ -29,4 +29,6 @@ public interface CoWalletSettingsService {
     Page<CoWalletSettingsResponseDto> getWalletSettings(
             int page,
             int size);
+
+    List<CoWalletSettings> getWalletSettings();
 }

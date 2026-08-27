@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,129 +21,29 @@ import java.util.Optional;
 
 @Service
 @Slf4j
-public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
+@Transactional
+public class CoWalletSettingsServiceImpl
+        implements CoWalletSettingsService {
 
     private static final int MAX_PAGE_SIZE = 100;
 
     @Autowired
     private CoWalletSettingsRepository walletSettingsRepository;
 
-
-    // ============================================================
-    // CREATE / UPDATE WALLET SETTINGS
-    // ============================================================
-
-    /**
-     * Create / Update Wallet Settings.
-     */
-    @Override
-    public CoWalletSettingsResponseDto saveWalletSettings(
-            CoWalletSettingsRequestDto requestDto) {
-
-        log.info("Entering saveWalletSettings");
-
-        // Validate request
-        validateSaveRequest(requestDto);
-
-        CoWalletSettings walletSettings;
-
-        /*
-         * ========================================================
-         * UPDATE
-         * ========================================================
-         */
-        if (requestDto.getWalletSettingsId() != null) {
-
-            log.info(
-                    "Updating wallet settings with ID: {}",
-                    requestDto.getWalletSettingsId()
-            );
-
-            Optional<CoWalletSettings> optionalWalletSettings =
-                    walletSettingsRepository.findById(
-                            requestDto.getWalletSettingsId()
-                    );
-
-            if (optionalWalletSettings.isEmpty()) {
-
-                log.error(
-                        "Wallet settings not found with ID: {}",
-                        requestDto.getWalletSettingsId()
-                );
-
-                throw new IllegalArgumentException(
-                        "Wallet settings not found with ID: "
-                                + requestDto.getWalletSettingsId()
-                );
-            }
-
-            walletSettings = optionalWalletSettings.get();
-
-            walletSettings.setPointsType(
-                    requestDto.getPointsType().trim()
-            );
-
-            walletSettings.setNumOfPoints(
-                    requestDto.getNumOfPoints()
-            );
-
-            walletSettings.setUpdatedBy(
-                    requestDto.getUpdatedBy()
-            );
-
-            walletSettings.setUpdatedAt(
-                    LocalDateTime.now()
-            );
-
-        } else {
-
-            /*
-             * ====================================================
-             * CREATE
-             * ====================================================
-             */
-
-            log.info("Creating new wallet settings");
-
-            walletSettings =
-                    CoWalletSettingsMapper.mapToEntity(requestDto);
-
-            walletSettings.setCreatedAt(
-                    LocalDateTime.now()
-            );
-        }
-
-        /*
-         * ========================================================
-         * SAVE ENTITY
-         * ========================================================
-         */
-
-        CoWalletSettings savedEntity =
-                walletSettingsRepository.save(walletSettings);
-
-        log.info(
-                "Wallet settings saved successfully. ID: {}",
-                savedEntity.getWalletSettingsId()
-        );
-
-        return CoWalletSettingsMapper.mapToResponseDto(
-                savedEntity
-        );
-    }
-
-
     // ============================================================
     // GET ALL WALLET SETTINGS
     // ============================================================
 
     /**
-     * Get all Wallet Settings without pagination.
+     * Get all wallet settings without pagination.
+     *
+     * @return list of wallet settings
      */
     @Override
+    @Transactional(readOnly = true)
     public List<CoWalletSettings> getWalletSettings() {
 
-        log.info("Entering getWalletSettings without pagination");
+        log.info("Fetching all wallet settings");
 
         List<CoWalletSettings> walletSettings =
                 walletSettingsRepository.findAll();
@@ -155,43 +56,181 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
         return walletSettings;
     }
 
+    // ============================================================
+    // CREATE / UPDATE WALLET SETTINGS
+    // ============================================================
+
+    /**
+     * Create or update wallet settings.
+     *
+     * CREATE:
+     * walletSettingsId is null
+     *
+     * UPDATE:
+     * walletSettingsId is provided
+     *
+     * @param requestDto wallet settings request
+     * @return saved wallet settings response
+     */
+    @Override
+    public CoWalletSettingsResponseDto saveWalletSettings(
+            CoWalletSettingsRequestDto requestDto) {
+
+        log.info("Entering saveWalletSettings");
+
+        // ========================================================
+        // VALIDATE REQUEST
+        // ========================================================
+
+        validateSaveRequest(requestDto);
+
+        CoWalletSettings walletSettings;
+
+        // ========================================================
+        // UPDATE
+        // ========================================================
+
+        if (requestDto.getWalletSettingsId() != null) {
+
+            Integer walletSettingsId =
+                    requestDto.getWalletSettingsId();
+
+            log.info(
+                    "Updating wallet settings. walletSettingsId={}",
+                    walletSettingsId
+            );
+
+            Optional<CoWalletSettings> optionalWalletSettings =
+                    walletSettingsRepository.findById(walletSettingsId);
+
+            if (optionalWalletSettings.isEmpty()) {
+
+                log.error(
+                        "Wallet settings not found. walletSettingsId={}",
+                        walletSettingsId
+                );
+
+                throw new IllegalArgumentException(
+                        "Wallet settings not found with ID: "
+                                + walletSettingsId
+                );
+            }
+
+            walletSettings = optionalWalletSettings.get();
+
+            // ====================================================
+            // UPDATE BUSINESS FIELDS
+            // ====================================================
+
+            walletSettings.setSettingType(
+                    requestDto.getSettingType().trim()
+            );
+
+            /*
+             * settingValue is Integer.
+             *
+             * Do NOT use trim().
+             */
+            walletSettings.setSettingValue(
+                    requestDto.getSettingValue()
+            );
+
+            // ====================================================
+            // UPDATE AUDIT FIELDS
+            // ====================================================
+
+            walletSettings.setUpdatedBy(
+                    requestDto.getUpdatedBy()
+            );
+
+            walletSettings.setUpdatedAt(
+                    LocalDateTime.now()
+            );
+
+            log.info(
+                    "Wallet settings updated successfully. " +
+                            "walletSettingsId={}",
+                    walletSettingsId
+            );
+
+        } else {
+
+            // ====================================================
+            // CREATE
+            // ====================================================
+
+            log.info("Creating new wallet settings");
+
+            walletSettings =
+                    CoWalletSettingsMapper.mapToEntity(
+                            requestDto
+                    );
+
+            /*
+             * Mapper already sets createdAt.
+             *
+             * Do not overwrite it here.
+             */
+
+            log.info("New wallet settings entity created");
+        }
+
+        // ========================================================
+        // SAVE ENTITY
+        // ========================================================
+
+        CoWalletSettings savedEntity =
+                walletSettingsRepository.save(walletSettings);
+
+        log.info(
+                "Wallet settings saved successfully. walletSettingsId={}",
+                savedEntity.getWalletSettingsId()
+        );
+
+        // ========================================================
+        // ENTITY -> RESPONSE DTO
+        // ========================================================
+
+        return CoWalletSettingsMapper.mapToResponseDto(
+                savedEntity
+        );
+    }
 
     // ============================================================
     // GET WALLET SETTINGS WITH PAGINATION
     // ============================================================
 
     /**
-     * Get Wallet Settings with Pagination.
+     * Get wallet settings with pagination.
+     *
+     * Latest records are returned first.
      *
      * @param page page number starting from 0
      * @param size number of records per page
+     * @return paginated wallet settings
      */
     @Override
+    @Transactional(readOnly = true)
     public Page<CoWalletSettingsResponseDto> getWalletSettings(
             int page,
             int size) {
 
         log.info(
-                "Entering getWalletSettings with pagination. page={}, size={}",
+                "Entering getWalletSettings with pagination. " +
+                        "page={}, size={}",
                 page,
                 size
         );
 
-        /*
-         * ========================================================
-         * VALIDATE PAGINATION
-         * ========================================================
-         */
+        // ========================================================
+        // VALIDATE PAGINATION
+        // ========================================================
 
         validatePagination(page, size);
 
-        /*
-         * ========================================================
-         * CREATE PAGEABLE
-         *
-         * Latest wallet settings first.
-         * ========================================================
-         */
+        // ========================================================
+        // CREATE PAGEABLE
+        // ========================================================
 
         Pageable pageable =
                 PageRequest.of(
@@ -203,11 +242,9 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
                         )
                 );
 
-        /*
-         * ========================================================
-         * FETCH FROM DATABASE
-         * ========================================================
-         */
+        // ========================================================
+        // FETCH FROM DATABASE
+        // ========================================================
 
         Page<CoWalletSettings> walletSettingsPage =
                 walletSettingsRepository.findAll(pageable);
@@ -220,31 +257,29 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
                 page
         );
 
-        /*
-         * ========================================================
-         * ENTITY -> RESPONSE DTO
-         * ========================================================
-         */
+        // ========================================================
+        // ENTITY -> RESPONSE DTO
+        // ========================================================
 
         return walletSettingsPage.map(
                 CoWalletSettingsMapper::mapToResponseDto
         );
     }
 
-
     // ============================================================
-    // VALIDATE SAVE REQUEST
+    // VALIDATE CREATE / UPDATE REQUEST
     // ============================================================
 
     /**
-     * Validate Create / Update Request.
+     * Validate create/update request.
      */
     private void validateSaveRequest(
             CoWalletSettingsRequestDto requestDto) {
 
-        /*
-         * Request cannot be null.
-         */
+        // ========================================================
+        // REQUEST NULL CHECK
+        // ========================================================
+
         if (requestDto == null) {
 
             throw new IllegalArgumentException(
@@ -252,45 +287,51 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
             );
         }
 
-        /*
-         * ========================================================
-         * VALIDATE POINTS TYPE
-         * ========================================================
-         */
+        // ========================================================
+        // WALLET SETTINGS ID
+        // ========================================================
 
-        if (requestDto.getPointsType() == null
-                || requestDto.getPointsType().trim().isEmpty()) {
+        if (requestDto.getWalletSettingsId() != null
+                && requestDto.getWalletSettingsId() <= 0) {
 
             throw new IllegalArgumentException(
-                    "Points type is required"
+                    "Wallet settings ID must be greater than 0"
             );
         }
 
-        /*
-         * ========================================================
-         * VALIDATE NUMBER OF POINTS
-         * ========================================================
-         */
+        // ========================================================
+        // SETTING TYPE
+        // ========================================================
 
-        if (requestDto.getNumOfPoints() == null) {
+        if (requestDto.getSettingType() == null
+                || requestDto.getSettingType().trim().isEmpty()) {
 
             throw new IllegalArgumentException(
-                    "Number of points is required"
+                    "Setting type is required"
             );
         }
 
-        if (requestDto.getNumOfPoints() <= 0) {
+        // ========================================================
+        // SETTING VALUE
+        // ========================================================
+
+        /*
+         * settingValue is Integer.
+         *
+         * Therefore:
+         * - null check is required
+         * - trim() must NOT be used
+         */
+        if (requestDto.getSettingValue() == null) {
 
             throw new IllegalArgumentException(
-                    "Number of points must be greater than 0"
+                    "Setting value is required"
             );
         }
 
-        /*
-         * ========================================================
-         * CREATE VALIDATION
-         * ========================================================
-         */
+        // ========================================================
+        // CREATE VALIDATION
+        // ========================================================
 
         if (requestDto.getWalletSettingsId() == null) {
 
@@ -303,11 +344,9 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
             }
         }
 
-        /*
-         * ========================================================
-         * UPDATE VALIDATION
-         * ========================================================
-         */
+        // ========================================================
+        // UPDATE VALIDATION
+        // ========================================================
 
         if (requestDto.getWalletSettingsId() != null) {
 
@@ -321,7 +360,6 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
         }
     }
 
-
     // ============================================================
     // VALIDATE PAGINATION
     // ============================================================
@@ -333,9 +371,10 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
             int page,
             int size) {
 
-        /*
-         * Page cannot be negative.
-         */
+        // ========================================================
+        // PAGE
+        // ========================================================
+
         if (page < 0) {
 
             throw new IllegalArgumentException(
@@ -343,9 +382,10 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
             );
         }
 
-        /*
-         * Page size must be greater than zero.
-         */
+        // ========================================================
+        // SIZE
+        // ========================================================
+
         if (size <= 0) {
 
             throw new IllegalArgumentException(
@@ -353,9 +393,10 @@ public class CoWalletSettingsServiceImpl implements CoWalletSettingsService {
             );
         }
 
-        /*
-         * Maximum page size.
-         */
+        // ========================================================
+        // MAX SIZE
+        // ========================================================
+
         if (size > MAX_PAGE_SIZE) {
 
             throw new IllegalArgumentException(

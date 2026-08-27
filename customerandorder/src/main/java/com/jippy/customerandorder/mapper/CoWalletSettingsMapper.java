@@ -13,7 +13,10 @@ public final class CoWalletSettingsMapper {
     }
 
     /**
-     * Request DTO -> Entity
+     * Maps Wallet Settings Request DTO to Entity.
+     *
+     * @param requestDto request DTO
+     * @return mapped entity
      */
     public static CoWalletSettings mapToEntity(
             CoWalletSettingsRequestDto requestDto) {
@@ -24,21 +27,47 @@ public final class CoWalletSettingsMapper {
 
         CoWalletSettings entity = new CoWalletSettings();
 
-        entity.setPointsType(
-                requestDto.getPointsType() != null
-                        ? requestDto.getPointsType().trim()
+        // ========================================================
+        // SETTING TYPE
+        // ========================================================
+
+        entity.setSettingType(
+                requestDto.getSettingType() != null
+                        ? requestDto.getSettingType().trim()
                         : null
         );
 
-        entity.setNumOfPoints(requestDto.getNumOfPoints());
-        entity.setCreatedBy(requestDto.getCreatedBy());
-        entity.setCreatedAt(LocalDateTime.now());
+        // ========================================================
+        // SETTING VALUE
+        // ========================================================
+        // settingValue is Integer.
+        // Do NOT use trim().
+        // ========================================================
+
+        entity.setSettingValue(
+                requestDto.getSettingValue()
+        );
+
+        // ========================================================
+        // AUDIT FIELDS
+        // ========================================================
+
+        entity.setCreatedBy(
+                requestDto.getCreatedBy()
+        );
+
+        entity.setCreatedAt(
+                LocalDateTime.now()
+        );
 
         return entity;
     }
 
     /**
-     * Entity -> Response DTO
+     * Maps Wallet Settings Entity to Response DTO.
+     *
+     * @param entity wallet settings entity
+     * @return mapped response DTO
      */
     public static CoWalletSettingsResponseDto mapToResponseDto(
             CoWalletSettings entity) {
@@ -50,13 +79,53 @@ public final class CoWalletSettingsMapper {
         CoWalletSettingsResponseDto responseDto =
                 new CoWalletSettingsResponseDto();
 
-        responseDto.setWalletSettingsId(entity.getWalletSettingsId());
-        responseDto.setPointsType(entity.getPointsType());
-        responseDto.setNumOfPoints(entity.getNumOfPoints());
-        responseDto.setCreatedAt(entity.getCreatedAt());
-        responseDto.setCreatedBy(entity.getCreatedBy());
-        responseDto.setUpdatedAt(entity.getUpdatedAt());
-        responseDto.setUpdatedBy(entity.getUpdatedBy());
+        // ========================================================
+        // ID
+        // ========================================================
+
+        responseDto.setWalletSettingsId(
+                entity.getWalletSettingsId()
+        );
+
+        // ========================================================
+        // SETTING TYPE
+        // ========================================================
+
+        responseDto.setSettingType(
+                entity.getSettingType()
+        );
+
+        // ========================================================
+        // SETTING VALUE
+        // ========================================================
+
+        responseDto.setSettingValue(
+                entity.getSettingValue()
+        );
+
+        // ========================================================
+        // CREATE AUDIT FIELDS
+        // ========================================================
+
+        responseDto.setCreatedAt(
+                entity.getCreatedAt()
+        );
+
+        responseDto.setCreatedBy(
+                entity.getCreatedBy()
+        );
+
+        // ========================================================
+        // UPDATE AUDIT FIELDS
+        // ========================================================
+
+        responseDto.setUpdatedAt(
+                entity.getUpdatedAt()
+        );
+
+        responseDto.setUpdatedBy(
+                entity.getUpdatedBy()
+        );
 
         return responseDto;
     }
