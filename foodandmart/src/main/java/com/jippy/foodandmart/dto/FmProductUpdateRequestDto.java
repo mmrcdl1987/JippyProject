@@ -33,6 +33,8 @@ public class FmProductUpdateRequestDto {
 
     private String thumbnail;
 
+
+
     @Valid
     private List<FmProductTimingRequestDto> timings;
 

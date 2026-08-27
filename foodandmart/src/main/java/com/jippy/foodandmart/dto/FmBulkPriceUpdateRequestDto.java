@@ -1,9 +1,9 @@
 package com.jippy.foodandmart.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,20 +12,45 @@ import java.util.List;
 @Data
 public class FmBulkPriceUpdateRequestDto {
 
-    @NotEmpty
-    private List<@NotNull Integer> outletIds;
+    @NotEmpty(message = "OutletIds cannot be empty")
+    private List<Integer> outletIds;
 
-    @NotNull
-    @Pattern(
-            regexp = "FLAT|PERCENTAGE",
-            message = "priceModel must be FLAT or PERCENT"
-    )
+    /**
+     * FLAT
+     * PERCENTAGE
+     */
+    @NotBlank(message = "Price model cannot be empty")
     private String priceModel;
 
-    @NotNull
+    /**
+     * Always positive.
+     *
+     * Example:
+     * 10
+     * 20
+     */
+    @NotNull(message = "Price value cannot be null")
     @DecimalMin(
             value = "0.01",
-            message = "value must be greater than 0"
+            message = "Price value must be greater than zero"
     )
     private BigDecimal value;
+
+    /**
+     * FLAT
+     * PERCENTAGE
+     */
+    private String priceType;
+
+    /**
+     * Example:
+     * OUTLET
+     */
+    private String locationType;
+
+    /**
+     * INCREASE
+     * DECREASE
+     */
+    private String operationType;
 }

@@ -13,6 +13,10 @@ public interface S3Service {
             Integer merchantId
     );
 
-    void deleteFile(String fileUrl);
+    String uploadCategoryImage(
+            MultipartFile image,
+            Integer categoryId
+    );
 
+    void deleteFile(String fileUrl);
 }

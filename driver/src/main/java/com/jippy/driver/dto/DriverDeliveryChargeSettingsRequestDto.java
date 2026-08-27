@@ -1,6 +1,7 @@
 package com.jippy.driver.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Data
 public class DriverDeliveryChargeSettingsRequestDto {
+
+    @NotNull(message = "Area ID cannot be null")
+    private Integer areaId;
 
     @DecimalMin(value = "0.0", inclusive = true)
     private BigDecimal pickUpKmsRangeFrom;

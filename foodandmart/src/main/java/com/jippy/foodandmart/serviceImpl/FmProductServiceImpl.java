@@ -11,6 +11,7 @@ import com.jippy.foodandmart.mapper.FmProductVariantOptionMapper;
 import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductPriceProjection;
+import com.jippy.foodandmart.projections.OutletProductPricingProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmProductService;
 import com.jippy.foodandmart.util.FmVariantExcelReader;
@@ -2214,4 +2215,38 @@ public class FmProductServiceImpl implements FmProductService {
                 "Invalid productType please enter valid product type :"
         );
     }
+
+    /**
+     * Get product pricing by outlet.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<OutletProductPricingDto> getProductPricingByOutletId(
+            Integer outletId
+    ) {
+
+        log.info(
+                "GET_PRODUCT_PRICING_BY_OUTLET | outletId={}",
+                outletId
+        );
+
+        if (outletId == null) {
+            throw new IllegalArgumentException(
+                    "Outlet ID is required"
+            );
+        }
+
+        List<OutletProductPricingProjection> products =
+                productRepository.findProductPricingByOutletId(outletId);
+
+        return products.stream()
+                .map(product -> new OutletProductPricingDto(
+                        product.getProductId(),
+                        product.getProductName(),
+                        product.getMerchantPrice(),
+                        product.getOnlinePrice()
+                ))
+                .toList();
+    }
+
 }

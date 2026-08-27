@@ -18,7 +18,7 @@ public interface FmProductPriceChangeHistoryRepository extends JpaRepository<FmP
     /**
      * Finds the APPLY history for a scheduled price period.
      * <p>
-     * APPLY:
+     * APPLY:a
      * original price -> scheduled price
      */
     @Query("""

@@ -2,6 +2,7 @@ package com.jippy.driver.repositary;
 
 import com.jippy.driver.entity.DriverIncentiveHistory;
 import com.jippy.driver.projection.DriverIncentiveDetailProjection;
+import com.jippy.driver.projection.DriverIncentiveHistoryPageProjection;
 import com.jippy.driver.projection.DriverIncentiveSettlementProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,4 +64,28 @@ public interface DriverIncentiveHistoryRepository extends JpaRepository<DriverIn
             """, nativeQuery = true)
     List<DriverIncentiveDetailProjection> getDriverIncentiveDetails
     (@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("""
+        SELECT
+            h.driverIncentiveHistoryId AS driverIncentiveHistoryId,
+            h.driverId AS driverId,
+            CONCAT(d.firstName, ' ', d.lastName) AS driverName,
+            h.currDate AS currDate,
+            h.incentiveAmount AS incentiveAmount,
+            h.completedOrdersCount AS completedOrdersCount,
+            h.createdAt AS createdAt
+        FROM DriverIncentiveHistory h
+        LEFT JOIN Driver d
+            ON d.driverId = h.driverId
+        WHERE (:driverId IS NULL OR h.driverId = :driverId)
+          AND (:startDate IS NULL OR h.currDate >= :startDate)
+          AND (:endDate IS NULL OR h.currDate <= :endDate)
+        """)
+    Page<DriverIncentiveHistoryPageProjection> searchIncentiveHistory(
+            @Param("driverId") Integer driverId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            Pageable pageable
+    );
+
 }

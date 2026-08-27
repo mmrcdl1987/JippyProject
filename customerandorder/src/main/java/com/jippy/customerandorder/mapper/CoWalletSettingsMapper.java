@@ -6,38 +6,123 @@ import com.jippy.customerandorder.entity.CoWalletSettings;
 
 import java.time.LocalDateTime;
 
-public class CoWalletSettingsMapper {
+public final class CoWalletSettingsMapper {
 
     private CoWalletSettingsMapper() {
+        // Utility class
     }
 
-    // Request DTO -> Entity
+    /**
+     * Maps Wallet Settings Request DTO to Entity.
+     *
+     * @param requestDto request DTO
+     * @return mapped entity
+     */
     public static CoWalletSettings mapToEntity(
             CoWalletSettingsRequestDto requestDto) {
 
+        if (requestDto == null) {
+            return null;
+        }
+
         CoWalletSettings entity = new CoWalletSettings();
 
-        entity.setSettingType(requestDto.getSettingType());
-        entity.setSettingValue(requestDto.getSettingValue());
-        entity.setCreatedBy(requestDto.getCreatedBy());
-        entity.setCreatedAt(LocalDateTime.now());
+        // ========================================================
+        // SETTING TYPE
+        // ========================================================
+
+        entity.setSettingType(
+                requestDto.getSettingType() != null
+                        ? requestDto.getSettingType().trim()
+                        : null
+        );
+
+        // ========================================================
+        // SETTING VALUE
+        // ========================================================
+
+        entity.setSettingValue(
+                requestDto.getSettingValue()
+        );
+
+        // ========================================================
+        // CREATE AUDIT FIELDS
+        // ========================================================
+
+        entity.setCreatedBy(
+                requestDto.getCreatedBy()
+        );
+
+        entity.setCreatedAt(
+                LocalDateTime.now()
+        );
 
         return entity;
     }
 
-    // Entity -> Response DTO
+    /**
+     * Maps Wallet Settings Entity to Response DTO.
+     *
+     * @param entity wallet settings entity
+     * @return mapped response DTO
+     */
     public static CoWalletSettingsResponseDto mapToResponseDto(
             CoWalletSettings entity) {
 
-        CoWalletSettingsResponseDto responseDto = new CoWalletSettingsResponseDto();
+        if (entity == null) {
+            return null;
+        }
 
-        responseDto.setWalletSettingsId(entity.getWalletSettingsId());
-        responseDto.setSettingType(entity.getSettingType());
-        responseDto.setSettingValue(entity.getSettingValue());
-        responseDto.setCreatedAt(entity.getCreatedAt());
-        responseDto.setCreatedBy(entity.getCreatedBy());
-        responseDto.setUpdatedAt(entity.getUpdatedAt());
-        responseDto.setUpdatedBy(entity.getUpdatedBy());
+        CoWalletSettingsResponseDto responseDto =
+                new CoWalletSettingsResponseDto();
+
+        // ========================================================
+        // ID
+        // ========================================================
+
+        responseDto.setWalletSettingsId(
+                entity.getWalletSettingsId()
+        );
+
+        // ========================================================
+        // SETTING TYPE
+        // ========================================================
+
+        responseDto.setSettingType(
+                entity.getSettingType()
+        );
+
+        // ========================================================
+        // SETTING VALUE
+        // ========================================================
+
+        responseDto.setSettingValue(
+                entity.getSettingValue()
+        );
+
+        // ========================================================
+        // CREATE AUDIT FIELDS
+        // ========================================================
+
+        responseDto.setCreatedAt(
+                entity.getCreatedAt()
+        );
+
+        responseDto.setCreatedBy(
+                entity.getCreatedBy()
+        );
+
+        // ========================================================
+        // UPDATE AUDIT FIELDS
+        // ========================================================
+
+        responseDto.setUpdatedAt(
+                entity.getUpdatedAt()
+        );
+
+        responseDto.setUpdatedBy(
+                entity.getUpdatedBy()
+        );
 
         return responseDto;
     }

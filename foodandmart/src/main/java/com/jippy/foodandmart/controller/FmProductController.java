@@ -33,352 +33,487 @@ public class FmProductController {
 
 
     /**
-     * POST /api/products/from-master
+     * POST /api/fm/products/from-master
+     *
      * Maps selected master products into outlet products.
      */
     @PostMapping("/from-master")
-    public ResponseEntity<FmMapToProductResult> mapFromMaster(@RequestBody FmMapToProduct req) {
+    public ResponseEntity<FmMapToProductResult> mapFromMaster(
+            @RequestBody FmMapToProduct req) {
 
-        log.info("[PRODUCT-MAP] POST /from-master - OutletId={}, CategoryId={}, Products={}", req.getOutletId(), req.getCategoryId(), req.getProducts() == null ? 0 : req.getProducts().size());
+        log.info(
+                "[PRODUCT-MAP] POST /from-master - OutletId={}, CategoryId={}, Products={}",
+                req.getOutletId(),
+                req.getCategoryId(),
+                req.getProducts() == null ? 0 : req.getProducts().size()
+        );
 
-        return ResponseEntity.ok(productMappingService.mapToProducts(req));
+        return ResponseEntity.ok(
+                productMappingService.mapToProducts(req)
+        );
     }
 
+
     /**
-     * POST /api/products/map-from-master-category/{outletCategoryId}
+     * POST /api/fm/products/map-from-master-category/{outletCategoryId}
      *
-     * At outlet-mapping time: looks up the category already linked to
-     * outletCategoryId, fetches ALL published master_products for that
-     * category, and auto-inserts them into:
-     *   → jippy_fm.products          (one row per master product)
-     *   → jippy_fm.product_variants  (one row per option/variant from options jsonb)
+     * At outlet-mapping time:
+     * - Looks up the category already linked to outletCategoryId.
+     * - Fetches all published master products for that category.
+     * - Inserts products into jippy_fm.products.
+     * - Inserts variants into jippy_fm.product_variants.
      *
-     * Already-existing products for this outlet category are skipped.
+     * Existing products are skipped.
      */
-//    @PostMapping("/map-from-master-category/{outletCategoryId}")
-//    public ResponseEntity<FmMasterProductMappingResultDTO> mapFromMasterCategory(
-//            @PathVariable Integer outletCategoryId) {
-//
-//        log.info("[PRODUCT-MAP] POST /map-from-master-category/{}",
-//                outletCategoryId);
-//
-//        return ResponseEntity.ok(
-//                productMappingService.mapFromMasterByCategory(outletCategoryId));
-//    }
+    // @PostMapping("/map-from-master-category/{outletCategoryId}")
+    // public ResponseEntity<FmMasterProductMappingResultDTO>
+    // mapFromMasterCategory(
+    //         @PathVariable Integer outletCategoryId) {
+    //
+    //     log.info(
+    //             "[PRODUCT-MAP] POST /map-from-master-category/{}",
+    //             outletCategoryId
+    //     );
+    //
+    //     return ResponseEntity.ok(
+    //             productMappingService.mapFromMasterByCategory(
+    //                     outletCategoryId
+    //             )
+    //     );
+    // }
 
 
     /**
      * POST /api/fm/products/bulk-upload-variants
-     * <p>
+     *
      * Uploads variant Excel for a specific outlet.
-     * <p>
+     *
      * Request:
      * - outletId : request parameter
      * - file     : Excel file (.xlsx / .xls)
      */
-    @PostMapping(value = "/bulk-upload-variants", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FmVariantBulkUploadResponseDto> bulkUploadVariants(@RequestParam Integer outletId, @RequestParam("file") MultipartFile file) {
+    @PostMapping(
+            value = "/bulk-upload-variants",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<FmVariantBulkUploadResponseDto> bulkUploadVariants(
+            @RequestParam Integer outletId,
+            @RequestParam("file") MultipartFile file) {
 
-        log.info("[VARIANT-BULK] POST /bulk-upload-variants | outletId={} | file={}", outletId, file != null ? file.getOriginalFilename() : null);
+        log.info(
+                "[VARIANT-BULK] POST /bulk-upload-variants | outletId={} | file={}",
+                outletId,
+                file != null ? file.getOriginalFilename() : null
+        );
 
-        FmVariantBulkUploadResponseDto response = productMappingService.bulkUploadVariants(outletId, file);
+        FmVariantBulkUploadResponseDto response =
+                productMappingService.bulkUploadVariants(
+                        outletId,
+                        file
+                );
 
-        log.info("[VARIANT-BULK] COMPLETED | outletId={} | file={}", outletId, file != null ? file.getOriginalFilename() : null);
+        log.info(
+                "[VARIANT-BULK] COMPLETED | outletId={} | file={}",
+                outletId,
+                file != null ? file.getOriginalFilename() : null
+        );
 
         return ResponseEntity.ok(response);
     }
 
+
     /**
      * GET /api/fm/products/{productId}
+     *
+     * Gets product by product ID.
      */
     @GetMapping("/{productId}")
-    public ResponseEntity<FmProductUpdateResponseDto> getProductById(@PathVariable Integer productId) {
+    public ResponseEntity<FmProductUpdateResponseDto> getProductById(
+            @PathVariable Integer productId) {
 
-        log.info("[PRODUCT] GET Product. ProductId={}", productId);
+        log.info(
+                "[PRODUCT] GET Product. ProductId={}",
+                productId
+        );
 
-        return ResponseEntity.ok(productMappingService.getProductById(productId));
+        return ResponseEntity.ok(
+                productMappingService.getProductById(productId)
+        );
     }
+
 
     /**
-     * PUT /api/fm/products/{productId}
+     * PUT /api/fm/products/updateCategoryAndProductDetails/{productId}
+     *
+     * Updates category and product details.
      */
     @PutMapping("/updateCategoryAndProductDetails/{productId}")
-    public ResponseEntity<FmProductUpdateResponseDto>
-        updateProduct(@PathVariable Integer productId,
-                       @Valid @RequestBody FmProductUpdateRequestDto request) {
+    public ResponseEntity<FmProductUpdateResponseDto> updateProduct(
+            @PathVariable Integer productId,
+            @Valid @RequestBody FmProductUpdateRequestDto request) {
 
-        log.info("[PRODUCT] UPDATE Product. ProductId={}", productId);
+        log.info(
+                "[PRODUCT] UPDATE Product. ProductId={}",
+                productId
+        );
 
-        return ResponseEntity.ok(productMappingService.updateProduct(productId, request));
+        return ResponseEntity.ok(
+                productMappingService.updateProduct(
+                        productId,
+                        request
+                )
+        );
     }
 
-//    ==================================================================================================
-//    ============================ getCategoryForProductByProductType =====================================
-//    ==================================================================================================
-@Operation(
-        summary = "Get Category For Product By Product Type",
-        description = """
-                Fetch category and outlet details based on product name and product type.
 
-                Supported product types:
-                - PRODUCT
-                - MASTERPRODUCT
+    // ==================================================================================================
+    // ============================ getCategoryForProductByProductType ================================
+    // ==================================================================================================
 
-                For PRODUCT:
-                Returns productId, productName, outletCategoryId, outletId,
-                categoryId, categoryName and outletName.
+    @Operation(
+            summary = "Get Category For Product By Product Type",
+            description = """
+                    Fetch category and outlet details based on product name
+                    and product type.
 
-                For MASTERPRODUCT:
-                Returns masterProductId, masterProductName, categoryId
-                and categoryName.
+                    Supported product types:
+                    - PRODUCT
+                    - MASTERPRODUCT
 
-                Product name matching is case-insensitive and leading/trailing
-                spaces are removed before searching.
-                """
-)
-@ApiResponses({
+                    For PRODUCT:
+                    Returns productId, productName, outletCategoryId, outletId,
+                    categoryId, categoryName and outletName.
 
-        @ApiResponse(
-                responseCode = "200",
-                description = "Details fetched successfully",
-                content = @Content(
-                        mediaType = "application/json",
-                        examples = {
+                    For MASTERPRODUCT:
+                    Returns masterProductId, masterProductName, categoryId
+                    and categoryName.
 
-                                @ExampleObject(
-                                        name = "PRODUCT Response",
-                                        summary = "Response for PRODUCT type",
-                                        value = """
-                                                [
-                                                  {
-                                                    "productId": 160,
-                                                    "productName": "Lemon Soda",
-                                                    "outletCategoryId": 80,
-                                                    "outletId": 220,
-                                                    "categoryId": 5,
-                                                    "categoryName": "Mediterranean",
-                                                    "outletName": "Sample Restaurantt"
-                                                  }
-                                                ]
-                                                """
-                                ),
+                    Product name matching is case-insensitive and
+                    leading/trailing spaces are removed before searching.
+                    """
+    )
+    @ApiResponses({
 
-                                @ExampleObject(
-                                        name = "MASTERPRODUCT Response",
-                                        summary = "Response for MASTERPRODUCT type",
-                                        value = """
-                                                [
-                                                  {
-                                                    "masterProductId": 22,
-                                                    "masterProductName": "Premium Cold Coffee",
-                                                    "categoryId": 1,
-                                                    "categoryName": "Beve"
-                                                  },
-                                                  {
-                                                    "masterProductId": 24,
-                                                    "masterProductName": "Premium Cold Coffee",
-                                                    "categoryId": 1,
-                                                    "categoryName": "Beve"
-                                                  }
-                                                ]
-                                                """
-                                )
-                        }
-                )
-        ),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Details fetched successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
 
-        @ApiResponse(
-                responseCode = "400",
-                description = "Invalid product name or product type",
-                content = @Content(
-                        mediaType = "application/json",
-                        examples = @ExampleObject(
-                                value = """
-                                        {
-                                          "success": false,
-                                          "message": "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT.",
-                                          "timestamp": "2026-08-25T10:30:00"
-                                        }
-                                        """
-                        )
-                )
-        ),
+                                    @ExampleObject(
+                                            name = "PRODUCT Response",
+                                            summary = "Response for PRODUCT type",
+                                            value = """
+                                                    [
+                                                      {
+                                                        "productId": 160,
+                                                        "productName": "Lemon Soda",
+                                                        "outletCategoryId": 80,
+                                                        "outletId": 220,
+                                                        "categoryId": 5,
+                                                        "categoryName": "Mediterranean",
+                                                        "outletName": "Sample Restaurantt"
+                                                      }
+                                                    ]
+                                                    """
+                                    ),
 
-        @ApiResponse(
-                responseCode = "404",
-                description = "Product or Master Product not found",
-                content = @Content(
-                        mediaType = "application/json",
-                        examples = @ExampleObject(
-                                value = """
-                                        {
-                                          "success": false,
-                                          "message": "Product not found with name : ABC Product",
-                                          "timestamp": "2026-08-25T10:30:00"
-                                        }
-                                        """
-                        )
-                )
-        )
-})
+                                    @ExampleObject(
+                                            name = "MASTERPRODUCT Response",
+                                            summary = "Response for MASTERPRODUCT type",
+                                            value = """
+                                                    [
+                                                      {
+                                                        "masterProductId": 22,
+                                                        "masterProductName": "Premium Cold Coffee",
+                                                        "categoryId": 1,
+                                                        "categoryName": "Beve"
+                                                      },
+                                                      {
+                                                        "masterProductId": 24,
+                                                        "masterProductName": "Premium Cold Coffee",
+                                                        "categoryId": 1,
+                                                        "categoryName": "Beve"
+                                                      }
+                                                    ]
+                                                    """
+                                    )
+                            }
+                    )
+            ),
 
-        @GetMapping("/getCategoryForProductByProductType")
-        public ResponseEntity<FmApiResponse<Object>> getCategoryForProductByProductType(
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid product name or product type",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "success": false,
+                                              "message": "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT.",
+                                              "timestamp": "2026-08-25T10:30:00"
+                                            }
+                                            """
+                            )
+                    )
+            ),
 
-        @Parameter(
-                description = "Product name to search",
-                required = true,
-                example = "Lemon Soda",
-                schema = @Schema(
-                        type = "string",
-                        example = "Lemon Soda"
-                )
-        )
-        @NotBlank(message = "Product name is required.")
-        @RequestParam String productName,
-        @Parameter(
-                description = "Product type. Allowed values: PRODUCT or MASTERPRODUCT",
-                required = true,
-                example = "PRODUCT",
-                schema = @Schema(
-                        type = "string",
-                        allowableValues = {
-                                "PRODUCT",
-                                "MASTERPRODUCT"
-                        },
-                        example = "PRODUCT"
-                )
-        )
-        @Pattern(
-                regexp = "PRODUCT|MASTERPRODUCT",
-                message = "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT."
-        )
-        @RequestParam String productType) {
-
-    log.info(
-            "[GET_CATEGORY_FOR_PRODUCT] Controller request | productName={} | productType={}",
-            productName,
-            productType
-    );
-
-    Object response = productMappingService.getCategoryForProductByProductType(
-                    productName,
-                    productType
-            );
-
-    return ResponseEntity.ok(
-            FmApiResponse.success(
-                    "Category details fetched successfully.",
-                    response
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product or Master Product not found",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "success": false,
+                                              "message": "Product not found with name : ABC Product",
+                                              "timestamp": "2026-08-25T10:30:00"
+                                            }
+                                            """
+                            )
+                    )
             )
-    );
+    })
+    @GetMapping("/getCategoryForProductByProductType")
+    public ResponseEntity<FmApiResponse<Object>>
+    getCategoryForProductByProductType(
 
-}
-
-
-
-//===============================updateCategoryForProductByProductType==================================
-@PutMapping("/updateCategoryForProductByProductType")
-@Operation(
-        summary = "Update Category For Product By Product Type",
-        description = """
-                Updates the category for a Product or Master Product.
-
-                PRODUCT:
-                1. Finds the product using productName.
-                2. Gets the outletCategoryId from products.
-                3. Updates category_id in outlet_categories.
-
-                MASTERPRODUCT:
-                1. Finds all master products using masterProductName.
-                2. Updates category_id in all matching master_products records.
-
-                Supported product types:
-                - PRODUCT
-                - MASTERPRODUCT
-                """
-)
-@ApiResponses({
-        @ApiResponse(
-                responseCode = "200",
-                description = "Category updated successfully"
-        ),
-        @ApiResponse(
-                responseCode = "400",
-                description = "Invalid request"
-        ),
-
-        @ApiResponse(
-                responseCode = "404",
-                description = "Product, Master Product or Category not found"
-
-        )
-})
-
-        public ResponseEntity<FmApiResponse<FmProductCategoryUpdateResponseDto>> updateCategoryForProductByProductType(
-                                @Valid @RequestBody FmProductCategoryUpdateRequestDto request) {
-
-    log.info(
-            "[UPDATE_CATEGORY_FOR_PRODUCT] Controller request | productName={} | productType={} | updatedCategoryId={}",
-            request.getProductName(),
-            request.getProductType(),
-            request.getUpdatedCategoryId()
-    );
-
-    FmProductCategoryUpdateResponseDto response =
-            productMappingService.updateCategoryForProductByProductType(
-                    request
-            );
-
-    return ResponseEntity.ok(
-            FmApiResponse.success(
-                    "Category updated successfully.",
-                    response
+            @Parameter(
+                    description = "Product name to search",
+                    required = true,
+                    example = "Lemon Soda",
+                    schema = @Schema(
+                            type = "string",
+                            example = "Lemon Soda"
+                    )
             )
-    );
-}
+            @NotBlank(message = "Product name is required.")
+            @RequestParam String productName,
 
-//=================================================================================================
-//=================================================================================================
+            @Parameter(
+                    description = "Product type. Allowed values: PRODUCT or MASTERPRODUCT",
+                    required = true,
+                    example = "PRODUCT",
+                    schema = @Schema(
+                            type = "string",
+                            allowableValues = {
+                                    "PRODUCT",
+                                    "MASTERPRODUCT"
+                            },
+                            example = "PRODUCT"
+                    )
+            )
+            @Pattern(
+                    regexp = "PRODUCT|MASTERPRODUCT",
+                    message = "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT."
+            )
+            @RequestParam String productType) {
 
+        log.info(
+                "[GET_CATEGORY_FOR_PRODUCT] Controller request | productName={} | productType={}",
+                productName,
+                productType
+        );
+
+        Object response =
+                productMappingService.getCategoryForProductByProductType(
+                        productName,
+                        productType
+                );
+
+        return ResponseEntity.ok(
+                FmApiResponse.success(
+                        "Category details fetched successfully.",
+                        response
+                )
+        );
+    }
+
+
+    // =====================================================================================================
+    // ========================== updateCategoryForProductByProductType ===================================
+    // =====================================================================================================
+
+    @PutMapping("/updateCategoryForProductByProductType")
+    @Operation(
+            summary = "Update Category For Product By Product Type",
+            description = """
+                    Updates the category for a Product or Master Product.
+
+                    PRODUCT:
+                    1. Finds the product using productName.
+                    2. Gets the outletCategoryId from products.
+                    3. Updates category_id in outlet_categories.
+
+                    MASTERPRODUCT:
+                    1. Finds all master products using masterProductName.
+                    2. Updates category_id in all matching master_products records.
+
+                    Supported product types:
+                    - PRODUCT
+                    - MASTERPRODUCT
+                    """
+    )
+    @ApiResponses({
+
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Category updated successfully"
+            ),
+
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request"
+            ),
+
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product, Master Product or Category not found"
+            )
+    })
+    public ResponseEntity<FmApiResponse<FmProductCategoryUpdateResponseDto>>
+    updateCategoryForProductByProductType(
+            @Valid
+            @RequestBody FmProductCategoryUpdateRequestDto request) {
+
+        log.info(
+                "[UPDATE_CATEGORY_FOR_PRODUCT] Controller request | productName={} | productType={} | updatedCategoryId={}",
+                request.getProductName(),
+                request.getProductType(),
+                request.getUpdatedCategoryId()
+        );
+
+        FmProductCategoryUpdateResponseDto response =
+                productMappingService.updateCategoryForProductByProductType(
+                        request
+                );
+
+        return ResponseEntity.ok(
+                FmApiResponse.success(
+                        "Category updated successfully.",
+                        response
+                )
+        );
+    }
+
+
+    // =================================================================================================
+    // ================================= PRODUCT VALIDATION ===========================================
+    // =================================================================================================
+
+    /**
+     * Checks whether a product belongs to an outlet.
+     */
     @GetMapping("/exists")
     public ResponseEntity<Boolean> existsProductInOutlet(
-
             @RequestParam Integer outletId,
-
             @RequestParam Integer productId) {
 
-        log.info("Received request to validate product belongs to outlet. outletId={}, productId={}", outletId, productId);
+        log.info(
+                "Received request to validate product belongs to outlet. " +
+                        "outletId={}, productId={}",
+                outletId,
+                productId
+        );
 
-        Boolean exists = productMappingService.existsProductInOutlet(outletId, productId);
+        Boolean exists =
+                productMappingService.existsProductInOutlet(
+                        outletId,
+                        productId
+                );
 
-        log.info("Product validation request completed. outletId={}, productId={}, exists={}", outletId, productId, exists);
+        log.info(
+                "Product validation request completed. " +
+                        "outletId={}, productId={}, exists={}",
+                outletId,
+                productId,
+                exists
+        );
 
         return ResponseEntity.ok(exists);
     }
 
+
+    /**
+     * Gets active product IDs for an outlet.
+     */
     @GetMapping("/active-product-ids")
     public ResponseEntity<List<Integer>> getActiveProductIdsByOutlet(
-
             @RequestParam Integer outletId) {
 
-        log.info("Received request to fetch active product ids. outletId={}", outletId);
+        log.info(
+                "Received request to fetch active product ids. outletId={}",
+                outletId
+        );
 
-        List<Integer> productIds = productMappingService.getActiveProductIdsByOutlet(outletId);
+        List<Integer> productIds =
+                productMappingService.getActiveProductIdsByOutlet(
+                        outletId
+                );
 
-        log.info("Returning {} active product ids. outletId={}", productIds.size(), outletId);
+        log.info(
+                "Returning {} active product ids. outletId={}",
+                productIds.size(),
+                outletId
+        );
 
         return ResponseEntity.ok(productIds);
     }
 
+
+    // =================================================================================================
+    // ================================= OUTLET PRODUCT PRICING =======================================
+    // =================================================================================================
+
+    /**
+     * GET /api/fm/products/outlets/{outletId}/pricing
+     *
+     * Returns product pricing for an outlet.
+     */
+    @GetMapping("/outlets/{outletId}/pricing")
+    public ResponseEntity<List<OutletProductPricingDto>>
+    getProductPricingByOutletId(
+            @PathVariable Integer outletId) {
+
+        log.info(
+                "GET_PRODUCT_PRICING_BY_OUTLET_START | outletId={}",
+                outletId
+        );
+
+        List<OutletProductPricingDto> products =
+                productMappingService.getProductPricingByOutletId(
+                        outletId
+                );
+
+        log.info(
+                "GET_PRODUCT_PRICING_BY_OUTLET_SUCCESS | " +
+                        "outletId={} | productCount={}",
+                outletId,
+                products.size()
+        );
+
+        return ResponseEntity.ok(products);
+    }
+
+
+    // =================================================================================================
+    // ================================= PRODUCT DETAILS ===============================================
+    // =================================================================================================
+
     /**
      * GET /api/fm/products/productdetails/{productId}
      *
-     * Returns complete product details including variant groups
-     * and their available variant options.
+     * Returns complete product details including:
+     * - Product information
+     * - Variant groups
+     * - Available variant options
      */
     @GetMapping("/productdetails/{productId}")
-    public ResponseEntity<FmProductDetailResponse> getProductDetailById(
+    public ResponseEntity<FmProductDetailResponse>
+    getProductDetailById(
             @PathVariable Integer productId) {
 
         log.info(
@@ -387,7 +522,9 @@ public class FmProductController {
         );
 
         FmProductDetailResponse response =
-                productMappingService.getProductDetailById(productId);
+                productMappingService.getProductDetailById(
+                        productId
+                );
 
         log.info(
                 "[PRODUCT] GET_PRODUCT_DETAIL_SUCCESS | productId={}",
@@ -396,5 +533,4 @@ public class FmProductController {
 
         return ResponseEntity.ok(response);
     }
-
 }

@@ -3,6 +3,7 @@ package com.jippy.foodandmart.controller;
 import com.jippy.foodandmart.dto.FmApiResponse;
 import com.jippy.foodandmart.dto.FmCreateCategoryRequestDto;
 import com.jippy.foodandmart.dto.FmCreateCategoryResponseDto;
+import com.jippy.foodandmart.dto.FmUpdateCategoryRequestDto;
 import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.repository.FmCategoryRepository;
 import com.jippy.foodandmart.service.IFmCategoryService;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,27 +30,23 @@ public class CategoryController {
 
     /**
      * Creates a new global category.
-     *
+     * <p>
      * This API inserts only into:
-     *  - jippy_fm.categories
-     *
+     * - jippy_fm.categories
+     * <p>
      * Newly created categories will be visible through
      * GET /api/fm/categories after refresh.
      */
     @PostMapping("/createCategory")
-    public ResponseEntity<FmApiResponse<FmCreateCategoryResponseDto>> createCategory(
-            @Valid @RequestBody FmCreateCategoryRequestDto request) {
+    public ResponseEntity<FmApiResponse<FmCreateCategoryResponseDto>> createCategory(@Valid @RequestBody FmCreateCategoryRequestDto request) {
 
-        log.info("CREATE_CATEGORY_API_STARTED | categoryName={}",
-                request.getCategoryName());
+        log.info("CREATE_CATEGORY_API_STARTED | categoryName={}", request.getCategoryName());
 
-        FmCreateCategoryResponseDto response =
-                categoryService.createCategory(request);
+        FmCreateCategoryResponseDto response = categoryService.createCategory(request);
 
         log.info("CREATE_CATEGORY_API_COMPLETED | categoryId={}", response.getCategoryId());
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(FmApiResponse.success("Category created successfully", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Category created successfully", response));
     }
 
 //    @GetMapping("/Categories")
@@ -66,22 +64,42 @@ public class CategoryController {
 //    If the filter is "HOME", it will fetch only the categories that are marked as home categories.
 
     @GetMapping("/getHomeOrAllCategories")
-    public ResponseEntity<FmApiResponse<List<FmCreateCategoryResponseDto>>> getHomeOrAllCategories(
-            @Parameter(description = "Filter categories. Allowed values: ALL or HOME",
-                    example = "ALL")
-            @RequestParam String filter) {
+    public ResponseEntity<FmApiResponse<List<FmCreateCategoryResponseDto>>> getHomeOrAllCategories(@Parameter(description = "Filter categories. Allowed values: ALL or HOME", example = "ALL") @RequestParam String filter) {
 
         log.info("GET_HOME_OR_ALL_CATEGORIES_API_STARTED | filter={}", filter);
 
-        List<FmCreateCategoryResponseDto> categories =
-                categoryService.getHomeOrAllCategories(filter);
+        List<FmCreateCategoryResponseDto> categories = categoryService.getHomeOrAllCategories(filter);
 
-        log.info("GET_HOME_OR_ALL_CATEGORIES_API_COMPLETED | totalCategories={}",
-                categories.size());
+        log.info("GET_HOME_OR_ALL_CATEGORIES_API_COMPLETED | totalCategories={}", categories.size());
 
-        return ResponseEntity.ok(
-                FmApiResponse.success("Categories fetched successfully", categories));
+        return ResponseEntity.ok(FmApiResponse.success("Categories fetched successfully", categories));
     }
 
+    @PutMapping(
+            value = "/updateCategory",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<FmApiResponse<FmCreateCategoryResponseDto>> updateCategory(
+            @Valid @ModelAttribute FmUpdateCategoryRequestDto request) {
 
+        log.info(
+                "UPDATE_CATEGORY_API_STARTED | categoryId={}",
+                request.getCategoryId()
+        );
+
+        FmCreateCategoryResponseDto response =
+                categoryService.updateCategory(request);
+
+        log.info(
+                "UPDATE_CATEGORY_API_COMPLETED | categoryId={}",
+                response.getCategoryId()
+        );
+
+        return ResponseEntity.ok(
+                FmApiResponse.success(
+                        "Category updated successfully",
+                        response
+                )
+        );
+    }
 }

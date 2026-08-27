@@ -1,6 +1,8 @@
 package com.jippy.driver.repositary;
 
 import com.jippy.driver.entity.DriverIncentiveSettings;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -33,4 +35,9 @@ public interface DriverIncentiveSettingsRepository
         ORDER BY orders_count ASC
         """, nativeQuery = true)
     List<DriverIncentiveSettings> findAllSlabs();
+
+    Page<DriverIncentiveSettings> findAllByOrderByOrdersCountAsc(
+            Pageable pageable
+    );
+
 }
