@@ -14,9 +14,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -63,6 +65,28 @@ public class FmProductController {
 //        return ResponseEntity.ok(
 //                productMappingService.mapFromMasterByCategory(outletCategoryId));
 //    }
+
+
+    /**
+     * POST /api/fm/products/bulk-upload-variants
+     * <p>
+     * Uploads variant Excel for a specific outlet.
+     * <p>
+     * Request:
+     * - outletId : request parameter
+     * - file     : Excel file (.xlsx / .xls)
+     */
+    @PostMapping(value = "/bulk-upload-variants", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FmVariantBulkUploadResponseDto> bulkUploadVariants(@RequestParam Integer outletId, @RequestParam("file") MultipartFile file) {
+
+        log.info("[VARIANT-BULK] POST /bulk-upload-variants | outletId={} | file={}", outletId, file != null ? file.getOriginalFilename() : null);
+
+        FmVariantBulkUploadResponseDto response = productMappingService.bulkUploadVariants(outletId, file);
+
+        log.info("[VARIANT-BULK] COMPLETED | outletId={} | file={}", outletId, file != null ? file.getOriginalFilename() : null);
+
+        return ResponseEntity.ok(response);
+    }
 
     /**
      * GET /api/fm/products/{productId}
@@ -251,9 +275,9 @@ public class FmProductController {
 
 }
 
-//=====================================================================================================
+
+
 //===============================updateCategoryForProductByProductType==================================
-//=====================================================================================================
 @PutMapping("/updateCategoryForProductByProductType")
 @Operation(
         summary = "Update Category For Product By Product Type",
@@ -345,6 +369,32 @@ public class FmProductController {
         log.info("Returning {} active product ids. outletId={}", productIds.size(), outletId);
 
         return ResponseEntity.ok(productIds);
+    }
+
+    /**
+     * GET /api/fm/products/productdetails/{productId}
+     *
+     * Returns complete product details including variant groups
+     * and their available variant options.
+     */
+    @GetMapping("/productdetails/{productId}")
+    public ResponseEntity<FmProductDetailResponse> getProductDetailById(
+            @PathVariable Integer productId) {
+
+        log.info(
+                "[PRODUCT] GET_PRODUCT_DETAIL | productId={}",
+                productId
+        );
+
+        FmProductDetailResponse response =
+                productMappingService.getProductDetailById(productId);
+
+        log.info(
+                "[PRODUCT] GET_PRODUCT_DETAIL_SUCCESS | productId={}",
+                productId
+        );
+
+        return ResponseEntity.ok(response);
     }
 
 }

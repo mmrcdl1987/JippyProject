@@ -1,0 +1,23 @@
+package com.jippy.foodandmart.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class FmProductVariantGroupDetailResponse {
+
+    private Integer productVariantGroupsId;
+
+    private String groupName;
+
+    private List<FmProductVariantOptionDetailResponse> options =
+            new ArrayList<>();
+}

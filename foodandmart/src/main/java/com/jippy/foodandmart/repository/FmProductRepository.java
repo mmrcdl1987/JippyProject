@@ -239,6 +239,20 @@ public interface FmProductRepository extends JpaRepository<FmProduct, Integer> {
     );
 
 
+    @Query("""
+    SELECT p
+    FROM FmProduct p
+    JOIN p.outletCategory oc
+    WHERE oc.outletId = :outletId
+      AND oc.isActive = 'Y'
+      AND p.isActive = 'Y'
+    ORDER BY p.productId
+    """)
+    List<FmProduct> findActiveProductsByOutletId(
+            @Param("outletId") Integer outletId
+    );
+
+
     /*
      * ============================================================
      * PRODUCT
