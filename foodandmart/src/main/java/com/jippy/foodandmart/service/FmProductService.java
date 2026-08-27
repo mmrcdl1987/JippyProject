@@ -2,6 +2,7 @@ package com.jippy.foodandmart.service;
 
 import com.jippy.foodandmart.dto.*;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,6 +22,13 @@ public interface FmProductService {
      */
     FmMapToProductResult mapToProducts(
             FmMapToProduct request);
+
+
+
+    FmVariantBulkUploadResponseDto bulkUploadVariants(
+            Integer outletId,
+            MultipartFile file
+    );
 
     /**
      * Maps all published master products of a category
@@ -80,6 +88,8 @@ public interface FmProductService {
 
     @Transactional(readOnly = true)
     List<FmProductPriceResponse> getProductsByOutlet(Integer outletId);
+
+    FmProductDetailResponse getProductDetailById(Integer productId);
 
     public Object getCategoryForProductByProductType(
             String productName,

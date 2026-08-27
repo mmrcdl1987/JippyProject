@@ -2,6 +2,7 @@ package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProductVariantGroupValue;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +43,15 @@ public interface FmProductVariantGroupValueRepository
             Integer productVariantGroupsId,
             String variantName,
             Integer productVariantGroupValuesId);
+
+
+    @Query("""
+    SELECT v
+    FROM FmProductVariantGroupValue v
+    WHERE v.isActive = true
+    ORDER BY v.productVariantGroupsId, v.variantName
+    """)
+    List<FmProductVariantGroupValue> findAllActiveValues();
 
 
 

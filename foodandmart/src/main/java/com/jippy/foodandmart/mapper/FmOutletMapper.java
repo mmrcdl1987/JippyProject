@@ -216,7 +216,6 @@ public final class FmOutletMapper {
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
         dto.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
-
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());

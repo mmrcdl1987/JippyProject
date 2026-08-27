@@ -532,6 +532,46 @@ public class OutletSubscriptionPlanServiceImpl implements OutletSubscriptionPlan
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<OutletSubscriptionPlanResponseDto> getSubscriptionsByOutletId(Integer outletId) {
+
+        String op = "GET_OUTLET_SUBSCRIPTIONS_" + UUID.randomUUID();
+        log.info("{} | START | outletId={}", op, outletId);
+
+        // Verify outlet exists
+        outletRepository.findById(outletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found with id: " + outletId));
+
+        List<FmOutletSubscriptionPlan> subscriptions = outletSubscriptionPlanRepository.findAllByOutletId(outletId);
+
+        List<OutletSubscriptionPlanResponseDto> response = subscriptions.stream()
+                .map(subscription -> {
+                    OutletSubscriptionPlanResponseDto dto = OutletSubscriptionPlanMapper.toDto(subscription);
+
+                    if (subscription.getBannerSlotDaysId() != null) {
+                        BannerSlotDay bannerSlot = bannerSlotDayRepository
+                                .findById(subscription.getBannerSlotDaysId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                        "Banner slot not found with id: " + subscription.getBannerSlotDaysId()));
+
+                        dto.setBannerFromDate(bannerSlot.getSlotStartDate());
+                        dto.setBannerToDate(bannerSlot.getSlotEndDate());
+                    }
+
+                    if (subscription.getMealTypeTimingsIds() != null) {
+                        dto.setMealTypeTimings(getMealTypeTimingDtos(subscription.getMealTypeTimingsIds()));
+                    }
+
+                    return dto;
+                })
+                .toList();
+
+        log.info("{} | SUCCESS | outletId={} | count={}", op, outletId, response.size());
+
+        return response;
+    }
+
     private ActiveBannerResponseDto mapToActiveBannerResponse(
             ActiveBannerProjection projection) {
 
