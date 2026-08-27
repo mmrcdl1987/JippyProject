@@ -4,11 +4,14 @@ import com.jippy.foodandmart.dto.FmMapToProduct;
 import com.jippy.foodandmart.dto.FmMapToProductResult;
 import com.jippy.foodandmart.dto.FmProductCategoryUpdateRequestDto;
 import com.jippy.foodandmart.dto.FmProductCategoryUpdateResponseDto;
+import com.jippy.foodandmart.dto.FmProductDetailResponse;
 import com.jippy.foodandmart.dto.FmProductPriceResponse;
 import com.jippy.foodandmart.dto.FmProductUpdateRequestDto;
 import com.jippy.foodandmart.dto.FmProductUpdateResponseDto;
+import com.jippy.foodandmart.dto.FmVariantBulkUploadResponseDto;
 import com.jippy.foodandmart.dto.OutletProductPricingDto;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -33,6 +36,23 @@ public interface FmProductService {
      */
     FmMapToProductResult mapToProducts(
             FmMapToProduct request
+    );
+
+
+    // ============================================================
+    // BULK UPLOAD VARIANTS
+    // ============================================================
+
+    /**
+     * Uploads product variants in bulk using an Excel file.
+     *
+     * @param outletId outlet id
+     * @param file Excel file containing variant information
+     * @return bulk upload result
+     */
+    FmVariantBulkUploadResponseDto bulkUploadVariants(
+            Integer outletId,
+            MultipartFile file
     );
 
 
@@ -76,6 +96,22 @@ public interface FmProductService {
      * @return product details
      */
     FmProductUpdateResponseDto getProductById(
+            Integer productId
+    );
+
+
+    // ============================================================
+    // GET COMPLETE PRODUCT DETAILS
+    // ============================================================
+
+    /**
+     * Fetch complete product details including
+     * variant groups and variant options.
+     *
+     * @param productId product id
+     * @return complete product details
+     */
+    FmProductDetailResponse getProductDetailById(
             Integer productId
     );
 
@@ -173,7 +209,7 @@ public interface FmProductService {
      * Gets category information for a product
      * based on product type.
      *
-     * Supported product types can include:
+     * Supported product types:
      * - PRODUCT
      * - MASTERPRODUCT
      *

@@ -138,4 +138,20 @@ public class OutletSubscriptionPlanController {
         }
     }
 
+    @GetMapping("/outlet/{outletId}")
+    public FmApiResponse<List<OutletSubscriptionPlanResponseDto>> getSubscriptionsByOutletId(@PathVariable Integer outletId) {
+        String op = startOperation("GET_OUTLET_SUBSCRIPTIONS");
+        log.info("API_START | {} | outletId={}", op, outletId);
+        try {
+            List<OutletSubscriptionPlanResponseDto> list = outletSubscriptionPlanService.getSubscriptionsByOutletId(outletId);
+            log.info("API_SUCCESS | {} | outletId={} | count={}", op, outletId, list == null ? 0 : list.size());
+            return FmApiResponse.success("Outlet subscriptions fetched successfully", list);
+        } catch (Exception ex) {
+            log.error("API_ERROR | {} | outletId={} | error={}", op, outletId, ex.getMessage(), ex);
+            throw ex;
+        } finally {
+            endOperation();
+        }
+    }
+
 }

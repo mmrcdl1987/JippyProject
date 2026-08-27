@@ -23,4 +23,7 @@ public interface OutletSubscriptionPlanService {
     public OutletSubscriptionStatusResponseDto getSubscriptionStatus(
             Integer outletId);
 
-    List<ActiveBannerResponseDto> getActiveBanners();}
+    List<ActiveBannerResponseDto> getActiveBanners();
+
+    List<OutletSubscriptionPlanResponseDto> getSubscriptionsByOutletId(Integer outletId);
+}

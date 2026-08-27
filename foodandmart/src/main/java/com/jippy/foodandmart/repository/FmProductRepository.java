@@ -300,6 +300,26 @@ public interface FmProductRepository
     );
 
 
+    /**
+     * Gets all active products for an outlet.
+     *
+     * Used by variant bulk-upload functionality.
+     */
+    @Query("""
+            SELECT p
+            FROM FmProduct p
+            JOIN p.outletCategory oc
+            WHERE oc.outletId = :outletId
+              AND oc.isActive = 'Y'
+              AND p.isActive = 'Y'
+            ORDER BY p.productId
+            """)
+    List<FmProduct> findActiveProductsByOutletId(
+            @Param("outletId")
+            Integer outletId
+    );
+
+
     // ============================================================
     // IMAGE / DESCRIPTION UPDATE
     // ============================================================
@@ -349,8 +369,6 @@ public interface FmProductRepository
     /**
      * Fetch all active products for multiple outlets.
      *
-     * IMPORTANT:
-     *
      * Returned Object[] order:
      *
      * [0] productId
@@ -358,9 +376,6 @@ public interface FmProductRepository
      * [2] merchantPrice
      * [3] outletCategoryId
      * [4] outletId
-     *
-     * The order MUST remain synchronized with the
-     * bulk pricing service implementation.
      */
     @Query(value = """
             SELECT
@@ -552,8 +567,7 @@ public interface FmProductRepository
               AND o.is_active = 'Y'
             """,
             nativeQuery = true)
-    List<FmProductCategoryProjection>
-    findProductCategoryDetails(
+    List<FmProductCategoryProjection> findProductCategoryDetails(
             @Param("productName")
             String productName
     );
@@ -688,5 +702,4 @@ public interface FmProductRepository
             @Param("productId")
             Integer productId
     );
-
 }

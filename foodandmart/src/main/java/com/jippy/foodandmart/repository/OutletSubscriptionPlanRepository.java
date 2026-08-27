@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface OutletSubscriptionPlanRepository
         extends JpaRepository<FmOutletSubscriptionPlan, Integer> {
 
+    List<FmOutletSubscriptionPlan> findAllByOutletId(Integer outletId);
+
     Optional<FmOutletSubscriptionPlan> findByOutletId(Integer outletId);
 
     @Query(value = " SELECT " +
