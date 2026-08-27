@@ -30,5 +30,5 @@ public interface CoWalletSettingsService {
             int page,
             int size);
 
-    List<CoWalletSettings> getWalletSettings();
+
 }

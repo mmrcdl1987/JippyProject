@@ -40,16 +40,13 @@ public final class CoWalletSettingsMapper {
         // ========================================================
         // SETTING VALUE
         // ========================================================
-        // settingValue is Integer.
-        // Do NOT use trim().
-        // ========================================================
 
         entity.setSettingValue(
                 requestDto.getSettingValue()
         );
 
         // ========================================================
-        // AUDIT FIELDS
+        // CREATE AUDIT FIELDS
         // ========================================================
 
         entity.setCreatedBy(
