@@ -56,6 +56,7 @@ public class FmOutletCreateResponseDTO {
             " Number (GSTIN) of the outlet.", example = "36ABCDE1234F1Z5")
     private String gstNumber;
 
+    private Boolean isGstApplied;
 //    --------------users Table----------------------
 
     @Schema(description = "Outlet username", example = "friends_outlet")

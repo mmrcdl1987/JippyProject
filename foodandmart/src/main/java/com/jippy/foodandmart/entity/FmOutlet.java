@@ -61,6 +61,9 @@ public class FmOutlet {
     @Builder.Default
     private Boolean isApproved = false;
 
+    @Column(name = "is_gst_applied")
+    private Boolean isGstApplied = Boolean.FALSE;
+
     /**
      * oulet_location GEOGRAPHY(POINT, 4326) — note the DB column has a typo "oulet" (single-l),
      * kept intentionally to match the existing DDL.
@@ -112,6 +115,9 @@ public class FmOutlet {
         if (this.radius == null) this.radius = new BigDecimal("3.00");
         if (this.isApproved == null) this.isApproved = false;
         if (this.isToggle == null) this.isToggle = false;
+        if (this.isGstApplied == null) {
+            this.isGstApplied = Boolean.FALSE;
+        }
     }
 
     @PreUpdate

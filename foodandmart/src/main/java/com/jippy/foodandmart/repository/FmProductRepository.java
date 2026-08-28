@@ -2,6 +2,7 @@ package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProduct;
 import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
+import com.jippy.foodandmart.projections.FmOutletProductProjection;
 import com.jippy.foodandmart.projections.FmProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductPriceProjection;
 import com.jippy.foodandmart.projections.OutletProductPricingProjection;
@@ -371,6 +372,9 @@ public interface FmProductRepository
      *
      * Returned Object[] order:
      *
+     * Fetch all products for multiple outlets in a single query.
+     * <p>
+     * Returns:
      * [0] productId
      * [1] productName
      * [2] merchantPrice
@@ -702,4 +706,26 @@ public interface FmProductRepository
             @Param("productId")
             Integer productId
     );
+
+    @Query(value = """
+            SELECT
+                p.product_id AS productId,
+                p.product_name AS productName,
+                oc.outlet_category_id AS outletCategoryId,
+                c.category_name AS categoryName
+            FROM jippy_fm.products p
+            INNER JOIN jippy_fm.outlet_categories oc
+                ON oc.outlet_category_id = p.outlet_category_id
+            INNER JOIN jippy_fm.categories c
+                ON c.category_id = oc.category_id
+            WHERE oc.outlet_id = :outletId
+              AND p.is_active = 'Y'
+              AND oc.is_active = 'Y'
+            ORDER BY oc.outlet_category_id, p.product_id
+            """, nativeQuery = true)
+    List<FmOutletProductProjection> findProductsByOutletIds(@Param("outletId") Integer outletId);
 }
+
+
+
+

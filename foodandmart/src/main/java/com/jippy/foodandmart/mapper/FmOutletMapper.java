@@ -146,6 +146,7 @@ import com.jippy.foodandmart.entity.FmMerchantBankDetails;
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmOutletAddress;
 import com.jippy.foodandmart.entity.FmOutletDay;
+import com.jippy.foodandmart.projections.FmAdminOutletMenuProjection;
 import com.jippy.foodandmart.projections.FmMerchantOutletMenuProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
@@ -193,6 +194,11 @@ public final class FmOutletMapper {
         outlet.setAlternateOutletPhone(dto.getAlternateOutletPhone());
         outlet.setIsActive(FmAppConstants.FLAG_YES);
         outlet.setIsApproved(FmAppConstants.STATUS_FALSE);
+        outlet.setIsGstApplied(
+                dto.getIsGstApplied() != null
+                        ? dto.getIsGstApplied()
+                        : Boolean.FALSE
+        );
         outlet.setUpdatedBy(dto.getUpdatedBy());
 
         return outlet;
@@ -219,6 +225,9 @@ public final class FmOutletMapper {
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());
+        dto.setIsGstApplied(
+                Boolean.TRUE.equals(outlet.getIsGstApplied())
+        );
         dto.setOutletPicUrl(outlet.getOutletPicUrl());
         // Outlet Location
         //
@@ -354,6 +363,9 @@ public final class FmOutletMapper {
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
         dto.setIsActive(outlet.getIsActive());
+        dto.setIsGstApplied(
+                Boolean.TRUE.equals(outlet.getIsGstApplied())
+        );
 
         return dto;
     }
@@ -1036,6 +1048,10 @@ public final class FmOutletMapper {
 
         outlet.setUpdatedBy(dto.getUpdatedBy());
 
+        if (dto.getIsGstApplied() != null) {
+            outlet.setIsGstApplied(dto.getIsGstApplied());
+        }
+
         /*
          * Update outlet location.
          */
@@ -1189,6 +1205,9 @@ public final class FmOutletMapper {
         response.setAlternateOutletPhone(request.getAlternateOutletPhone());
         response.setFssaiNumber(request.getFssaiNumber());
         response.setGstNumber(request.getGstNumber());
+        response.setIsGstApplied(
+                Boolean.TRUE.equals(outlet.getIsGstApplied())
+        );
         response.setUsername(request.getUsername());
         response.setUpdatedBy(request.getUpdatedBy());
 
@@ -1251,6 +1270,9 @@ public final class FmOutletMapper {
         response.setCuisineType(outlet.getCuisineType());
         response.setOutletPhone(outlet.getOutletPhone());
         response.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
+        response.setIsGstApplied(
+                Boolean.TRUE.equals(outlet.getIsGstApplied())
+        );
 
         // ---------------- Tracking ----------------
         response.setUpdatedBy(request.getUpdatedBy());
@@ -1342,5 +1364,243 @@ public final class FmOutletMapper {
         }
 
         return activeOffer;
+    }
+
+    public static FmAdminOutletDetailsDto mapAdminOutletToDto(List<FmAdminOutletMenuProjection> rows) {
+
+        log.info("ADMIN_OUTLET_MAPPING_START | rows={}", rows == null ? 0 : rows.size());
+
+        FmAdminOutletDetailsDto outlet = new FmAdminOutletDetailsDto();
+
+        if (rows == null || rows.isEmpty()) {
+            return outlet;
+        }
+
+        Map<Integer, FmAdminCategoryDto> categoryMap = new LinkedHashMap<>();
+
+        Map<String, FmOutletTimingDto> outletTimingMap = new LinkedHashMap<>();
+
+        Map<Integer, FmCuisineTypeResponseDTO> cuisineMap = new LinkedHashMap<>();
+
+        Map<Integer, FmAdminProductDto> productMap = new HashMap<>();
+
+        FmAdminOutletMenuProjection firstRow = rows.get(0);
+
+        // =========================================================
+        // OUTLET
+        // =========================================================
+
+        outlet.setOutletId(firstRow.getOutletId());
+        outlet.setOutletName(firstRow.getOutletName());
+        outlet.setOutletEmail(firstRow.getOutletEmail());
+        outlet.setOutletPhone(firstRow.getOutletPhone());
+        outlet.setAlternateOutletPhone(firstRow.getAlternateOutletPhone());
+
+        outlet.setLatitude(firstRow.getLatitude());
+        outlet.setLongitude(firstRow.getLongitude());
+
+        outlet.setIsAvailable(firstRow.getOutletAvailable());
+
+        outlet.setIsToggle(firstRow.getOutletToggle());
+        outlet.setIsGstApplied(firstRow.getGstApplied());
+
+        // =========================================================
+        // BANK
+        // =========================================================
+
+        outlet.setAccountNumber(firstRow.getAccountNumber());
+        outlet.setIfscCode(firstRow.getIfscCode());
+        outlet.setBankName(firstRow.getBankName());
+        outlet.setAccountHolderName(firstRow.getAccountHolderName());
+
+        // =========================================================
+        // ADDRESS
+        // =========================================================
+
+        outlet.setBuildingNumber(firstRow.getBuildingNumber());
+        outlet.setRoad(firstRow.getRoad());
+        outlet.setLandmark(firstRow.getLandmark());
+
+        outlet.setCityId(firstRow.getCityId());
+        outlet.setCityName(firstRow.getCityName());
+
+        outlet.setStateId(firstRow.getStateId());
+        outlet.setStateName(firstRow.getStateName());
+
+        outlet.setAreaId(firstRow.getAreaId());
+        outlet.setAreaName(firstRow.getAreaName());
+
+        // =========================================================
+        // ROW MAPPING
+        // =========================================================
+
+        for (FmAdminOutletMenuProjection row : rows) {
+
+            if (row == null) {
+                continue;
+            }
+
+            // =====================================================
+            // CUISINE
+            // =====================================================
+
+            if (row.getCuisineTypeId() != null) {
+
+                cuisineMap.computeIfAbsent(row.getCuisineTypeId(), id -> {
+
+                    FmCuisineTypeResponseDTO dto = new FmCuisineTypeResponseDTO();
+
+                    dto.setCuisineTypeId(row.getCuisineTypeId());
+
+                    dto.setCuisineTypeName(row.getCuisineTypeName());
+
+                    return dto;
+                });
+            }
+
+            // =====================================================
+            // OUTLET TIMING
+            // =====================================================
+
+            if (row.getOutletDay() != null) {
+
+                outletTimingMap.computeIfAbsent(row.getOutletDay(), day -> {
+
+                    FmOutletTimingDto dto = new FmOutletTimingDto();
+
+                    dto.setDay(day);
+                    dto.setIsOpen(row.getIsOpen());
+                    dto.setOpeningTime(row.getOpeningTime());
+                    dto.setClosingTime(row.getClosingTime());
+
+                    return dto;
+                });
+            }
+
+            // =====================================================
+            // CATEGORY
+            // =====================================================
+
+            if (row.getCategoryId() == null) {
+                continue;
+            }
+
+            FmAdminCategoryDto category = categoryMap.computeIfAbsent(row.getCategoryId(), id -> {
+
+                FmAdminCategoryDto dto = new FmAdminCategoryDto();
+
+                dto.setCategoryId(id);
+                dto.setCategoryName(row.getCategoryName());
+
+                dto.setIsAvailable(row.getCategoryAvailable());
+                dto.setIsToggle(row.getCategoryToggle());
+
+                return dto;
+            });
+// =====================================================
+// PRODUCT
+// =====================================================
+
+            if (row.getProductId() == null) {
+                continue;
+            }
+
+            FmAdminProductDto product = productMap.get(row.getProductId());
+
+            if (product == null) {
+
+                product = new FmAdminProductDto();
+
+                product.setProductId(row.getProductId());
+                product.setProductName(row.getProductName());
+                product.setDescription(row.getDescription());
+                product.setImageLink(row.getImageLink());
+
+                product.setIsVeg(row.getIsVeg());
+
+                product.setHasProductVariants(row.getHasProductVariants());
+
+                product.setIsAvailable(row.getProductAvailable());
+                product.setIsToggle(row.getProductToggle());
+
+                // =================================================
+                // ADMIN PRICING
+                // =================================================
+
+                product.setMerchantPrice(row.getMerchantPrice());
+
+                product.setOnlinePrice(row.getOnlinePrice());
+
+                category.getProducts().add(product);
+
+                productMap.put(row.getProductId(), product);
+            }
+
+            // =====================================================
+            // PRODUCT TIMING
+            // =====================================================
+
+            if (row.getStartTime() != null && row.getProductDay() != null) {
+
+                boolean exists = product.getProductTimings().stream().anyMatch(timing -> Objects.equals(timing.getDay(), row.getProductDay()) && Objects.equals(timing.getStartTime(), row.getStartTime()) && Objects.equals(timing.getEndTime(), row.getEndTime()));
+
+                if (!exists) {
+
+                    FmProductTimingDto timing = new FmProductTimingDto();
+
+                    timing.setDay(row.getProductDay());
+                    timing.setStartTime(row.getStartTime());
+                    timing.setEndTime(row.getEndTime());
+
+                    product.getProductTimings().add(timing);
+                }
+            }
+
+            // =====================================================
+            // VARIANT
+            // =====================================================
+
+            if (Boolean.TRUE.equals(row.getHasProductVariants()) && row.getProductVariantId() != null) {
+
+                boolean exists = product.getVariants().stream().anyMatch(variant -> Objects.equals(variant.getVariantId(), row.getProductVariantId()));
+
+                if (!exists) {
+
+                    FmAdminProductVariantDto variant = new FmAdminProductVariantDto();
+
+                    variant.setVariantId(row.getProductVariantId());
+
+                    variant.setVariantValueId(row.getVariantValueId());
+
+                    variant.setVariantGroupId(row.getVariantGroupId());
+
+                    variant.setVariantName(row.getVariantName());
+
+                    variant.setGroupName(row.getVariantGroupName());
+
+                    variant.setPriceType(row.getVariantPriceType());
+
+                    // =================================================
+                    // BOTH PRICES FOR ADMIN
+                    // =================================================
+
+                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+
+                    variant.setOnlinePrice(row.getVariantOnlinePrice());
+
+                    product.getVariants().add(variant);
+                }
+            }
+        }
+
+        outlet.setCuisineTypes(new ArrayList<>(cuisineMap.values()));
+
+        outlet.setOutletTimings(new ArrayList<>(outletTimingMap.values()));
+
+        outlet.setCategories(new ArrayList<>(categoryMap.values()));
+
+        log.info("ADMIN_OUTLET_MAPPING_COMPLETED | outletId={} | categories={} | cuisines={}", outlet.getOutletId(), categoryMap.size(), cuisineMap.size());
+
+        return outlet;
     }
 }

@@ -69,4 +69,9 @@ public interface IFmOutletService {
     List<FmOutlet> getOutletsByAreaId(Integer areaId);
 
     OutletLocationResponseDto getOutletAddressDetails(Integer outletId);
+
+
+    FmAdminOutletDetailsDto getAdminOutletDetails(Integer outletId);
+
+    Integer getAreaIdByOutletId(Integer outletId);
 }

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,23 @@ public class FmProductController {
     //             )
     //     );
     // }
+
+    @GetMapping("/outlet/{outletId}")
+    public ResponseEntity<List<FmOutletProductResponseDto>> getProductsByOutletId(
+            @PathVariable
+            @NotNull(message = "Outlet id is required")
+            Integer outletId) {
+
+        log.info(
+                "CONTROLLER_START | GET_PRODUCTS_BY_OUTLET | outletId={}",
+                outletId
+        );
+
+        List<FmOutletProductResponseDto> response =
+                productMappingService.getProductsByOutletId(outletId);
+
+        return ResponseEntity.ok(response);
+    }
 
 
     /**

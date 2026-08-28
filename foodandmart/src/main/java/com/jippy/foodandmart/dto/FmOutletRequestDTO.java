@@ -76,6 +76,8 @@ public class FmOutletRequestDTO {
             message = "Invalid GST Number")
     private String gstNumber;
 
+    private Boolean isGstApplied;
+
 
     @Schema(description = "Username for outlet login", example = "friends_outlet")
     @NotBlank(message = "Username is required")

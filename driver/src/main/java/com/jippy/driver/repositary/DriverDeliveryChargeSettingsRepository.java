@@ -34,14 +34,31 @@ public interface DriverDeliveryChargeSettingsRepository
     // =========================================================
     // DELIVERY SLAB
     // =========================================================
+//
+//    @Query("""
+//            SELECT d
+//            FROM DriverDeliveryChargeSettings d
+//            WHERE :deliveryDistance >= d.kmsRangeFrom
+//              AND :deliveryDistance < d.kmsRangeTo
+//              AND UPPER(d.chargeType) = 'DELIVERY'
+//            """)
+//    Optional<DriverDeliveryChargeSettings> findDeliverySlab(
+//            @Param("deliveryDistance") BigDecimal deliveryDistance
+//    );
+
+
+// DELIVERY SLAB
+// =========================================================
 
     @Query("""
-            SELECT d
-            FROM DriverDeliveryChargeSettings d
-            WHERE :deliveryDistance >= d.kmsRangeFrom
-              AND :deliveryDistance < d.kmsRangeTo
-              AND UPPER(d.chargeType) = 'DELIVERY'
-            """)
+        SELECT d
+        FROM DriverDeliveryChargeSettings d
+        WHERE :deliveryDistance >= d.kmsRangeFrom
+          AND :deliveryDistance < d.kmsRangeTo
+          AND UPPER(d.chargeType) = 'PER_KM'
+          AND UPPER(d.status) = 'ACTIVE'
+        ORDER BY d.kmsRangeFrom
+        """)
     Optional<DriverDeliveryChargeSettings> findDeliverySlab(
             @Param("deliveryDistance") BigDecimal deliveryDistance
     );

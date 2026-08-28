@@ -778,4 +778,62 @@ public class FmOutletController {
 
         return ResponseEntity.ok(response);
     }
+
+
+    // ============================================================================
+// ADMIN - GET COMPLETE OUTLET DETAILS
+// ============================================================================
+
+    @Operation(summary = "Admin: Get Complete Outlet Details", description = """
+            Fetches complete outlet configuration based on outlet ID.
+            
+            The response includes:
+            - Outlet details
+            - Outlet location
+            - Outlet status
+            - Bank details
+            - Address details
+            - Cuisine types
+            - Outlet timings
+            - Categories
+            - Products
+            - Product merchant price
+            - Product online price
+            - Product available timings
+            - Product variants
+            - Variant merchant price
+            - Variant online price
+            
+            Admin receives both merchant and online pricing.
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Admin outlet details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid outlet ID"), @ApiResponse(responseCode = "404", description = "Outlet not found")})
+    @GetMapping("/admin/outlet-details")
+    public ResponseEntity<FmAdminOutletDetailsDto> getAdminOutletDetails(
+
+            @Parameter(description = "Outlet ID", required = true, example = "267") @RequestParam Integer outletId) {
+
+        log.info("ADMIN_OUTLET_DETAILS_REQUEST | outletId={}", outletId);
+
+        FmAdminOutletDetailsDto response = outletService.getAdminOutletDetails(outletId);
+
+        log.info("ADMIN_OUTLET_DETAILS_SUCCESS | outletId={}", outletId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/area/{outletId}")
+    public ResponseEntity<Integer> getAreaIdByOutletId(
+            @PathVariable Integer outletId) {
+
+        log.info(
+                "GET /api/fm/outlets/{}/area",
+                outletId
+        );
+
+        Integer areaId =
+                outletService.getAreaIdByOutletId(outletId);
+
+        return ResponseEntity.ok(areaId);
+    }
+
 }
