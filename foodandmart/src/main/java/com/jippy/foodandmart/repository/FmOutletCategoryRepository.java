@@ -1,6 +1,5 @@
 package com.jippy.foodandmart.repository;
 
-import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmOutletCategory;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -61,4 +60,5 @@ public interface FmOutletCategoryRepository extends JpaRepository<FmOutletCatego
     );
 
     Optional<FmOutletCategory> findByOutletCategoryId(Integer outletCategoryId);
+
 }

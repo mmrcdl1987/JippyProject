@@ -33,6 +33,11 @@ public interface FMFeignClient {
     @GetMapping("/api/fm/outlets/fetchOutletName")
     String fetchOutletName(@RequestParam Integer outletId);
 
+    @GetMapping("/api/fm/products/productdetails/{productId}")
+    CoProductDetailResponseDto getProductDetailById(
+            @PathVariable("productId") Integer productId
+    );
+
     // --------------------------------------------------------------------------------
     // CALL FM SERVICE for DEACTIVATING DRIVER i.e is_active = Y to N in fm_users table
     // --------------------------------------------------------------------------------
@@ -93,5 +98,10 @@ public interface FMFeignClient {
 
     @GetMapping("/api/fm/location/findAreaById")
     public String findAreaById(@RequestParam Integer areaId);
+
+    @GetMapping("/api/fm/outlets/area/{outletId}")
+    Integer getAreaIdByOutletId(
+            @PathVariable("outletId") Integer outletId
+    );
 
 }

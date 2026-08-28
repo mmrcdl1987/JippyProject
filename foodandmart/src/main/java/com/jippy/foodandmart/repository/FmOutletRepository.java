@@ -1009,6 +1009,268 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             join "jippy_fm"."address" a on  o.outlet_id = a.jippy_address_id and address_type = 'OUTLET'
             where outlet_id =:outletId """,nativeQuery = true)
     OutletAddressProjection getOutletAddressDetails(@Param("outletId") Integer outletId);
+
+
+    @Query(value = """
+        SELECT
+
+            -- =========================================================
+            -- OUTLET
+            -- =========================================================
+            o.outlet_id,
+            o.outlet_name,
+            o.outlet_email,
+            o.outlet_phone,
+            o.alternate_outlet_phone,
+
+            o.is_active,
+            o.is_approved,
+            o.is_toggle AS outlet_available,
+            o.is_toggle AS outlet_toggle,
+            o.is_gst_applied AS gst_applied,
+
+            ST_Y(o.outlet_location::geometry) AS latitude,
+            ST_X(o.outlet_location::geometry) AS longitude,
+
+            -- =========================================================
+            -- BANK
+            -- =========================================================
+            ubd.account_number,
+            ubd.ifsc_code,
+            ubd.bank_name,
+            ubd.account_holder_name,
+
+            -- =========================================================
+            -- ADDRESS
+            -- =========================================================
+            a.building_number,
+            a.road,
+            a.landmark,
+
+            a.city_id,
+            ct.city_name,
+
+            a.state_id,
+            st.state_name,
+
+            a.area_id,
+            ar.area_name,
+
+            -- =========================================================
+            -- CUISINE
+            -- =========================================================
+            cuisine.cuisine_types_id AS cuisine_type_id,
+            cuisine.cuisine_types_name AS cuisine_type_name,
+
+            -- =========================================================
+            -- CATEGORY
+            -- =========================================================
+            c.category_id,
+            c.category_name,
+            oc.is_toggle AS category_available,
+            oc.is_toggle AS category_toggle,
+
+            -- =========================================================
+            -- PRODUCT
+            -- =========================================================
+            p.product_id,
+            p.product_name,
+            p.description,
+            p.image_link,
+            p.merchant_price,
+            p.is_veg,
+            p.has_product_variants,
+            p.is_toggle AS product_available,
+            p.is_toggle AS product_toggle,
+
+            -- =========================================================
+            -- PRODUCT ONLINE PRICE
+            --
+            -- Non-variant product:
+            -- product_variant_id IS NULL
+            --
+            -- Variant product:
+            -- minimum online price among active configured variants
+            -- =========================================================
+            (
+                SELECT MIN(pop.online_price)
+                FROM jippy_fm.product_online_pricing pop
+                WHERE pop.product_id = p.product_id
+                  AND pop.outlet_category_id = p.outlet_category_id
+                  AND pop.online_price > 0
+                  AND (
+                        (
+                            p.has_product_variants = true
+                            AND pop.product_variant_id IS NOT NULL
+                        )
+                        OR
+                        (
+                            p.has_product_variants = false
+                            AND pop.product_variant_id IS NULL
+                        )
+                  )
+            ) AS online_price,
+
+            -- =========================================================
+            -- VARIANT OPTION
+            -- =========================================================
+            pvo.product_variant_options_id AS product_variant_id,
+            pvo.variant_price AS variant_merchant_price,
+            pvo.price_type AS variant_price_type,
+
+            -- =========================================================
+            -- VARIANT ONLINE PRICE
+            -- =========================================================
+            vpop.online_price AS variant_online_price,
+
+            -- =========================================================
+            -- VARIANT VALUE
+            -- =========================================================
+            pvgv.product_variant_group_values_id AS variant_value_id,
+            pvgv.variant_name,
+            pvgv.product_variant_groups_id AS variant_group_id,
+
+            -- =========================================================
+            -- VARIANT GROUP
+            -- =========================================================
+            pvg.group_name AS variant_group_name,
+
+            -- =========================================================
+            -- OUTLET TIMINGS
+            -- =========================================================
+            od.is_open,
+            od.opening_time,
+            od.closing_time,
+            d1.day_name AS outlet_day,
+
+            -- =========================================================
+            -- PRODUCT TIMINGS
+            -- =========================================================
+            pat.start_time,
+            pat.end_time,
+            d2.day_name AS product_day
+
+        FROM jippy_fm.outlets o
+
+        -- =========================================================
+        -- BANK
+        -- =========================================================
+        LEFT JOIN jippy_fm.user_bank_details ubd
+               ON ubd.recipient_id = o.outlet_id
+              AND ubd.user_type = 'OUTLET'
+
+        -- =========================================================
+        -- ADDRESS
+        -- =========================================================
+        LEFT JOIN jippy_fm.address a
+               ON a.jippy_address_id = o.outlet_id
+              AND a.address_type = 'OUTLET'
+
+        LEFT JOIN jippy_fm.state st
+               ON st.state_id = a.state_id
+
+        LEFT JOIN jippy_fm.city ct
+               ON ct.city_id = a.city_id
+
+        LEFT JOIN jippy_fm.area ar
+               ON ar.area_id = a.area_id
+
+        -- =========================================================
+        -- CUISINE
+        -- =========================================================
+        LEFT JOIN jippy_fm.cuisine_types cuisine
+               ON cuisine.cuisine_types_id = ANY(o.cuisine_type)
+
+        -- =========================================================
+        -- OUTLET CATEGORY
+        -- =========================================================
+        LEFT JOIN jippy_fm.outlet_categories oc
+               ON o.outlet_id = oc.outlet_id
+
+        LEFT JOIN jippy_fm.categories c
+               ON oc.category_id = c.category_id
+
+        -- =========================================================
+        -- PRODUCT
+        -- =========================================================
+        LEFT JOIN jippy_fm.products p
+               ON oc.outlet_category_id = p.outlet_category_id
+
+        -- =========================================================
+        -- PRODUCT VARIANT OPTIONS
+        -- =========================================================
+        LEFT JOIN jippy_fm.product_variant_options pvo
+               ON pvo.product_id = p.product_id
+              AND p.has_product_variants = true
+              AND pvo.is_active = true
+
+        -- =========================================================
+        -- VARIANT ONLINE PRICING
+        --
+        -- product_online_pricing.product_variant_id
+        -- matches product_variant_options.product_variant_options_id
+        --
+        -- Admin sees configured pricing regardless of approval status.
+        -- =========================================================
+        LEFT JOIN jippy_fm.product_online_pricing vpop
+               ON vpop.product_id = p.product_id
+              AND vpop.outlet_category_id = p.outlet_category_id
+              AND vpop.product_variant_id = pvo.product_variant_options_id
+              AND vpop.online_price > 0
+
+        -- =========================================================
+        -- VARIANT GROUP VALUE
+        -- =========================================================
+        LEFT JOIN jippy_fm.product_variant_group_values pvgv
+               ON pvgv.product_variant_group_values_id =
+                  pvo.product_variant_group_values_id
+              AND pvgv.is_active = true
+
+        -- =========================================================
+        -- VARIANT GROUP
+        -- =========================================================
+        LEFT JOIN jippy_fm.product_variant_groups pvg
+               ON pvg.product_variant_groups_id =
+                  pvgv.product_variant_groups_id
+              AND pvg.is_active = true
+
+        -- =========================================================
+        -- OUTLET DAYS
+        -- =========================================================
+        LEFT JOIN jippy_fm.outlet_days od
+               ON o.outlet_id = od.outlet_id
+
+        LEFT JOIN jippy_fm.days_of_week d1
+               ON od.day_of_week_id = d1.day_id
+
+        -- =========================================================
+        -- PRODUCT AVAILABLE TIMINGS
+        -- =========================================================
+        LEFT JOIN jippy_fm.product_available_timings pat
+               ON p.product_id = pat.product_id
+              AND od.day_of_week_id = pat.day_of_week_id
+
+        LEFT JOIN jippy_fm.days_of_week d2
+               ON pat.day_of_week_id = d2.day_id
+
+        -- =========================================================
+        -- OUTLET FILTER
+        -- =========================================================
+        WHERE o.outlet_id = :outletId
+
+        ORDER BY
+            cuisine.cuisine_types_id,
+            c.category_id,
+            p.product_id,
+            pvg.product_variant_groups_id,
+            pvo.product_variant_options_id,
+            od.day_of_week_id,
+            pat.start_time
+        """, nativeQuery = true)
+    List<FmAdminOutletMenuProjection> getAdminOutletMenu(
+            @Param("outletId") Integer outletId
+    );
+
 }
 
 

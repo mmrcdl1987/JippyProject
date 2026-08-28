@@ -1,15 +1,6 @@
 package com.jippy.foodandmart.service;
 
-import com.jippy.foodandmart.dto.FmMapToProduct;
-import com.jippy.foodandmart.dto.FmMapToProductResult;
-import com.jippy.foodandmart.dto.FmProductCategoryUpdateRequestDto;
-import com.jippy.foodandmart.dto.FmProductCategoryUpdateResponseDto;
-import com.jippy.foodandmart.dto.FmProductDetailResponse;
-import com.jippy.foodandmart.dto.FmProductPriceResponse;
-import com.jippy.foodandmart.dto.FmProductUpdateRequestDto;
-import com.jippy.foodandmart.dto.FmProductUpdateResponseDto;
-import com.jippy.foodandmart.dto.FmVariantBulkUploadResponseDto;
-import com.jippy.foodandmart.dto.OutletProductPricingDto;
+import com.jippy.foodandmart.dto.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,7 +14,7 @@ public interface FmProductService {
 
     /**
      * Maps selected products into outlet products.
-     *
+     * <p>
      * Creates:
      * - Product
      * - Product Available Timings
@@ -39,31 +30,16 @@ public interface FmProductService {
     );
 
 
-    // ============================================================
-    // BULK UPLOAD VARIANTS
-    // ============================================================
 
-    /**
-     * Uploads product variants in bulk using an Excel file.
-     *
-     * @param outletId outlet id
-     * @param file Excel file containing variant information
-     * @return bulk upload result
-     */
     FmVariantBulkUploadResponseDto bulkUploadVariants(
             Integer outletId,
             MultipartFile file
     );
 
-
-    // ============================================================
-    // MAP MASTER PRODUCTS
-    // ============================================================
-
     /**
      * Maps all published master products of a category
      * into an outlet category.
-     *
+     * <p>
      * Creates:
      * - Products
      * - Product Available Timings
@@ -155,16 +131,6 @@ public interface FmProductService {
     );
 
 
-    // ============================================================
-    // ACTIVE PRODUCTS
-    // ============================================================
-
-    /**
-     * Gets all active product IDs for an outlet.
-     *
-     * @param outletId outlet id
-     * @return active product IDs
-     */
     List<Integer> getActiveProductIdsByOutlet(
             Integer outletId
     );
@@ -237,4 +203,6 @@ public interface FmProductService {
     FmProductCategoryUpdateResponseDto updateCategoryForProductByProductType(
             FmProductCategoryUpdateRequestDto request
     );
+
+    List<FmOutletProductResponseDto> getProductsByOutletId(Integer outletId);
 }

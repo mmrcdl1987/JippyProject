@@ -15,5 +15,6 @@ public class FmOutletCreatedDTO {
     private Integer[] cuisineType;
     private String  outletPhone;
     private String  isActive;
+    private Boolean IsGstApplied;
 
 }
