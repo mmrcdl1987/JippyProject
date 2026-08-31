@@ -28,10 +28,26 @@ public class FmProductUpdateResponseDto {
 
     private String thumbnail;
 
+    /**
+     * Product type stored in:
+     * jippy_fm.products.product_type
+     *
+     * Example:
+     * PRODUCT
+     * MASTERPRODUCT
+     * RICE
+     * CURRY
+     * BREAKFAST
+     * NOODLES
+     * DESSERT
+     * BEVERAGE
+     */
+    private String productType;
+
     private List<FmProductTimingResponseDto> timings;
 
     /**
-     * Merchant Variant Groups with Variant Prices
+     * Merchant Variant Groups with Variant Prices.
      */
     private List<FmProductEditVariantGroupDto> variantGroups;
 }

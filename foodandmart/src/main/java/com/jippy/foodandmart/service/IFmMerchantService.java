@@ -24,4 +24,6 @@ public interface IFmMerchantService {
     FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto);
 
     FmResponseDto updateMerchantProfilePic(FmMerchantDto merchantDto);
+
+    FmMerchant createMerchantBulkUpload(FmMerchantRequestDTO dto);
 }

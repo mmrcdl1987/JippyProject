@@ -1,9 +1,9 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmMerchant;
-import com.jippy.foodandmart.entity.FmMerchantBankDetails;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 import com.jippy.foodandmart.projections.FmPendingMerchantApprovalProjection;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,122 +14,165 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface FmMerchantRepository extends JpaRepository<FmMerchant, Integer> {
-    Optional<FmMerchant> findByMerchantEmail(String email);
+public interface FmMerchantRepository
+        extends JpaRepository<FmMerchant, Integer> {
 
-    Optional<FmMerchant> findByMerchantPhone(String phone);
+    // ============================================================
+    // EMAIL
+    // ============================================================
 
-    boolean existsByMerchantEmail(String email);
+    Optional<FmMerchant> findByMerchantEmail(
+            String email
+    );
 
-    boolean existsByMerchantPhone(String phone);
+    Optional<FmMerchant> findByMerchantEmailIgnoreCase(
+            String merchantEmail
+    );
+
+    boolean existsByMerchantEmail(
+            String email
+    );
 
 
-    //    for finding the email in the Merchant table
-    Optional<FmMerchant> findByMerchantEmailIgnoreCase(String merchantEmail);
+    // ============================================================
+    // PHONE
+    // ============================================================
 
-    @Query(value = """
-                    SELECT 
-                        m.merchant_id AS merchantId,
-                        m.merchant_name AS merchantName,
-                        m.merchant_email AS merchantEmail,
-                        m.merchant_phone AS merchantPhone,
-                        m.merchant_business_type AS businessType,
-                        m.status AS status,
-            -- for bank details
-                       u.bank_id AS bankId,
-                       u.recipient_id AS recipientId,
-                       u.account_number AS accountNumber,
-                       u.ifsc_code AS ifscCode,
-                       u.bank_name AS bankName,
-                       u.account_holder_name AS accountHolderName,
-                       u.user_type AS userType
-                    FROM jippy_fm.merchants m
-                     JOIN jippy_fm.user_bank_details u
-                        ON u.recipient_id = m.merchant_id
-                        AND u.user_type = 'MERCHANT'
-                    WHERE m.merchant_id = :merchantId
-            """, nativeQuery = true)
-//     for fetching bank details from the Merchant-table
-    FmMerchantWithBankProjection getMerchantWithBank(@Param("merchantId") Integer merchantId);
+    Optional<FmMerchant> findByMerchantPhone(
+            String phone
+    );
 
-//-----------------------------------FOR APPROVALS-----------------------------------------------------------------
+    boolean existsByMerchantPhone(
+            String phone
+    );
+
+
+    // ============================================================
+    // MERCHANT NAME
+    // ============================================================
 
     /**
-     * Fetches all Pending Merchant Approval Requests
-     * assigned to the specified Approver and Entity Type.
-     * <p>
-     * Business Flow:
-     * <p>
-     * Approval Settings
-     * ↓
-     * Employee
-     * ↓
-     * Employee Address (EMPLOYEE)
-     * ↓
-     * Area
-     * ↓
-     * Merchant Address (MERCHANT)
-     * ↓
-     * Merchant
-     * <p>
-     * Returns only:
-     * • Pending Merchants (is_approved = false)
-     * • Created within last 24 Hours
+     * Finds merchant by name ignoring case and
+     * leading/trailing spaces.
+     *
+     * Example:
+     *
+     * CSV:
+     * mahendra
+     *
+     * Database:
+     * mahendra
+     *
+     * Result:
+     * merchant_id = 35
      */
+    @Query("""
+            SELECT m
+            FROM FmMerchant m
+            WHERE LOWER(TRIM(m.merchantName))
+                  = LOWER(TRIM(:merchantName))
+            """)
+    Optional<FmMerchant> findMerchantByName(
+            @Param("merchantName") String merchantName
+    );
+
+
+    // ============================================================
+    // MERCHANT + BANK DETAILS
+    // ============================================================
+
     @Query(value = """
-            
             SELECT
-            
-                m.merchant_id                AS merchantId,   --From Merchants Table
-                m.merchant_name              AS merchantName,
-                m.merchant_email             AS merchantEmail,
-                m.merchant_phone             AS merchantPhone,
-                m.merchant_business_type     AS merchantBusinessType,
-                m.is_approved                AS isApproved,
-                m.created_at                 AS createdAt
-            
+                m.merchant_id AS merchantId,
+                m.merchant_name AS merchantName,
+                m.merchant_email AS merchantEmail,
+                m.merchant_phone AS merchantPhone,
+                m.merchant_business_type AS businessType,
+                m.status AS status,
+
+                u.bank_id AS bankId,
+                u.recipient_id AS recipientId,
+                u.account_number AS accountNumber,
+                u.ifsc_code AS ifscCode,
+                u.bank_name AS bankName,
+                u.account_holder_name AS accountHolderName,
+                u.user_type AS userType
+
+            FROM jippy_fm.merchants m
+
+            JOIN jippy_fm.user_bank_details u
+              ON u.recipient_id = m.merchant_id
+             AND u.user_type = 'MERCHANT'
+
+            WHERE m.merchant_id = :merchantId
+            """,
+            nativeQuery = true)
+    FmMerchantWithBankProjection getMerchantWithBank(
+            @Param("merchantId") Integer merchantId
+    );
+
+
+    // ============================================================
+    // PENDING MERCHANT APPROVALS
+    // ============================================================
+
+    @Query(value = """
+
+            SELECT
+
+                m.merchant_id            AS merchantId,
+                m.merchant_name          AS merchantName,
+                m.merchant_email         AS merchantEmail,
+                m.merchant_phone         AS merchantPhone,
+                m.merchant_business_type AS merchantBusinessType,
+                m.is_approved            AS isApproved,
+                m.created_at             AS createdAt
+
             FROM jippy_fm.approval_settings aps
-            
-            /* Fetch configured Approver */
+
             INNER JOIN jippy_fm.employees emp
                     ON emp.employee_id = aps.approver_id
-            
-            /* Fetch Employee Address */
+
             INNER JOIN jippy_fm.address emp_addr
                     ON emp_addr.jippy_address_id = emp.employee_id
                    AND emp_addr.address_type = 'EMPLOYEE'
-            
-            /* Fetch Merchant Addresses from same Area */
+
             INNER JOIN jippy_fm.address merchant_addr
                     ON merchant_addr.area_id = emp_addr.area_id
                    AND merchant_addr.address_type = 'MERCHANT'
-            
-            /* Fetch Merchant Details */
+
             INNER JOIN jippy_fm.merchants m
                     ON m.merchant_id = merchant_addr.jippy_address_id
-            
+
             WHERE aps.approver_id = :approverId
-            
-                    AND aps.entity_type = :entityType
-            
-                    AND aps.is_active = TRUE
-            
-                    AND m.is_approved = FALSE
-            
-                    AND m.created_at >= NOW() - INTERVAL '24 HOURS'
-            
-                    ORDER BY m.created_at DESC
-            
-            """, nativeQuery = true)
-    List<FmPendingMerchantApprovalProjection> getPendingMerchantApprovalRequestsByEntityType(
-            @Param("approverId") Integer approverId,
-            @Param("entityType") String entityType);
 
-//
+              AND aps.entity_type = :entityType
 
-    /**
-     * Approve Merchant.
-     */
+              AND aps.is_active = TRUE
+
+              AND m.is_approved = FALSE
+
+              AND m.created_at >= NOW() - INTERVAL '24 HOURS'
+
+            ORDER BY m.created_at DESC
+
+            """,
+            nativeQuery = true)
+    List<FmPendingMerchantApprovalProjection>
+    getPendingMerchantApprovalRequestsByEntityType(
+
+            @Param("approverId")
+            Integer approverId,
+
+            @Param("entityType")
+            String entityType
+    );
+
+
+    // ============================================================
+    // APPROVE MERCHANT
+    // ============================================================
+
     @Modifying
     @Query("""
             UPDATE FmMerchant
@@ -137,7 +180,7 @@ public interface FmMerchantRepository extends JpaRepository<FmMerchant, Integer>
             WHERE merchantId = :merchantId
             """)
     int approveMerchant(
-            @Param("merchantId") Integer merchantId);
-
+            @Param("merchantId")
+            Integer merchantId
+    );
 }
-

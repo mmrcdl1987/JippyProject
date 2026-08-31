@@ -7,40 +7,115 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class FmMapToProductRequest {
+
+    /**
+     * Existing mobile application may send this.
+     *
+     * Bulk upload can leave this null when products
+     * belong to different categories.
+     */
     private Integer outletCategoryId;
-    private Integer outletId;          // required when outletCategoryId is null
+
+    /**
+     * Outlet ID.
+     */
+    private Integer outletId;
+
+    /**
+     * Selected master/outlet products.
+     */
     private List<ProductEntry> products;
 
-    @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class ProductEntry {
+
         private String productName;
+
         private String description;
+
         private BigDecimal merchantPrice;
+
         private Boolean isVeg;
+
+        /**
+         * Kept for mobile compatibility.
+         *
+         * Master-product mapping will always create
+         * the outlet product without variants.
+         */
         private Boolean hasProductVariants;
+
+        /**
+         * Kept for compatibility.
+         *
+         * Not used during master-product mapping.
+         */
         private List<VariantEntry> variants;
-        private Integer masterProductId;   // used to look up category when no outletCategoryId
-        private Integer categoryId;        // category from master product
-        /** Day-of-week name from CSV daysofaweek column, e.g. "Monday". Used to resolve day_of_week_id. */
+
+        /**
+         * Master product ID.
+         */
+        private Integer masterProductId;
+
+        /**
+         * Master product category ID.
+         */
+        private Integer categoryId;
+
+        /**
+         * Product type from master_products.product_type.
+         */
+        private String productType;
+
+        /**
+         * CSV day.
+         */
         private String csvDayOfWeek;
-        /** Raw timing string from CSV, e.g. "9:00-22:00". Parsed into TimingEntry rows. */
+
+        /**
+         * CSV timing.
+         */
         private String csvTiming;
-        /** Explicit per-day timing rows (optional; takes precedence over csvTiming). */
+
+        /**
+         * Explicit timing rows.
+         */
         private List<TimingEntry> timings;
     }
 
-    @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class TimingEntry {
-        private Integer dayOfWeekId;   // 0 = all days, 1=Mon … 7=Sun
-        private String  startTime;     // "HH:mm"
-        private String  endTime;       // "HH:mm"
+
+        private Integer dayOfWeekId;
+
+        private String startTime;
+
+        private String endTime;
     }
 
-    @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class VariantEntry {
+
         private String variantName;
+
         private BigDecimal merchantPrice;
     }
 }

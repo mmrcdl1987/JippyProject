@@ -38,6 +38,20 @@ public class FmProductDetailResponseDto {
 
     private Boolean hasProductVariants;
 
+    /**
+     * Product type stored in:
+     * jippy_fm.products.product_type
+     *
+     * Example:
+     * FOOD
+     * BEVERAGE
+     * GROCERY
+     * DESSERT
+     * RICE
+     * CURRY
+     */
+    private String productType;
+
     private String imageLink;
 
     private String photos;

@@ -48,10 +48,9 @@ public class FmCreateMasterProductRequestDto {
     private String shortDescription;
 
     @Schema(
-            description = "Main Product Image URL",
+            description = "Main Product Image URL. Optional when creating or adding a product to an outlet.",
             example = "https://cdn.jippymart.in/images/chicken-biryani.jpg"
     )
-    @NotBlank(message = "Photo is required")
     @Size(
             max = 500,
             message = "Photo URL cannot exceed 500 characters"
@@ -113,4 +112,14 @@ public class FmCreateMasterProductRequestDto {
             message = "Cuisine Type cannot exceed 100 characters"
     )
     private String cuisineType;
+
+    @Schema(
+            description = "Product type stored in master_products.product_type",
+            example = "RICE"
+    )
+    @Size(
+            max = 20,
+            message = "Product Type cannot exceed 20 characters"
+    )
+    private String productType;
 }

@@ -1,4 +1,5 @@
-package com.jippy.foodandmart.controller;
+
+        package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmMasterProduct;
@@ -24,7 +25,9 @@ import java.util.Map;
 
 /**
  * REST controller for the master product catalogue.
- * Base path: /api/master-products
+ *
+ * Base path:
+ * /api/fm/master-products
  */
 @Slf4j
 @RestController
@@ -34,20 +37,41 @@ public class FmMasterProductController {
 
     private final FmMasterProductService service;
 
+    /**
+     * Create a master product.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public FmMasterProduct create(@RequestBody FmMasterProductRequest req) {
-        log.info("[MASTER] POST /api/master-products — name={}", req.getMasterProductName());
+    public FmMasterProduct create(
+            @RequestBody FmMasterProductRequest req) {
+
+        log.info(
+                "[MASTER] POST /api/fm/master-products — name={}",
+                req.getMasterProductName()
+        );
+
         return service.save(req);
     }
 
+    /**
+     * Bulk add master products.
+     */
     @PostMapping("/bulk-add")
     @ResponseStatus(HttpStatus.CREATED)
-    public List<FmMasterProduct> bulkAdd(@RequestBody List<FmMasterProductRequest> requests) {
-        log.info("[MASTER] POST /api/master-products/bulk-add — count={}", requests.size());
+    public List<FmMasterProduct> bulkAdd(
+            @RequestBody List<FmMasterProductRequest> requests) {
+
+        log.info(
+                "[MASTER] POST /api/fm/master-products/bulk-add — count={}",
+                requests.size()
+        );
+
         return service.saveAll(requests);
     }
 
+    /**
+     * Get all master products with pagination.
+     */
     @GetMapping
     public Page<FmMasterProduct> getAll(
             @PageableDefault(
@@ -55,70 +79,139 @@ public class FmMasterProductController {
                     size = 10,
                     sort = "masterProductId",
                     direction = Sort.Direction.ASC
-            ) Pageable pageable) {
+            )
+            Pageable pageable) {
 
-        log.info("[MASTER] GET /api/master-products - page: {}, size: {}",
-                pageable.getPageNumber(), pageable.getPageSize());
+        log.info(
+                "[MASTER] GET /api/master-products - page: {}, size: {}",
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
 
         return service.getAll(pageable);
     }
 
+    /**
+     * Get master product by ID.
+     */
     @GetMapping("/{id}")
-    public FmMasterProduct getById(@PathVariable Integer id) {
+    public FmMasterProduct getById(
+            @PathVariable Integer id) {
+
         return service.getById(id);
     }
 
+    /**
+     * Filter master products by type.
+     */
     @GetMapping("/filter")
-    public List<FmMasterProduct> filter(@RequestParam String type) {
+    public List<FmMasterProduct> filter(
+            @RequestParam String type) {
+
         return service.filter(type);
     }
 
+    /**
+     * Search master products by name.
+     */
     @GetMapping("/search")
-    public List<FmMasterProduct> search(@RequestParam String keyword) {
+    public List<FmMasterProduct> search(
+            @RequestParam String keyword) {
+
         return service.search(keyword);
     }
 
+    /**
+     * Update master product.
+     */
     @PutMapping("/{id}")
-    public FmMasterProduct update(@PathVariable Integer id, @RequestBody FmMasterProductRequest req) {
-        log.info("[MASTER] PUT /api/master-products/{}", id);
+    public FmMasterProduct update(
+            @PathVariable Integer id,
+            @RequestBody FmMasterProductRequest req) {
+
+        log.info(
+                "[MASTER] PUT /api/master-products/{}",
+                id
+        );
+
         return service.update(id, req);
     }
 
+    /**
+     * Upload product photo.
+     */
     @PostMapping("/{id}/photo")
     public ResponseEntity<Map<String, String>> uploadPhoto(
             @PathVariable Integer id,
             @RequestParam("photo") MultipartFile photo) {
-        log.info("[MASTER] POST /api/master-products/{}/photo — file={}", id, photo.getOriginalFilename());
+
+        log.info(
+                "[MASTER] POST /api/master-products/{}/photo — file={}",
+                id,
+                photo.getOriginalFilename()
+        );
+
         String uri = service.updatePhoto(id, photo);
-        return ResponseEntity.ok(Map.of("photo", uri));
-    }
 
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Integer id) {
-        log.info("[MASTER] DELETE /api/master-products/{}", id);
-        service.delete(id);
-    }
-
-    @PostMapping("/compare-file")
-    public ResponseEntity<FmCompareFileResponse> compareFile(
-            @RequestParam("file") MultipartFile file) {
-        log.info("[MASTER] POST /api/master-products/compare-file — file={}", file.getOriginalFilename());
-        return ResponseEntity.ok(service.compareFileWithDB(file));
+        return ResponseEntity.ok(
+                Map.of("photo", uri)
+        );
     }
 
     /**
-     * POST /api/master-products/add-new-items
-     * Bulk-saves NEW (non-duplicate) products from compare result into master_products.
-     * Silently skips any names that already exist.
+     * Delete master product.
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @PathVariable Integer id) {
+
+        log.info(
+                "[MASTER] DELETE /api/master-products/{}",
+                id
+        );
+
+        service.delete(id);
+    }
+
+    /**
+     * Compare uploaded CSV/Excel file against DB.
+     */
+    @PostMapping("/compare-file")
+    public ResponseEntity<FmCompareFileResponse> compareFile(
+            @RequestParam("file") MultipartFile file) {
+
+        log.info(
+                "[MASTER] POST /api/master-products/compare-file — file={}",
+                file.getOriginalFilename()
+        );
+
+        return ResponseEntity.ok(
+                service.compareFileWithDB(file)
+        );
+    }
+
+    /**
+     * Bulk save new products from compare result.
+     *
+     * Duplicate products are skipped by the service layer.
      */
     @PostMapping("/add-new-items")
     @ResponseStatus(HttpStatus.CREATED)
-    public List<FmMasterProduct> addNewItems(@RequestBody List<FmMasterProductRequest> requests) {
-        log.info("[MASTER] POST /api/master-products/add-new-items — count={}", requests.size());
+    public List<FmMasterProduct> addNewItems(
+            @RequestBody List<FmMasterProductRequest> requests) {
+
+        log.info(
+                "[MASTER] POST /api/master-products/add-new-items — count={}",
+                requests.size()
+        );
+
         return service.saveAll(requests);
     }
 
+    /**
+     * Create a new master product under an existing category.
+     */
     @Operation(
             summary = "Create Master Product",
             description = """
@@ -131,34 +224,63 @@ public class FmMasterProductController {
                 • Prevents duplicate product names within the same category.
                 • Inserts the new product into jippy_fm.master_products.
                 • The product becomes available in GET /api/fm/{categoryId} after refresh.
-                """)
+                """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Master product created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid request"),
-            @ApiResponse(responseCode = "404", description = "Category not found"),
-            @ApiResponse(responseCode = "409", description = "Master product already exists"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Master product created successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Category not found"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Master product already exists"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error"
+            )
     })
     @PostMapping("/create")
-    public ResponseEntity<FmApiResponse<FmCreateMasterProductResponseDto>> createMasterProduct(
-            @Valid @RequestBody FmCreateMasterProductRequestDto request) {
+    public ResponseEntity<FmApiResponse<FmCreateMasterProductResponseDto>>
+    createMasterProduct(
+            @Valid
+            @RequestBody FmCreateMasterProductRequestDto request) {
 
-        log.info("CREATE_MASTER_PRODUCT_API_STARTED | categoryId={} | productName={}",
+        log.info(
+                "CREATE_MASTER_PRODUCT_API_STARTED | categoryId={} | productName={}",
                 request.getCategoryId(),
-                request.getMasterProductName());
+                request.getMasterProductName()
+        );
 
         FmCreateMasterProductResponseDto response =
                 service.createMasterProduct(request);
 
-        log.info("CREATE_MASTER_PRODUCT_API_COMPLETED | masterProductId={}",
-                response.getMasterProductId());
+        log.info(
+                "CREATE_MASTER_PRODUCT_API_COMPLETED | masterProductId={}",
+                response.getMasterProductId()
+        );
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(FmApiResponse.success(
-                        "Master Product created successfully",
-                        response));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        FmApiResponse.success(
+                                "Master Product created successfully",
+                                response
+                        )
+                );
     }
 
+    /**
+     * Get all published master products by category.
+     */
     @Operation(
             summary = "Get Master Products By Category",
             description = """
@@ -169,27 +291,43 @@ public class FmMasterProductController {
                 • System retrieves all published products belonging to that category.
                 • Optional keyword performs case-insensitive product name search.
                 • Used while merchant adds products to an outlet.
-                """)
+                """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Products fetched successfully"),
-            @ApiResponse(responseCode = "404", description = "Category not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Products fetched successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Category not found"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error"
+            )
     })
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<FmApiResponse<List<FmMasterProductResponseDto>>> getProductsByCategory(
+    public ResponseEntity<FmApiResponse<List<FmMasterProductResponseDto>>>
+    getProductsByCategory(
             @Parameter(
                     description = "Category Id",
                     required = true,
-                    example = "5")
+                    example = "5"
+            )
             @PathVariable Integer categoryId,
 
             @Parameter(
                     description = "Optional product name search keyword",
-                    example = "Chicken")
+                    example = "Chicken"
+            )
             @RequestParam(required = false) String keyword) {
 
-        log.info("GET_PRODUCTS_BY_CATEGORY_STARTED | categoryId={} | keyword={}",
-                categoryId, keyword);
+        log.info(
+                "GET_PRODUCTS_BY_CATEGORY_STARTED | categoryId={} | keyword={}",
+                categoryId,
+                keyword
+        );
 
         List<FmMasterProductResponseDto> products =
                 service.getProductsByCategory(categoryId, keyword);
@@ -197,6 +335,9 @@ public class FmMasterProductController {
         return ResponseEntity.ok(
                 FmApiResponse.success(
                         "Products fetched successfully",
-                        products));
+                        products
+                )
+        );
     }
 }
+

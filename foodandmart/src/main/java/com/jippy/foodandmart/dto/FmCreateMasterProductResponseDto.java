@@ -21,5 +21,10 @@ public class FmCreateMasterProductResponseDto {
 
     private Integer nonVeg;
 
+    /**
+     * Product type stored in master_products.product_type.
+     */
+    private String productType;
+
     private Integer publish;
 }
