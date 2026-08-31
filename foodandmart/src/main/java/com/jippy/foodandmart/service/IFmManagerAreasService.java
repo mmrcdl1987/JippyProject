@@ -28,4 +28,28 @@ public interface IFmManagerAreasService {
      */
     FmManagerAreasResponseDTO assignManagerAreas(FmManagerAreasRequestDTO requestDTO);
 
+    /**
+     * Fetches all Areas assigned to a Manager.
+     *
+     * @param userId Manager User Id.
+     * @return Manager Area assignment response.
+     */
+    FmManagerAreasResponseDTO getAssignedManagerAreas(Integer userId);
+
+    /**
+     * Fetches all Areas assigned to a Manager using username.
+     *
+     * @param username approver username.
+     * @return Manager Area assignment response.
+     */
+    FmManagerAreasResponseDTO getAssignedManagerAreasByUsername(String username);
+
+    /**
+     * Replaces all Areas assigned to a Manager.
+     *
+     * @param requestDTO contains Manager User Id and replacement area ids.
+     * @return Manager Area assignment response.
+     */
+    FmManagerAreasResponseDTO updateManagerAreas(FmManagerAreasRequestDTO requestDTO);
+
 }

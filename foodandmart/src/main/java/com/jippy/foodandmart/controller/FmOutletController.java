@@ -1,5 +1,4 @@
-
-        package com.jippy.foodandmart.controller;
+package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
@@ -1306,5 +1305,91 @@ public class FmOutletController {
         OutletLocationResponseDto response = outletService.getOutletAddressDetails(outletId);
 
         return ResponseEntity.ok(response);
+    }
+
+    // ============================================================================
+// ADMIN - GET COMPLETE OUTLET DETAILS
+// ============================================================================
+
+    @Operation(summary = "Admin: Get Complete Outlet Details", description = """
+            Fetches complete outlet configuration based on outlet ID.
+            
+            The response includes:
+            - Outlet details
+            - Outlet location
+            - Outlet status
+            - Bank details
+            - Address details
+            - Cuisine types
+            - Outlet timings
+            - Categories
+            - Products
+            - Product merchant price
+            - Product online price
+            - Product available timings
+            - Product variants
+            - Variant merchant price
+            - Variant online price
+            
+            Admin receives both merchant and online pricing.
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Admin outlet details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid outlet ID"), @ApiResponse(responseCode = "404", description = "Outlet not found")})
+    @GetMapping("/admin/outlet-details")
+    public ResponseEntity<FmAdminOutletDetailsDto> getAdminOutletDetails(
+
+            @Parameter(description = "Outlet ID", required = true, example = "267") @RequestParam Integer outletId) {
+
+        log.info("ADMIN_OUTLET_DETAILS_REQUEST | outletId={}", outletId);
+
+        FmAdminOutletDetailsDto response = outletService.getAdminOutletDetails(outletId);
+
+        log.info("ADMIN_OUTLET_DETAILS_SUCCESS | outletId={}", outletId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ============================================================================
+    // PUBLIC - GET OUTLET DETAILS (NO AUTHENTICATION)
+    // ============================================================================
+
+    @Operation(summary = "Public: Get Outlet Details", description = """
+            Fetches public outlet configuration based on outlet ID without authentication.
+
+            The response includes:
+            - Outlet details (ID, name, availability)
+            - Categories with products
+            - Product details (name, description, price, veg status, image)
+            - Product variants (if available)
+
+            This is a simplified version of the admin endpoint with only essential fields.
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Public outlet details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid outlet ID"), @ApiResponse(responseCode = "404", description = "Outlet not found")})
+    @GetMapping("/public/outlet-details")
+    public ResponseEntity<FmPublicOutletDetailsDto> getPublicOutletDetails(
+
+            @Parameter(description = "Outlet ID", required = true, example = "267") @RequestParam Integer outletId) {
+
+        log.info("PUBLIC_OUTLET_DETAILS_REQUEST | outletId={}", outletId);
+
+        FmPublicOutletDetailsDto response = outletService.getPublicOutletDetails(outletId);
+
+        log.info("PUBLIC_OUTLET_DETAILS_SUCCESS | outletId={}", outletId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/area/{outletId}")
+    public ResponseEntity<Integer> getAreaIdByOutletId(
+            @PathVariable Integer outletId) {
+
+        log.info(
+                "GET /api/fm/outlets/{}/area",
+                outletId
+        );
+
+        Integer areaId =
+                outletService.getAreaIdByOutletId(outletId);
+
+        return ResponseEntity.ok(areaId);
     }
 }

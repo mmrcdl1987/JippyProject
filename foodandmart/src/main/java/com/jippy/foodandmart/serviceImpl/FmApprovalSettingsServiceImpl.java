@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service Implementation for Approval Settings.
@@ -332,6 +334,32 @@ public class FmApprovalSettingsServiceImpl implements IFmApprovalSettingsService
         //----------------------------------------------------------
 
         return response;
+    }
+
+    //==========================================================================
+    // getAllSettings
+    //==========================================================================
+
+    /**
+     * getAllSettings
+     *
+     * <p>
+     * Returns all Approval Settings.
+     *
+     * @return List of all Approval Settings
+     */
+    @Override
+    public List<FmApprovalSettingsResponseDTO> getAllSettings() {
+
+        log.info("Fetching all Approval Settings.");
+
+        List<FmApprovalSettings> settings = repository.findAll();
+
+        log.info("Found {} Approval Settings.", settings.size());
+
+        return settings.stream()
+                .map(FmApprovalSettingsMapper::mapEntityToResponseDto)
+                .collect(Collectors.toList());
     }
 
 }

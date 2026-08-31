@@ -14,10 +14,15 @@ import lombok.*;
 public class FmOutletCreatedDTO {
 
     private Integer outletId;
+
     private String outletName;
+
     private Integer merchantId;
+
     private Integer[] cuisineType;
+
     private String outletPhone;
+
     private String isActive;
 
     // ============================================================
@@ -25,8 +30,14 @@ public class FmOutletCreatedDTO {
     // ============================================================
 
     private Boolean isVegOutlet;
+
     private Boolean isGstApplied;
 
+    // ============================================================
+    // OUTLET LOGIN CREDENTIALS
+    // ============================================================
+
     private String outletLoginId;
+
     private String outletPassword;
 }

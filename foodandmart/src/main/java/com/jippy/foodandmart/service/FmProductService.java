@@ -29,7 +29,6 @@ public interface FmProductService {
             FmMapToProduct request
     );
 
-
     // ============================================================
     // BULK UPLOAD VARIANTS
     // ============================================================
@@ -45,7 +44,6 @@ public interface FmProductService {
             Integer outletId,
             MultipartFile file
     );
-
 
     // ============================================================
     // MAP MASTER PRODUCTS
@@ -69,7 +67,6 @@ public interface FmProductService {
     //         Integer outletCategoryId
     // );
 
-
     // ============================================================
     // GET PRODUCT BY ID
     // ============================================================
@@ -90,7 +87,6 @@ public interface FmProductService {
             Integer productId
     );
 
-
     // ============================================================
     // GET COMPLETE PRODUCT DETAILS
     // ============================================================
@@ -105,7 +101,6 @@ public interface FmProductService {
     FmProductDetailResponse getProductDetailById(
             Integer productId
     );
-
 
     // ============================================================
     // UPDATE PRODUCT
@@ -128,7 +123,6 @@ public interface FmProductService {
             FmProductUpdateRequestDto request
     );
 
-
     // ============================================================
     // PRODUCT / OUTLET VALIDATION
     // ============================================================
@@ -145,7 +139,6 @@ public interface FmProductService {
             Integer productId
     );
 
-
     // ============================================================
     // ACTIVE PRODUCTS
     // ============================================================
@@ -159,7 +152,6 @@ public interface FmProductService {
     List<Integer> getActiveProductIdsByOutlet(
             Integer outletId
     );
-
 
     // ============================================================
     // PRODUCTS BY OUTLET
@@ -176,6 +168,15 @@ public interface FmProductService {
             Integer outletId
     );
 
+    /**
+     * Gets all products for an outlet by outlet ID.
+     *
+     * @param outletId outlet id
+     * @return outlet product response list
+     */
+    List<FmOutletProductResponseDto> getProductsByOutletId(
+            Integer outletId
+    );
 
     // ============================================================
     // PRODUCT PRICING BY OUTLET
@@ -190,7 +191,6 @@ public interface FmProductService {
     List<OutletProductPricingDto> getProductPricingByOutletId(
             Integer outletId
     );
-
 
     // ============================================================
     // PRODUCT CATEGORY BY PRODUCT TYPE
@@ -213,7 +213,6 @@ public interface FmProductService {
             String productType
     );
 
-
     // ============================================================
     // UPDATE PRODUCT CATEGORY BY PRODUCT TYPE
     // ============================================================
@@ -229,6 +228,19 @@ public interface FmProductService {
             FmProductCategoryUpdateRequestDto request
     );
 
+    // ============================================================
+    // MERCHANT PRICE UPDATE
+    // ============================================================
+
+    /**
+     * Updates merchant price for a product.
+     *
+     * Merchant price changes are handled by the product service.
+     *
+     * @param productId product id
+     * @param request merchant price update request
+     * @return price update response
+     */
     FmMerchantPriceUpdateResponse updateMerchantPrice(
             Integer productId,
             FmMerchantPriceUpdateRequest request

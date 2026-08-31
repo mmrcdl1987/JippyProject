@@ -575,6 +575,14 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
      */
     List<FmApprovalRequest> findByApprovalRequestIdIn(List<Integer> approvalRequestIds);
 
+    /**
+     * Fetch approval requests by status, newest first.
+     *
+     * @param status approval status
+     * @return matching approval requests ordered by creation time descending
+     */
+    List<FmApprovalRequest> findByStatusIgnoreCaseOrderByCreatedAtDesc(String status);
+
 
     /**
      * Update Current Level.

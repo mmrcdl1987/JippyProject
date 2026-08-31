@@ -3,6 +3,7 @@ package com.jippy.foodandmart.controller;
 import com.jippy.foodandmart.dto.FmApiResponse;
 import com.jippy.foodandmart.dto.FmCreateEmployeeRequestDTO;
 import com.jippy.foodandmart.dto.FmCreateEmployeeResponseDTO;
+import com.jippy.foodandmart.dto.FmEmployeeSearchResponseDTO;
 import com.jippy.foodandmart.service.IFmEmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,10 +14,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/fm/employees")
@@ -80,5 +85,29 @@ public class FmEmployeeController {
 
         return ResponseEntity.ok(FmApiResponse.success("Employee created successfully",
                 response));
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search Employees", description = """
+            Searches the employees table by employee name or employee ID.
+
+            Use the `q` parameter for either:
+            • a partial employee name, or
+            • a numeric employee ID
+            """)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Employees fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request")
+    })
+    public ResponseEntity<FmApiResponse<List<FmEmployeeSearchResponseDTO>>> searchEmployees(
+            @RequestParam(value = "q", defaultValue = "") String q) {
+
+        log.info("Received employee search request with query: {}", q);
+
+        List<FmEmployeeSearchResponseDTO> response = employeeService.searchEmployees(q);
+
+        log.info("Employee search completed with {} result(s)", response.size());
+
+        return ResponseEntity.ok(FmApiResponse.success("Employees fetched successfully", response));
     }
 }

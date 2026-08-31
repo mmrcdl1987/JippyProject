@@ -66,6 +66,8 @@ public class FmUpdateOutletRequestDTO {
             message = "Alternate outlet phone must be a valid 10-digit Indian mobile number")
     private String alternateOutletPhone;
 
+    private Boolean isGstApplied;
+
     // ------------------------------------------------------------------
     // Bank Details
     // ------------------------------------------------------------------

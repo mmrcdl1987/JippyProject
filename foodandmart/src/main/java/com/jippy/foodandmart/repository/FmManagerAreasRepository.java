@@ -57,6 +57,12 @@ public interface FmManagerAreasRepository
      *
      * @param userId Manager User Id.
      */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query("""
+        DELETE FROM FmManagerAreas m
+        WHERE m.userId = :userId
+    """)
     void deleteByUserId(Integer userId);
 
 //  ----------------------------------------------------------------------------------------------------

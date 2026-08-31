@@ -34,6 +34,9 @@ public class FmOutletResponseDto {
 
     private String isActive;
 
+    private Boolean isGstApplied;
+
+
     private Boolean isApproved;
 
     private String outletPicUrl;

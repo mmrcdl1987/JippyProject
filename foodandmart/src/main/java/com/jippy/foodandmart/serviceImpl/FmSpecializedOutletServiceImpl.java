@@ -2,10 +2,13 @@ package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.FmNearbyOutletResponseDto;
 import com.jippy.foodandmart.dto.FmOutletDto;
+import com.jippy.foodandmart.dto.FmPublicNearbyOutletResponseDto;
+import com.jippy.foodandmart.mapper.FmPublicNearbyOutletMapper;
 import com.jippy.foodandmart.service.FmSpecializedOutletService;
 import com.jippy.foodandmart.projections.FmOutletProjection;
 import com.jippy.foodandmart.repository.FmSpecializedOutletRepository;
 import com.jippy.foodandmart.projections.FmNearbyOutletProjection;
+import com.jippy.foodandmart.projections.FmPublicNearbyOutletProjection;
 import com.jippy.foodandmart.constants.FmAppConstants;
 
 import jakarta.transaction.Transactional;
@@ -90,7 +93,7 @@ public class FmSpecializedOutletServiceImpl implements FmSpecializedOutletServic
 //        return response;
 //    }
 @Override
-public FmNearbyOutletResponseDto
+    public FmNearbyOutletResponseDto
 fetchNearbySpecializedOutlets(
         Double latitude,
         Double longitude) {
@@ -142,4 +145,36 @@ fetchNearbySpecializedOutlets(
 
     return response;
 }
+
+    @Override
+    public FmPublicNearbyOutletResponseDto fetchPublicNearbySpecializedOutlets(
+            Double latitude,
+            Double longitude,
+            Integer areaId) {
+
+        log.info(
+                "[FM Service] Fetching public nearby specialized outlets for latitude={} longitude={} areaId={}",
+                latitude,
+                longitude,
+                areaId);
+
+        List<FmPublicNearbyOutletProjection> projections =
+                repository.fetchPublicNearbySpecializedOutlets(
+                        latitude,
+                        longitude,
+                        FmAppConstants.NEARBY_OUTLET_RADIUS_METERS);
+
+        log.info(
+                "[FM Service] DB returned {} public nearby outlets",
+                projections.size());
+
+        FmPublicNearbyOutletResponseDto response = new FmPublicNearbyOutletResponseDto();
+        response.setAreaId(areaId);
+        response.setTotalOutlets(projections.size());
+        response.setOutlets(FmPublicNearbyOutletMapper.toDtoList(projections));
+
+        log.info("[FM Service] Public nearby outlet response prepared successfully");
+
+        return response;
+    }
 }

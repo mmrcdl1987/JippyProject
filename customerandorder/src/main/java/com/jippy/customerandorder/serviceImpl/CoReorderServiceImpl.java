@@ -122,6 +122,8 @@ public class CoReorderServiceImpl implements ICoReorderService {
 
             cart.setProductId(item.getProductId());
 
+            cart.setVariantOptionId(item.getVariantOptionId());
+
             cart.setQuantity(item.getQuantity());
 
             cart.setTotalPrice(item.getOnlineUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));

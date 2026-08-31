@@ -12,6 +12,7 @@ import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
+import com.jippy.foodandmart.mapper.FmPublicOutletMapper;
 import com.jippy.foodandmart.projections.*;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.*;
@@ -81,7 +82,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final EmailService emailService;
     private final CacheInvalidateServiceImpl cacheInvalidateService;
     private final IFmApprovalRequestService approvalRequestService;
-
 
     @Override
     @Transactional
@@ -2606,6 +2606,76 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     @Override
+    public FmPublicCustomerNearbyResponseDto fetchPublicCustomerNearbyOutlets(double customerLat, double customerLng) {
+
+        double radiusKm = 10.0;
+
+        log.info("[OutletService] fetchPublicCustomerNearbyOutlets lat={} lng={} radius={} km", customerLat, customerLng, radiusKm);
+
+        List<FmPublicCustomerNearbyOutletProjection> projections = outletRepository.fetchPublicCustomerNearbyOutlets(customerLat, customerLng);
+
+        /*
+         * NO OUTLETS FOUND
+         */
+        if (projections.isEmpty()) {
+
+            FmPublicCustomerNearbyResponseDto response = new FmPublicCustomerNearbyResponseDto();
+
+            response.setCustomerLat(customerLat);
+
+            response.setCustomerLng(customerLng);
+
+            response.setRadiusKm(radiusKm);
+
+            response.setTotalOutlets(0);
+
+            response.setMessage("Service is not available in this area");
+
+            response.setOutlets(List.of());
+
+            return response;
+        }
+
+        /*
+         * MAP PROJECTIONS TO DTOs
+         */
+        List<FmPublicCustomerNearbyOutletDto> outlets = projections.stream()
+                .map(projection -> {
+                    FmPublicCustomerNearbyOutletDto dto = new FmPublicCustomerNearbyOutletDto();
+                    dto.setOutletId(projection.getOutletId());
+                    dto.setOutletName(projection.getOutletName());
+                    dto.setMerchantId(projection.getMerchantId());
+                    dto.setRating(projection.getRating());
+                    dto.setIsActive(projection.getIsActive());
+                    dto.setIsApproved(projection.getIsApproved());
+                    dto.setOpenNow(projection.getOpenNow());
+                    dto.setIsVegOutlet(projection.getIsVegOutlet());
+                    dto.setOutletPicUrl(projection.getOutletPicUrl());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        /*
+         * SUCCESS RESPONSE
+         */
+        FmPublicCustomerNearbyResponseDto response = new FmPublicCustomerNearbyResponseDto();
+
+        response.setCustomerLat(customerLat);
+
+        response.setCustomerLng(customerLng);
+
+        response.setRadiusKm(radiusKm);
+
+        response.setTotalOutlets(outlets.size());
+
+        response.setMessage("Nearby outlets fetched successfully");
+
+        response.setOutlets(outlets);
+
+        return response;
+    }
+
+    @Override
     public List<FmOutlet> getOutletsByAreaId(Integer areaId) {
 
         log.info("Fetching outlets by areaId={}", areaId);
@@ -2639,6 +2709,165 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return response;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public FmAdminOutletDetailsDto getAdminOutletDetails(Integer outletId) {
+
+        log.info("ADMIN_OUTLET_DETAILS_START | outletId={}", outletId);
+
+        // =========================================================
+        // 1. VALIDATE OUTLET ID
+        // =========================================================
+
+        if (outletId == null || outletId <= 0) {
+
+            log.warn("ADMIN_OUTLET_DETAILS_INVALID_ID | outletId={}", outletId);
+
+            throw new IllegalArgumentException("Valid outletId is required.");
+        }
+
+        // =========================================================
+        // 2. VALIDATE OUTLET EXISTS
+        // =========================================================
+
+        boolean exists = outletRepository.existsById(outletId);
+
+        if (!exists) {
+
+            log.warn("ADMIN_OUTLET_DETAILS_NOT_FOUND | outletId={}", outletId);
+
+            throw new ResourceNotFoundException("Outlet not found with id: " + outletId);
+        }
+
+        // =========================================================
+        // 3. FETCH COMPLETE OUTLET MENU DATA
+        // =========================================================
+
+        List<FmAdminOutletMenuProjection> rows = outletRepository.getAdminOutletMenu(outletId);
+
+        if (rows == null || rows.isEmpty()) {
+
+            log.warn("ADMIN_OUTLET_DETAILS_NO_DATA | outletId={}", outletId);
+
+            throw new ResourceNotFoundException("No outlet details found for outletId: " + outletId);
+        }
+
+        // =========================================================
+        // 4. MAP PROJECTION TO DTO
+        // =========================================================
+
+        FmAdminOutletDetailsDto response = FmOutletMapper.mapAdminOutletToDto(rows);
+
+        // =========================================================
+        // 5. KYC DETAILS
+        // =========================================================
+
+        FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
+
+        if (kyc != null) {
+
+            response.setFssaiNumber(kyc.getFssaiNumber());
+
+            response.setGstNumber(kyc.getGstNumber());
+        }
+
+        // =========================================================
+        // 6. OUTLET DETAILS NOT IN PROJECTION
+        // =========================================================
+
+        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> new ResourceNotFoundException("Outlet not found with id: " + outletId));
+
+        // =========================================================
+        // 7. OUTLET STATUS
+        // =========================================================
+        response.setIsActive(outlet.getIsActive());
+
+        response.setIsApproved(Boolean.TRUE.equals(outlet.getIsApproved()));
+
+        response.setIsAvailable(Boolean.TRUE.equals(outlet.getIsToggle()));
+
+        response.setIsToggle(Boolean.TRUE.equals(outlet.getIsToggle()));
+
+        response.setIsGstApplied(Boolean.TRUE.equals(outlet.getIsGstApplied()));
+
+        // =========================================================
+        // 8. OUTLET IMAGE
+        // =========================================================
+
+        response.setOutletPicUrl(outlet.getOutletPicUrl());
+
+        // =========================================================
+        // 9. LOG SUCCESS
+        // =========================================================
+
+        log.info("ADMIN_OUTLET_DETAILS_SUCCESS | outletId={} | categories={} | products={}", outletId, response.getCategories() == null ? 0 : response.getCategories().size(), response.getCategories() == null ? 0 : response.getCategories().stream().mapToInt(category -> category.getProducts() == null ? 0 : category.getProducts().size()).sum());
+
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FmPublicOutletDetailsDto getPublicOutletDetails(Integer outletId) {
+
+        log.info("PUBLIC_OUTLET_DETAILS_START | outletId={}", outletId);
+
+        // =========================================================
+        // 1. VALIDATE OUTLET ID
+        // =========================================================
+
+        if (outletId == null || outletId <= 0) {
+
+            log.warn("PUBLIC_OUTLET_DETAILS_INVALID_ID | outletId={}", outletId);
+
+            throw new BadRequestException("Invalid outlet ID");
+        }
+
+        // =========================================================
+        // 2. FETCH DATA FROM REPOSITORY
+        // =========================================================
+
+        List<FmPublicOutletDetailsProjection> rows = outletRepository.getPublicOutletDetails(outletId);
+
+        // =========================================================
+        // 3. VALIDATE DATA EXISTS
+        // =========================================================
+
+        if (rows == null || rows.isEmpty()) {
+
+            log.warn("PUBLIC_OUTLET_DETAILS_NO_DATA | outletId={}", outletId);
+
+            throw new ResourceNotFoundException("No outlet details found for outletId: " + outletId);
+        }
+
+        // =========================================================
+        // 4. MAP PROJECTION TO DTO
+        // =========================================================
+
+        FmPublicOutletDetailsDto response = FmPublicOutletMapper.mapPublicOutletToDto(rows);
+
+        // =========================================================
+        // 5. LOG SUCCESS
+        // =========================================================
+
+        log.info("PUBLIC_OUTLET_DETAILS_SUCCESS | outletId={} | categories={} | products={}", outletId, response.getCategories() == null ? 0 : response.getCategories().size(), response.getCategories() == null ? 0 : response.getCategories().stream().mapToInt(category -> category.getProducts() == null ? 0 : category.getProducts().size()).sum());
+
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Integer getAreaIdByOutletId(Integer outletId) {
+
+        log.info("Fetching areaId for outletId={}", outletId);
+
+        FmOutletAddress address = addressRepository.findByJippyAddressIdAndAddressType(outletId, FmAppConstants.TYPE_OUTLET).orElseThrow(() -> new ResourceNotFoundException("Outlet address not found for outletId: " + outletId));
+
+        if (address.getAreaId() == null) {
+            throw new ResourceNotFoundException("Area not configured for outletId: " + outletId);
+        }
+
+        return address.getAreaId();
+    }
 
 }
 

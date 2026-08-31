@@ -71,7 +71,10 @@ public class FmOutlet {
     /**
      * Outlet location GEOGRAPHY(POINT,4326)
      */
-    @Column(name = "outlet_location", columnDefinition = "geography(Point,4326)")
+    @Column(
+            name = "outlet_location",
+            columnDefinition = "geography(Point,4326)"
+    )
     private Point outletLocation;
 
     @Column(name = "created_at")
@@ -88,12 +91,19 @@ public class FmOutlet {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "merchant_id", insertable = false, updatable = false)
+    @JoinColumn(
+            name = "merchant_id",
+            insertable = false,
+            updatable = false
+    )
     private FmMerchant merchant;
 
     @Column(name = "is_toggle")
     private Boolean isToggle;
 
+    /**
+     * Cuisine types associated with the outlet.
+     */
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "cuisine_type", columnDefinition = "integer[]")
     private Integer[] cuisineType;
@@ -111,16 +121,38 @@ public class FmOutlet {
     private Boolean isGstApplied = false;
 
     // ============================================================
+    // OUTLET ADDRESS
+    // ============================================================
+
+    /*
+    @JsonIgnore
+    @OneToOne(
+            mappedBy = "outlet",
+            cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY
+    )
+    private FmOutletAddress address;
+    */
+
+    // ============================================================
     // RELATIONSHIPS
     // ============================================================
 
     @JsonIgnore
-    @OneToMany(mappedBy = "outlet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "outlet",
+            cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY
+    )
     @Builder.Default
     private List<FmOutletDay> operatingDays = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "outlet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "outlet",
+            cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY
+    )
     @Builder.Default
     private List<FmOutletCategory> categories = new ArrayList<>();
 

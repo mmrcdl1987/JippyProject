@@ -58,6 +58,8 @@ public interface IFmOutletService {
      */
     FmCustomerNearbyResponseDto fetchCustomerNearbyOutlets(double customerLat, double customerLng, Integer categoryId);
 
+    FmPublicCustomerNearbyResponseDto fetchPublicCustomerNearbyOutlets(double customerLat, double customerLng);
+
     FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto);
 
     FmAddressRequestDto getAddressDetails(Integer addressId);
@@ -69,4 +71,11 @@ public interface IFmOutletService {
     List<FmOutlet> getOutletsByAreaId(Integer areaId);
 
     OutletLocationResponseDto getOutletAddressDetails(Integer outletId);
+
+
+    FmAdminOutletDetailsDto getAdminOutletDetails(Integer outletId);
+
+    FmPublicOutletDetailsDto getPublicOutletDetails(Integer outletId);
+
+    Integer getAreaIdByOutletId(Integer outletId);
 }

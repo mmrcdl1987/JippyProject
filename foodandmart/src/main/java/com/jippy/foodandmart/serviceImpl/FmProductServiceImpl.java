@@ -10,6 +10,7 @@ import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.mapper.FmProductVariantOptionMapper;
 import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductCategoryProjection;
+import com.jippy.foodandmart.projections.FmOutletProductProjection;
 import com.jippy.foodandmart.projections.FmProductPriceProjection;
 import com.jippy.foodandmart.projections.OutletProductPricingProjection;
 import com.jippy.foodandmart.repository.*;
@@ -2490,5 +2491,52 @@ public class FmProductServiceImpl implements FmProductService {
         return products.stream().map(product -> new OutletProductPricingDto(product.getProductId(), product.getProductName(), product.getMerchantPrice(), product.getOnlinePrice())).toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<FmOutletProductResponseDto> getProductsByOutletId(Integer outletId) {
+
+        log.info(
+                "SERVICE_START | GET_PRODUCTS_BY_OUTLET | outletId={}",
+                outletId
+        );
+
+        if (outletId == null || outletId <= 0) {
+            throw new IllegalArgumentException("Valid outlet ID is required.");
+        }
+
+        List<FmOutletProductProjection> products =
+                productRepository.findProductsByOutletIds(outletId);
+
+        if (products.isEmpty()) {
+            log.warn(
+                    "NO_PRODUCTS_FOUND | outletId={}",
+                    outletId
+            );
+
+            throw new ResourceNotFoundException(
+                    "No active products found for outlet id : " + outletId
+            );
+        }
+
+        List<FmOutletProductResponseDto> response =
+                products.stream()
+                        .map(product -> new FmOutletProductResponseDto(
+                                product.getProductId(),
+                                product.getProductName(),
+                                product.getOutletCategoryId(),
+                                product.getCategoryName()
+                        ))
+                        .toList();
+
+        log.info(
+                "SERVICE_SUCCESS | GET_PRODUCTS_BY_OUTLET | outletId={} | count={}",
+                outletId,
+                response.size()
+        );
+
+        return response;
+    }
+
 }
+
 
