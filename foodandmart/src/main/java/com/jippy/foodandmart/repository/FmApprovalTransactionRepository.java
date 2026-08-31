@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 /**
  * Repository for Approval Transactions.
  */
@@ -52,5 +54,13 @@ public interface FmApprovalTransactionRepository extends JpaRepository<FmApprova
             String approvalLevel,
             Integer approvedBy,
             String status);
+
+    /**
+     * Fetches all Approval Transactions by status (case-insensitive), ordered by approvedAt descending.
+     *
+     * @param status The status to filter by (e.g., "REJECTED", "APPROVED", "PENDING")
+     * @return List of approval transactions with the specified status
+     */
+    List<FmApprovalTransaction> findByStatusIgnoreCaseOrderByApprovedAtDesc(String status);
 
 }

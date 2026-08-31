@@ -221,7 +221,6 @@ public class FmOutletController {
 
         return ResponseEntity.ok(outletDetails);
     }
-//---------------------------------------------------------------------------------------------------
 
     @Operation(summary = "Get Outlets by Merchant ID", description = "Fetch all outlets for a " + "merchant with state, city, and area details. Throws error if outlet is not approved.")
     //    for getOutletsByMerchant API - to fetch outlet's, address-state,city,area details based on merchant id
@@ -712,6 +711,31 @@ public class FmOutletController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Public Customer Nearby Outlets", description = """
+            Public version of the nearby outlets API.
+
+            Returns only the minimal outlet fields:
+            outletId, outletName, merchantId, review, isActive, isApproved,
+            distanceKm, isVegOutlet, outletPicUrl.
+
+            This endpoint does not require authentication.
+            """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "lat or lng parameter is missing / invalid")
+    })
+    @GetMapping("/public/customer/nearby")
+    public ResponseEntity<FmPublicCustomerNearbyResponseDto> fetchPublicCustomerNearbyOutlets(
+            @Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true)
+            @RequestParam double lat,
+            @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true)
+            @RequestParam double lng) {
+
+        log.info("GET /api/fm/outlets/public/customer/nearby lat={}, lng={}", lat, lng);
+        FmPublicCustomerNearbyResponseDto response = outletService.fetchPublicCustomerNearbyOutlets(lat, lng);
+        return ResponseEntity.ok(response);
+    }
+
     // End Points for getting address data from FM_Microservice to CO_Microservice
     @PostMapping("/saveAddressDetails")
     public ResponseEntity<FmAddressRequestDto> saveAddressDetails(@Valid @RequestBody FmAddressRequestDto fmAddressRequestDto) {
@@ -765,7 +789,6 @@ public class FmOutletController {
         return ResponseEntity.ok(service.fetchNearbySpecializedOutlets(latitude, longitude));
     }
 
-
     // used as a feign client call
     @GetMapping("/getOutletAddressDetails")
     public ResponseEntity<OutletLocationResponseDto> getOutletAddressDetails(@RequestParam Integer outletId) {
@@ -817,6 +840,36 @@ public class FmOutletController {
         FmAdminOutletDetailsDto response = outletService.getAdminOutletDetails(outletId);
 
         log.info("ADMIN_OUTLET_DETAILS_SUCCESS | outletId={}", outletId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ============================================================================
+    // PUBLIC - GET OUTLET DETAILS (NO AUTHENTICATION)
+    // ============================================================================
+
+    @Operation(summary = "Public: Get Outlet Details", description = """
+            Fetches public outlet configuration based on outlet ID without authentication.
+
+            The response includes:
+            - Outlet details (ID, name, availability)
+            - Categories with products
+            - Product details (name, description, price, veg status, image)
+            - Product variants (if available)
+
+            This is a simplified version of the admin endpoint with only essential fields.
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Public outlet details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid outlet ID"), @ApiResponse(responseCode = "404", description = "Outlet not found")})
+    @GetMapping("/public/outlet-details")
+    public ResponseEntity<FmPublicOutletDetailsDto> getPublicOutletDetails(
+
+            @Parameter(description = "Outlet ID", required = true, example = "267") @RequestParam Integer outletId) {
+
+        log.info("PUBLIC_OUTLET_DETAILS_REQUEST | outletId={}", outletId);
+
+        FmPublicOutletDetailsDto response = outletService.getPublicOutletDetails(outletId);
+
+        log.info("PUBLIC_OUTLET_DETAILS_SUCCESS | outletId={}", outletId);
 
         return ResponseEntity.ok(response);
     }

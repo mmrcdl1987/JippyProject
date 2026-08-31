@@ -3,6 +3,7 @@ package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmCreateEmployeeRequestDTO;
 import com.jippy.foodandmart.dto.FmCreateEmployeeResponseDTO;
+import com.jippy.foodandmart.dto.FmEmployeeSearchResponseDTO;
 import com.jippy.foodandmart.entity.FmEmployee;
 import com.jippy.foodandmart.entity.FmOutletAddress;
 import com.jippy.foodandmart.entity.FmUser;
@@ -17,7 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -146,6 +151,41 @@ public class FmEmployeeServiceImpl implements IFmEmployeeService {
         log.info("Employee created successfully with employeeId : {}", employee.getEmployeeId());
 
         return response;
+    }
+
+    @Override
+    public List<FmEmployeeSearchResponseDTO> searchEmployees(String query) {
+
+        String kw = query == null ? "" : query.trim();
+        log.info("Employee search started for query: {}", kw);
+
+        if (kw.isBlank()) {
+            return List.of();
+        }
+
+        Map<Integer, FmEmployeeSearchResponseDTO> results = new LinkedHashMap<>();
+
+        employeeRepository.findByEmployeeNameContainingIgnoreCaseOrderByEmployeeIdAsc(kw)
+                .forEach(employee -> results.put(employee.getEmployeeId(), toSearchResponse(employee)));
+
+        if (kw.matches("\\d+")) {
+            Integer employeeId = Integer.valueOf(kw);
+            employeeRepository.findByEmployeeId(employeeId)
+                    .ifPresent(employee -> results.putIfAbsent(employee.getEmployeeId(), toSearchResponse(employee)));
+        }
+
+        log.info("Employee search completed for query: {} | results={}", kw, results.size());
+        return new ArrayList<>(results.values());
+    }
+
+    private FmEmployeeSearchResponseDTO toSearchResponse(FmEmployee employee) {
+        FmEmployeeSearchResponseDTO dto = new FmEmployeeSearchResponseDTO();
+        dto.setEmployeeId(employee.getEmployeeId());
+        dto.setEmployeeName(employee.getEmployeeName());
+        dto.setEmail(employee.getEmail());
+        dto.setMobileNumber(employee.getMobileNumber());
+        dto.setIsActive(employee.getIsActive());
+        return dto;
     }
 
 //    HELPER METHODS for Creating EMPLOYEE

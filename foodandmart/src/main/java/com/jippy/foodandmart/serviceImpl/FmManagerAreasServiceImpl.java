@@ -2,22 +2,27 @@ package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.FmManagerAreasRequestDTO;
 import com.jippy.foodandmart.dto.FmManagerAreasResponseDTO;
+import com.jippy.foodandmart.entity.FmEmployee;
 import com.jippy.foodandmart.entity.FmManagerAreas;
+import com.jippy.foodandmart.entity.FmUser;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmManagerAreasMapper;
 import com.jippy.foodandmart.repository.FmAreaRepository;
+import com.jippy.foodandmart.repository.FmEmployeeRepository;
 import com.jippy.foodandmart.repository.FmManagerAreasRepository;
 import com.jippy.foodandmart.repository.FmUserRepository;
 import com.jippy.foodandmart.service.IFmManagerAreasService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service Implementation for assigning
@@ -42,6 +47,11 @@ public class FmManagerAreasServiceImpl implements IFmManagerAreasService {
      * Repository for Area validations.
      */
     private final FmAreaRepository areaRepository;
+
+    /**
+     * Repository for Employee validations.
+     */
+    private final FmEmployeeRepository employeeRepository;
 
     /**
      * Assigns one Manager to multiple Areas.
@@ -87,13 +97,86 @@ public class FmManagerAreasServiceImpl implements IFmManagerAreasService {
             log.info("Assigned Area Id: {} to User Id: {}", areaId, requestDTO.getUserId());
         }
 
+        String approverName = getApproverName(requestDTO.getUserId());
+
         FmManagerAreasResponseDTO response =
-                FmManagerAreasMapper.mapToResponseDto(requestDTO.getUserId(), assignedAreaIds);
+                FmManagerAreasMapper.mapToResponseDto(requestDTO.getUserId(), approverName, assignedAreaIds);
 
         log.info("Successfully assigned {} Area(s) to User Id: {}", assignedAreaIds.size(),
                 requestDTO.getUserId());
 
         return response;
+    }
+
+    @Override
+    public FmManagerAreasResponseDTO getAssignedManagerAreas(Integer userId) {
+
+        log.info("Fetching assigned Area(s) for User Id: {}", userId);
+
+        List<FmManagerAreas> managerAreas = managerAreasRepository.findByUserId(userId);
+
+        if (managerAreas == null || managerAreas.isEmpty()) {
+
+            log.warn("No Area mappings found for User Id: {}", userId);
+
+            throw new ResourceNotFoundException("No Areas assigned for User Id: " + userId);
+        }
+
+        List<Integer> assignedAreaIds = managerAreas.stream()
+                .map(FmManagerAreas::getAreaId)
+                .collect(Collectors.toList());
+
+        String approverName = getApproverName(userId);
+
+        return FmManagerAreasMapper.mapToResponseDto(userId, approverName, assignedAreaIds);
+    }
+
+    @Override
+    public FmManagerAreasResponseDTO getAssignedManagerAreasByUsername(String username) {
+
+        log.info("Fetching assigned Area(s) for Username: {}", username);
+
+        Integer userId = userRepository.findByUsername(username)
+                .map(FmUser::getUserId)
+                .orElseThrow(() -> {
+
+                    log.warn("User not found for Username: {}", username);
+
+                    return new ResourceNotFoundException("User not found with username: " + username);
+                });
+
+        return getAssignedManagerAreas(userId);
+    }
+
+    @Override
+    @Transactional
+    public FmManagerAreasResponseDTO updateManagerAreas(FmManagerAreasRequestDTO requestDTO) {
+
+        log.info("Replacing assigned Area(s) for User Id: {}", requestDTO.getUserId());
+
+        validateDuplicateAreaIds(requestDTO.getAreaIds());
+        validateAreas(requestDTO.getAreaIds());
+
+        managerAreasRepository.deleteByUserId(requestDTO.getUserId());
+        managerAreasRepository.flush();
+
+        List<Integer> assignedAreaIds = new ArrayList<>();
+
+        for (Integer areaId : requestDTO.getAreaIds()) {
+
+            FmManagerAreas entity =
+                    FmManagerAreasMapper.mapToEntity(requestDTO.getUserId(), areaId);
+
+            managerAreasRepository.save(entity);
+            assignedAreaIds.add(areaId);
+        }
+
+        log.info("Replaced Area mappings for User Id: {} with {} Area(s)",
+                requestDTO.getUserId(), assignedAreaIds.size());
+
+        String approverName = getApproverName(requestDTO.getUserId());
+
+        return FmManagerAreasMapper.mapToResponseDto(requestDTO.getUserId(), approverName, assignedAreaIds);
     }
 
 //    ---------------------- HELPER METHOD -------------------------------------------
@@ -143,16 +226,11 @@ public class FmManagerAreasServiceImpl implements IFmManagerAreasService {
      */
     private void validateDuplicateAreaIds(List<Integer> areaIds) {
 
-        Set<Integer> uniqueAreaIds = new HashSet<>();
+        Set<Integer> uniqueAreaIds = new HashSet<>(areaIds);
 
-        for (Integer areaId : areaIds) {
-
-            if (!uniqueAreaIds.add(areaId)) {
-
-                log.warn("Duplicate Area Id found in request: {}", areaId);
-
-                throw new IllegalArgumentException("Duplicate Area Id found in request: " + areaId);
-            }
+        if (uniqueAreaIds.size() != areaIds.size()) {
+            log.warn("Duplicate Area Ids found in request");
+            throw new IllegalArgumentException("Duplicate Area Ids are not allowed");
         }
 
         log.info("Duplicate Area Id validation completed successfully.");
@@ -183,6 +261,18 @@ public class FmManagerAreasServiceImpl implements IFmManagerAreasService {
         }
 
         log.info("Existing Manager-Area mapping validation completed successfully.");
+    }
+
+    /**
+     * Fetches the approver name by user ID.
+     *
+     * @param userId User ID.
+     * @return Approver name or null if not found.
+     */
+    private String getApproverName(Integer userId) {
+        return employeeRepository.findByEmployeeId(userId)
+                .map(FmEmployee::getEmployeeName)
+                .orElse(null);
     }
 
 }
