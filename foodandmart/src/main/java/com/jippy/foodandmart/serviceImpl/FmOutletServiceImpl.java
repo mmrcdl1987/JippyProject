@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -69,6 +70,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final FmMerchantBankDetailsRepository merchantBankDetailsRepository;
     private final FmOutletDayRepository outletDayRepository;
     private final FmCityRepository cityRepository;
+    private final FmCuisineTypeRepository cuisineTypeRepository;
     private final FmUserKycRepository userKycRepository;
     private final DivisionFeignClient divisionFeignClient;
     private final PromotionPlanRepository promotionPlanRepository;
@@ -160,11 +162,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Every new Outlet enters the approval workflow
          * at Level 1 with PENDING status.
          */
-    approvalRequestService.createApprovalRequest(
-            FmAppConstants.TYPE_OUTLET,
-            outlet.getOutletId(),
-            outlet.getOutletId()
-    );
+        approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_OUTLET, outlet.getOutletId(), outlet.getOutletId());
 
         /*
          * Save Address.
@@ -485,55 +483,51 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return result;
     }
 
-//    @Override
+    //    @Override
 //    public FmOutlet getOutletById(Integer id) {
 //        return outletRepository.findById(id)
 //                .orElseThrow(() -> new IllegalArgumentException
 //                        ("Outlet ID " + id + " does not exist"));
 //    }
-@Override
-@Transactional(readOnly = true)
-public FmOutletResponseDto getOutletById(Integer outletId) {
+    @Override
+    @Transactional(readOnly = true)
+    public FmOutletResponseDto getOutletById(Integer outletId) {
 
-    log.info("Fetching complete outlet details for outletId={}", outletId);
+        log.info("Fetching complete outlet details for outletId={}", outletId);
 
-    // 1. Fetch outlet
-    FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> {
+        // 1. Fetch outlet
+        FmOutlet outlet = outletRepository.findById(outletId).orElseThrow(() -> {
 
-        log.error("Outlet not found with outletId={}", outletId);
+            log.error("Outlet not found with outletId={}", outletId);
 
-        return new ResourceNotFoundException("Outlet not found with id: " + outletId);
-    });
-    // 2. Basic outlet + location
+            return new ResourceNotFoundException("Outlet not found with id: " + outletId);
+        });
+        // 2. Basic outlet + location
 
-    FmOutletResponseDto response = FmOutletMapper.toOutletResponseDto(outlet);
-    // 3. Address
-    FmOutletAddress address = addressRepository.findByJippyAddressIdAndAddressType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
+        FmOutletResponseDto response = FmOutletMapper.toOutletResponseDto(outlet);
+        // 3. Address
+        FmOutletAddress address = addressRepository.findByJippyAddressIdAndAddressType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
 
-    FmOutletMapper.mapAddressToOutletResponse(response, address);
-    // 4. Bank details
-    FmMerchantBankDetails bankDetails = merchantBankDetailsRepository.findByRecipientIdAndUserType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
+        FmOutletMapper.mapAddressToOutletResponse(response, address);
+        // 4. Bank details
+        FmMerchantBankDetails bankDetails = merchantBankDetailsRepository.findByRecipientIdAndUserType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
 
-    FmOutletMapper.mapBankDetailsToOutletResponse(response, bankDetails);
-    // KYC Details - FSSAI + GST
-    FmUserKyc kyc = userKycRepository
-            .findByEntityIdAndEntityType(
-                    outletId,
-                    FmAppConstants.TYPE_OUTLET
-            )
-            .orElse(null);
+        FmOutletMapper.mapBankDetailsToOutletResponse(response, bankDetails);
+        // KYC Details - FSSAI + GST
+        FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
 
-    FmOutletMapper.mapKycToOutletResponse(response, kyc);
+        FmOutletMapper.mapKycToOutletResponse(response, kyc);
 
-    // 6. Operating days
-    List<FmOutletDay> outletDays = dayRepository.findByOutletId(outletId);
+        // 6. Operating days
+        List<FmOutletDay> outletDays = dayRepository.findByOutletId(outletId);
 
-    FmOutletMapper.mapOperatingDaysToOutletResponse(response, outletDays);
-    // 7. Final log
-    log.info("Successfully fetched complete outlet details for outletId={}", outletId);
+        FmOutletMapper.mapOperatingDaysToOutletResponse(response, outletDays);
+        // 7. Final log
+        log.info("Successfully fetched complete outlet details for outletId={}", outletId);
 
-    return response;
-}
+        return response;
+    }
+
     @Override
     public FmOutletCreatedDTO createOutletForBulkUploadAndOtpValidation(FmOutletRequestDTO dto) {
 //    public FmOutletCreatedDTO createOutlet(FmOutletRequestDTO dto) {
@@ -649,115 +643,423 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
 //         return FmOutletMapper.toCreatedDTO(outlet);
 //     }
 
+//    @Override
+//    @Transactional(rollbackFor = Exception.class)
+//    public FmOutletCreatedDTO createOutletBulkUpload(FmOutletRequestDTO dto) {
+//
+//        log.info("[OUTLET_BULK] Creating outlet: name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
+//
+//        /*
+//         * Validate request.
+//         */
+//        validateOutletRequest(dto);
+//
+//        /*
+//         * Check Merchant Exists.
+//         */
+//        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId()).orElseThrow(() -> {
+//
+//            log.error("[OUTLET_BULK] Merchant not found: merchantId={}", dto.getMerchantId());
+//
+//            return new ResourceNotFoundException("Merchant not found with id: " + dto.getMerchantId());
+//        });
+//
+//        /*
+//         * Check Outlet Phone.
+//         */
+//        if (outletRepository.existsByOutletPhone(dto.getOutletPhone())) {
+//
+//            throw new IllegalArgumentException("An outlet with phone " + dto.getOutletPhone() + " already exists");
+//        }
+//
+//        /*
+//         * Check Username.
+//         */
+//        if (userRepository.findByUsernameAndUserType(dto.getUsername(), FmAppConstants.TYPE_OUTLET).isPresent()) {
+//
+//            throw new IllegalArgumentException("Username already exists.");
+//        }
+//
+//        /*
+//         * Check duplicate outlet.
+//         */
+//        if (outletRepository.existsByMerchantIdAndOutletName(dto.getMerchantId(), dto.getOutletName())) {
+//
+//            throw new IllegalArgumentException("Outlet '" + dto.getOutletName() + "' already exists for this merchant");
+//        }
+//
+//        /*
+//         * Build outlet location.
+//         */
+//        Point location = buildPoint(dto.getLatitude(), dto.getLongitude());
+//
+//        /*
+//         * Merchant email and outlet email must be same.
+//         */
+//        if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getOutletEmail())) {
+//
+//            throw new IllegalArgumentException("Merchant email and outlet email must be same.");
+//        }
+//
+//        /*
+//         * Convert DTO to Entity.
+//         */
+//        FmOutlet outlet = FmOutletMapper.toEntity(dto);
+//
+//        /*
+//         * Always use merchant email.
+//         */
+//        outlet.setOutletEmail(merchant.getMerchantEmail());
+//
+//        /*
+//         * Set location.
+//         */
+//        outlet.setOutletLocation(location);
+//
+//        /*
+//         * Save outlet.
+//         */
+//        outlet = outletRepository.save(outlet);
+//
+//        log.info("[OUTLET_BULK] Outlet saved successfully: outletId={}, outletName={}", outlet.getOutletId(), outlet.getOutletName());
+//
+//        /*
+//         * Save Address.
+//         */
+//        saveAddress(dto, outlet.getOutletId());
+//
+//        /*
+//         * Save Operating Days.
+//         */
+//        saveOperatingDays(dto, outlet.getOutletId());
+//
+//        /*
+//         * Save Outlet User.
+//         */
+//        saveOutletUser(dto.getUsername(), dto.getPassword(), outlet.getOutletId());
+//
+//        /*
+//         * Email #3:
+//         * Outlet Registration Successful.
+//         *
+//         * This executes only after all outlet
+//         * creation operations above succeed.
+//         */
+//        emailService.sendOutletRegistrationEmail(outlet.getOutletEmail(), outlet.getOutletName(), merchant.getMerchantName());
+//
+//        log.info("[OUTLET_BULK] Outlet registration email triggered: outletId={}, email={}", outlet.getOutletId(), outlet.getOutletEmail());
+//
+//        return FmOutletMapper.toCreatedDTO(outlet);
+//    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FmOutletCreatedDTO createOutletBulkUpload(FmOutletRequestDTO dto) {
 
-        log.info("[OUTLET_BULK] Creating outlet: name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
+        log.info(
+                "[OUTLET_BULK] START | outletName={} | merchantName={} | phone={}",
+                dto.getOutletName(),
+                dto.getMerchantName(),
+                dto.getOutletPhone()
+        );
 
-        /*
-         * Validate request.
-         */
+        // ============================================================
+        // 1. RESOLVE MERCHANT NAME -> MERCHANT ID
+        // ============================================================
+
+        if (isBlank(dto.getMerchantName())) {
+            throw new IllegalArgumentException(
+                    "Merchant Name is required for bulk upload."
+            );
+        }
+
+        FmMerchant merchant = merchantRepository
+                .findMerchantByName(dto.getMerchantName().trim())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Merchant not found with name: "
+                                        + dto.getMerchantName()
+                        )
+                );
+
+        dto.setMerchantId(merchant.getMerchantId());
+
+        // ============================================================
+        // 2. RESOLVE STATE NAME -> STATE ID
+        // ============================================================
+
+        Integer stateId = resolveStateId(dto.getStateName());
+        dto.setStateId(stateId);
+
+        // ============================================================
+        // 3. RESOLVE CITY NAME -> CITY ID
+        // ============================================================
+
+        if (isBlank(dto.getCityName())) {
+            throw new IllegalArgumentException(
+                    "City Name is required for bulk upload."
+            );
+        }
+
+        FmCity city = cityRepository
+                .findByStateId(stateId)
+                .stream()
+                .filter(c ->
+                        c.getCityName() != null
+                                && c.getCityName()
+                                .trim()
+                                .equalsIgnoreCase(
+                                        dto.getCityName().trim()
+                                )
+                )
+                .findFirst()
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "City '" + dto.getCityName()
+                                        + "' not found for state '"
+                                        + dto.getStateName() + "'."
+                        )
+                );
+
+        dto.setCityId(city.getCityId());
+
+        // ============================================================
+        // 4. RESOLVE AREA NAME -> AREA ID
+        // ============================================================
+
+        Integer areaId = resolveAreaId(dto.getAreaName());
+        dto.setAreaId(areaId);
+
+        // ============================================================
+        // 5. RESOLVE CUISINE NAMES -> CUISINE IDS
+        // ============================================================
+
+        resolveCuisineNames(dto);
+
+        // ============================================================
+        // 6. VALIDATE REQUEST
+        //
+        // Validation is done AFTER name -> ID conversion because
+        // validateOutletRequest() expects merchantId and cuisineType.
+        // ============================================================
+
         validateOutletRequest(dto);
 
-        /*
-         * Check Merchant Exists.
-         */
-        FmMerchant merchant = merchantRepository.findById(dto.getMerchantId()).orElseThrow(() -> {
+        // ============================================================
+        // 7. CHECK OUTLET PHONE
+        // ============================================================
 
-            log.error("[OUTLET_BULK] Merchant not found: merchantId={}", dto.getMerchantId());
-
-            return new ResourceNotFoundException("Merchant not found with id: " + dto.getMerchantId());
-        });
-
-        /*
-         * Check Outlet Phone.
-         */
         if (outletRepository.existsByOutletPhone(dto.getOutletPhone())) {
-
-            throw new IllegalArgumentException("An outlet with phone " + dto.getOutletPhone() + " already exists");
+            throw new IllegalArgumentException(
+                    "An outlet with phone "
+                            + dto.getOutletPhone()
+                            + " already exists."
+            );
         }
 
-        /*
-         * Check Username.
-         */
-        if (userRepository.findByUsernameAndUserType(dto.getUsername(), FmAppConstants.TYPE_OUTLET).isPresent()) {
+        // ============================================================
+        // 8. CHECK DUPLICATE OUTLET
+        //
+        // Same merchant + same outlet name + same area = duplicate.
+        // ============================================================
 
-            throw new IllegalArgumentException("Username already exists.");
+        if (outletRepository.existsByMerchantAndOutletNameAndArea(
+                dto.getMerchantId(),
+                dto.getOutletName(),
+                dto.getAreaId()
+        )) {
+            throw new IllegalArgumentException(
+                    "Outlet '" + dto.getOutletName()
+                            + "' already exists for this merchant "
+                            + "in the selected area."
+            );
         }
 
-        /*
-         * Check duplicate outlet.
-         */
-        if (outletRepository.existsByMerchantIdAndOutletName(dto.getMerchantId(), dto.getOutletName())) {
+        // ============================================================
+        // 9. USERNAME
+        //
+        // If username is supplied in CSV/Excel, use it.
+        // If blank, generate automatically.
+        // ============================================================
 
-            throw new IllegalArgumentException("Outlet '" + dto.getOutletName() + "' already exists for this merchant");
+        String username = dto.getUsername();
+
+        if (isBlank(username)) {
+            username = generateUniqueOutletUsername(
+                    dto.getOutletName()
+            );
+
+            log.info(
+                    "[OUTLET_BULK] USERNAME_GENERATED | outletName={} | username={}",
+                    dto.getOutletName(),
+                    username
+            );
         }
 
-        /*
-         * Build outlet location.
-         */
-        Point location = buildPoint(dto.getLatitude(), dto.getLongitude());
+        // ============================================================
+        // 10. PASSWORD
+        //
+        // If password is supplied in CSV/Excel, use it.
+        // If blank, generate automatically.
+        // ============================================================
 
-        /*
-         * Merchant email and outlet email must be same.
-         */
-        if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getOutletEmail())) {
+        String password = dto.getPassword();
 
-            throw new IllegalArgumentException("Merchant email and outlet email must be same.");
+        if (isBlank(password)) {
+            password = generateOutletPassword();
+
+            log.info(
+                    "[OUTLET_BULK] PASSWORD_GENERATED | outletName={}",
+                    dto.getOutletName()
+            );
         }
 
-        /*
-         * Convert DTO to Entity.
-         */
+        // ============================================================
+        // 11. CHECK USERNAME
+        // ============================================================
+
+        if (userRepository
+                .findByUsernameAndUserType(
+                        username,
+                        FmAppConstants.TYPE_OUTLET
+                )
+                .isPresent()) {
+
+            throw new IllegalArgumentException(
+                    "Username already exists: " + username
+            );
+        }
+
+        dto.setUsername(username);
+        dto.setPassword(password);
+
+        // ============================================================
+        // 12. OUTLET EMAIL
+        //
+        // Email validation and email sending are NOT required for
+        // bulk upload. Do not validate CSV outlet email.
+        //
+        // Keep merchant email on the outlet only if the database
+        // requires outlet_email to be populated. No email is sent.
+        // ============================================================
+
+        dto.setOutletEmail(
+                merchant.getMerchantEmail()
+        );
+
+        // ============================================================
+        // 13. BUILD OUTLET LOCATION
+        // ============================================================
+
+        Point location = buildPoint(
+                dto.getLatitude(),
+                dto.getLongitude()
+        );
+
+        // ============================================================
+        // 14. CREATE OUTLET
+        // ============================================================
+
         FmOutlet outlet = FmOutletMapper.toEntity(dto);
 
-        /*
-         * Always use merchant email.
-         */
-        outlet.setOutletEmail(merchant.getMerchantEmail());
+        outlet.setMerchantId(
+                merchant.getMerchantId()
+        );
 
-        /*
-         * Set location.
-         */
+        outlet.setOutletEmail(
+                merchant.getMerchantEmail()
+        );
+
         outlet.setOutletLocation(location);
 
-        /*
-         * Save outlet.
-         */
+        // New bulk outlet remains pending approval.
+        outlet.setIsApproved(false);
+
         outlet = outletRepository.save(outlet);
 
-        log.info("[OUTLET_BULK] Outlet saved successfully: outletId={}, outletName={}", outlet.getOutletId(), outlet.getOutletName());
+        log.info(
+                "[OUTLET_BULK] OUTLET_CREATED | outletId={} | outletName={}",
+                outlet.getOutletId(),
+                outlet.getOutletName()
+        );
 
-        /*
-         * Save Address.
-         */
-        saveAddress(dto, outlet.getOutletId());
+        // ============================================================
+        // 15. CREATE OUTLET ADDRESS
+        // ============================================================
 
-        /*
-         * Save Operating Days.
-         */
-        saveOperatingDays(dto, outlet.getOutletId());
+        saveAddress(
+                dto,
+                outlet.getOutletId()
+        );
 
-        /*
-         * Save Outlet User.
-         */
-        saveOutletUser(dto.getUsername(), dto.getPassword(), outlet.getOutletId());
+        // ============================================================
+        // 16. CREATE OUTLET BANK DETAILS
+        // ============================================================
 
-        /*
-         * Email #3:
-         * Outlet Registration Successful.
-         *
-         * This executes only after all outlet
-         * creation operations above succeed.
-         */
-        emailService.sendOutletRegistrationEmail(outlet.getOutletEmail(), outlet.getOutletName(), merchant.getMerchantName());
+        saveOutletBankDetails(
+                dto,
+                outlet.getOutletId()
+        );
 
-        log.info("[OUTLET_BULK] Outlet registration email triggered: outletId={}, email={}", outlet.getOutletId(), outlet.getOutletEmail());
+        // ============================================================
+        // 17. CREATE OUTLET KYC
+        // ============================================================
+
+        saveOutletKyc(
+                dto,
+                outlet.getOutletId()
+        );
+
+        // ============================================================
+        // 18. CREATE OPERATING DAYS / TIMINGS
+        // ============================================================
+
+        saveBulkOperatingDays(
+                dto,
+                outlet.getOutletId()
+        );
+
+        // ============================================================
+        // 19. CREATE OUTLET LOGIN USER
+        // ============================================================
+
+        saveOutletUser(
+                username,
+                password,
+                outlet.getOutletId()
+        );
+
+        // ============================================================
+        // 20. CREATE APPROVAL REQUEST
+        //
+        // Reuse the SAME approval service used by the existing
+        // single-outlet flow. Do not change the old createOutlet()
+        // function.
+        // ============================================================
+
+        approvalRequestService.createApprovalRequest(
+                FmAppConstants.TYPE_OUTLET,
+                outlet.getOutletId(),
+                outlet.getOutletId()
+        );
+
+        log.info(
+                "[OUTLET_BULK] APPROVAL_REQUEST_CREATED | outletId={} | status=PENDING",
+                outlet.getOutletId()
+        );
+
+        // ============================================================
+        // 21. BULK UPLOAD EMAIL
+        // ============================================================
+        // Email is intentionally NOT sent during bulk upload.
+        // Bulk upload must not fail because of SMTP/AWS SES credentials.
+
+        // ============================================================
+        // 22. RETURN RESULT
+        // ============================================================
 
         return FmOutletMapper.toCreatedDTO(outlet);
     }
-
 
     // ── Bulk Upload ───────────────────────────────────────────────────────────
 
@@ -799,6 +1101,205 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
         result.setErrors(errors);
         return result;
     }*/
+
+    // ============================================================
+    // BULK UPLOAD HELPERS
+    // These helpers are used only by createOutletBulkUpload().
+    // Existing single-outlet functions are not modified.
+    // ============================================================
+
+    /**
+     * Resolves comma-separated cuisine names from CSV/Excel
+     * into cuisine type IDs.
+     *
+     * Example:
+     * Biryani,Chinese,North Indian
+     *
+     * becomes:
+     * [1, 2, 5]
+     */
+    private void resolveCuisineNames(FmOutletRequestDTO dto) {
+
+        if (isBlank(dto.getCuisineTypeNames())) {
+            throw new IllegalArgumentException(
+                    "Cuisine Type is required for bulk upload."
+            );
+        }
+
+        String[] cuisineNames =
+                dto.getCuisineTypeNames().split(",");
+
+        List<Integer> cuisineIds =
+                new ArrayList<>();
+
+        for (String cuisineName : cuisineNames) {
+
+            String name = cuisineName.trim();
+
+            if (name.isBlank()) {
+                continue;
+            }
+
+            FmCuisineType cuisineType =
+                    cuisineTypeRepository
+                            .findByCuisineTypesNameIgnoreCase(name)
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Cuisine Type '"
+                                                    + name
+                                                    + "' not found."
+                                    )
+                            );
+
+            cuisineIds.add(
+                    cuisineType.getCuisineTypesId()
+            );
+        }
+
+        if (cuisineIds.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "At least one valid cuisine type is required."
+            );
+        }
+
+        dto.setCuisineType(
+                cuisineIds.toArray(new Integer[0])
+        );
+    }
+
+    /**
+     * Generates a unique outlet username from the outlet name.
+     *
+     * Example:
+     * Mehfil Restaurant
+     * -> mehfil_restaurant
+     *
+     * If already exists:
+     * -> mehfil_restaurant_1
+     * -> mehfil_restaurant_2
+     */
+    private String generateUniqueOutletUsername(
+            String outletName
+    ) {
+
+        String base = outletName
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_|_$", "");
+
+        if (base.isBlank()) {
+            base = "outlet";
+        }
+
+        if (base.length() > 35) {
+            base = base.substring(0, 35);
+        }
+
+        String username = base;
+        int counter = 1;
+
+        while (userRepository
+                .findByUsernameAndUserType(
+                        username,
+                        FmAppConstants.TYPE_OUTLET
+                )
+                .isPresent()) {
+
+            username = base + "_" + counter;
+            counter++;
+        }
+
+        return username;
+    }
+
+    /**
+     * Generates a password satisfying the existing outlet
+     * password policy:
+     *
+     * - uppercase
+     * - lowercase
+     * - number
+     * - special character
+     */
+    private String generateOutletPassword() {
+
+        String upper =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        String lower =
+                "abcdefghijklmnopqrstuvwxyz";
+
+        String numbers =
+                "0123456789";
+
+        String special =
+                "@#$%&!";
+
+        SecureRandom random =
+                new SecureRandom();
+
+        StringBuilder password =
+                new StringBuilder();
+
+        // Guarantee at least one of each required type.
+        password.append(
+                upper.charAt(
+                        random.nextInt(upper.length())
+                )
+        );
+
+        password.append(
+                lower.charAt(
+                        random.nextInt(lower.length())
+                )
+        );
+
+        password.append(
+                numbers.charAt(
+                        random.nextInt(numbers.length())
+                )
+        );
+
+        password.append(
+                special.charAt(
+                        random.nextInt(special.length())
+                )
+        );
+
+        String all =
+                upper + lower + numbers + special;
+
+        while (password.length() < 12) {
+
+            password.append(
+                    all.charAt(
+                            random.nextInt(all.length())
+                    )
+            );
+        }
+
+        List<Character> characters =
+                new ArrayList<>();
+
+        for (char c : password.toString().toCharArray()) {
+            characters.add(c);
+        }
+
+        Collections.shuffle(
+                characters,
+                random
+        );
+
+        StringBuilder result =
+                new StringBuilder();
+
+        for (Character c : characters) {
+            result.append(c);
+        }
+
+        return result.toString();
+    }
 
     // ── Validation ────────────────────────────────────────────────────────────
 
@@ -924,6 +1425,93 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
         log.info("[OUTLET] Address saved for outletId={}", outletId);
     }
 
+    /**
+     * Saves operating-day slots for BULK UPLOAD only.
+     *
+     * The bulk CSV/Excel parser can create multiple FmOutletDayDTO rows
+     * for the same day (for example, Monday 09:00-14:00 and Monday
+     * 18:00-22:00). Each DTO is intentionally stored as a separate
+     * FmOutletDay row.
+     *
+     * This method is kept separate from saveOperatingDays() so the
+     * existing single-outlet create/update flow is not changed.
+     */
+    private void saveBulkOperatingDays(FmOutletRequestDTO dto, Integer outletId) {
+
+        if (dto.getOperatingDays() == null || dto.getOperatingDays().isEmpty()) {
+            log.info(
+                    "[OUTLET_BULK] No operating slots provided | outletId={}",
+                    outletId
+            );
+            return;
+        }
+
+        int savedSlots = 0;
+
+        for (FmOutletDayDTO d : dto.getOperatingDays()) {
+
+            if (d == null || d.getDayOfWeekId() == null) {
+                continue;
+            }
+
+            boolean isEvening =
+                    d.getSlotType() != null
+                            && "evening".equalsIgnoreCase(d.getSlotType());
+
+            LocalTime defaultOpeningTime =
+                    isEvening ? LocalTime.of(17, 0) : LocalTime.of(9, 0);
+
+            LocalTime defaultClosingTime =
+                    isEvening ? LocalTime.of(22, 0) : LocalTime.of(14, 0);
+
+            FmOutletDay day = new FmOutletDay();
+
+            day.setOutletId(outletId);
+            day.setDayOfWeekId(d.getDayOfWeekId());
+            day.setIsOpen(
+                    d.getIsOpen() != null
+                            ? d.getIsOpen()
+                            : true
+            );
+
+            day.setOpeningTime(
+                    parseTime(
+                            d.getOpeningTime() == null
+                                    ? null
+                                    : String.valueOf(d.getOpeningTime()),
+                            defaultOpeningTime
+                    )
+            );
+
+            day.setClosingTime(
+                    parseTime(
+                            d.getClosingTime() == null
+                                    ? null
+                                    : String.valueOf(d.getClosingTime()),
+                            defaultClosingTime
+                    )
+            );
+
+            dayRepository.save(day);
+            savedSlots++;
+
+            log.info(
+                    "[OUTLET_BULK] OPERATING_SLOT_CREATED | outletId={} | dayOfWeekId={} | opening={} | closing={} | slotType={}",
+                    outletId,
+                    d.getDayOfWeekId(),
+                    day.getOpeningTime(),
+                    day.getClosingTime(),
+                    d.getSlotType()
+            );
+        }
+
+        log.info(
+                "[OUTLET_BULK] Operating slots saved | outletId={} | slots={}",
+                outletId,
+                savedSlots
+        );
+    }
+
     private void saveOperatingDays(FmOutletRequestDTO dto, Integer outletId) {
         if (dto.getOperatingDays() == null || dto.getOperatingDays().isEmpty()) return;
         for (FmOutletDayDTO d : dto.getOperatingDays()) {
@@ -1009,8 +1597,7 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
 
         log.info("Fetching outlet details for outletId={}, userType={}, customerId={}", outletId, userType, customerId);
 
-        boolean outletExists =
-                outletRepository.existsByOutletIdAndIsApprovedTrue(outletId);
+        boolean outletExists = outletRepository.existsByOutletIdAndIsApprovedTrue(outletId);
 
         // =========================================================
         // STEP 1: Check outlet existence
@@ -1018,14 +1605,9 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
 
         if (!outletExists) {
 
-            log.warn(
-                    "Outlet not found | outletId={}",
-                    outletId
-            );
+            log.warn("Outlet not found | outletId={}", outletId);
 
-            throw new ResourceNotFoundException(
-                    "Outlet not found with id: " + outletId
-            );
+            throw new ResourceNotFoundException("Outlet not found with id: " + outletId);
         }
 //---------------------------------------------------------------------------------------------------
         FmOutletDetailsDto outletDtoresponse = new FmOutletDetailsDto();
@@ -1061,36 +1643,22 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
                 // cuisine_types.cuisine_types_name
                 // ---------------------------------------------------------------------
 
-                log.info(
-                        "Fetching merchant outlet menu | outletId={}",
-                        outletId
-                );
+                log.info("Fetching merchant outlet menu | outletId={}", outletId);
 
-                List<FmMerchantOutletMenuProjection> merchantRows =
-                        outletRepository.getMerchantOutletMenu(outletId);
+                List<FmMerchantOutletMenuProjection> merchantRows = outletRepository.getMerchantOutletMenu(outletId);
 
                 // Validate merchant outlet menu data
                 if (merchantRows == null || merchantRows.isEmpty()) {
 
-                    log.warn(
-                            "No merchant menu available | outletId={}",
-                            outletId
-                    );
+                    log.warn("No merchant menu available | outletId={}", outletId);
 
-                    throw new ResourceNotFoundException(
-                            "No menu available for outlet: " + outletId
-                    );
+                    throw new ResourceNotFoundException("No menu available for outlet: " + outletId);
                 }
 
-                log.info(
-                        "Merchant outlet menu fetched | outletId={} | rows={}",
-                        outletId,
-                        merchantRows.size()
-                );
+                log.info("Merchant outlet menu fetched | outletId={} | rows={}", outletId, merchantRows.size());
 
                 // Map merchant projection → Outlet Details DTO
-                outletDtoresponse =
-                        FmOutletMapper.mapMerchantToOutletDto(merchantRows);
+                outletDtoresponse = FmOutletMapper.mapMerchantToOutletDto(merchantRows);
 
             } else {
 
@@ -1102,52 +1670,23 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
                 // including customer-specific online pricing.
                 // ---------------------------------------------------------------------
 
-                log.info(
-                        "Fetching customer outlet menu | outletId={}",
-                        outletId
-                );
+                log.info("Fetching customer outlet menu | outletId={}", outletId);
 
-                List<FmOutletMenuProjection> rows =
-                        outletRepository.getCustomerOutletMenu(outletId);
+                List<FmOutletMenuProjection> rows = outletRepository.getCustomerOutletMenu(outletId);
 
                 // Validate customer outlet menu data
                 if (rows == null || rows.isEmpty()) {
 
-                    log.warn(
-                            "No customer menu available for outlet ID: " + outletId + ".\n" +
-                                    "Required menu data is missing.\n" +
-                                    "Data must exist in the following DB tables:\n" +
-                                    "1. jippy_fm.outlets\n" +
-                                    "2. jippy_fm.outlet_days (Outlet Timings)\n" +
-                                    "3. jippy_fm.outlet_categories\n" +
-                                    "4. jippy_fm.categories\n" +
-                                    "5. jippy_fm.products\n"+
-                                    "6. jippy_fm.product_available_timings(product timings)"
-                    );
+                    log.warn("No customer menu available for outlet ID: " + outletId + ".\n" + "Required menu data is missing.\n" + "Data must exist in the following DB tables:\n" + "1. jippy_fm.outlets\n" + "2. jippy_fm.outlet_days (Outlet Timings)\n" + "3. jippy_fm.outlet_categories\n" + "4. jippy_fm.categories\n" + "5. jippy_fm.products\n" + "6. jippy_fm.product_available_timings(product timings)");
 
 
-                    throw new ResourceNotFoundException(
-                            "No customer menu available for outlet ID: " + outletId + ".   \n" +
-                                    "  Required menu data is missing.  \n" +
-                                    "  Data must exist in the following DB tables:  \n" +
-                                    "  1. jippy_fm.outlets  \n" +
-                                    "  2. jippy_fm.outlet_days (Outlet Timings)  \n" +
-                                    "  3. jippy_fm.outlet_categories  \n" +
-                                    "  4. jippy_fm.categories  \n" +
-                                    "  5. jippy_fm.products\n"+
-                                    "  6. jippy_fm.product_available_timings(product timings)"
-                    );
+                    throw new ResourceNotFoundException("No customer menu available for outlet ID: " + outletId + ".   \n" + "  Required menu data is missing.  \n" + "  Data must exist in the following DB tables:  \n" + "  1. jippy_fm.outlets  \n" + "  2. jippy_fm.outlet_days (Outlet Timings)  \n" + "  3. jippy_fm.outlet_categories  \n" + "  4. jippy_fm.categories  \n" + "  5. jippy_fm.products\n" + "  6. jippy_fm.product_available_timings(product timings)");
                 }
 
-                log.info(
-                        "Customer outlet menu fetched | outletId={} | rows={}",
-                        outletId,
-                        rows.size()
-                );
+                log.info("Customer outlet menu fetched | outletId={} | rows={}", outletId, rows.size());
 
                 // Map existing customer projection → Outlet Details DTO
-                outletDtoresponse =
-                        FmOutletMapper.mapCustomerToOutletDto(rows, userType);
+                outletDtoresponse = FmOutletMapper.mapCustomerToOutletDto(rows, userType);
             }
 
 //           ================================================================================
@@ -1180,7 +1719,7 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
                     log.info("Zero active promotions or coupons found. Proceeding with standard menu pricing.");
 
                     // Cache the raw menu in Redis with standard 10-minute TTL so subsequent calls hit Redis Step 1
-                   saveToRedis(cacheKey, outletDtoresponse, 30, TimeUnit.MINUTES);
+                    saveToRedis(cacheKey, outletDtoresponse, 30, TimeUnit.MINUTES);
 
                     return outletDtoresponse;
                 }
@@ -1249,13 +1788,13 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
                 // Safety guard: ensure TTL is at least 30 seconds
                 ttlSeconds = Math.max(30, ttlSeconds);
 
-               saveToRedis(cacheKey,outletDtoresponse,ttlSeconds,TimeUnit.SECONDS);
+                saveToRedis(cacheKey, outletDtoresponse, ttlSeconds, TimeUnit.SECONDS);
 
                 //redisTemplate.opsForValue().set(cacheKey, jsonPayload, ttlSeconds, TimeUnit.SECONDS);
                 // log.info("Cached CUSTOMER view [{}] in Redis with offer/slot TTL: {}s", cacheKey, ttlSeconds);
             } else {
                 // Merchant view or No-Offer Customer view: Standard 10 min TTL
-                saveToRedis(cacheKey,outletDtoresponse,30,TimeUnit.MINUTES);
+                saveToRedis(cacheKey, outletDtoresponse, 30, TimeUnit.MINUTES);
                 //  redisTemplate.opsForValue().set(cacheKey, jsonPayload, 5, TimeUnit.MINUTES);
                 //  log.info("Cached [{}] in Redis with standard TTL: 300s", cacheKey);
             }
@@ -1313,9 +1852,7 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
         } catch (Exception e) {
 
             // Unexpected exception → log it.
-            log.error("Unexpected error while fetching outlet details | cacheKey={}",
-                    cacheKey, e
-            );
+            log.error("Unexpected error while fetching outlet details | cacheKey={}", cacheKey, e);
         }
 
         return outletDtoresponse;
@@ -2104,3 +2641,4 @@ public FmOutletResponseDto getOutletById(Integer outletId) {
 
 
 }
+

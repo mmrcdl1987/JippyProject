@@ -26,6 +26,10 @@ public class FmOutletResponseDto {
 
     private String alternateOutletPhone;
 
+    private Boolean isVegOutlet;
+
+    private Boolean isGstApplied;
+
     private BigDecimal radius;
 
     private String isActive;

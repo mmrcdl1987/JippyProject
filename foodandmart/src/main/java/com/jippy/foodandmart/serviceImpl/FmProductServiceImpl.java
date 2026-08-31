@@ -15,6 +15,7 @@ import com.jippy.foodandmart.projections.OutletProductPricingProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmProductService;
 import com.jippy.foodandmart.util.FmVariantExcelReader;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.InvalidRequestException;
@@ -60,154 +61,348 @@ public class FmProductServiceImpl implements FmProductService {
 
     private final FmDaysOfWeekRepository daysOfWeekRepository;
 
+    private final EntityManager entityManager;
+
+    private final FmMerchantPriceChangeHistoryRepository merchantPriceChangeHistoryRepository;
+
     @Override
     @Transactional
     public FmMapToProductResult mapToProducts(FmMapToProduct request) {
 
-        log.info("[PRODUCT-MAP] Product mapping initiated | outletId={} | categoryId={} | requestedProducts={}", request.getOutletId(), request.getCategoryId(), request.getProducts() == null ? 0 : request.getProducts().size());
+        log.info("[PRODUCT-MAP] Product mapping initiated | outletId={} | categoryId={} | outletCategoryId={} | requestedProducts={}", request != null ? request.getOutletId() : null, request != null ? request.getCategoryId() : null, request != null ? request.getOutletCategoryId() : null, request != null && request.getProducts() != null ? request.getProducts().size() : 0);
+
+        // ============================================================
+        // 1. VALIDATE REQUEST
+        // ============================================================
+
+        if (request == null) {
+            throw new IllegalArgumentException("Request cannot be null.");
+        }
+
+        if (request.getOutletId() == null || request.getOutletId() <= 0) {
+            throw new IllegalArgumentException("Valid Outlet Id is required.");
+        }
 
         if (request.getProducts() == null || request.getProducts().isEmpty()) {
-
-            log.warn("[PRODUCT-MAP] Product mapping failed | reason=Product list is empty");
-
             throw new IllegalArgumentException("Products are required.");
         }
 
-        if (request.getOutletId() == null) {
+        Integer outletId = request.getOutletId();
 
-            log.warn("[PRODUCT-MAP] Product mapping failed | reason=Outlet Id is missing");
-
-            throw new IllegalArgumentException("Outlet Id is required.");
-        }
-
-        if (request.getCategoryId() == null) {
-
-            log.warn("[PRODUCT-MAP] Product mapping failed | reason=Category Id is missing");
-
-            throw new IllegalArgumentException("Category Id is required.");
-        }
-
-        FmOutletCategory outletCategory = outletCategoryRepository.findByOutletIdAndCategoryId(request.getOutletId(), request.getCategoryId()).orElseGet(() -> {
-
-            log.info("[PRODUCT-MAP] Outlet category not found. Creating new mapping | outletId={} | categoryId={}", request.getOutletId(), request.getCategoryId());
-
-            FmOutletCategory entity = new FmOutletCategory();
-
-            entity.setOutletId(request.getOutletId());
-            entity.setCategoryId(request.getCategoryId());
-            entity.setCreatedBy(SYSTEM_USER);
-            entity.setUpdatedBy(SYSTEM_USER);
-            entity.setIsToggle(true);
-            entity.setIsActive("Y");
-
-            FmOutletCategory saved = outletCategoryRepository.save(entity);
-
-            log.info("[PRODUCT-MAP] Outlet category created successfully | outletCategoryId={}", saved.getOutletCategoryId());
-
-            return saved;
-        });
-
-        Integer outletCategoryId = outletCategory.getOutletCategoryId();
+        /*
+         * IMPORTANT:
+         * The outlet_categories table is using a PostgreSQL generated-id
+         * sequence. If that sequence is behind the current MAX(id), Hibernate
+         * can receive an already-used ID (for example 97) and the INSERT fails
+         * with outlet_categories_pkey duplicate key.
+         *
+         * Keep the sequence synchronized before this operation. The database
+         * should also be fixed permanently with the SQL provided separately.
+         */
+        synchronizeOutletCategorySequence();
 
         List<String> savedNames = new ArrayList<>();
         List<String> skippedNames = new ArrayList<>();
 
+        // ============================================================
+        // 2. PROCESS EACH MASTER PRODUCT INDEPENDENTLY
+        //
+        // A single bulk request may contain master products from
+        // different categories. Therefore outletCategoryId is resolved
+        // separately for every product.
+        // ============================================================
+
         for (ProductEntry entry : request.getProducts()) {
+
+            if (entry == null) {
+                skippedNames.add("(null product)");
+                continue;
+            }
 
             String productName = entry.getProductName() == null ? "" : entry.getProductName().trim();
 
-            if (productName.isBlank()) {
+            // --------------------------------------------------------
+            // 2.1 MASTER PRODUCT ID
+            // --------------------------------------------------------
 
-                log.warn("[PRODUCT-MAP] Skipping product | reason=Blank product name");
+            if (entry.getMasterProductId() == null || entry.getMasterProductId() <= 0) {
 
-                skippedNames.add("(blank)");
+                log.warn("[PRODUCT-MAP] Skipping product | productName={} | reason=Master Product Id missing", productName);
+
+                skippedNames.add(productName.isBlank() ? "(Master Product Id Missing)" : productName + " (Master Product Id Missing)");
 
                 continue;
             }
 
+            // --------------------------------------------------------
+            // 2.2 LOAD MASTER PRODUCT
+            // --------------------------------------------------------
+
+            FmMasterProduct masterProduct = masterProductRepository.findById(entry.getMasterProductId()).orElseThrow(() -> {
+                log.warn("[PRODUCT-MAP] Master product not found | masterProductId={}", entry.getMasterProductId());
+
+                return new ResourceNotFoundException("Master Product not found with id : " + entry.getMasterProductId());
+            });
+
+            // --------------------------------------------------------
+            // 2.3 MASTER PRODUCT MUST BE PUBLISHED
+            // --------------------------------------------------------
+
+            if (masterProduct.getPublish() == null || masterProduct.getPublish() != 1) {
+
+                log.warn("[PRODUCT-MAP] Skipping unpublished master product | masterProductId={} | productName={}", masterProduct.getMasterProductId(), masterProduct.getMasterProductName());
+
+                skippedNames.add(masterProduct.getMasterProductName() + " (Master Product Not Published)");
+
+                continue;
+            }
+
+            // --------------------------------------------------------
+            // 2.4 USE MASTER PRODUCT NAME WHEN REQUEST NAME IS EMPTY
+            // --------------------------------------------------------
+
+            if (productName.isBlank()) {
+                productName = masterProduct.getMasterProductName() == null ? "" : masterProduct.getMasterProductName().trim();
+            }
+
+            if (productName.isBlank()) {
+                skippedNames.add("(Blank Product Name)");
+                continue;
+            }
+
+            // ========================================================
+            // 3. RESOLVE CATEGORY FROM MASTER PRODUCT
+            // ========================================================
+
+            Integer masterCategoryId = masterProduct.getCategoryId();
+
+            if (masterCategoryId == null || masterCategoryId <= 0) {
+
+                log.warn("[PRODUCT-MAP] Skipping master product | masterProductId={} | reason=Category missing", masterProduct.getMasterProductId());
+
+                skippedNames.add(productName + " (Category Missing)");
+
+                continue;
+            }
+
+            /*
+             * Mobile compatibility:
+             *
+             * If categoryId is supplied, validate it against the
+             * selected master product.
+             *
+             * Bulk mapping normally leaves categoryId null. In that
+             * case the category comes from each master product.
+             */
+            Integer categoryId = request.getCategoryId() != null ? request.getCategoryId() : masterCategoryId;
+
+            if (!Objects.equals(masterCategoryId, categoryId)) {
+
+                log.warn("[PRODUCT-MAP] Skipping category mismatch | masterProductId={} | masterCategoryId={} | requestedCategoryId={}", masterProduct.getMasterProductId(), masterCategoryId, categoryId);
+
+                skippedNames.add(productName + " (Category Mismatch)");
+
+                continue;
+            }
+
+            // ========================================================
+            // 4. RESOLVE OUTLET CATEGORY
+            // ========================================================
+
+            FmOutletCategory outletCategory;
+
+            if (request.getOutletCategoryId() != null) {
+
+                // ----------------------------------------------------
+                // Existing mobile flow
+                // ----------------------------------------------------
+
+                outletCategory = outletCategoryRepository.findByOutletCategoryId(request.getOutletCategoryId()).orElseThrow(() -> new ResourceNotFoundException("Outlet Category not found with id : " + request.getOutletCategoryId()));
+
+                if (!Objects.equals(outletCategory.getOutletId(), outletId)) {
+                    throw new IllegalArgumentException("Outlet Category does not belong to Outlet Id : " + outletId);
+                }
+
+                if (!Objects.equals(outletCategory.getCategoryId(), categoryId)) {
+                    throw new IllegalArgumentException("Outlet Category does not belong to Category Id : " + categoryId);
+                }
+
+            } else {
+
+                // ----------------------------------------------------
+                // Bulk flow
+                //
+                // Each master product can have a different category.
+                // ----------------------------------------------------
+
+                Optional<FmOutletCategory> existingOutletCategory = outletCategoryRepository.findByOutletIdAndCategoryId(outletId, categoryId);
+
+                if (existingOutletCategory.isPresent()) {
+
+                    outletCategory = existingOutletCategory.get();
+
+                    log.info("[PRODUCT-MAP] Reusing existing outlet category | outletId={} | categoryId={} | outletCategoryId={}", outletId, categoryId, outletCategory.getOutletCategoryId());
+
+                } else {
+
+                    log.info("[PRODUCT-MAP] Creating outlet category | outletId={} | categoryId={}", outletId, categoryId);
+
+                    FmOutletCategory entity = new FmOutletCategory();
+
+                    entity.setOutletId(outletId);
+                    entity.setCategoryId(categoryId);
+                    entity.setCreatedBy(SYSTEM_USER);
+                    entity.setUpdatedBy(SYSTEM_USER);
+                    entity.setIsToggle(true);
+                    entity.setIsActive("Y");
+
+                    FmOutletCategory saved = outletCategoryRepository.saveAndFlush(entity);
+
+                    log.info("[PRODUCT-MAP] Outlet category created | outletCategoryId={}", saved.getOutletCategoryId());
+
+                    outletCategory = saved;
+                }
+            }
+
+            if (!"Y".equalsIgnoreCase(outletCategory.getIsActive() == null ? "Y" : outletCategory.getIsActive())) {
+
+                throw new IllegalArgumentException("Outlet Category is inactive for outletId=" + outletId + ", categoryId=" + categoryId);
+            }
+
+            Integer outletCategoryId = outletCategory.getOutletCategoryId();
+
+            // ========================================================
+            // 5. DUPLICATE CHECK
+            // ========================================================
+
             if (productRepository.existsByOutletCategoryIdAndProductNameIgnoreCase(outletCategoryId, productName)) {
 
-                log.warn("[PRODUCT-MAP] Product already mapped | outletCategoryId={} | productName={}", outletCategoryId, productName);
+                log.info("[PRODUCT-MAP] Product already mapped | outletCategoryId={} | productName={}", outletCategoryId, productName);
 
                 skippedNames.add(productName + " (Already Exists)");
 
                 continue;
             }
 
-            if (entry.getMasterProductId() == null) {
-
-                log.warn("[PRODUCT-MAP] Product mapping failed | productName={} | reason=Master Product Id missing", productName);
-
-                throw new IllegalArgumentException("Master Product Id is required.");
-            }
-
-            FmMasterProduct masterProduct = masterProductRepository.findById(entry.getMasterProductId()).orElseThrow(() -> {
-
-                log.warn("[PRODUCT-MAP] Master product not found | masterProductId={}", entry.getMasterProductId());
-
-                return new ResourceNotFoundException("Master Product not found with id : " + entry.getMasterProductId());
-            });
-
-            if (!Objects.equals(masterProduct.getCategoryId(), request.getCategoryId())) {
-
-                log.warn("[PRODUCT-MAP] Invalid master product category | masterProductId={} | expectedCategory={} | actualCategory={}", masterProduct.getMasterProductId(), request.getCategoryId(), masterProduct.getCategoryId());
-
-                throw new IllegalArgumentException("Selected Master Product does not belong to Category Id : " + request.getCategoryId());
-            }
-
-            if (masterProduct.getPhoto() == null || masterProduct.getPhoto().isBlank()) {
-
-                log.warn("[PRODUCT-MAP] Master product image missing | masterProductId={} | productName={}", masterProduct.getMasterProductId(), productName);
-
-                throw new IllegalArgumentException("Master Product image missing : " + productName);
-            }
-
-            boolean hasVariants = Boolean.TRUE.equals(entry.getHasProductVariants());
+            // ========================================================
+            // 6. CREATE OUTLET PRODUCT
+            // ========================================================
 
             FmProduct product = new FmProduct();
 
             product.setOutletCategoryId(outletCategoryId);
+
             product.setProductName(productName);
-            product.setDescription(entry.getDescription() == null ? "" : entry.getDescription());
 
-            product.setIsVeg(entry.getIsVeg() == null ? Boolean.TRUE : entry.getIsVeg());
+            String description = entry.getDescription();
 
-            product.setHasProductVariants(hasVariants);
+            if (description == null || description.isBlank()) {
+                description = masterProduct.getDescription();
+            }
+
+            // products.description is NOT NULL.
+            product.setDescription(description == null ? "" : description);
+
+            // --------------------------------------------------------
+            // VEG / NON-VEG
+            // --------------------------------------------------------
+
+            Boolean isVeg = entry.getIsVeg();
+
+            if (isVeg == null) {
+                isVeg = masterProduct.getVeg() != null && masterProduct.getVeg() == 1;
+            }
+
+            product.setIsVeg(isVeg);
+
+            // ========================================================
+            // 7. NO VARIANTS DURING MASTER PRODUCT MAPPING
+            // ========================================================
+
+            /*
+             * This mapping operation only creates the base outlet
+             * product. Variant functionality remains available through
+             * the existing variant APIs/update flow.
+             */
+            product.setHasProductVariants(false);
+
+            // ========================================================
+            // 8. IMAGE
+            // ========================================================
 
             product.setImageLink(masterProduct.getPhoto());
-//            product.setPhotos(masterProduct.getPhotos());
-//            product.setThumbnail(masterProduct.getThumbnail());
+
+            // ========================================================
+            // 9. PRODUCT TYPE
+            // ========================================================
+
+            /*
+             * IMPORTANT FIX:
+             *
+             * master_products.product_type
+             *              ->
+             * products.product_type
+             */
+            String productType = masterProduct.getProductType();
+
+            if (productType != null && !productType.trim().isEmpty()) {
+                product.setProductType(productType.trim());
+            } else {
+                product.setProductType(null);
+
+                log.warn("[PRODUCT-MAP] Master product has no productType | masterProductId={} | productName={}", masterProduct.getMasterProductId(), productName);
+            }
+
+            // ========================================================
+            // 10. MERCHANT PRICE
+            // ========================================================
+
+            BigDecimal merchantPrice = entry.getMerchantPrice();
+
+            if (merchantPrice == null) {
+                merchantPrice = BigDecimal.ZERO;
+            }
+
+            if (merchantPrice.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Merchant Price cannot be negative for product : " + productName);
+            }
+
+            product.setMerchantPrice(merchantPrice);
+
+            // ========================================================
+            // 11. AUDIT / ACTIVE STATUS
+            // ========================================================
 
             product.setCreatedBy(SYSTEM_USER);
             product.setUpdatedBy(SYSTEM_USER);
+            product.setIsActive("Y");
 
-            if (hasVariants) {
-
-                product.setMerchantPrice(BigDecimal.ZERO);
-
-            } else {
-
-                BigDecimal requestPrice = entry.getMerchantPrice();
-
-                product.setMerchantPrice(requestPrice != null && requestPrice.compareTo(BigDecimal.ZERO) > 0 ? requestPrice : resolvePrice(productName));
-            }
+            // ========================================================
+            // 12. SAVE PRODUCT
+            // ========================================================
 
             FmProduct savedProduct = productRepository.save(product);
 
-            if (hasVariants) {
-
-                saveProductVariantOptions(savedProduct.getProductId(), entry.getVariantGroups());
-            }
+            // ========================================================
+            // 13. SAVE TIMINGS
+            // ========================================================
 
             saveTimings(savedProduct.getProductId(), entry);
 
             savedNames.add(productName);
 
-            log.info("[PRODUCT-MAP] Product mapped successfully | productId={} | productName={}", savedProduct.getProductId(), savedProduct.getProductName());
+            log.info("[PRODUCT-MAP] Product mapped successfully | masterProductId={} | productId={} | outletId={} | outletCategoryId={} | categoryId={} | productType={}", masterProduct.getMasterProductId(), savedProduct.getProductId(), outletId, outletCategoryId, categoryId, savedProduct.getProductType());
         }
 
-        //Invalidate outlet details cache
-        cacheInvalidateService.invalidateCache(request.getOutletId());
+        // ============================================================
+        // 14. INVALIDATE OUTLET CACHE
+        // ============================================================
+
+        cacheInvalidateService.invalidateCache(outletId);
+
+        // ============================================================
+        // 15. RESPONSE
+        // ============================================================
 
         FmMapToProductResult response = new FmMapToProductResult();
 
@@ -216,7 +411,7 @@ public class FmProductServiceImpl implements FmProductService {
         response.setSavedNames(savedNames);
         response.setSkippedNames(skippedNames);
 
-        log.info("[PRODUCT-MAP] Product mapping completed | outletCategoryId={} | saved={} | skipped={}", outletCategoryId, savedNames.size(), skippedNames.size());
+        log.info("[PRODUCT-MAP] Product mapping completed | outletId={} | saved={} | skipped={}", outletId, savedNames.size(), skippedNames.size());
 
         return response;
     }
@@ -725,6 +920,37 @@ public class FmProductServiceImpl implements FmProductService {
         return response;
     }
 
+    /**
+     * Synchronizes the PostgreSQL generated-id sequence for outlet_categories
+     * with the actual maximum primary-key value in the table.
+     * <p>
+     * This protects the master-product mapping flow when an existing database
+     * has a sequence that is behind the rows already stored in the table.
+     * <p>
+     * Permanent database fix:
+     * SELECT setval(
+     * pg_get_serial_sequence('jippy_fm.outlet_categories', 'outlet_category_id'),
+     * COALESCE(MAX(outlet_category_id), 1),
+     * COUNT(*) > 0
+     * ) FROM jippy_fm.outlet_categories;
+     */
+    private void synchronizeOutletCategorySequence() {
+        try {
+            entityManager.createNativeQuery("SELECT setval(" + "pg_get_serial_sequence('jippy_fm.outlet_categories', 'outlet_category_id'), " + "COALESCE(MAX(outlet_category_id), 1), " + "COUNT(*) > 0" + ") " + "FROM jippy_fm.outlet_categories").getSingleResult();
+
+            log.debug("[PRODUCT-MAP] outlet_categories sequence synchronized successfully");
+
+        } catch (Exception ex) {
+            /*
+             * Do not hide the actual insert problem. If sequence metadata is
+             * unavailable, let the normal database exception be visible.
+             */
+            log.error("[PRODUCT-MAP] Failed to synchronize outlet_categories sequence", ex);
+
+            throw new IllegalStateException("Unable to synchronize outlet_categories primary-key sequence.", ex);
+        }
+    }
+
     private String normalizeName(String value) {
 
         if (value == null) {
@@ -845,6 +1071,7 @@ public class FmProductServiceImpl implements FmProductService {
         response.setHasProductVariants(product.getHasProductVariants());
         response.setMerchantPrice(product.getMerchantPrice());
         response.setImageLink(product.getImageLink());
+        response.setProductType(product.getProductType());
 //        response.setPhotos(product.getPhotos());
 //        response.setThumbnail(product.getThumbnail());
 
@@ -947,8 +1174,7 @@ public class FmProductServiceImpl implements FmProductService {
 
         validateProductUpdateRequest(request);
 
-        FmProduct product = productRepository.findByProductIdAndIsActive(productId, "Y")
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id : " + productId));
+        FmProduct product = productRepository.findByProductIdAndIsActive(productId, "Y").orElseThrow(() -> new ResourceNotFoundException("Product not found with id : " + productId));
 
         /*
          * ============================================================
@@ -965,6 +1191,12 @@ public class FmProductServiceImpl implements FmProductService {
         product.setHasProductVariants(hasVariants);
 
         product.setImageLink(request.getImageLink());
+
+        // Update product type only when it is supplied in the request.
+        if (request.getProductType() != null && !request.getProductType().trim().isEmpty()) {
+            product.setProductType(request.getProductType().trim());
+        }
+
 //        product.setPhotos(request.getPhotos());
 //        product.setThumbnail(request.getThumbnail());
         /*
@@ -1062,6 +1294,173 @@ public class FmProductServiceImpl implements FmProductService {
         outletCategory.ifPresent(fmOutletCategory -> cacheInvalidateService.invalidateCache(fmOutletCategory.getOutletId()));
 
         return getProductById(productId);
+    }
+
+    @Override
+    @Transactional
+    public FmMerchantPriceUpdateResponse updateMerchantPrice(Integer productId, FmMerchantPriceUpdateRequest request) {
+
+        log.info("[MERCHANT-PRICE] Update started | productId={} | requestPrice={} | role={} | updatedBy={}", productId, request != null ? request.getMerchantPrice() : null, request != null ? request.getRole() : null, request != null ? request.getUpdatedBy() : null);
+
+        // ============================================================
+        // 1. VALIDATE REQUEST
+        // ============================================================
+
+        if (productId == null || productId <= 0) {
+            throw new IllegalArgumentException("Valid productId is required.");
+        }
+
+        if (request == null) {
+            throw new IllegalArgumentException("Request cannot be null.");
+        }
+
+        if (request.getMerchantPrice() == null) {
+            throw new IllegalArgumentException("Merchant price is required.");
+        }
+
+        if (request.getMerchantPrice().compareTo(BigDecimal.ZERO) < 0) {
+
+            throw new IllegalArgumentException("Merchant price cannot be negative.");
+        }
+
+        if (request.getRole() == null || request.getRole().isBlank()) {
+
+            throw new IllegalArgumentException("Role is required.");
+        }
+
+        // ============================================================
+        // 2. NORMALIZE ROLE
+        // ============================================================
+
+        String role = request.getRole().trim().toUpperCase(Locale.ROOT);
+
+        // ============================================================
+        // 3. VALIDATE ROLE
+        // ============================================================
+
+        if (!"ROLE_MERCHANT".equals(role) && !"ROLE_SUPERADMIN".equals(role) && !"ROLE_DEVADMIN".equals(role)) {
+
+            throw new IllegalArgumentException("Invalid role. Allowed roles are " + "ROLE_MERCHANT, ROLE_SUPERADMIN and ROLE_DEVADMIN.");
+        }
+
+        // ============================================================
+        // 4. FETCH PRODUCT
+        // ============================================================
+
+        FmProduct product = productRepository.findByProductIdAndIsActive(productId, "Y").orElseThrow(() -> {
+
+            log.warn("[MERCHANT-PRICE] Product not found | productId={}", productId);
+
+            return new ResourceNotFoundException("Product not found with id : " + productId);
+        });
+
+        // ============================================================
+        // 5. CURRENT PRICE
+        // ============================================================
+
+        BigDecimal oldPrice = product.getMerchantPrice();
+
+        if (oldPrice == null) {
+            oldPrice = BigDecimal.ZERO;
+        }
+
+        BigDecimal requestedPrice = request.getMerchantPrice();
+
+        // ============================================================
+        // 6. CHECK WHETHER PRICE ACTUALLY CHANGED
+        // ============================================================
+
+        if (oldPrice.compareTo(requestedPrice) == 0) {
+
+            log.info("[MERCHANT-PRICE] No price change | productId={} | price={}", productId, oldPrice);
+
+            return FmMerchantPriceUpdateResponse.builder().success(true).message("Merchant price is already the same.").productId(productId).outletId(productRepository.fetchOutletIdForProductId(productId)).oldPrice(oldPrice).requestedPrice(requestedPrice).updatedPrice(oldPrice).role(role).updatedBy(request.getUpdatedBy()).priceUpdated(false).build();
+        }
+
+        // ============================================================
+        // 7. MERCHANT CAN ONLY DECREASE
+        // ============================================================
+
+        boolean isMerchant = "ROLE_MERCHANT".equals(role);
+
+        boolean isAdmin = "ROLE_SUPERADMIN".equals(role) || "ROLE_DEVADMIN".equals(role);
+
+        if (isMerchant && requestedPrice.compareTo(oldPrice) > 0) {
+
+            log.warn("[MERCHANT-PRICE] Merchant attempted price increase | " + "productId={} | oldPrice={} | requestedPrice={} | updatedBy={}", productId, oldPrice, requestedPrice, request.getUpdatedBy());
+
+            return FmMerchantPriceUpdateResponse.builder().success(false).message("Merchant can only decrease the merchant price.").productId(productId).outletId(productRepository.fetchOutletIdForProductId(productId)).oldPrice(oldPrice).requestedPrice(requestedPrice).updatedPrice(oldPrice).role(role).updatedBy(request.getUpdatedBy()).priceUpdated(false).build();
+        }
+
+        // ============================================================
+        // 8. ADMIN CAN INCREASE OR DECREASE
+        // ============================================================
+
+        if (!isMerchant && !isAdmin) {
+
+            throw new IllegalArgumentException("You are not authorized to update merchant price.");
+        }
+
+        // ============================================================
+        // 9. GET OUTLET ID
+        // ============================================================
+
+        Integer outletId = productRepository.fetchOutletIdForProductId(productId);
+
+        if (outletId == null) {
+
+            throw new ResourceNotFoundException("Outlet not found for product id : " + productId);
+        }
+
+        // ============================================================
+        // 10. UPDATE PRODUCT PRICE
+        // ============================================================
+
+        LocalDateTime now = LocalDateTime.now();
+
+        product.setMerchantPrice(requestedPrice);
+
+        product.setUpdatedBy(request.getUpdatedBy());
+
+        product.setUpdatedAt(now);
+
+        productRepository.save(product);
+
+        // ============================================================
+        // 11. SAVE PRICE HISTORY
+        // ============================================================
+
+        FmMerchantPriceChangeHistory history = FmMerchantPriceChangeHistory.builder().outletId(outletId).productId(productId)
+
+                // Base product price.
+                // Variant price uses the variant option id.
+                .productVariantOptionsId(null)
+
+                .oldPrice(oldPrice).newPrice(requestedPrice)
+
+                .priceUpdatedBy(role)
+
+                .createdBy(request.getUpdatedBy()).createdAt(now)
+
+                .updatedAt(now).updatedBy(request.getUpdatedBy())
+
+                .build();
+
+        merchantPriceChangeHistoryRepository.save(history);
+
+        // ============================================================
+        // 12. INVALIDATE OUTLET CACHE
+        // ============================================================
+
+        cacheInvalidateService.invalidateCache(outletId);
+
+        // ============================================================
+        // 13. RESPONSE
+        // ============================================================
+
+        log.info("[MERCHANT-PRICE] Price updated successfully | " + "productId={} | outletId={} | oldPrice={} | newPrice={} | role={} | updatedBy={}", productId, outletId, oldPrice, requestedPrice, role, request.getUpdatedBy());
+
+        return FmMerchantPriceUpdateResponse.builder().success(true).message("Merchant price updated successfully.").productId(productId).outletId(outletId).oldPrice(oldPrice).requestedPrice(requestedPrice).updatedPrice(requestedPrice).role(role).updatedBy(request.getUpdatedBy()).priceUpdated(true).build();
     }
 
     @Override
@@ -1649,9 +2048,7 @@ public class FmProductServiceImpl implements FmProductService {
 
             response.setMerchantPrice(product.getMerchantPrice());
 
-            response.setImageLink(
-                    product.getImageLink()
-            );
+            response.setImageLink(product.getImageLink());
 
 
             response.setHasProductVariants(Boolean.TRUE.equals(product.getHasProductVariants()));
@@ -1781,16 +2178,13 @@ public class FmProductServiceImpl implements FmProductService {
             return response;
         }
     }
+
     //    =================================================================================================
     @Override
     @Transactional(readOnly = true)
     public Object getCategoryForProductByProductType(String productName, String productType) {
 
-        log.info(
-                "[GET_CATEGORY_FOR_PRODUCT] START | productName={} | productType={}",
-                productName,
-                productType
-        );
+        log.info("[GET_CATEGORY_FOR_PRODUCT] START | productName={} | productType={}", productName, productType);
 
         /*
          * ============================================================
@@ -1799,13 +2193,9 @@ public class FmProductServiceImpl implements FmProductService {
          */
         if (productName == null || productName.trim().isEmpty()) {
 
-            log.error(
-                    "[GET_CATEGORY_FOR_PRODUCT] Product name is empty"
-            );
+            log.error("[GET_CATEGORY_FOR_PRODUCT] Product name is empty");
 
-            throw new IllegalArgumentException(
-                    "Product name is required."
-            );
+            throw new IllegalArgumentException("Product name is required.");
         }
 
         /*
@@ -1815,13 +2205,9 @@ public class FmProductServiceImpl implements FmProductService {
          */
         if (productType == null || productType.trim().isEmpty()) {
 
-            log.error(
-                    "[GET_CATEGORY_FOR_PRODUCT] Product type is empty"
-            );
+            log.error("[GET_CATEGORY_FOR_PRODUCT] Product type is empty");
 
-            throw new IllegalArgumentException(
-                    "Product type is required."
-            );
+            throw new IllegalArgumentException("Product type is required.");
         }
 
         String normalizedProductName = productName.trim();
@@ -1836,27 +2222,15 @@ public class FmProductServiceImpl implements FmProductService {
          */
         if (FmAppConstants.PRODUCT_TYPE_PRODUCT.equals(normalizedProductType)) {
 
-            log.info(
-                    "[GET_CATEGORY_FOR_PRODUCT] Fetching PRODUCT | productName={}",
-                    normalizedProductName
-            );
+            log.info("[GET_CATEGORY_FOR_PRODUCT] Fetching PRODUCT | productName={}", normalizedProductName);
 
-            List<FmProductCategoryProjection> projections =
-                    productRepository.findProductCategoryDetails(
-                            normalizedProductName
-                    );
+            List<FmProductCategoryProjection> projections = productRepository.findProductCategoryDetails(normalizedProductName);
 
             if (projections == null || projections.isEmpty()) {
 
-                log.error(
-                        "[GET_CATEGORY_FOR_PRODUCT] Product not found | productName={}",
-                        normalizedProductName
-                );
+                log.error("[GET_CATEGORY_FOR_PRODUCT] Product not found | productName={}", normalizedProductName);
 
-                throw new ResourceNotFoundException(
-                        "Product not found with name : "
-                                + normalizedProductName
-                );
+                throw new ResourceNotFoundException("Product not found with name : " + normalizedProductName);
             }
 
             /*
@@ -1868,18 +2242,12 @@ public class FmProductServiceImpl implements FmProductService {
 
             for (FmProductCategoryProjection projection : projections) {
 
-                FmProductCategoryResponseDto dto =
-                        FmProductMapper.mapProductCategoryProjectionToDto(
-                                projection
-                        );
+                FmProductCategoryResponseDto dto = FmProductMapper.mapProductCategoryProjectionToDto(projection);
 
                 response.add(dto);
             }
 
-            log.info(
-                    "[GET_CATEGORY_FOR_PRODUCT] PRODUCT SUCCESS | count={}",
-                    response.size()
-            );
+            log.info("[GET_CATEGORY_FOR_PRODUCT] PRODUCT SUCCESS | count={}", response.size());
 
             return response;
         }
@@ -1892,27 +2260,15 @@ public class FmProductServiceImpl implements FmProductService {
          */
         if (FmAppConstants.PRODUCT_TYPE_MASTER_PRODUCT.equals(normalizedProductType)) {
 
-            log.info(
-                    "[GET_CATEGORY_FOR_PRODUCT] Fetching MASTERPRODUCT | productName={}",
-                    normalizedProductName
-            );
+            log.info("[GET_CATEGORY_FOR_PRODUCT] Fetching MASTERPRODUCT | productName={}", normalizedProductName);
 
-            List<FmMasterProductCategoryProjection> projections =
-                    productRepository.findMasterProductCategoryDetails(
-                            normalizedProductName
-                    );
+            List<FmMasterProductCategoryProjection> projections = productRepository.findMasterProductCategoryDetails(normalizedProductName);
 
             if (projections == null || projections.isEmpty()) {
 
-                log.error(
-                        "[GET_CATEGORY_FOR_PRODUCT] Master Product not found | productName={}",
-                        normalizedProductName
-                );
+                log.error("[GET_CATEGORY_FOR_PRODUCT] Master Product not found | productName={}", normalizedProductName);
 
-                throw new ResourceNotFoundException(
-                        "Master Product not found with name : "
-                                + normalizedProductName
-                );
+                throw new ResourceNotFoundException("Master Product not found with name : " + normalizedProductName);
             }
 
             /*
@@ -1920,23 +2276,16 @@ public class FmProductServiceImpl implements FmProductService {
              * Projection -> DTO
              * ========================================================
              */
-            List<FmMasterProductCategoryResponseDto> response =
-                    new ArrayList<>();
+            List<FmMasterProductCategoryResponseDto> response = new ArrayList<>();
 
             for (FmMasterProductCategoryProjection projection : projections) {
 
-                FmMasterProductCategoryResponseDto dto =
-                        FmProductMapper.mapMasterProductCategoryProjectionToDto(
-                                projection
-                        );
+                FmMasterProductCategoryResponseDto dto = FmProductMapper.mapMasterProductCategoryProjectionToDto(projection);
 
                 response.add(dto);
             }
 
-            log.info(
-                    "[GET_CATEGORY_FOR_PRODUCT] MASTERPRODUCT SUCCESS | count={}",
-                    response.size()
-            );
+            log.info("[GET_CATEGORY_FOR_PRODUCT] MASTERPRODUCT SUCCESS | count={}", response.size());
 
             return response;
         }
@@ -1947,26 +2296,16 @@ public class FmProductServiceImpl implements FmProductService {
          * INVALID PRODUCT TYPE
          * ============================================================
          */
-        log.error(
-                "[GET_CATEGORY_FOR_PRODUCT] Invalid productType={}",
-                productType
-        );
+        log.error("[GET_CATEGORY_FOR_PRODUCT] Invalid productType={}", productType);
 
-        throw new IllegalArgumentException(
-                "Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT."
-        );
+        throw new IllegalArgumentException("Invalid product type. Allowed values are PRODUCT or MASTERPRODUCT.");
     }
+
     @Override
     @Transactional
-    public FmProductCategoryUpdateResponseDto updateCategoryForProductByProductType(
-            FmProductCategoryUpdateRequestDto request) {
+    public FmProductCategoryUpdateResponseDto updateCategoryForProductByProductType(FmProductCategoryUpdateRequestDto request) {
 
-        log.info(
-                "[UPDATE_CATEGORY_FOR_PRODUCT] START | productName={} | productType={} | updatedCategoryId={}",
-                request.getProductName(),
-                request.getProductType(),
-                request.getUpdatedCategoryId()
-        );
+        log.info("[UPDATE_CATEGORY_FOR_PRODUCT] START | productName={} | productType={} | updatedCategoryId={}", request.getProductName(), request.getProductType(), request.getUpdatedCategoryId());
 
         /*
          * ============================================================
@@ -1992,20 +2331,13 @@ public class FmProductServiceImpl implements FmProductService {
          * "Does this category ID exist in the categories table?"
          * ============================================================
          */
-        long categoryCount = productRepository.countCategoryById(
-                updatedCategoryId
-        );
+        long categoryCount = productRepository.countCategoryById(updatedCategoryId);
 
         if (categoryCount == 0) {
 
-            log.error(
-                    "[UPDATE_CATEGORY_FOR_PRODUCT] Category not found | categoryId={}",
-                    updatedCategoryId
-            );
+            log.error("[UPDATE_CATEGORY_FOR_PRODUCT] Category not found | categoryId={}", updatedCategoryId);
 
-            throw new ResourceNotFoundException("Category not found with id : "
-                    + updatedCategoryId
-            );
+            throw new ResourceNotFoundException("Category not found with id : " + updatedCategoryId);
         }
 
 
@@ -2031,27 +2363,15 @@ public class FmProductServiceImpl implements FmProductService {
          */
         if (FmAppConstants.PRODUCT_TYPE_PRODUCT.equals(productType)) {
 
-            log.info(
-                    "[UPDATE_CATEGORY_FOR_PRODUCT] Updating PRODUCT | productName={}",
-                    productName
-            );
+            log.info("[UPDATE_CATEGORY_FOR_PRODUCT] Updating PRODUCT | productName={}", productName);
 
-            List<Integer> outletCategoryIds =
-                    productRepository.findOutletCategoryIdsByProductName(
-                            productName
-                    );
+            List<Integer> outletCategoryIds = productRepository.findOutletCategoryIdsByProductName(productName);
 
             if (outletCategoryIds == null || outletCategoryIds.isEmpty()) {
 
-                log.error(
-                        "[UPDATE_CATEGORY_FOR_PRODUCT] Product not found | productName={}",
-                        productName
-                );
+                log.error("[UPDATE_CATEGORY_FOR_PRODUCT] Product not found | productName={}", productName);
 
-                throw new ResourceNotFoundException(
-                        "Product not found with name : "
-                                + productName
-                );
+                throw new ResourceNotFoundException("Product not found with name : " + productName);
             }
 
             int totalUpdatedRecords = 0;
@@ -2066,49 +2386,26 @@ public class FmProductServiceImpl implements FmProductService {
 
                 if (outletCategoryId == null) {
 
-                    log.warn(
-                            "[UPDATE_CATEGORY_FOR_PRODUCT] Outlet Category ID is null | productName={}",
-                            productName
-                    );
+                    log.warn("[UPDATE_CATEGORY_FOR_PRODUCT] Outlet Category ID is null | productName={}", productName);
 
                     continue;
                 }
 
-                int updatedRecords =
-                        productRepository.updateOutletCategoryId(
-                                outletCategoryId,
-                                updatedCategoryId
-                        );
+                int updatedRecords = productRepository.updateOutletCategoryId(outletCategoryId, updatedCategoryId);
 
                 totalUpdatedRecords = totalUpdatedRecords + updatedRecords;
             }
 
             if (totalUpdatedRecords == 0) {
 
-                log.error(
-                        "[UPDATE_CATEGORY_FOR_PRODUCT] Outlet category update failed | productName={}",
-                        productName
-                );
+                log.error("[UPDATE_CATEGORY_FOR_PRODUCT] Outlet category update failed | productName={}", productName);
 
-                throw new ResourceNotFoundException(
-                        "Outlet Category not found for product : "
-                                + productName
-                );
+                throw new ResourceNotFoundException("Outlet Category not found for product : " + productName);
             }
 
-            log.info(
-                    "[UPDATE_CATEGORY_FOR_PRODUCT] PRODUCT category updated successfully | productName={} | updatedCategoryId={} | records={}",
-                    productName,
-                    updatedCategoryId,
-                    totalUpdatedRecords
-            );
+            log.info("[UPDATE_CATEGORY_FOR_PRODUCT] PRODUCT category updated successfully | productName={} | updatedCategoryId={} | records={}", productName, updatedCategoryId, totalUpdatedRecords);
 
-            return FmProductMapper.mapCategoryUpdateResponse(
-                    productType,
-                    productName,
-                    updatedCategoryId,
-                    totalUpdatedRecords
-            );
+            return FmProductMapper.mapCategoryUpdateResponse(productType, productName, updatedCategoryId, totalUpdatedRecords);
         }
 
 
@@ -2129,35 +2426,20 @@ public class FmProductServiceImpl implements FmProductService {
          * All matching records will have category_id updated.
          * ============================================================
          */
-        if (FmAppConstants.PRODUCT_TYPE_MASTER_PRODUCT
-                .equals(productType)) {
+        if (FmAppConstants.PRODUCT_TYPE_MASTER_PRODUCT.equals(productType)) {
 
-            log.info(
-                    "[UPDATE_CATEGORY_FOR_PRODUCT] Updating MASTERPRODUCT | productName={}",
-                    productName
-            );
+            log.info("[UPDATE_CATEGORY_FOR_PRODUCT] Updating MASTERPRODUCT | productName={}", productName);
 
             /*
              * First check whether Master Product exists.
              */
-            List<FmMasterProductCategoryProjection> masterProducts =
-                    productRepository
-                            .findMasterProductCategoryDetails(
-                                    productName
-                            );
+            List<FmMasterProductCategoryProjection> masterProducts = productRepository.findMasterProductCategoryDetails(productName);
 
-            if (masterProducts == null
-                    || masterProducts.isEmpty()) {
+            if (masterProducts == null || masterProducts.isEmpty()) {
 
-                log.error(
-                        "[UPDATE_CATEGORY_FOR_PRODUCT] Master Product not found | productName={}",
-                        productName
-                );
+                log.error("[UPDATE_CATEGORY_FOR_PRODUCT] Master Product not found | productName={}", productName);
 
-                throw new ResourceNotFoundException(
-                        "Master Product not found with name : "
-                                + productName
-                );
+                throw new ResourceNotFoundException("Master Product not found with name : " + productName);
             }
 
             /*
@@ -2165,39 +2447,18 @@ public class FmProductServiceImpl implements FmProductService {
              * Update all matching master products
              * ========================================================
              */
-            int updatedRecords =
-                    productRepository
-                            .updateMasterProductCategoryId(
-                                    productName,
-                                    updatedCategoryId
-                            );
+            int updatedRecords = productRepository.updateMasterProductCategoryId(productName, updatedCategoryId);
 
             if (updatedRecords == 0) {
 
-                log.error(
-                        "[UPDATE_CATEGORY_FOR_PRODUCT] Master Product category update failed | productName={}",
-                        productName
-                );
+                log.error("[UPDATE_CATEGORY_FOR_PRODUCT] Master Product category update failed | productName={}", productName);
 
-                throw new ResourceNotFoundException(
-                        "Unable to update category for Master Product : "
-                                + productName
-                );
+                throw new ResourceNotFoundException("Unable to update category for Master Product : " + productName);
             }
 
-            log.info(
-                    "[UPDATE_CATEGORY_FOR_PRODUCT] MASTERPRODUCT category updated successfully | productName={} | updatedCategoryId={} | records={}",
-                    productName,
-                    updatedCategoryId,
-                    updatedRecords
-            );
+            log.info("[UPDATE_CATEGORY_FOR_PRODUCT] MASTERPRODUCT category updated successfully | productName={} | updatedCategoryId={} | records={}", productName, updatedCategoryId, updatedRecords);
 
-            return FmProductMapper.mapCategoryUpdateResponse(
-                    productType,
-                    productName,
-                    updatedCategoryId,
-                    updatedRecords
-            );
+            return FmProductMapper.mapCategoryUpdateResponse(productType, productName, updatedCategoryId, updatedRecords);
         }
 
 
@@ -2206,14 +2467,9 @@ public class FmProductServiceImpl implements FmProductService {
          * INVALID PRODUCT TYPE
          * ============================================================
          */
-        log.error(
-                "[UPDATE_CATEGORY_FOR_PRODUCT] Invalid productType={}",
-                productType
-        );
+        log.error("[UPDATE_CATEGORY_FOR_PRODUCT] Invalid productType={}", productType);
 
-        throw new IllegalArgumentException(
-                "Invalid productType please enter valid product type :"
-        );
+        throw new IllegalArgumentException("Invalid productType please enter valid product type :");
     }
 
     /**
@@ -2221,32 +2477,18 @@ public class FmProductServiceImpl implements FmProductService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<OutletProductPricingDto> getProductPricingByOutletId(
-            Integer outletId
-    ) {
+    public List<OutletProductPricingDto> getProductPricingByOutletId(Integer outletId) {
 
-        log.info(
-                "GET_PRODUCT_PRICING_BY_OUTLET | outletId={}",
-                outletId
-        );
+        log.info("GET_PRODUCT_PRICING_BY_OUTLET | outletId={}", outletId);
 
         if (outletId == null) {
-            throw new IllegalArgumentException(
-                    "Outlet ID is required"
-            );
+            throw new IllegalArgumentException("Outlet ID is required");
         }
 
-        List<OutletProductPricingProjection> products =
-                productRepository.findProductPricingByOutletId(outletId);
+        List<OutletProductPricingProjection> products = productRepository.findProductPricingByOutletId(outletId);
 
-        return products.stream()
-                .map(product -> new OutletProductPricingDto(
-                        product.getProductId(),
-                        product.getProductName(),
-                        product.getMerchantPrice(),
-                        product.getOnlinePrice()
-                ))
-                .toList();
+        return products.stream().map(product -> new OutletProductPricingDto(product.getProductId(), product.getProductName(), product.getMerchantPrice(), product.getOnlinePrice())).toList();
     }
 
 }
+

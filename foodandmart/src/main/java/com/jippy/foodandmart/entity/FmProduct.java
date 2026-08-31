@@ -91,6 +91,10 @@ public class FmProduct {
     @Column(name = "is_toggle")
     private Boolean isToggle;
 
+
+    @Column(name = "product_type", length = 20)
+    private String productType;
+
     @JsonIgnore
     @OneToMany(
             mappedBy = "product",

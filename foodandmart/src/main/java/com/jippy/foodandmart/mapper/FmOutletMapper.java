@@ -1,11 +1,12 @@
-//package com.jippy.foodandmart.mapper;
+
+        //package com.jippy.foodandmart.mapper;
 //
 //import com.jippy.foodandmart.dto.FmOutletCreatedDTO;
 //import com.jippy.foodandmart.dto.FmOutletRequestDTO;
 //import com.jippy.foodandmart.entity.FmOutlet;
 //import com.jippy.foodandmart.entity.FmOutletAddress;
 //
-///**
+/// **
 // * Static utility class for converting between {@link FmOutletRequestDTO} /
 // * {@link FmOutletCreatedDTO} and the {@link FmOutlet} / {@link FmOutletAddress} entities.
 // *
@@ -134,7 +135,7 @@
 //}
 
 
-package com.jippy.foodandmart.mapper;
+        package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.division.dto.FmNearbyOutletDto;
@@ -181,6 +182,22 @@ public final class FmOutletMapper {
     /**
      * Converts an {@link FmOutletRequestDTO} into a new {@link FmOutlet} entity.
      */
+//    public static FmOutlet toEntity(FmOutletRequestDTO dto) {
+//
+//        FmOutlet outlet = new FmOutlet();
+//
+//        outlet.setOutletName(dto.getOutletName().trim());
+//        outlet.setMerchantId(dto.getMerchantId());
+//        outlet.setCuisineType(dto.getCuisineType());
+//        outlet.setOutletPhone(dto.getOutletPhone().trim());
+//        outlet.setOutletEmail(dto.getOutletEmail());
+//        outlet.setAlternateOutletPhone(dto.getAlternateOutletPhone());
+//        outlet.setIsActive(FmAppConstants.FLAG_YES);
+//        outlet.setIsApproved(FmAppConstants.STATUS_FALSE);
+//        outlet.setUpdatedBy(dto.getUpdatedBy());
+//
+//        return outlet;
+//    }
     public static FmOutlet toEntity(FmOutletRequestDTO dto) {
 
         FmOutlet outlet = new FmOutlet();
@@ -191,14 +208,21 @@ public final class FmOutletMapper {
         outlet.setOutletPhone(dto.getOutletPhone().trim());
         outlet.setOutletEmail(dto.getOutletEmail());
         outlet.setAlternateOutletPhone(dto.getAlternateOutletPhone());
+
+        // ============================================================
+        // VEG / GST
+        // ============================================================
+
+        outlet.setIsVegOutlet(dto.getIsVegOutlet() != null ? dto.getIsVegOutlet() : false);
+
+        outlet.setIsGstApplied(dto.getIsGstApplied() != null ? dto.getIsGstApplied() : false);
+
         outlet.setIsActive(FmAppConstants.FLAG_YES);
         outlet.setIsApproved(FmAppConstants.STATUS_FALSE);
         outlet.setUpdatedBy(dto.getUpdatedBy());
 
         return outlet;
     }
-
-
 // OUTLET ENTITY -> OUTLET RESPONSE DTO
 
     public static FmOutletResponseDto toOutletResponseDto(FmOutlet outlet) {
@@ -216,6 +240,8 @@ public final class FmOutletMapper {
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
         dto.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
+        dto.setIsVegOutlet(outlet.getIsVegOutlet());
+        dto.setIsGstApplied(outlet.getIsGstApplied());
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());
@@ -261,6 +287,7 @@ public final class FmOutletMapper {
         fmAddressRequestDto.setAddressType(fmOutletAddress.getAddressType());
         return fmAddressRequestDto;
     }
+
     // ADDRESS -> OUTLET RESPONSE DTO
     public static void mapAddressToOutletResponse(FmOutletResponseDto response, FmOutletAddress address) {
 
@@ -291,6 +318,7 @@ public final class FmOutletMapper {
 
         response.setAccountHolderName(bankDetails.getAccountHolderName());
     }
+
     //    for feign client to map the address details from Outletdto to AddressRequestdto to send to address microservice
     public static FmAddressRequestDto convertToAddressReqDto(FmOutletRequestDTO dto, Integer outletId, Integer stateId, Integer areaId) {
         FmAddressRequestDto fmAddressRequestDto = new FmAddressRequestDto();
@@ -319,6 +347,7 @@ public final class FmOutletMapper {
 
         response.setOperatingDays(outletDays.stream().map(FmOutletDayMapper::toDTO).toList());
     }
+
     /**
      * Builds an {@link FmOutletAddress} from the DTO plus resolved integer FKs.
      */
@@ -336,7 +365,7 @@ public final class FmOutletMapper {
         address.setAreaId(dto.getAreaId());
         address.setAddressType(dto.getAddressType());
         return address;
-}
+    }
 
     // ── Entity → DTO ──────────────────────────────────────────────────────────
 
@@ -354,6 +383,8 @@ public final class FmOutletMapper {
         dto.setCuisineType(outlet.getCuisineType());
         dto.setOutletPhone(outlet.getOutletPhone());
         dto.setIsActive(outlet.getIsActive());
+        dto.setIsVegOutlet(outlet.getIsVegOutlet());
+        dto.setIsGstApplied(outlet.getIsGstApplied());
 
         return dto;
     }
@@ -417,14 +448,34 @@ public final class FmOutletMapper {
                 }
 
                 // Map Timings
+                // IMPORTANT:
+                // A single day can have multiple timing slots.
+                // Example:
+                // Monday -> 09:00-14:00
+                // Monday -> 18:00-22:00
+                //
+                // Use day + openingTime + closingTime as the key so that
+                // multiple slots for the same day are preserved.
                 String day = row.getOutletDay();
-                if (day != null && !outletTimingMap.containsKey(day)) {
-                    FmOutletTimingDto timing = new FmOutletTimingDto();
-                    timing.setDay(day);
-                    timing.setIsOpen(row.getIsOpen());
-                    timing.setOpeningTime(row.getOpeningTime());
-                    timing.setClosingTime(row.getClosingTime());
-                    outletTimingMap.put(day, timing);
+
+                if (day != null) {
+
+                    String timingKey =
+                            day + "_"
+                                    + row.getOpeningTime() + "_"
+                                    + row.getClosingTime();
+
+                    if (!outletTimingMap.containsKey(timingKey)) {
+
+                        FmOutletTimingDto timing = new FmOutletTimingDto();
+
+                        timing.setDay(day);
+                        timing.setIsOpen(row.getIsOpen());
+                        timing.setOpeningTime(row.getOpeningTime());
+                        timing.setClosingTime(row.getClosingTime());
+
+                        outletTimingMap.put(timingKey, timing);
+                    }
                 }
 
                 // Map Categories
@@ -537,74 +588,74 @@ public final class FmOutletMapper {
                         /*
                          * Map Product Variants.
                          */
-                if (Boolean.TRUE.equals(row.getHasProductVariants()) && row.getProductVariantId() != null) {
+                        if (Boolean.TRUE.equals(row.getHasProductVariants()) && row.getProductVariantId() != null) {
 
-                    boolean variantExists = false;
+                            boolean variantExists = false;
 
-                    // ---------------------------------------------------------
-                    // Check whether this variant was already added
-                    // ---------------------------------------------------------
-                    for (FmProductVariantDTO existingVariant : product.getVariants()) {
+                            // ---------------------------------------------------------
+                            // Check whether this variant was already added
+                            // ---------------------------------------------------------
+                            for (FmProductVariantDTO existingVariant : product.getVariants()) {
 
-                        if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
+                                if (existingVariant.getVariantId().equals(row.getProductVariantId())) {
 
-                            variantExists = true;
-                            break;
-                        }
-                    }
+                                    variantExists = true;
+                                    break;
+                                }
+                            }
 
-            // ---------------------------------------------------------
-            // Add variant only if it does not already exist
-            // ---------------------------------------------------------
-                    if (!variantExists) {
+                            // ---------------------------------------------------------
+                            // Add variant only if it does not already exist
+                            // ---------------------------------------------------------
+                            if (!variantExists) {
 
-                        FmProductVariantDTO variant = new FmProductVariantDTO();
+                                FmProductVariantDTO variant = new FmProductVariantDTO();
 
-            //                                variant.setVariantId(row.getProductVariantId());
-            //                                variant.setVariantName(row.getVariantName());
-            //
-            //                                /*
-            //                                 * Customer sees online price.
-            //                                 * Merchant sees merchant price.
-            //                                 */
-            //                                if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
-            //                                        && row.getOnlinePrice() != null) {
-            //
-            //                                    variant.setPrice(row.getOnlinePrice());
-            //
-            //                                } else {
-            //
-            //                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
-            //                                }
-            //
-            //                                product.getVariants().add(variant);
-
-
-                // =========================================================
-                // Variant Option
-                // =========================================================
-
-                variant.setVariantId(row.getProductVariantId());
+                                //                                variant.setVariantId(row.getProductVariantId());
+                                //                                variant.setVariantName(row.getVariantName());
+                                //
+                                //                                /*
+                                //                                 * Customer sees online price.
+                                //                                 * Merchant sees merchant price.
+                                //                                 */
+                                //                                if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)
+                                //                                        && row.getOnlinePrice() != null) {
+                                //
+                                //                                    variant.setPrice(row.getOnlinePrice());
+                                //
+                                //                                } else {
+                                //
+                                //                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+                                //                                }
+                                //
+                                //                                product.getVariants().add(variant);
 
 
-                // =========================================================
-                // Variant Group Value
-                // =========================================================
+                                // =========================================================
+                                // Variant Option
+                                // =========================================================
+
+                                variant.setVariantId(row.getProductVariantId());
+
+
+                                // =========================================================
+                                // Variant Group Value
+                                // =========================================================
 
 //                commented for UI
 //              variant.setVariantValueId(row.getVariantValueId());
 
-                        variant.setVariantName(row.getVariantName());
+                                variant.setVariantName(row.getVariantName());
 
 
-                    // =========================================================
-                    // Variant Group
-                    // =========================================================
+                                // =========================================================
+                                // Variant Group
+                                // =========================================================
 
 //                  commented for UI
 //                  variant.setVariantGroupId(row.getVariantGroupId());
 
-                    variant.setGroupName(row.getVariantGroupName());
+                                variant.setGroupName(row.getVariantGroupName());
 
 //                  variant.setSelectionType(row.getVariantSelectionType());
 
@@ -614,57 +665,57 @@ public final class FmOutletMapper {
 //                  variant.setMaxSelection(row.getVariantMaxSelection());
 
 
-                        // =========================================================
-                        // Price Type
-                        // MAIN / ADD
-                        // =========================================================
+                                // =========================================================
+                                // Price Type
+                                // MAIN / ADD
+                                // =========================================================
 
-                        variant.setPriceType(row.getVariantPriceType());
+                                variant.setPriceType(row.getVariantPriceType());
 
-                        // =========================================================
-                        // Variant Pricing
-                        // =========================================================
-                        //
-                        // MERCHANT:
-                        //     merchantPrice = variant_price
-                        //     price         = null
-                        //
-                        // CUSTOMER:
-                        //     If variant online price exists:
-                        //         merchantPrice = null
-                        //         price = variant online price
-                        //
-                        //     If variant online price does NOT exist:
-                        //         merchantPrice = variant merchant price
-                        //         price = null
-                        // =========================================================
+                                // =========================================================
+                                // Variant Pricing
+                                // =========================================================
+                                //
+                                // MERCHANT:
+                                //     merchantPrice = variant_price
+                                //     price         = null
+                                //
+                                // CUSTOMER:
+                                //     If variant online price exists:
+                                //         merchantPrice = null
+                                //         price = variant online price
+                                //
+                                //     If variant online price does NOT exist:
+                                //         merchantPrice = variant merchant price
+                                //         price = null
+                                // =========================================================
 
-                        if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
+                                if (FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
 
-                            // Merchant gets variant merchant price
-                            variant.setMerchantPrice(row.getVariantMerchantPrice());
-                            variant.setOnlinePrice(null);
+                                    // Merchant gets variant merchant price
+                                    variant.setMerchantPrice(row.getVariantMerchantPrice());
+                                    variant.setOnlinePrice(null);
 
-            } else if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
+                                } else if (FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType)) {
 
-                if (row.getVariantOnlinePrice() != null) {
+                                    if (row.getVariantOnlinePrice() != null) {
 
-                    // Customer gets variant online price
-                    variant.setMerchantPrice(null);
-                    variant.setOnlinePrice(row.getVariantOnlinePrice());
+                                        // Customer gets variant online price
+                                        variant.setMerchantPrice(null);
+                                        variant.setOnlinePrice(row.getVariantOnlinePrice());
 
-                } else {
+                                    } else {
 
-                    // No variant online price → fallback to merchant price
-                    variant.setMerchantPrice(row.getVariantMerchantPrice());
-                    variant.setOnlinePrice(null);
-                }
-            }
-                    // =========================================================
-                    // Add to product
-                    // =========================================================
+                                        // No variant online price → fallback to merchant price
+                                        variant.setMerchantPrice(row.getVariantMerchantPrice());
+                                        variant.setOnlinePrice(null);
+                                    }
+                                }
+                                // =========================================================
+                                // Add to product
+                                // =========================================================
 
-                    product.getVariants().add(variant);
+                                product.getVariants().add(variant);
                             }
                         }
                     }
@@ -676,13 +727,9 @@ public final class FmOutletMapper {
         // FINAL OUTLET RESPONSE
         // =========================================================
 
-        outlet.setOutletTimings(
-                new ArrayList<>(outletTimingMap.values())
-        );
+        outlet.setOutletTimings(new ArrayList<>(outletTimingMap.values()));
 
-        outlet.setCategories(
-                new ArrayList<>(categoryMap.values())
-        );
+        outlet.setCategories(new ArrayList<>(categoryMap.values()));
 
         return outlet;
     }
@@ -1230,16 +1277,15 @@ public final class FmOutletMapper {
     }
 
 //    ------------------------------------------------------------------------------------------
+
     /**
      * Converts the updated outlet entity and request DTO into
      * the response returned after successful outlet update.
-     *
+     * <p>
      * Note:
      * Username and Password are not part of the update API.
      */
-    public static FmUpdateOutletRequestDTO toUpdateResponseDto(
-            FmUpdateOutletRequestDTO request,
-            FmOutlet outlet) {
+    public static FmUpdateOutletRequestDTO toUpdateResponseDto(FmUpdateOutletRequestDTO request, FmOutlet outlet) {
 
         FmUpdateOutletRequestDTO response = new FmUpdateOutletRequestDTO();
 
@@ -1296,6 +1342,7 @@ public final class FmOutletMapper {
 
         return day;
     }
+
     private static BigDecimal toBigDecimal(Object o) {
 
         if (o == null) {
@@ -1338,7 +1385,7 @@ public final class FmOutletMapper {
 
             activeOffer.setRemainingTime(remainingTimeStr);
 
-            log.info("===================={} ",remainingTimeStr);
+            log.info("===================={} ", remainingTimeStr);
         }
 
         return activeOffer;

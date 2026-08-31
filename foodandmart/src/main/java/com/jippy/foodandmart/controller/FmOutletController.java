@@ -1,26 +1,31 @@
-package com.jippy.foodandmart.controller;
+
+        package com.jippy.foodandmart.controller;
+
 import com.jippy.foodandmart.constants.FmAppConstants;
-import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
-import com.jippy.foodandmart.entity.FmOutlet;
-import com.jippy.foodandmart.exception.InvalidUserTypeException;
-import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.repository.FmMerchantRepository;
 import com.jippy.foodandmart.service.FmSpecializedOutletService;
 import com.jippy.foodandmart.service.IFmOutletService;
 import com.jippy.foodandmart.service.S3Service;
+import com.jippy.foodandmart.exception.InvalidUserTypeException;
+import com.jippy.foodandmart.exception.ResourceNotFoundException;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,18 +33,15 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.DateTimeException;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.function.Function;
 
-/**
- * REST controller for all outlet management endpoints.
- *
- * <p>Handles single outlet creation, queries, and bulk upload via
- * CSV or Excel files. File parsing (Excel/CSV → DTO list) lives here
- * in private helpers to keep the service layer free of file-format concerns.</p>
- */
 @RestController
 @Validated
 @RequestMapping("/api/fm/outlets")
@@ -53,31 +55,27 @@ public class FmOutletController {
     private final FmMerchantRepository merchantRepository;
 
 
-    /**
-     * Creates a single outlet from a JSON request body.
-     *
-     * <p>POST /api/outlets</p>
-     *
-     * <p>Why {@code @Valid}: the DTO carries JSR-303 annotations (NotBlank,
-     * Pattern for phone, etc.). Spring validates them before the method body
-     * runs, returning a 400 with field-level errors if any fail.</p>
-     *
-     * @param dto the validated outlet creation request
-     * @return 201 with an {@link FmOutletCreatedDTO} including portal credentials
-     */
+    // ============================================================
+    // CREATE OUTLET - BULK / OTP VALIDATION FLOW
+    // ============================================================
+
     @PostMapping(value = "/bulkUpload", consumes = MediaType.APPLICATION_JSON_VALUE)
-//    public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutlet(
     public ResponseEntity<FmApiResponse<FmOutletCreatedDTO>> createOutletForBulkUploadAndOtpValidation(@RequestHeader("Create-Outlet-Token") String token, @Valid @RequestBody FmOutletRequestDTO dto) {
 
-        log.info("[OUTLET] POST /api/outlets name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
-//        FmOutletCreatedDTO saved = outletService.createOutlet(dto);
+        log.info("[OUTLET] POST /api/outlets/bulkUpload name={}, merchantId={}, phone={}", dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone());
+
         FmOutletCreatedDTO saved = outletService.createOutletForBulkUploadAndOtpValidation(dto);
 
         log.info("[OUTLET] Created: outletId={}", saved.getOutletId());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Outlet created successfully", saved));
     }
 
-    //    --------------- CREATE OUTLET WITH ADDRESS AND BANK DETAILS -----------------------------------------
+
+    // ============================================================
+    // CREATE OUTLET
+    // ============================================================
+
     @PostMapping(value = "/createOutlet", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses({@ApiResponse(responseCode = "201", description = "Outlet created successfully"), @ApiResponse(responseCode = "400", description = "Validation Failed"), @ApiResponse(responseCode = "404", description = "Merchant Not Found"), @ApiResponse(responseCode = "409", description = "Duplicate Resource")})
     public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(@Valid @RequestBody FmOutletRequestDTO dto) {
@@ -91,19 +89,18 @@ public class FmOutletController {
         return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Outlet created successfully", response));
     }
 
+
+    // ============================================================
+    // OUTLET IMAGE
+    // ============================================================
+
     @PostMapping(value = "/{outletId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet image uploaded/updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid image"), @ApiResponse(responseCode = "404", description = "Outlet Not Found"), @ApiResponse(responseCode = "413", description = "Image size exceeds 5 MB")})
-    public ResponseEntity<FmApiResponse<String>> uploadOrUpdateOutletImage(
-
-            @PathVariable("outletId") Integer outletId,
-
-            @RequestPart("image") MultipartFile image) {
+    public ResponseEntity<FmApiResponse<String>> uploadOrUpdateOutletImage(@PathVariable("outletId") Integer outletId, @RequestPart("image") MultipartFile image) {
 
         log.info("Received outlet image upload/update request. outletId={}, fileName={}", outletId, image != null ? image.getOriginalFilename() : null);
 
         String imageUrl = outletService.uploadOrUpdateOutletImage(outletId, image);
-
-        log.info("Outlet image uploaded/updated successfully. outletId={}", outletId);
 
         return ResponseEntity.ok(FmApiResponse.success("Outlet image uploaded successfully", imageUrl));
     }
@@ -111,11 +108,7 @@ public class FmOutletController {
 
     @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet image uploaded successfully"), @ApiResponse(responseCode = "400", description = "Invalid image"), @ApiResponse(responseCode = "404", description = "Merchant Not Found"), @ApiResponse(responseCode = "413", description = "Image size exceeds 5 MB")})
-    public ResponseEntity<FmApiResponse<String>> uploadOutletImage(
-
-            @RequestParam("merchantId") Integer merchantId,
-
-            @RequestPart("image") MultipartFile image) {
+    public ResponseEntity<FmApiResponse<String>> uploadOutletImage(@RequestParam("merchantId") Integer merchantId, @RequestPart("image") MultipartFile image) {
 
         log.info("Received outlet image upload request. merchantId={}, fileName={}", merchantId, image != null ? image.getOriginalFilename() : null);
 
@@ -125,607 +118,1140 @@ public class FmOutletController {
 
         String imageUrl = s3Service.uploadOutletImage(image, merchantId);
 
-        log.info("Outlet image uploaded successfully. merchantId={}", merchantId);
-
         return ResponseEntity.ok(FmApiResponse.success("Outlet image uploaded successfully", imageUrl));
     }
-    //---------------------------------------------------------------------------------
 
-    /**
-     * Updates outlet details by Merchant.
-     * <p>
-     * This API allows a merchant to update
-     * outlet information including:
-     * - Outlet Details
-     * - Bank Details
-     * - Address Details
-     * - Operating Days
-     * <p>
-     * Username and Password cannot be updated
-     * through this API.
-     */
+
+    // ============================================================
+    // UPDATE OUTLET
+    // ============================================================
+
     @PutMapping("/updateOutletDetailsByMerchant/{outletId}")
-    @Operation(summary = "Update Outlet Details By Merchant ", description = "Allows Merchant to update outlet details," + " address, bank details and operating days. " + "[Username and Password cannot be updated].")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Outlet updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid request"), @ApiResponse(responseCode = "404", description = "Outlet or Merchant not found")})
+    @Operation(summary = "Update Outlet Details By Merchant", description = "Allows Merchant to update outlet details, address, " + "bank details and operating days. " + "[Username and Password cannot be updated].")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid request"), @ApiResponse(responseCode = "404", description = "Outlet or Merchant not found")})
     public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(@PathVariable Integer outletId, @Valid @RequestBody FmUpdateOutletRequestDTO dto) {
 
-        log.info("Received request to update outlet details for outletId : {}", outletId);
-
         FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto);
-
-        log.info("Outlet details updated successfully for outletId : {}", outletId);
 
         return ResponseEntity.ok(FmApiResponse.success("Outlet details updated successfully", response));
     }
 
-    //    --------------------------------------------------------------------------------------------
-    //edit and Update outlet product details
+
+    // ============================================================
+    // EDIT OUTLET PRODUCT DETAILS
+    // ============================================================
+
     @PutMapping("/editAndUpdateOutletProducts")
     @Operation(summary = "Update outlet details", description = "Updates outlet timings, categories, products and product timings. " + "OutletId, outletName and outletPhone are not editable.")
-    public ResponseEntity<FmOutletDetailsDto> updateOutletDetailsByMerchant(
+    public ResponseEntity<FmOutletDetailsDto> updateOutletDetailsByMerchant(@Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId,
 
-            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId, @RequestParam String userType, @RequestBody FmOutletDetailsDto dto) {
+                                                                            @RequestParam String userType,
 
-        log.info("Received request to update outlet with id={}", outletId);
+                                                                            @RequestBody FmOutletDetailsDto dto) {
 
-        // Call service
         FmOutletDetailsDto response = outletService.updateOutletDetails(outletId, dto, userType);
-
-        log.info("Successfully updated outlet with id={}", outletId);
 
         return ResponseEntity.ok(response);
     }
 
-    //    -----------------------------------------------------------------------------------------
-//    for getOutletDetails API - to fetch outlet details including menu, categories,
-//    product timings and outlet timings based on user type (customer or merchant)
+
+    // ============================================================
+    // GET OUTLET DETAILS
+    // ============================================================
+
     @Operation(summary = "Get Outlet Details", description = """
-            Fetches complete outlet details including outlet information, address,
-            bank details, operating days, categories and products. based on user type
-            
-            Prerequisites - to use this API:
-            1. Merchant should be created.
-            2. Outlet should be created.
-            3. Outlet Category should be created and mapped to the outlet.
-            4. At least one Product should be created under the Outlet Category.
-            5. (Optional) Product Online Pricing can be configured.
-            6. (Optional) Product Available Timings can be configured.
-            -- Ignore if  already Created/Exists.
-            
-            Note:
-            - If the outlet has no Outlet Categories or Products, this API will not return any data.
-            - For CUSTOMER userType, favourite status is returned when customerId is provided.
-            - For MERCHANT userType, complete outlet configuration details are returned.
+            Fetches complete outlet details including outlet information,
+            address, bank details, operating days, categories and products.
+            based on user type.
             """)
     @ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
     @ApiResponse(responseCode = "400", description = "Invalid userType")
     @ApiResponse(responseCode = "404", description = "Outlet not found")
     @GetMapping("/getOutletDetails")
-    public ResponseEntity<FmOutletDetailsDto> getOutletDetails(
+    public ResponseEntity<FmOutletDetailsDto> getOutletDetails(@RequestParam Integer outletId, @RequestParam String userType, @RequestParam(required = false) Integer customerId) {
 
-            @Parameter(description = "Outlet ID", required = true) @RequestParam Integer outletId,
-
-            @Parameter(description = "User Type (CUSTOMER / MERCHANT)", required = true) @RequestParam String userType,
-
-            @Parameter(description = "Customer ID (Optional). If provided, the " + "response includes the is_favourite feild status of the outlet " + "for that customer.", required = false) @RequestParam(required = false) Integer customerId) {
-
-        log.info("Fetching outlet details for outletId={}, userType={}, customerId={}", outletId, userType, customerId);
-        // Custom validation for case sensitivity
         if (!FmAppConstants.TYPE_CUSTOMER.equalsIgnoreCase(userType) && !FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(userType)) {
+
             throw new InvalidUserTypeException("Invalid userType. Allowed values: CUSTOMER or MERCHANT");
         }
 
         FmOutletDetailsDto outletDetails = outletService.getOutletDetails(outletId, userType, customerId);
 
-        log.info("Successfully fetched outlet details for outletId: {}, userType: {}", outletId, userType);
-
         return ResponseEntity.ok(outletDetails);
     }
-//---------------------------------------------------------------------------------------------------
 
-    @Operation(summary = "Get Outlets by Merchant ID", description = "Fetch all outlets for a " + "merchant with state, city, and area details. Throws error if outlet is not approved.")
-    //    for getOutletsByMerchant API - to fetch outlet's, address-state,city,area details based on merchant id
-    @ApiResponse(responseCode = "200", description = "Outlets fetched successfully")
-    @ApiResponse(responseCode = "400", description = "Outlet not approved")
-    @ApiResponse(responseCode = "404", description = "No outlets found")
+
+    // ============================================================
+    // GET OUTLETS BY MERCHANT
+    // ============================================================
+
     @GetMapping("/getOutletsByMerchant")
-    public ResponseEntity<List<FmOutletByMerchantDto>> getOutletsByFmMerchant(
+    public ResponseEntity<List<FmOutletByMerchantDto>> getOutletsByFmMerchant(@Positive(message = "Merchant ID must be a positive number") @RequestParam Integer merchantId) {
 
-            @Parameter(description = "Merchant ID", required = true) @Positive(message = "Merchant ID must be a positive number") @RequestParam Integer merchantId) {
+        List<FmOutletByMerchantDto> outletByMerchantDetails = outletService.getOutletsByFmMerchantId(merchantId);
 
-        log.info("Fetching outlets for merchantId={}", merchantId);
-
-        List<FmOutletByMerchantDto> OutletByMerchantDetails = outletService.getOutletsByFmMerchantId(merchantId);
-
-        log.info("Successfully fetched outlets for merchantId={}", merchantId);
-
-        return ResponseEntity.ok(OutletByMerchantDetails);
+        return ResponseEntity.ok(outletByMerchantDetails);
     }
 
-//    -----------------------------------------------------------------------------------------
 
-    /**
-     * Returns all outlets as summary DTOs.
-     *
-     * <p>GET /api/outlets</p>
-     *
-     * @return 200 with list of {@link FmOutletSummaryDTO}
-     */
+    // ============================================================
+    // GET ALL OUTLETS
+    // ============================================================
+
     @GetMapping
     public ResponseEntity<FmApiResponse<List<FmOutletSummaryDTO>>> getAllOutlets() {
-        log.info("[OUTLET] GET /api/outlets");
+
         return ResponseEntity.ok(FmApiResponse.success("Outlets fetched", outletService.getAllOutletsSummary()));
     }
 
-    /**
-     * Returns all outlets belonging to the specified merchant.
-     *
-     * <p>GET /api/outlets/merchant/{merchantId}</p>
-     *
-     * @param merchantId the merchant's primary key
-     * @return 200 with list of {@link FmOutletSummaryDTO} for that merchant
-     */
+
+    // ============================================================
+    // GET OUTLETS BY MERCHANT ID
+    // ============================================================
+
     @GetMapping("/merchant/{merchantId}")
     public ResponseEntity<FmApiResponse<List<FmOutletSummaryDTO>>> getOutletsByMerchant(@PathVariable Integer merchantId) {
-        log.info("[OUTLET] GET /api/outlets/merchant/{}", merchantId);
+
         return ResponseEntity.ok(FmApiResponse.success("Outlets fetched", outletService.getOutletsByMerchantId(merchantId)));
     }
 
-    /**
-     * Fetches a single outlet by its primary key.
-     *
-     * <p>GET /api/outlets/{id}</p>
-     *
-     * @param outletId the outlet's primary key
-     * @return 200 with the {@link FmOutlet} entity
-     */
-//    @GetMapping("/{id}")
-//    public ResponseEntity<FmApiResponse<FmOutlet>> getOutletById(@PathVariable Integer id) {
-//        log.info("[OUTLET] GET /api/outlets/{}", id);
-//        return ResponseEntity.ok
-//                (FmApiResponse.success("Outlet fetched", outletService.getOutletById(id)));
-//    }
+
+    // ============================================================
+    // GET OUTLET BY ID
+    // ============================================================
+
     @GetMapping("/getOutletById/{outletId}")
-    @Operation(summary = "Get outlet details by outlet ID", description = "Fetches complete outlet details including outlet information, KYC, bank details, address, location and operating days")
+    @Operation(summary = "Get outlet details by outlet ID")
     @ApiResponse(responseCode = "200", description = "Outlet details fetched successfully")
     @ApiResponse(responseCode = "404", description = "Outlet not found")
     public ResponseEntity<FmApiResponse<FmOutletResponseDto>> getOutletById(@PathVariable Integer outletId) {
 
-        log.info("[OUTLET] GET /api/fm/outlets/getOutletById/{}", outletId);
-
         FmOutletResponseDto response = outletService.getOutletById(outletId);
-
-        log.info("Successfully returned outlet details for outletId={}", outletId);
 
         return ResponseEntity.ok(FmApiResponse.success("Outlet fetched successfully", response));
     }
 
-    /**
-     * Returns the total outlet count.
-     *
-     * <p>GET /api/outlets/count</p>
-     *
-     * @return 200 with the count as a Long
-     */
+
+    // ============================================================
+    // OUTLET COUNT
+    // ============================================================
+
     @GetMapping("/count")
     public ResponseEntity<FmApiResponse<Long>> getCount() {
+
         return ResponseEntity.ok(FmApiResponse.success("Count fetched", outletService.countOutlets()));
     }
 
-    /**
-     * Accepts a bulk outlet upload file (.xlsx or .csv) and creates one outlet per data row.
-     *
-     * <p>POST /api/outlets/upload</p>
-     *
-     * <p>Why parse in the controller: the service layer only receives a clean
-     * {@code List<OutletRequestDTO>}. Parsing is a presentation-layer concern
-     * (it deals with file format, column headers, and cell types) and belongs
-     * here rather than in the service.</p>
-     *
-     * <p>The XLS template has a header row (row 0) and an indicator/instruction
-     * row (row 1). Data rows start at index 2. The CSV template skips the
-     * indicator row unless its first column is "req".</p>
-     *
-     * @param file the uploaded .xlsx or .csv file
-     * @return 200/207/400 depending on success/partial success/full failure
-     */
+
+    // ============================================================
+    // BULK UPLOAD
+    // ============================================================
+
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FmApiResponse<FmBulkOutletResultDTO>> uploadFile(@RequestParam("file") MultipartFile file) {
 
-        log.info("[BULK] POST /api/outlets/upload file={}, size={} bytes", file.getOriginalFilename(), file.getSize());
+        log.info("[BULK] POST /api/fm/outlets/upload file={}, size={} bytes", file.getOriginalFilename(), file.getSize());
 
-        if (file.isEmpty())
+        if (file == null || file.isEmpty()) {
+
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Uploaded file is empty"));
+        }
 
         List<FmOutletRequestDTO> rows;
+
         try {
-            String fn = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+
+            String fn = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase(Locale.ROOT) : "";
+
             if (fn.endsWith(".xlsx") || fn.endsWith(".xls")) {
+
                 rows = parseExcel(file.getInputStream());
+
             } else if (fn.endsWith(".csv")) {
+
                 rows = parseCsv(file.getInputStream());
+
             } else {
+
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Only .xlsx or .csv files are supported"));
             }
+
         } catch (Exception e) {
-            log.error("[BULK] File parse error: {}", e.getMessage());
+
+            log.error("[BULK] File parse error: {}", e.getMessage(), e);
+
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Failed to parse file: " + e.getMessage()));
         }
 
-        if (rows.isEmpty())
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("No data rows found in file"));
+        if (rows.isEmpty()) {
 
-        //FmBulkOutletResultDTO result = outletService.bulkUpload(rows);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("No data rows found in file"));
+        }
+
         FmBulkOutletResultDTO result = outletBulkUpload(rows);
+
         String message = String.format("Upload complete: %d success, %d failed out of %d rows", result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
+
         HttpStatus status = result.getFailureCount() == 0 ? HttpStatus.OK : (result.getSuccessCount() == 0 ? HttpStatus.BAD_REQUEST : HttpStatus.MULTI_STATUS);
+
         return ResponseEntity.status(status).body(FmApiResponse.success(message, result));
     }
 
-    // ─── File Parsers ─────────────────────────────────────────────────────────
 
-    /**
-     * Parses an Excel (.xlsx) InputStream into a list of outlet request DTOs.
-     *
-     * <p>Why skip row index 1: the Jippy outlet upload template has a header
-     * on row 0 and an instruction/indicator row on row 1 (showing column
-     * requirements). Data rows start at index 2.</p>
-     *
-     * <p>Why use {@link XSSFWorkbook}: we only support .xlsx (OOXML format).
-     * Old .xls files would need {@code HSSFWorkbook}; if needed, use
-     * {@code WorkbookFactory.create(is)} which detects both automatically.</p>
-     *
-     * @param is the raw Excel file input stream
-     * @return list of parsed {@link FmOutletRequestDTO} (empty rows skipped)
-     * @throws Exception if the stream cannot be parsed as a valid Excel file
-     */
+    // ============================================================
+    // EXCEL PARSER
+    // ============================================================
+
     private List<FmOutletRequestDTO> parseExcel(InputStream is) throws Exception {
+
         List<FmOutletRequestDTO> list = new ArrayList<>();
+
         try (Workbook wb = new XSSFWorkbook(is)) {
+
+            if (wb.getNumberOfSheets() == 0) {
+                return list;
+            }
+
             Sheet sheet = wb.getSheetAt(0);
+
             Row headerRow = sheet.getRow(0);
-            if (headerRow == null) return list;
-            // Build a case-insensitive, no-whitespace column index map for flexible header matching
-            Map<String, Integer> colMap = new HashMap<>();
-            for (int i = 0; i <= headerRow.getLastCellNum(); i++) {
-                Cell c = headerRow.getCell(i);
-                if (c != null) colMap.put(c.toString().trim().toLowerCase().replaceAll("\\s+", ""), i);
+
+            if (headerRow == null) {
+                return list;
             }
-            // Row 1 is the template instruction row — skip it; data starts at row index 2
+
+            Map<String, Integer> colMap = new HashMap<>();
+
+            for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+
+                Cell cell = headerRow.getCell(i);
+
+                if (cell == null) {
+                    continue;
+                }
+
+                String header = normalizeHeader(cell.toString());
+
+                if (header.isBlank()) {
+                    continue;
+                }
+
+                colMap.put(header, i);
+            }
+
+            validateRequiredColumns(colMap, "Excel");
+
             for (int r = 2; r <= sheet.getLastRowNum(); r++) {
+
                 Row row = sheet.getRow(r);
-                if (row == null) continue;
-                if (getCellStr(row, colMap, "outletname").isBlank()) continue; // skip empty rows
-                list.add(mapExcelRow(row, colMap));
+
+                if (row == null || isEmptyExcelRow(row)) {
+
+                    continue;
+                }
+
+                String outletName = getCellStr(row, colMap, "outletname");
+
+                if (outletName == null || outletName.isBlank()) {
+                    continue;
+                }
+
+                FmOutletRequestDTO dto = mapExcelRow(row, colMap);
+
+                list.add(dto);
             }
         }
+
+        log.info("[BULK] Excel parsing completed. rows={}", list.size());
+
         return list;
     }
 
-    /**
-     * Parses a CSV InputStream into a list of outlet request DTOs.
-     *
-     * <p>Why check for "req" in the second row: the CSV template mirrors the
-     * Excel template which has an indicator row. If the first column of the
-     * second row is "req", it is the indicator row and should be skipped.</p>
-     *
-     * @param is the raw CSV file input stream
-     * @return list of parsed {@link FmOutletRequestDTO}
-     * @throws Exception if the stream cannot be read
-     */
+
+    // ============================================================
+    // EXCEL EMPTY ROW
+    // ============================================================
+
+    private boolean isEmptyExcelRow(Row row) {
+
+        if (row == null) {
+            return true;
+        }
+
+        short lastCellNum = row.getLastCellNum();
+
+        if (lastCellNum < 0) {
+            return true;
+        }
+
+        for (int i = 0; i < lastCellNum; i++) {
+
+            Cell cell = row.getCell(i);
+
+            if (cell == null) {
+                continue;
+            }
+
+            String value = cell.toString().trim();
+
+            if (!value.isBlank()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    // ============================================================
+    // CSV PARSER
+    // ============================================================
+
     private List<FmOutletRequestDTO> parseCsv(InputStream is) throws Exception {
+
         List<FmOutletRequestDTO> list = new ArrayList<>();
-        try (Scanner sc = new Scanner(is)) {
-            if (!sc.hasNextLine()) return list;
-            String[] headers = sc.nextLine().split(",", -1);
-            Map<String, Integer> colMap = new HashMap<>();
-            for (int i = 0; i < headers.length; i++)
-                colMap.put(headers[i].trim().toLowerCase().replaceAll("\\s+", ""), i);
-            if (sc.hasNextLine()) {
-                String peek = sc.nextLine();
-                String first = peek.split(",")[0].trim().toLowerCase();
-                // Skip the indicator row if present (first cell is "req")
-                if (!first.equals("req") && !first.isBlank()) list.add(mapCsvRow(peek.split(",", -1), colMap));
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+
+            String headerLine = reader.readLine();
+
+            if (headerLine == null || headerLine.isBlank()) {
+                return list;
             }
-            while (sc.hasNextLine()) {
-                String[] cells = sc.nextLine().split(",", -1);
-                if (cells.length == 0 || cells[0].isBlank()) continue;
-                list.add(mapCsvRow(cells, colMap));
+
+            String[] headers = splitCsvLine(headerLine);
+
+            Map<String, Integer> colMap = new HashMap<>();
+
+            for (int i = 0; i < headers.length; i++) {
+
+                String header = normalizeHeader(headers[i]);
+
+                if (header.isBlank()) {
+                    continue;
+                }
+
+                colMap.put(header, i);
+            }
+
+            validateRequiredColumns(colMap, "CSV");
+
+            String line;
+
+            int csvRowNumber = 1;
+
+            while ((line = reader.readLine()) != null) {
+
+                csvRowNumber++;
+
+                if (line.isBlank()) {
+                    continue;
+                }
+
+                String[] cells = splitCsvLine(line);
+
+                if (cells.length == 0) {
+                    continue;
+                }
+
+                if (isIndicatorCsvRow(cells)) {
+
+                    log.info("[BULK] CSV row {} detected as instruction row. Skipping.", csvRowNumber);
+
+                    continue;
+                }
+
+                String outletName = getCsvCell(cells, colMap, "outletname");
+
+                if (outletName == null || outletName.isBlank()) {
+                    continue;
+                }
+
+                FmOutletRequestDTO dto = mapCsvRow(cells, colMap);
+
+                list.add(dto);
             }
         }
+
+        log.info("[BULK] CSV parsing completed. rows={}", list.size());
+
         return list;
     }
 
-    /**
-     * Maps a single Excel row to an {@link FmOutletRequestDTO}.
-     *
-     * <p>Why "zipcode" for area code: the XLS column header uses "zipcode"
-     * (a legacy label). Internally the value is now an area name string resolved
-     * to area_id by the service; the column header stays "zipcode" so existing files work.</p>
-     *
-     * <p>Why "state" column contains a name (not an ID): Excel templates are
-     * filled by humans. The service layer resolves the state name to an integer
-     * FK via the states lookup table.</p>
-     *
-     * @param row the Excel row to map
-     * @param col the column-name-to-index map built from the header row
-     * @return a populated {@link FmOutletRequestDTO}
-     */
+
+    // ============================================================
+    // REQUIRED COLUMNS
+    // ============================================================
+
+    private void validateRequiredColumns(Map<String, Integer> colMap, String fileType) {
+
+        String[] requiredColumns = {
+
+                "outletname", "merchantname", "cuisinetype", "outletphone", "outletemail",
+
+                "isvegoutlet", "isgstapplied",
+
+                "fssainumber", "gstnumber", "username", "password",
+
+                "accountnumber", "ifsccode", "bankname", "accountholdername",
+
+                "buildingnumber", "road", "landmark",
+
+                "statename", "cityname", "areaname",
+
+                "latitude", "longitude",
+
+                "operatingdays",
+
+                "uploadedby"};
+
+        for (String requiredColumn : requiredColumns) {
+
+            if (!colMap.containsKey(requiredColumn)) {
+
+                throw new IllegalArgumentException("Required " + fileType + " column is missing: " + requiredColumn);
+            }
+        }
+    }
+
+
+    // ============================================================
+    // CSV INDICATOR ROW
+    // ============================================================
+
+    private boolean isIndicatorCsvRow(String[] cells) {
+
+        if (cells == null || cells.length == 0) {
+            return false;
+        }
+
+        int checked = 0;
+
+        int matched = 0;
+
+        for (String cell : cells) {
+
+            if (cell == null) {
+                continue;
+            }
+
+            String value = cell.trim().toLowerCase(Locale.ROOT);
+
+            if (value.isBlank()) {
+                continue;
+            }
+
+            checked++;
+
+            if (value.equals("req") || value.equals("required") || value.equals("yes") || value.equals("no") || value.equals("y") || value.equals("n")) {
+                matched++;
+            }
+        }
+
+        return checked > 0 && matched == checked;
+    }
+
+
+    // ============================================================
+    // EXCEL ROW MAPPER
+    // ============================================================
+
     private FmOutletRequestDTO mapExcelRow(Row row, Map<String, Integer> col) {
+
         FmOutletRequestDTO dto = new FmOutletRequestDTO();
+
         dto.setOutletName(getCellStr(row, col, "outletname"));
-        dto.setMerchantId(parseIntOrNull(getCellStr(row, col, "merchantid")));
-        dto.setCuisineType(
-                Arrays.stream(getCellStr(row, col, "outletcuisine").split(","))
-                        .map(String::trim)
-                        .filter(value -> !value.isEmpty())
-                        .map(Integer::valueOf)
-                        .toArray(Integer[]::new)
-        );
+
+        dto.setMerchantName(getCellStr(row, col, "merchantname"));
+
+        dto.setCuisineTypeNames(getCellStr(row, col, "cuisinetype"));
+
         dto.setOutletPhone(getCellStr(row, col, "outletphone"));
+
+        dto.setOutletEmail(getCellStr(row, col, "outletemail"));
+
+        dto.setAlternateOutletPhone(getCellStr(row, col, "alternateoutletphone"));
+
+        // ========================================================
+        // VEG / GST
+        // ========================================================
+
+        dto.setIsVegOutlet(parseBooleanValue(getCellStr(row, col, "isvegoutlet"), "is_veg_outlet"));
+
+        dto.setIsGstApplied(parseBooleanValue(getCellStr(row, col, "isgstapplied"), "is_gst_applied"));
+
+        // ========================================================
+        // KYC
+        // ========================================================
+
+        dto.setFssaiNumber(getCellStr(row, col, "fssainumber"));
+
+        dto.setGstNumber(getCellStr(row, col, "gstnumber"));
+
+        // ========================================================
+        // LOGIN
+        // ========================================================
+
+        String username = getCellStr(row, col, "username");
+
+        String password = getCellStr(row, col, "password");
+
+        dto.setUsername(username.isBlank() ? null : username);
+
+        dto.setPassword(password.isBlank() ? null : password);
+
+        // ========================================================
+        // BANK
+        // ========================================================
+
+        dto.setAccountNumber(getCellStr(row, col, "accountnumber"));
+
+        dto.setIfscCode(getCellStr(row, col, "ifsccode"));
+
+        dto.setBankName(getCellStr(row, col, "bankname"));
+
+        dto.setAccountHolderName(getCellStr(row, col, "accountholdername"));
+
+        // ========================================================
+        // ADDRESS
+        // ========================================================
+
         dto.setBuildingNumber(getCellStr(row, col, "buildingnumber"));
+
         dto.setRoad(getCellStr(row, col, "road"));
-        dto.setLandmark(getCellStr(row, col, "arealandmark"));
-        dto.setCityId(parseIntOrNull(getCellStr(row, col, "city")));
-        // "state" column holds the state name — resolved to state_id in the service layer
-        dto.setStateName(getCellStr(row, col, "state"));
-        // "zipcode" column now holds an area name string (e.g. "Banjara Hills")
-        // The service resolves this to area_id via the area table
-        dto.setAreaName(getCellStr(row, col, "zipcode"));
+
+        dto.setLandmark(getCellStr(row, col, "landmark"));
+
+        // ========================================================
+        // LOCATION
+        // ========================================================
+
+        dto.setStateName(getCellStr(row, col, "statename"));
+
+        dto.setCityName(getCellStr(row, col, "cityname"));
+
+        dto.setAreaName(getCellStr(row, col, "areaname"));
+
         dto.setLatitude(getCellStr(row, col, "latitude"));
+
         dto.setLongitude(getCellStr(row, col, "longitude"));
-        dto.setUploadedBy("bulk_upload");
-        // Build operating days from the per-day columns in the sheet
-        dto.setOperatingDays(buildOperatingDays(k -> getCellStr(row, col, k)));
+
+        // ========================================================
+        // MULTIPLE OPERATING TIMES
+        // ========================================================
+
+        dto.setOperatingDays(buildOperatingDays(key -> getCellStr(row, col, key)));
+
+        // ========================================================
+        // UPLOADED BY
+        // ========================================================
+
+        String uploadedBy = getCellStr(row, col, "uploadedby");
+
+        dto.setUploadedBy(uploadedBy.isBlank() ? "bulk_upload" : uploadedBy);
+
         return dto;
     }
 
-    /**
-     * Maps a single CSV row (array of cell strings) to an {@link FmOutletRequestDTO}.
-     *
-     * <p>Why identical structure to {@link #mapExcelRow}: the CSV and Excel
-     * templates share the same column schema. Only the cell-value extraction
-     * method differs ({@code csvGet} vs {@code getCellStr}).</p>
-     *
-     * @param cells the split CSV cell array for this row
-     * @param col   the column-name-to-index map built from the header row
-     * @return a populated {@link FmOutletRequestDTO}
-     */
+
+    // ============================================================
+    // CSV ROW MAPPER
+    // ============================================================
+
     private FmOutletRequestDTO mapCsvRow(String[] cells, Map<String, Integer> col) {
-        FmOutletRequestDTO dto = new FmOutletRequestDTO();
-        dto.setOutletName(csvGet(cells, col, "outletname"));
-        dto.setMerchantId(parseIntOrNull(csvGet(cells, col, "merchantid")));
-        String cuisineType = csvGet(cells, col, "outletcuisine");
 
-        dto.setCuisineType(
-                cuisineType == null || cuisineType.isBlank()
-                        ? null
-                        : Arrays.stream(cuisineType.split(","))
-                        .map(String::trim)
-                        .filter(value -> !value.isEmpty())
-                        .map(Integer::valueOf)
-                        .toArray(Integer[]::new)
-        );        dto.setOutletPhone(csvGet(cells, col, "outletphone"));
+        FmOutletRequestDTO dto = new FmOutletRequestDTO();
+
+        dto.setOutletName(csvGet(cells, col, "outletname"));
+
+        dto.setMerchantName(csvGet(cells, col, "merchantname"));
+
+        dto.setCuisineTypeNames(csvGet(cells, col, "cuisinetype"));
+
+        dto.setOutletPhone(csvGet(cells, col, "outletphone"));
+
+        dto.setOutletEmail(csvGet(cells, col, "outletemail"));
+
+        dto.setAlternateOutletPhone(csvGet(cells, col, "alternateoutletphone"));
+
+        // ========================================================
+        // VEG / GST
+        // ========================================================
+
+        dto.setIsVegOutlet(parseBooleanValue(csvGet(cells, col, "isvegoutlet"), "is_veg_outlet"));
+
+        dto.setIsGstApplied(parseBooleanValue(csvGet(cells, col, "isgstapplied"), "is_gst_applied"));
+
+        // ========================================================
+        // KYC
+        // ========================================================
+
+        dto.setFssaiNumber(csvGet(cells, col, "fssainumber"));
+
+        dto.setGstNumber(csvGet(cells, col, "gstnumber"));
+
+        // ========================================================
+        // LOGIN
+        // ========================================================
+
+        String username = csvGet(cells, col, "username");
+
+        String password = csvGet(cells, col, "password");
+
+        dto.setUsername(username == null || username.isBlank() ? null : username);
+
+        dto.setPassword(password == null || password.isBlank() ? null : password);
+
+        // ========================================================
+        // BANK
+        // ========================================================
+
+        dto.setAccountNumber(csvGet(cells, col, "accountnumber"));
+
+        dto.setIfscCode(csvGet(cells, col, "ifsccode"));
+
+        dto.setBankName(csvGet(cells, col, "bankname"));
+
+        dto.setAccountHolderName(csvGet(cells, col, "accountholdername"));
+
+        // ========================================================
+        // ADDRESS
+        // ========================================================
+
         dto.setBuildingNumber(csvGet(cells, col, "buildingnumber"));
+
         dto.setRoad(csvGet(cells, col, "road"));
-        dto.setLandmark(csvGet(cells, col, "arealandmark"));
-        dto.setCityId(parseIntOrNull(csvGet(cells, col, "city")));
-        dto.setStateName(csvGet(cells, col, "state"));
-        // "zipcode" column now holds an area name string — resolved to area_id in service
-        dto.setAreaName(csvGet(cells, col, "zipcode"));
+
+        dto.setLandmark(csvGet(cells, col, "landmark"));
+
+        // ========================================================
+        // LOCATION
+        // ========================================================
+
+        dto.setStateName(csvGet(cells, col, "statename"));
+
+        dto.setCityName(csvGet(cells, col, "cityname"));
+
+        dto.setAreaName(csvGet(cells, col, "areaname"));
+
         dto.setLatitude(csvGet(cells, col, "latitude"));
+
         dto.setLongitude(csvGet(cells, col, "longitude"));
-        dto.setUploadedBy("bulk_upload");
-        dto.setOperatingDays(buildOperatingDays(k -> csvGet(cells, col, k)));
+
+        // ========================================================
+        // MULTIPLE OPERATING TIMES
+        // ========================================================
+
+        dto.setOperatingDays(buildOperatingDays(key -> csvGet(cells, col, key)));
+
+        // ========================================================
+        // UPLOADED BY
+        // ========================================================
+
+        String uploadedBy = csvGet(cells, col, "uploadedby");
+
+        dto.setUploadedBy(uploadedBy == null || uploadedBy.isBlank() ? "bulk_upload" : uploadedBy);
+
         return dto;
     }
 
+
+    // ============================================================
+    // BOOLEAN PARSER
+    // ============================================================
+
+    private Boolean parseBooleanValue(String value, String columnName) {
+
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+
+        switch (normalized) {
+
+            case "true":
+            case "yes":
+            case "y":
+            case "1":
+                return true;
+
+            case "false":
+            case "no":
+            case "n":
+            case "0":
+                return false;
+
+            default:
+                throw new IllegalArgumentException("Invalid value '" + value + "' for column '" + columnName + "'. Allowed values: true/false, yes/no, y/n, 1/0");
+        }
+    }
+
+
+    // ============================================================
+    // MULTIPLE OPERATING TIMES
+    // ============================================================
+
     /**
-     * Builds a list of {@link FmOutletDayDTO} from day column values in the upload file.
-     *
-     * <p>Why a {@link Function} parameter: both Excel and CSV rows need this
-     * logic but get their cell values differently. Accepting a lambda that maps
-     * a column key to a string value avoids duplicating the day-parsing logic.</p>
-     *
-     * <p>Cell value format: blank/empty = closed, "no"/"closed" = closed,
-     * "09:00-22:00" = open with those hours, any other non-blank = open with
-     * default hours (09:00–22:00).</p>
-     *
-     * @param getter a function that returns a cell value for a given column key
-     * @return list of 7 {@link FmOutletDayDTO} (Mon–Sun), one per day
+     * Supports multiple timings for the same day.
+     * <p>
+     * Example:
+     * <p>
+     * Monday:
+     * 09:00-14:00|18:00-22:00
+     * <p>
+     * Tuesday:
+     * 09:00-22:00
+     * <p>
+     * The "|" character separates multiple slots
+     * on the same day.
      */
     private List<FmOutletDayDTO> buildOperatingDays(Function<String, String> getter) {
+
         String[] dayKeys = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+
         List<FmOutletDayDTO> days = new ArrayList<>();
+
         for (int i = 0; i < dayKeys.length; i++) {
-            String val = getter.apply(dayKeys[i]);
-            boolean isOpen = !val.equalsIgnoreCase("no") && !val.equalsIgnoreCase("closed") && !val.isBlank();
-            String open = "09:00", close = "22:00";
-            // Parse "HH:mm-HH:mm" range from cell if present
-            if (val.contains("-")) {
-                String[] parts = val.split("-");
-                if (parts.length == 2) {
-                    open = parts[0].trim();
-                    close = parts[1].trim();
+
+            String dayValue = getter.apply(dayKeys[i]);
+
+            if (dayValue == null || dayValue.isBlank()) {
+                continue;
+            }
+
+            dayValue = dayValue.trim();
+
+            /*
+             * Example:
+             *
+             * 09:00-14:00|18:00-22:00
+             *
+             * becomes:
+             *
+             * 09:00-14:00
+             * 18:00-22:00
+             */
+
+            String[] timings = dayValue.split("\\|");
+
+            for (int slotIndex = 0; slotIndex < timings.length; slotIndex++) {
+
+                String timing = timings[slotIndex].trim();
+
+                if (timing.isBlank()) {
+                    continue;
+                }
+
+                /*
+                 * Closed / No
+                 */
+
+                if (timing.equalsIgnoreCase("no") || timing.equalsIgnoreCase("closed")) {
+                    continue;
+                }
+
+                /*
+                 * Expected:
+                 *
+                 * 09:00-14:00
+                 */
+
+                String[] parts = timing.split("-", 2);
+
+                if (parts.length != 2) {
+
+                    throw new IllegalArgumentException("Invalid operating time '" + timing + "' for " + dayKeys[i] + ". Expected HH:mm-HH:mm");
+                }
+
+                String openingValue = parts[0].trim();
+
+                String closingValue = parts[1].trim();
+
+                try {
+
+                    LocalTime openingTime = LocalTime.parse(openingValue);
+
+                    LocalTime closingTime = LocalTime.parse(closingValue);
+
+                    /*
+                     * Validate that opening and closing
+                     * are not exactly the same.
+                     */
+
+                    if (openingTime.equals(closingTime)) {
+
+                        throw new IllegalArgumentException("Opening time and closing time cannot be the same for " + dayKeys[i]);
+                    }
+
+                    FmOutletDayDTO dayDto = new FmOutletDayDTO();
+
+                    /*
+                     * Monday = 1
+                     * Tuesday = 2
+                     * ...
+                     * Sunday = 7
+                     */
+
+                    dayDto.setDayOfWeekId(i + 1);
+
+                    dayDto.setIsOpen(true);
+
+                    dayDto.setOpeningTime(openingTime);
+
+                    dayDto.setClosingTime(closingTime);
+
+                    /*
+                     * Slot type.
+                     *
+                     * One timing:
+                     * FULL_DAY
+                     *
+                     * First of multiple:
+                     * MORNING
+                     *
+                     * Second:
+                     * EVENING
+                     *
+                     * Third and later:
+                     * SLOT_3, SLOT_4...
+                     */
+
+                    if (timings.length == 1) {
+
+                        dayDto.setSlotType("FULL_DAY");
+
+                    } else if (slotIndex == 0) {
+
+                        dayDto.setSlotType("MORNING");
+
+                    } else if (slotIndex == 1) {
+
+                        dayDto.setSlotType("EVENING");
+
+                    } else {
+
+                        dayDto.setSlotType("SLOT_" + (slotIndex + 1));
+                    }
+
+                    days.add(dayDto);
+
+                } catch (DateTimeException e) {
+
+                    throw new IllegalArgumentException("Invalid operating time '" + timing + "' for " + dayKeys[i] + ". Expected HH:mm-HH:mm");
                 }
             }
-            // Build OutletDayDTO using setter methods instead of builder
-            FmOutletDayDTO dayDto = new FmOutletDayDTO();
-            dayDto.setDayOfWeekId(i + 1);
-            dayDto.setIsOpen(isOpen);
-            dayDto.setOpeningTime(LocalTime.parse(open));
-            dayDto.setClosingTime(LocalTime.parse(close));
-            days.add(dayDto);
         }
+
         return days;
     }
 
-    // ─── Cell Value Helpers ───────────────────────────────────────────────────
 
-    /**
-     * Extracts the string value from an Excel cell at the given column key.
-     *
-     * <p>Why a column-key lookup helper: cell index must be looked up from the
-     * header map every time. This helper keeps row-mapping methods readable
-     * by hiding that plumbing.</p>
-     *
-     * @param row the Excel row
-     * @param col the column-name-to-index map
-     * @param key the normalised column name to look up
-     * @return the cell's string value, or empty string if column not found
-     */
+    // ============================================================
+    // HEADER NORMALIZATION
+    // ============================================================
+
+    private String normalizeHeader(String header) {
+
+        if (header == null) {
+            return "";
+        }
+
+        String normalized = header
+                .replace("\uFEFF", "")
+                .trim();
+
+        // Handle headers exported with surrounding CSV quotes.
+        // Examples:
+        // "outletname"  -> outletname
+        // "Outlet Name" -> outletname
+        if (normalized.length() >= 2
+                && normalized.startsWith("\"")
+                && normalized.endsWith("\"")) {
+
+            normalized = normalized.substring(
+                    1,
+                    normalized.length() - 1
+            );
+        }
+
+        // Remove BOM again in case it occurs inside quotes.
+        normalized = normalized
+                .replace("\uFEFF", "")
+                .trim();
+
+        // Normalize all supported header formats:
+        // Outlet Name -> outletname
+        // outlet_name -> outletname
+        // outlet-name -> outletname
+        // outletname  -> outletname
+        return normalized
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[\\s_-]+", "");
+    }
+
+
+    // ============================================================
+    // CSV GET
+    // ============================================================
+
+    private String csvGet(String[] cells, Map<String, Integer> col, String key) {
+
+        Integer index = col.get(normalizeHeader(key));
+
+        if (index == null || index < 0 || index >= cells.length) {
+            return "";
+        }
+
+        String value = cells[index];
+
+        if (value == null) {
+            return "";
+        }
+
+        return stripCsvQuotes(value.trim());
+    }
+
+
+    // ============================================================
+    // GET CSV CELL
+    // ============================================================
+
+    private String getCsvCell(String[] cells, Map<String, Integer> colMap, String columnName) {
+
+        return csvGet(cells, colMap, columnName);
+    }
+
+
+    // ============================================================
+    // STRIP CSV QUOTES
+    // ============================================================
+
+    private String stripCsvQuotes(String value) {
+
+        if (value == null) {
+            return "";
+        }
+
+        String result = value.trim();
+
+        if (result.length() >= 2 && result.startsWith("\"") && result.endsWith("\"")) {
+
+            result = result.substring(1, result.length() - 1);
+
+            result = result.replace("\"\"", "\"");
+        }
+
+        return result.trim();
+    }
+
+
+    // ============================================================
+    // CSV SPLITTER
+    // ============================================================
+
+    private String[] splitCsvLine(String line) {
+
+        if (line == null) {
+            return new String[0];
+        }
+
+        List<String> result = new ArrayList<>();
+
+        StringBuilder current = new StringBuilder();
+
+        boolean insideQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+
+            char c = line.charAt(i);
+
+            if (c == '"') {
+
+                if (insideQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+
+                    current.append('"');
+
+                    i++;
+
+                } else {
+
+                    insideQuotes = !insideQuotes;
+                }
+
+            } else if (c == ',' && !insideQuotes) {
+
+                result.add(current.toString());
+
+                current.setLength(0);
+
+            } else {
+
+                current.append(c);
+            }
+        }
+
+        result.add(current.toString());
+
+        return result.toArray(new String[0]);
+    }
+
+
+    // ============================================================
+    // EXCEL CELL
+    // ============================================================
+
     private String getCellStr(Row row, Map<String, Integer> col, String key) {
-        Integer idx = col.get(key);
-        if (idx == null) return "";
+
+        Integer idx = col.get(normalizeHeader(key));
+
+        if (idx == null) {
+            return "";
+        }
+
         return getCellStr(row.getCell(idx));
     }
 
-    /**
-     * Converts an Apache POI {@link Cell} to a plain string.
-     *
-     * <p>Why handle NUMERIC specially: numeric cells that represent integers
-     * (e.g. merchant ID 42) are stored as doubles (42.0) in Excel. Without
-     * this conversion, the string would be "42.0" and {@code Integer.parseInt}
-     * would fail.</p>
-     *
-     * @param c the cell to convert (may be null)
-     * @return string representation, or empty string if null
-     */
+
+    // ============================================================
+    // EXCEL CELL VALUE
+    // ============================================================
+
     private String getCellStr(Cell c) {
-        if (c == null) return "";
+
+        if (c == null) {
+            return "";
+        }
+
         return switch (c.getCellType()) {
+
             case NUMERIC -> {
+
                 double d = c.getNumericCellValue();
-                // Return integer representation for whole numbers (e.g. 42.0 → "42")
+
                 yield d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d);
             }
+
             case BOOLEAN -> String.valueOf(c.getBooleanCellValue());
+
+            case FORMULA -> c.toString().trim();
+
             default -> c.toString().trim();
         };
     }
 
-    /**
-     * Extracts a cell value from a CSV row array by column name.
-     *
-     * <p>Why bounds-check {@code idx >= cells.length}: a short row (fewer
-     * columns than the header) would throw an ArrayIndexOutOfBoundsException
-     * without this guard. We return empty string to treat missing cells as blank.</p>
-     *
-     * @param cells the split CSV cell array
-     * @param col   the column-name-to-index map
-     * @param key   the column name to look up
-     * @return the trimmed cell string, or empty string if out of bounds
-     */
-    private String csvGet(String[] cells, Map<String, Integer> col, String key) {
-        Integer idx = col.get(key);
-        if (idx == null || idx >= cells.length) return "";
-        return cells[idx].trim();
-    }
 
-    /**
-     * Parses a string to an Integer, returning null if blank or unparseable.
-     *
-     * <p>Why strip ".0": Excel numeric cells serialise as "42.0". Stripping
-     * the trailing ".0" before parsing prevents {@code NumberFormatException}.</p>
-     *
-     * @param s the raw cell string
-     * @return the parsed integer, or null if not parseable
-     */
-    private Integer parseIntOrNull(String s) {
-        if (s == null || s.isBlank()) return null;
-        try {
-            return Integer.parseInt(s.trim().replaceAll("\\.0$", ""));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
+    // ============================================================
+    // BULK UPLOAD SERVICE
+    // ============================================================
 
     public FmBulkOutletResultDTO outletBulkUpload(List<FmOutletRequestDTO> rows) {
-        int total = rows.size(), success = 0;
+
+        int total = rows.size();
+
+        int success = 0;
+
         List<FmBulkOutletResultDTO.OutletCredential> credentials = new ArrayList<>();
+
         List<FmBulkOutletResultDTO.OutletError> errors = new ArrayList<>();
 
         for (int i = 0; i < rows.size(); i++) {
-            int rowNum = i + 3;
+
+            int rowNum = i + 2;
+
             FmOutletRequestDTO dto = rows.get(i);
+
             try {
+
+                log.info("[BULK] Processing row {} outletName={}", rowNum, dto.getOutletName());
+
                 FmOutletCreatedDTO created = outletService.createOutletBulkUpload(dto);
+
                 success++;
+
                 FmBulkOutletResultDTO.OutletCredential cred = new FmBulkOutletResultDTO.OutletCredential();
+
                 cred.setOutletId(created.getOutletId());
+
                 cred.setOutletName(created.getOutletName());
+
                 credentials.add(cred);
+
+                log.info("[BULK] Row {} success. outletId={}", rowNum, created.getOutletId());
+
             } catch (Exception e) {
-                log.warn("[BULK] Row {} failed: {}", rowNum, e.getMessage());
+
+                log.warn("[BULK] Row {} failed. outletName={}, reason={}", rowNum, dto.getOutletName(), e.getMessage(), e);
+
                 FmBulkOutletResultDTO.OutletError err = new FmBulkOutletResultDTO.OutletError();
+
                 err.setRowNumber(rowNum);
+
                 err.setOutletName(dto.getOutletName());
-                err.setReason(e.getMessage());
+
+                err.setReason(e.getMessage() != null ? e.getMessage() : "Unknown error");
+
                 errors.add(err);
-                //throw new RuntimeException(e.getMessage());
             }
         }
 
         FmBulkOutletResultDTO result = new FmBulkOutletResultDTO();
+
         result.setTotalRows(total);
+
         result.setSuccessCount(success);
+
         result.setFailureCount(total - success);
+
         result.setCredentials(credentials);
+
         result.setErrors(errors);
+
         return result;
     }
 
-    @Operation(summary = "Customer App: Nearby outlets within 3 km (USE THIS FOR MOBILE APP)", description = """
-            Returns all active outlets (is_active = 'Y') within 3 km of the customer's
-            current GPS location, sorted nearest-first.
-            
-            This is the correct endpoint for the mobile/customer app. It returns:
-              • distanceKm      — straight-line distance via PostGIS
-              • roadDistance    — actual road distance via Google Maps (e.g. "1.4 km")
-              • deliveryTime    — estimated delivery time via Google Maps (e.g. "14 mins")
-              • openingTime     — today's opening time from outlet_days table
-              • closingTime     — today's closing time from outlet_days table
-              • openNow         — whether the outlet is currently open
-            
-            Prerequisites for non-null roadDistance and deliveryTime:
-              1. Set google.maps.api-key in application.yml (or GOOGLE_MAPS_API_KEY env var)
-              2. Enable Distance Matrix API in Google Cloud Console
-            
-            Prerequisites for non-null distanceKm:
-              1. outlet_location must be set in jippy_fm.outlets for each outlet
-              2. Run: UPDATE jippy_fm.outlets
-                        SET outlet_location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
-                      WHERE outlet_location IS NULL;
-            
-            Example:
-              GET /api/outlets/customer/nearby?lat=17.385&lng=78.4867
-            """)
-    @ApiResponses({@ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully", content = @Content(schema = @Schema(implementation = FmCustomerNearbyResponseDto.class))), @ApiResponse(responseCode = "400", description = "lat or lng parameter is missing / invalid")})
+
+    // ============================================================
+    // CUSTOMER NEARBY OUTLETS
+    // ============================================================
+
+    @Operation(summary = "Customer App: Nearby outlets within 3 km", description = "Returns all active outlets within 3 km of customer's current GPS location.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully", content = @Content(schema = @Schema(implementation = FmCustomerNearbyResponseDto.class))), @ApiResponse(responseCode = "400", description = "Invalid latitude or longitude")})
     @GetMapping("/customer/nearby")
-    public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(@Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true) @RequestParam double lat,
+    public ResponseEntity<FmCustomerNearbyResponseDto> fetchCustomerNearbyOutlets(@RequestParam double lat, @RequestParam double lng, @RequestParam(required = false) Integer categoryId) {
 
-                                                                                  @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true) @RequestParam double lng, @RequestParam(required = false) Integer categoryId) {
-
-        log.info("GET /api/outlets/customer/nearby lat={}, lng={}", lat, lng);
         FmCustomerNearbyResponseDto response = outletService.fetchCustomerNearbyOutlets(lat, lng, categoryId);
+
         return ResponseEntity.ok(response);
     }
 
-    // End Points for getting address data from FM_Microservice to CO_Microservice
+
+    // ============================================================
+    // ADDRESS DETAILS
+    // ============================================================
+
     @PostMapping("/saveAddressDetails")
     public ResponseEntity<FmAddressRequestDto> saveAddressDetails(@Valid @RequestBody FmAddressRequestDto fmAddressRequestDto) {
+
         FmAddressRequestDto savedAddress = outletService.saveAddressDetails(fmAddressRequestDto);
+
         return ResponseEntity.ok(savedAddress);
     }
 
+
     @GetMapping("/getAddressDetails")
     public ResponseEntity<FmAddressRequestDto> getAddressDetails(@RequestParam Integer driverId) {
+
         FmAddressRequestDto getAddress = outletService.getAddressDetails(driverId);
+
         return ResponseEntity.ok(getAddress);
     }
 
-    //    for Feign  in the CO_Microservice to just fetch
+
+    // ============================================================
+    // FETCH OUTLET NAME
+    // ============================================================
+
     @GetMapping("/fetchOutletName")
     public ResponseEntity<String> fetchOutletName(@RequestParam @Positive(message = "Outlet ID must be a positive number") Integer outletId) {
 
@@ -733,48 +1259,51 @@ public class FmOutletController {
     }
 
 
+    // ============================================================
+    // OUTLET LOCATION
+    // ============================================================
+
     @GetMapping("/location/{outletId}")
     public ResponseEntity<OutletLocationResponseDto> getOutletLocation(@PathVariable Integer outletId) {
-        log.info("REST request to get location for outletId: {}", outletId);
 
         OutletLocationResponseDto response = outletService.getOutletLocation(outletId);
 
-
-        log.debug("Returning location response for outletId: {}", outletId);
-
         return ResponseEntity.ok(response);
     }
+
+
+    // ============================================================
+    // SPECIALIZED OUTLETS BY AREA
+    // ============================================================
 
     @GetMapping("/specialized-outlets/area")
     public ResponseEntity<FmNearbyOutletResponseDto> fetchSpecializedOutletsByAreaId(@RequestParam Integer areaId) {
 
-        log.info("Fetching specialized outlets for areaId={}", areaId);
-
         FmNearbyOutletResponseDto response = service.fetchSpecializedOutletsByAreaId(areaId);
-
-        log.info("Successfully fetched {} outlets for areaId={}", response.getTotalOutlets(), areaId);
 
         return ResponseEntity.ok(response);
     }
 
+
+    // ============================================================
+    // SPECIALIZED OUTLETS NEARBY
+    // ============================================================
+
     @GetMapping("/specialized-outlets/nearby")
     public ResponseEntity<FmNearbyOutletResponseDto> fetchNearbySpecializedOutlets(@RequestParam Double latitude, @RequestParam Double longitude) {
-
-        log.info("Fetching nearby specialized outlets for latitude={} longitude={}", latitude, longitude);
 
         return ResponseEntity.ok(service.fetchNearbySpecializedOutlets(latitude, longitude));
     }
 
 
-    // used as a feign client call
+    // ============================================================
+    // GET OUTLET ADDRESS DETAILS
+    // ============================================================
+
     @GetMapping("/getOutletAddressDetails")
     public ResponseEntity<OutletLocationResponseDto> getOutletAddressDetails(@RequestParam Integer outletId) {
-        log.info("REST request to get location for outletId: {}", outletId);
 
         OutletLocationResponseDto response = outletService.getOutletAddressDetails(outletId);
-
-
-        log.debug("Returning location response for outletId: {}", outletId);
 
         return ResponseEntity.ok(response);
     }

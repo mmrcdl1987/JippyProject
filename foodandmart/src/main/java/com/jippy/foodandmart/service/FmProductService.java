@@ -1,15 +1,6 @@
 package com.jippy.foodandmart.service;
 
-import com.jippy.foodandmart.dto.FmMapToProduct;
-import com.jippy.foodandmart.dto.FmMapToProductResult;
-import com.jippy.foodandmart.dto.FmProductCategoryUpdateRequestDto;
-import com.jippy.foodandmart.dto.FmProductCategoryUpdateResponseDto;
-import com.jippy.foodandmart.dto.FmProductDetailResponse;
-import com.jippy.foodandmart.dto.FmProductPriceResponse;
-import com.jippy.foodandmart.dto.FmProductUpdateRequestDto;
-import com.jippy.foodandmart.dto.FmProductUpdateResponseDto;
-import com.jippy.foodandmart.dto.FmVariantBulkUploadResponseDto;
-import com.jippy.foodandmart.dto.OutletProductPricingDto;
+import com.jippy.foodandmart.dto.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -236,5 +227,10 @@ public interface FmProductService {
      */
     FmProductCategoryUpdateResponseDto updateCategoryForProductByProductType(
             FmProductCategoryUpdateRequestDto request
+    );
+
+    FmMerchantPriceUpdateResponse updateMerchantPrice(
+            Integer productId,
+            FmMerchantPriceUpdateRequest request
     );
 }

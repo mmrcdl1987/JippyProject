@@ -1,4 +1,5 @@
-package com.jippy.foodandmart.entity;
+
+        package com.jippy.foodandmart.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -11,7 +12,8 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
-@Getter @Setter
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,60 +28,110 @@ public class FmMasterProduct {
 
     @NotBlank(message = "Master product name is required")
     @Size(max = 100)
-    @Column(name = "master_product_name", nullable = false, length = 100)
+    @Column(
+            name = "master_product_name",
+            nullable = false,
+            length = 100
+    )
     private String masterProductName;
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(
+            name = "description",
+            columnDefinition = "TEXT"
+    )
     private String description;
 
-    @Column(name = "short_description", columnDefinition = "TEXT")
+    @Column(
+            name = "short_description",
+            columnDefinition = "TEXT"
+    )
     private String shortDescription;
 
-    @Column(name = "photo", columnDefinition = "TEXT")
+    @Column(
+            name = "photo",
+            columnDefinition = "TEXT"
+    )
     private String photo;
 
-    @Column(name = "photos", columnDefinition = "TEXT")
+    @Column(
+            name = "photos",
+            columnDefinition = "TEXT"
+    )
     private String photos;
 
-    @Column(name = "thumbnail", columnDefinition = "TEXT")
+    @Column(
+            name = "thumbnail",
+            columnDefinition = "TEXT"
+    )
     private String thumbnail;
 
-    @Column(name = "category_id", nullable = false)
+    @Column(
+            name = "category_id",
+            nullable = false
+    )
     private Integer categoryId;
 
-    @Column(name = "category_name", length = 100, nullable = false)
+    @Column(
+            name = "category_name",
+            length = 100,
+            nullable = false
+    )
     private String categoryName;
 
     @Column(name = "sub_category_id")
     private Integer subCategoryId;
 
-    @Column(name = "sub_category_name", length = 100)
+    @Column(
+            name = "sub_category_name",
+            length = 100
+    )
     private String subCategoryName;
 
-    @Column(name = "has_options", nullable = false)
+    @Column(
+            name = "has_options",
+            nullable = false
+    )
     @Builder.Default
     private Integer hasOptions = 0;
 
-    @Column(name = "options_enabled", nullable = false)
+    @Column(
+            name = "options_enabled",
+            nullable = false
+    )
     @Builder.Default
     private Integer optionsEnabled = 0;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "options", columnDefinition = "jsonb")
+    @Column(
+            name = "options",
+            columnDefinition = "jsonb"
+    )
     private String options;
 
-    @Column(name = "veg", nullable = false)
+    @Column(
+            name = "veg",
+            nullable = false
+    )
     @Builder.Default
     private Integer veg = 0;
 
-    @Column(name = "non_veg", nullable = false)
+    @Column(
+            name = "non_veg",
+            nullable = false
+    )
     @Builder.Default
     private Integer nonVeg = 0;
 
-    @Column(name = "food_type", length = 50)
+    @Column(
+            name = "food_type",
+            length = 50
+    )
     private String foodType;
 
-    @Column(name = "cuisine_type", length = 100)
+    @Column(
+            name = "cuisine_type",
+            length = 100
+    )
     private String cuisineType;
 
     @Column(name = "calories")
@@ -102,12 +154,34 @@ public class FmMasterProduct {
     @Builder.Default
     private Integer grams = 0;
 
-    @Column(name = "publish", nullable = false)
+    /**
+     * Product type/category classification.
+     *
+     * Example values:
+     * FOOD
+     * BEVERAGE
+     * GROCERY
+     * DESSERT
+     * SNACK
+     */
+    @Column(
+            name = "product_type",
+            length = 20
+    )
+    private String productType;
+
+    @Column(
+            name = "publish",
+            nullable = false
+    )
     @Builder.Default
     private Integer publish = 1;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(
+            name = "created_at",
+            updatable = false
+    )
     private LocalDateTime createdAt;
 
     @Column(name = "created_by")
@@ -120,18 +194,27 @@ public class FmMasterProduct {
     @Column(name = "updated_by")
     private Integer updatedBy;
 
-    /** Transient — carries the merchant_price from an uploaded CSV file.
-     *  Never persisted to the master_products table. */
+    /**
+     * Transient — carries the merchant_price from an uploaded CSV file.
+     * Never persisted to the master_products table.
+     */
     @Transient
     private Double csvMerchantPrice;
 
-    /** Transient — carries the raw availability timing string (e.g. "9:00-22:00")
-     *  from an uploaded CSV file. Never persisted to master_products. */
+    /**
+     * Transient — carries the raw availability timing string
+     * (e.g. "9:00-22:00") from an uploaded CSV file.
+     * Never persisted to master_products.
+     */
     @Transient
     private String csvTiming;
 
-    /** Transient - carries the day-of-week name (e.g. "Monday", "Sunday")
-     *  from an uploaded CSV file. Never persisted to master_products. */
+    /**
+     * Transient — carries the day-of-week name
+     * (e.g. "Monday", "Sunday") from an uploaded CSV file.
+     * Never persisted to master_products.
+     */
     @Transient
     private String csvDayOfWeek;
 }
+

@@ -6,14 +6,27 @@ import lombok.*;
  * Returned after a single outlet is created.
  * Includes the auto-generated login credentials for the outlet manager.
  */
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class FmOutletCreatedDTO {
 
     private Integer outletId;
-    private String  outletName;
+    private String outletName;
     private Integer merchantId;
     private Integer[] cuisineType;
-    private String  outletPhone;
-    private String  isActive;
+    private String outletPhone;
+    private String isActive;
 
+    // ============================================================
+    // VEG / GST
+    // ============================================================
+
+    private Boolean isVegOutlet;
+    private Boolean isGstApplied;
+
+    private String outletLoginId;
+    private String outletPassword;
 }
