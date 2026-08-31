@@ -30,11 +30,22 @@ public interface IFmApprovalRequestService {
      */
     void createApprovalRequest(String entityType, Integer entityId, Integer createdBy);
 
-//    For Driver Microservice Through Feign Client(DRIVER)
+    public List<FmLevel1PendingApprovalResponseDTO> getLevel1PendingApprovalRequests(Integer approverId);
+//    For Driver Microservice Through Feign Client
     void createApprovalRequest(FmApprovalRequestDTO requestDTO);
 
-    List<FmLevel1PendingApprovalResponseDTO> getLevel1PendingApprovalRequests(Integer approverId);
-
+    /**
+     * Fetches Pending Approval Requests for an Approver based on their configured approval levels.
+     * <p>
+     * Business Rules:
+     * 1. Only shows approval requests for levels the approver is configured to approve
+     * 2. Fleet Manager configured for Level 1 will only see Level 1 pending requests
+     * 3. Zone Manager configured for Level 2 will only see Level 2 pending requests
+     * 4. Returns requests based on approver's approval settings configuration
+     *
+     * @param approverId Approver User Id
+     * @return List of Pending Approval Requests for the approver's configured levels
+     */
     /**
      * Fetches all rejected approval requests along with
      * their respective entity basic details.

@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * REST Controller for Approval Settings.
  */
@@ -224,6 +226,29 @@ public class FmApprovalSettingsController {
         //----------------------------------------------------------
 
         return ResponseEntity.ok(response);
+    }
+
+    //============================================================================
+    /// Get All Approval Settings
+    ///============================================================================
+
+    @Operation(
+            summary = "Get All Approval Settings",
+            description = "Retrieves all Approval Settings."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Approval Settings retrieved successfully.")
+    @GetMapping
+    public ResponseEntity<FmApiResponse<List<FmApprovalSettingsResponseDTO>>> getAllSettings() {
+
+        log.info("Received request to get all Approval Settings.");
+
+        List<FmApprovalSettingsResponseDTO> response = service.getAllSettings();
+
+        log.info("Retrieved {} Approval Settings.", response.size());
+
+        return ResponseEntity.ok(FmApiResponse.success("Approval Settings retrieved successfully.", response));
     }
 
 }

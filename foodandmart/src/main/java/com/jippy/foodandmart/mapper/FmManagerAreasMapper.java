@@ -49,4 +49,23 @@ public class FmManagerAreasMapper {
         return response;
     }
 
+    /**
+     * Converts assigned Manager and Area Ids
+     * into Response DTO with approver name.
+     *
+     * @param userId        Manager User Id.
+     * @param approverName  Approver name.
+     * @param areaIds       Assigned Area Ids.
+     * @return Response DTO.
+     */
+    public static FmManagerAreasResponseDTO mapToResponseDto(Integer userId, String approverName, List<Integer> areaIds) {
+
+        FmManagerAreasResponseDTO response = new FmManagerAreasResponseDTO();
+        response.setUserId(userId);
+        response.setApproverName(approverName);
+        response.setAssignedAreaIds(areaIds);
+
+        return response;
+    }
+
 }

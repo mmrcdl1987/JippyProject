@@ -265,7 +265,7 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
         }
 
         //----------------------------------------------------------
-        // Step 3: Change REJECTED → PENDING
+        // Step 3: Change REJECTED  PENDING
         //
         // IMPORTANT:
         // Current Level must NOT be changed.
@@ -302,7 +302,7 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
                 approvalRequest.getUpdatedBy());
 
         //----------------------------------------------------------
-        // Step 6: Convert Entity → Response DTO
+        // Step 6: Convert Entity  Response DTO
         //----------------------------------------------------------
 
         FmRejectedApprovalToPendingResponseDTO response =
@@ -751,7 +751,7 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
                     projection.getApprovalLevel());
 
             //------------------------------------------------------
-            // Convert Projection → Response DTO
+            // Convert Projection  Response DTO
             //------------------------------------------------------
 
             FmRejectedApprovalResponseDTO response =

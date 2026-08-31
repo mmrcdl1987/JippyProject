@@ -4,6 +4,7 @@ import com.jippy.foodandmart.entity.FmEmployee;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,4 +23,14 @@ public interface FmEmployeeRepository extends JpaRepository<FmEmployee, Integer>
      * Check whether employee mobile number already exists.
      */
     boolean existsByMobileNumber(String mobileNumber);
+
+    /**
+     * Find employee by employee ID.
+     */
+    Optional<FmEmployee> findByEmployeeId(Integer employeeId);
+
+    /**
+     * Find employees whose names contain the provided keyword.
+     */
+    List<FmEmployee> findByEmployeeNameContainingIgnoreCaseOrderByEmployeeIdAsc(String employeeName);
 }

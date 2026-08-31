@@ -48,17 +48,18 @@ public class FmSecurityConfig {
                         .requestMatchers("/api/fm/internal/**").permitAll()
                         .requestMatchers("/api/fm/users/findByUserIdAndUserType").permitAll()
                         .requestMatchers("/api/fm/users/createUser").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/fm/outlets/public/**").permitAll()
 
                         .requestMatchers("/api/fm/auth/**", "/auth/**").permitAll() // Public login/register
 
                         //.requestMatchers("/api/fm/**").authenticated() // Protected routes
                         // 2. READ-ONLY ROLE (Can only perform GET requests)
-                        .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN","CUSTOMER","INTERNAL_SYSTEM")
+                        .requestMatchers(HttpMethod.GET, "/api/fm/**").hasAnyRole("OUTLET","MERCHANT","ADMIN","SUPERADMIN","DEVADMIN","CUSTOMER","INTERNAL_SYSTEM","FLEET_MANAGER")
 
                         // 3. CREATE/UPDATE ROLE (Can perform POST/PUT/PATCH)
-                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
-                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
-                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
+                        .requestMatchers(HttpMethod.POST, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM","FLEET_MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM","FLEET_MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM","FLEET_MANAGER")
 
                         // 4. FULL ADMIN (Can also DELETE)
                         .requestMatchers(HttpMethod.DELETE, "/api/fm/**").hasAnyRole("ADMIN","SUPERADMIN","DEVADMIN","OUTLET","MERCHANT","CUSTOMER","INTERNAL_SYSTEM")
