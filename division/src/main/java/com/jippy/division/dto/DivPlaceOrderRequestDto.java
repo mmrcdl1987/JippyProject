@@ -54,6 +54,8 @@ public class DivPlaceOrderRequestDto {
 
     private BigDecimal couponDiscount;
 
+    private BigDecimal walletAmount;
+
     /*
      * DELIVERY DISTANCE
      */

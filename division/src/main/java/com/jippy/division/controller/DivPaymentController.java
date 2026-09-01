@@ -36,28 +36,15 @@ public class DivPaymentController {
         }
     }
 
-    @PostMapping("/verify")
-    public ResponseEntity<String> verify(@RequestBody PaymentVerifyRequestDto request) {
+    @PostMapping("/verifyAndCompletePayment")
+    public ResponseEntity<String> verifyAndCompletePayment(@RequestBody PaymentVerifyRequestDto request) {
         log.info("Verifying payment for orderId: {}, paymentId: {}", request.getApplicationOrderId(),
                 request.getRzpPaymentId());
-        boolean isValid = paymentService.verifyPaymentSignature(request);
+        boolean isValid = paymentService.verifyAndCompletePayment(request);
         if (isValid) {
             return ResponseEntity.ok("Payment verified successfully. Order confirmed.");
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid payment signature signature mismatch.");
-    }
-
-    @PostMapping("/orderRefund")
-    public ResponseEntity<String> orderRefund(@RequestParam String orderId,
-           @RequestParam String reason) {
-        try{
-            log.info("Processing refund for orderId: {}, reason: {}", orderId, reason);
-
-            String response = paymentService.orderRefund(orderId, reason);
-            return ResponseEntity.status(HttpStatus.OK).body("Refund request processed successfully. Refund ID: " + response);
-        }catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing refund: " + e.getMessage());
-        }
     }
 
     @PostMapping("/callback/{orderId}")

@@ -18,8 +18,9 @@ public class CoOrderPriceBreakup {
     @Column(name = "order_price_breakup_id")
     private Long orderPriceBreakupId;
 
-    @Column(name = "order_id", nullable = false)
-    private String orderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    private CoOrder order;
 
     @Column(name = "coupon_id")
     private Integer couponId;

@@ -8,11 +8,7 @@ import com.jippy.foodandmart.exception.FileProcessingException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.mapper.FmProductVariantOptionMapper;
-import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
-import com.jippy.foodandmart.projections.FmProductCategoryProjection;
-import com.jippy.foodandmart.projections.FmOutletProductProjection;
-import com.jippy.foodandmart.projections.FmProductPriceProjection;
-import com.jippy.foodandmart.projections.OutletProductPricingProjection;
+import com.jippy.foodandmart.projections.*;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmProductService;
 import com.jippy.foodandmart.util.FmVariantExcelReader;
@@ -2536,6 +2532,54 @@ public class FmProductServiceImpl implements FmProductService {
 
         return response;
     }
+
+    @Override
+    public List<FmOrderItemsEvent> getOrderProductItemsForMerchant(List<Integer> productIds, List<Integer> productVariantIds) {
+
+        List<FmOrderProductItemsForMerchantProjection> orderItemsForMerchantProjection =
+                productRepository.getOrderProductItemsForMerchant(productIds, productVariantIds);
+
+        if (orderItemsForMerchantProjection != null && !orderItemsForMerchantProjection.isEmpty()) {
+
+            return orderItemsForMerchantProjection.stream()
+                    .collect(Collectors.groupingBy(
+                            FmOrderProductItemsForMerchantProjection::getProductId,
+                            LinkedHashMap::new, // Preserves SQL order
+                            Collectors.toList()
+                    ))
+                    .values().stream()
+                    .map(projectionsGroup -> {
+                        // Get common product metadata from the first entry in the group
+                        FmOrderProductItemsForMerchantProjection first = projectionsGroup.get(0);
+
+                        FmOrderItemsEvent event = new FmOrderItemsEvent();
+                        event.setProductId(first.getProductId());
+                        event.setProductName(first.getProductName());
+                        event.setProductPrice(first.getProductPrice());
+
+                        // Map variants list for this product
+                        List<FmOrderItemsEvent.VariantDto> variants = projectionsGroup.stream()
+                                .filter(p -> p.getProductVariantOptionsId() != null)
+                                .map(p -> {
+                                    FmOrderItemsEvent.VariantDto variant = new FmOrderItemsEvent.VariantDto();
+                                    variant.setProductVariantOptionsId(p.getProductVariantOptionsId());
+                                    variant.setVariantName(p.getVariantName());
+                                    variant.setVariantPrice(p.getVariantPrice());
+                                    variant.setPriceType(p.getPriceType());
+                                    return variant;
+                                })
+                                .collect(Collectors.toList());
+
+                        event.setVariants(variants);
+                        return event;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        return Collections.emptyList();
+    }
+
+
 
 }
 

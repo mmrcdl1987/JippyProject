@@ -59,15 +59,15 @@ public class CoOrderMapper {
     /*
      * MAP ORDER ITEM
      */
-    public CoOrderItem mapToItem(CoOrderItemDto orderItemDto, String orderId) {
+    public CoOrderItem mapToItem(CoOrderItemDto orderItemDto, CoOrder order) {
 
         validateOrderItem(orderItemDto);
 
-        log.info("MAPPER_START | MAP_ORDER_ITEM | orderId={} | productId={}", orderId, orderItemDto.getProductId());
+        log.info("MAPPER_START | MAP_ORDER_ITEM | orderId={} | productId={}", order.getOrderId(), orderItemDto.getProductId());
 
         CoOrderItem orderItem = new CoOrderItem();
 
-        orderItem.setOrderId(orderId);
+        orderItem.setOrder(order);
 
         orderItem.setProductId(orderItemDto.getProductId());
 
@@ -91,7 +91,7 @@ public class CoOrderMapper {
 
         orderItem.setCreatedAt(LocalDateTime.now());
 
-        log.info("MAPPER_END | MAP_ORDER_ITEM_SUCCESS | orderId={} | productId={}", orderId, orderItemDto.getProductId());
+        log.info("MAPPER_END | MAP_ORDER_ITEM_SUCCESS | orderId={} | productId={}", order.getOrderId(), orderItemDto.getProductId());
 
         return orderItem;
     }
@@ -99,13 +99,13 @@ public class CoOrderMapper {
     /*
      * MAP PRICE BREAKUP
      */
-    public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto requestDto, String orderId) {
+    public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto requestDto, CoOrder order) {
 
-        log.info("MAPPER_START | MAP_PRICE_BREAKUP | orderId={}", orderId);
+        log.info("MAPPER_START | MAP_PRICE_BREAKUP | orderId={}", order.getOrderId());
 
         CoOrderPriceBreakup breakup = new CoOrderPriceBreakup();
 
-        breakup.setOrderId(orderId);
+        breakup.setOrder(order);
 
         breakup.setCouponId(requestDto.getCouponId());
 
@@ -139,7 +139,7 @@ public class CoOrderMapper {
 
         breakup.setDeliveryCharges(requestDto.getDeliveryCharges());
 
-        log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", orderId);
+        log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", order.getOrderId());
 
         return breakup;
     }

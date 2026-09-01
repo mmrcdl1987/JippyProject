@@ -111,7 +111,7 @@ public class CoWalletRefundServiceImpl implements CoWalletRefundService {
     @Override
     public BigDecimal getWalletAmountUsed(String orderId) {
 
-        CoOrderPriceBreakup priceBreakup = priceBreakupRepository.findByOrderId(orderId);
+        CoOrderPriceBreakup priceBreakup = priceBreakupRepository.findByOrder_OrderId(orderId);
 
         if (priceBreakup == null || priceBreakup.getWalletAmount() == null) {
 

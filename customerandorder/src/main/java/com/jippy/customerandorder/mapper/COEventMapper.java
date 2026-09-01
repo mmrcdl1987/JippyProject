@@ -1,12 +1,12 @@
 package com.jippy.customerandorder.mapper;
 
-import com.jippy.customerandorder.dto.COOrderEvent;
-import com.jippy.customerandorder.dto.WelcomeCouponDto;
-import com.jippy.customerandorder.dto.WelcomeCouponNotificationEvent;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.exception.OrderException;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
 
 @Slf4j
 public class COEventMapper {
@@ -77,5 +77,19 @@ public class COEventMapper {
         event.setMinOrderValue(coupon.getMinOrderValue());
 
         return event;
+    }
+
+    public static CoNewOrderEvent mapToOrderNewOrderEvent(CoOrder order, CoCustomer customer, List<CoOrderItemsEvent> orderItemsEventList) {
+
+        CoNewOrderEvent newOrderEvent = new CoNewOrderEvent();
+
+        newOrderEvent.setOrderId(order.getOrderId());
+        newOrderEvent.setCustomerId(order.getCustomerId());
+        newOrderEvent.setCustomerName(customer.getFirstName());
+        newOrderEvent.setCustomerMobileNum(customer.getPhoneNumber());
+        newOrderEvent.setOrderStatus(order.getOrderStatus());
+        newOrderEvent.setOrderItemsList(orderItemsEventList);
+
+        return newOrderEvent;
     }
 }

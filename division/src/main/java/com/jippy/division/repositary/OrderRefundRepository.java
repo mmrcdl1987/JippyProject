@@ -20,4 +20,9 @@ public interface OrderRefundRepository extends JpaRepository<OrderRefund, UUID> 
             "where rt.refund_status =:paymentStatus and pt.payment_method_type =:paymentMethodType ",nativeQuery = true)
     List<OrderRefund> findByStatusAndTransactionPaymentMethodType(@Param("paymentStatus") String paymentStatus,
             @Param("paymentMethodType") String paymentMethodType);
+
+    @Query(value = "SELECT rt.* FROM  refund_transactions rt WHERE rt.refund_transactions_id = CAST(:refundId AS string)", nativeQuery = true)
+    Optional<OrderRefund> findByRefundTransactionsId(@Param("refundId") String refundId);
+
+    List<OrderRefund> findByRefundStatus(String paymentStatusRefundInitiated);
 }

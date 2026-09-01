@@ -121,31 +121,10 @@ public class CoOrderController {
     @GetMapping("/orders/price-breakup")
     public CoOrderPriceBreakupDto getOrderPriceBreakup(@RequestParam String orderId) {
 
-        CoOrderPriceBreakup breakup = coOrderPriceBreakupRepository.findByOrderId(orderId);
+        return orderService.getOrderPriceBreakup(orderId);
 
-        CoOrderPriceBreakupDto dto = new CoOrderPriceBreakupDto();
 
-        dto.setOrderId(breakup.getOrderId());
 
-        dto.setOrderAmount(breakup.getOrderAmount());
-
-        dto.setPlatformFee(breakup.getPlatformFee());
-
-        dto.setDeliveryFee(breakup.getDeliveryFee());
-
-        dto.setSurgeFee(breakup.getSurgeFee());
-
-        dto.setPackagingFee(breakup.getPackagingFee());
-
-        dto.setGst(breakup.getGst());
-
-        dto.setOrderTotalAmount(breakup.getOrderTotalAmount());
-
-        dto.setCouponDiscount(breakup.getCouponDiscount());
-
-        dto.setOrderAmountDiscounted(breakup.getOrderAmountDiscounted());
-
-        return dto;
     }
 
     @GetMapping("/orders")

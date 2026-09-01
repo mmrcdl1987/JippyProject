@@ -34,7 +34,7 @@ public class FmOutletResponseDto {
 
     private String isActive;
 
-    private Boolean isGstApplied;
+    //private Boolean isGstApplied;
 
 
     private Boolean isApproved;
