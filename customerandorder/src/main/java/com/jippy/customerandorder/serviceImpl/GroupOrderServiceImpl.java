@@ -1,6 +1,5 @@
 package com.jippy.customerandorder.serviceImpl;
 
-
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
@@ -14,6 +13,7 @@ import com.jippy.customerandorder.projection.CustomerDeliveryAddressProjection;
 import com.jippy.customerandorder.projection.GroupOrderCartItemsProjection;
 import com.jippy.customerandorder.repository.*;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -36,11 +36,11 @@ import java.util.concurrent.TimeUnit;
 public class GroupOrderServiceImpl implements GroupOrderService {
 
 
+    private static final String TOPIC = "group-order-events";
     private final GroupOrderInvitationRepository groupOrderInvitationRepository;
     private final CoCustomerRepository customerRepository;
     private final CoGroupOrderMemberRepository groupOrderMemberRepository;
     private final GroupCartItemsRepository groupCartItemsRepository;
-    private final CoOrderSettingsRepository orderSettingsRepository;
     private final FMFeignClient fmFeignClient;
     private final StringRedisTemplate redisTemplate;
     private final CoCommunityRepository communityRepository;
@@ -49,33 +49,31 @@ public class GroupOrderServiceImpl implements GroupOrderService {
     private final GroupOrderPriceBreakupRepository priceBreakupRepository;
     private final GroupOrderPaymentRepository paymentRepository;
     private final COOrderService orderService;
-    private  final CoOrderRepository orderRepository;
+    private final CoOrderRepository orderRepository;
     private final CoCustomerCommunityRepository customerCommunityRepository;
     private final CoCustomerDeliveryAddressRepository customerDeliveryAddressRepository;
     private final SimpMessagingTemplate messagingTemplate;
-
-    private static final String TOPIC = "group-order-events";
+    private final CoOrderCheckoutFeeRepository feeRepository;
+    private final CoOrderCheckoutTaxRepository taxRepository;
 
     @Override
     public ResponseEntity<?> createGroupOrderInvitation(GroupOrderInvitationDto groupCreationDto) {
 
         CoCustomer customer = new CoCustomer();
 
-        log.info("{} flow started ",groupCreationDto.getOrderType());
+        log.info("{} flow started ", groupCreationDto.getOrderType());
 
-        ResponseEntity<?> validationResponse = validateOrderType(groupCreationDto,customer);
+        ResponseEntity<?> validationResponse = validateOrderType(groupCreationDto, customer);
 
         // If validation returned an error status, stop immediately and return it to Postman
         if (validationResponse != null && validationResponse.getStatusCode().isError()) {
             return validationResponse;
         }
 
-        GroupOrderInvitation groupOrderInvitation = GroupOrderMapper.toGroupOrderInvitation(groupCreationDto, customer,generateRandomCode());
+        GroupOrderInvitation groupOrderInvitation = GroupOrderMapper.toGroupOrderInvitation(groupCreationDto, customer, generateRandomCode());
         GroupOrderInvitation savedGroupOrderInvitation = groupOrderInvitationRepository.save(groupOrderInvitation);
 
-        log.info("Group order invitation created with ID: {} and Invitation Code: {}",
-                savedGroupOrderInvitation.getGroupOrdersInvitationId(),
-                savedGroupOrderInvitation.getInvitationCode());
+        log.info("Group order invitation created with ID: {} and Invitation Code: {}", savedGroupOrderInvitation.getGroupOrdersInvitationId(), savedGroupOrderInvitation.getInvitationCode());
 
         // 2. Create a unique key using the generated database ID
         String redisKey = "group:expiry:" + savedGroupOrderInvitation.getGroupOrdersInvitationId();
@@ -84,8 +82,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         // We don't care about the value ("value" is fine), we only care about the key's lifetime!
         redisTemplate.opsForValue().set(redisKey, "ACTIVE", groupCreationDto.getOrderCloseDurationInMinutes(), TimeUnit.MINUTES);
 
-        log.info("Redis key {} set with :{} expiration for group order invitation ID: {}",
-                redisKey, groupCreationDto.getOrderCloseDurationInMinutes(),savedGroupOrderInvitation.getGroupOrdersInvitationId());
+        log.info("Redis key {} set with :{} expiration for group order invitation ID: {}", redisKey, groupCreationDto.getOrderCloseDurationInMinutes(), savedGroupOrderInvitation.getGroupOrdersInvitationId());
 
         GroupOrderInvitationDto responseDto = GroupOrderMapper.toGroupOrderInvitationResponseDto(savedGroupOrderInvitation);
         return ResponseEntity.ok(responseDto);
@@ -94,30 +91,26 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
     private ResponseEntity<?> validateOrderType(GroupOrderInvitationDto groupCreationDto, CoCustomer customer) {
 
-        if(groupCreationDto.getOrderType().equals(COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE)){
-            Optional<CoCustomerCommunities> customerCommunities = customerCommunityRepository.
-                    findByCustomerIdAndCommunityId(groupCreationDto.getHostCustomerId(),groupCreationDto.getCommunityId());
+        if (groupCreationDto.getOrderType().equals(COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE)) {
+            Optional<CoCustomerCommunities> customerCommunities = customerCommunityRepository.findByCustomerIdAndCommunityId(groupCreationDto.getHostCustomerId(), groupCreationDto.getCommunityId());
 
-            if(customerCommunities.isEmpty()){
+            if (customerCommunities.isEmpty()) {
                 log.warn("Community group order is not allowed as customer does not belongs to any community");
-                return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body
-                        ("Community group order is not allowed as customer does not belongs to any community " + groupCreationDto.getHostCustomerId());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Community group order is not allowed as customer does not belongs to any community " + groupCreationDto.getHostCustomerId());
             }
         }
 
-        if(groupCreationDto.getOrderType().equals(COConstants.GROUP_ORDER_ORDER_TYPE)){
+        if (groupCreationDto.getOrderType().equals(COConstants.GROUP_ORDER_ORDER_TYPE)) {
 
-            customer = customerRepository.findById(groupCreationDto.getHostCustomerId())
-                    .orElseThrow(() -> {
-                        log.error("Customer not found with id: {}", groupCreationDto.getHostCustomerId());
-                        return new CoBadRequestException("Customer not found with id: " + groupCreationDto.getHostCustomerId());
-                    });
+            customer = customerRepository.findById(groupCreationDto.getHostCustomerId()).orElseThrow(() -> {
+                log.error("Customer not found with id: {}", groupCreationDto.getHostCustomerId());
+                return new CoBadRequestException("Customer not found with id: " + groupCreationDto.getHostCustomerId());
+            });
 
             Optional<GroupOrderInvitation> existingActiveGO = groupOrderInvitationRepository.getActiveGroupOrderByCustomerId(groupCreationDto.getHostCustomerId(), COConstants.GROUP_ORDER_INVITATION_ACTIVE);
-            if(existingActiveGO.isPresent()){
+            if (existingActiveGO.isPresent()) {
                 log.error("An active group order is associated with this customer id: {}", groupCreationDto.getHostCustomerId());
-                return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body
-                        ("An active group order is associated with this customer id: " + groupCreationDto.getHostCustomerId());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("An active group order is associated with this customer id: " + groupCreationDto.getHostCustomerId());
             }
 
         }
@@ -133,35 +126,29 @@ public class GroupOrderServiceImpl implements GroupOrderService {
     public ResponseEntity<CoResponseDto> joinGroupMembers(JoinGroupMembersDto joinGroupMembersDto) {
 
         // 1. Fetch the active group invitation session using the code from the shared link
-        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findByGroupOrdersInvitationId(joinGroupMembersDto.getGroupOrdersInvitationId())
-                .orElseThrow(() -> {
-                    log.error("Group order invitation not found with code: {}", joinGroupMembersDto.getInvitationCode());
-                    return new CoResourceNotFoundException("Group order invitation not found with code: "
-                            + joinGroupMembersDto.getInvitationCode());
-                });
+        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findByGroupOrdersInvitationId(joinGroupMembersDto.getGroupOrdersInvitationId()).orElseThrow(() -> {
+            log.error("Group order invitation not found with code: {}", joinGroupMembersDto.getInvitationCode());
+            return new CoResourceNotFoundException("Group order invitation not found with code: " + joinGroupMembersDto.getInvitationCode());
+        });
 
-        ResponseEntity<CoResponseDto> validationResponse = validateGroupOrderMembers(joinGroupMembersDto,groupOrderInvitation);
+        ResponseEntity<CoResponseDto> validationResponse = validateGroupOrderMembers(joinGroupMembersDto, groupOrderInvitation);
 
         // If validation returned an error status, stop immediately and return it to Postman
         if (validationResponse != null && validationResponse.getStatusCode().isError()) {
             return validationResponse;
         }
 
-        CoCustomer customer = customerRepository.findById(joinGroupMembersDto.getCustomerId())
-                .orElseThrow(() -> {
-                    log.error("Customer not found with id: {}", joinGroupMembersDto.getCustomerId());
-                    return new CoBadRequestException("Customer not found with id: "
-                            + joinGroupMembersDto.getCustomerId());
-                });
+        CoCustomer customer = customerRepository.findById(joinGroupMembersDto.getCustomerId()).orElseThrow(() -> {
+            log.error("Customer not found with id: {}", joinGroupMembersDto.getCustomerId());
+            return new CoBadRequestException("Customer not found with id: " + joinGroupMembersDto.getCustomerId());
+        });
 
 
-        GroupOrderMembers groupOrderMembersEntity = GroupOrderMapper.toGroupOrderMembersEntity
-                (joinGroupMembersDto, groupOrderInvitation, customer);
+        GroupOrderMembers groupOrderMembersEntity = GroupOrderMapper.toGroupOrderMembersEntity(joinGroupMembersDto, groupOrderInvitation, customer);
 
         groupOrderMemberRepository.save(groupOrderMembersEntity);
 
-        log.info("Customer with ID {} successfully joined group order with code {}. GroupOrderMembers ID: {}",
-                joinGroupMembersDto.getCustomerId(), joinGroupMembersDto.getInvitationCode(), groupOrderMembersEntity.getGroupOrderMembersId());
+        log.info("Customer with ID {} successfully joined group order with code {}. GroupOrderMembers ID: {}", joinGroupMembersDto.getCustomerId(), joinGroupMembersDto.getInvitationCode(), groupOrderMembersEntity.getGroupOrderMembersId());
 
         // Note: After saving, you can trigger a Kafka event or Firebase Push Notification
         // to tell the host's app UI to update instantly with "+1 member joined"!
@@ -175,18 +162,15 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
         // 3. Publish to Kafka Topic asynchronous broker pipeline
         // Using invitationId as the Kafka Partitioning Key ensures sequence ordering per room session
-        this.kafkaTemplate.send(TOPIC, String.valueOf(groupOrderInvitation.getGroupOrdersInvitationId()), eventPayload)
-                .whenComplete((result, ex) -> {
-                    if (ex == null) {
-                        log.info("Successfully sent member joined event to Kafka for Group: {}",
-                                groupOrderInvitation.getGroupOrdersInvitationId());
-                    } else {
-                        log.error("Failed to stream event notification to Kafka", ex);
-                    }
-                });
+        this.kafkaTemplate.send(TOPIC, String.valueOf(groupOrderInvitation.getGroupOrdersInvitationId()), eventPayload).whenComplete((result, ex) -> {
+            if (ex == null) {
+                log.info("Successfully sent member joined event to Kafka for Group: {}", groupOrderInvitation.getGroupOrdersInvitationId());
+            } else {
+                log.error("Failed to stream event notification to Kafka", ex);
+            }
+        });
 
-        return ResponseEntity.ok(new CoResponseDto("200", "Customer with ID: "+joinGroupMembersDto.getCustomerId()
-                + " successfully joined group order with id "+ joinGroupMembersDto.getGroupOrdersInvitationId()));
+        return ResponseEntity.ok(new CoResponseDto("200", "Customer with ID: " + joinGroupMembersDto.getCustomerId() + " successfully joined group order with id " + joinGroupMembersDto.getGroupOrdersInvitationId()));
 
     }
 
@@ -199,62 +183,51 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         if (LocalDateTime.now().isAfter(expirationTime)) {
             groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_INVITATION_EXPIRED);
             groupOrderInvitationRepository.save(groupOrderInvitation);
-            log.warn("Group order invitation with code {} has expired. Current time: {}, Expiration time: {}",
-                    joinGroupMembersDto.getInvitationCode(), LocalDateTime.now(), expirationTime);
+            log.warn("Group order invitation with code {} has expired. Current time: {}, Expiration time: {}", joinGroupMembersDto.getInvitationCode(), LocalDateTime.now(), expirationTime);
             throw new IllegalStateException("This group order session has expired.");
         }
 
         // 3. Validate Status
         if (!"ACTIVE".equals(groupOrderInvitation.getStatus()) && !"LOCKED".equals(groupOrderInvitation.getStatus())) {
-            log.warn("Attempt to join group order with code {} which is not active. Current status: {}",
-                    joinGroupMembersDto.getInvitationCode(), groupOrderInvitation.getStatus());
-            return ResponseEntity.ok(new CoResponseDto("500", "This group :  "
-                    +groupOrderInvitation.getInvitationCode()+" is no longer active"));
+            log.warn("Attempt to join group order with code {} which is not active. Current status: {}", joinGroupMembersDto.getInvitationCode(), groupOrderInvitation.getStatus());
+            return ResponseEntity.ok(new CoResponseDto("500", "This group :  " + groupOrderInvitation.getInvitationCode() + " is no longer active"));
         }
 
         // 4. Validate Capacity Limit
         long currentMemberCount = groupOrderMemberRepository.getMaxMembersCount(groupOrderInvitation.getGroupOrdersInvitationId());
         if (currentMemberCount >= groupOrderInvitation.getMaxMembers()) {
-            log.warn("Attempt to join full group order with code {}. Current members: {}, Max members: {}",
-                    joinGroupMembersDto.getInvitationCode(), currentMemberCount, groupOrderInvitation.getMaxMembers());
-            return ResponseEntity.ok(new CoResponseDto("500", "Group is full! Maximum limit reached in the group :  "
-                    +groupOrderInvitation.getInvitationCode()));
+            log.warn("Attempt to join full group order with code {}. Current members: {}, Max members: {}", joinGroupMembersDto.getInvitationCode(), currentMemberCount, groupOrderInvitation.getMaxMembers());
+            return ResponseEntity.ok(new CoResponseDto("500", "Group is full! Maximum limit reached in the group :  " + groupOrderInvitation.getInvitationCode()));
         }
 
         // 5. Check if user is already a member to prevent duplicates
-        GroupOrderMembers groupOrderMembers = groupOrderMemberRepository.validateGroupMemberAlreadyExists(
-                groupOrderInvitation.getGroupOrdersInvitationId(), joinGroupMembersDto.getCustomerId());
+        GroupOrderMembers groupOrderMembers = groupOrderMemberRepository.validateGroupMemberAlreadyExists(groupOrderInvitation.getGroupOrdersInvitationId(), joinGroupMembersDto.getCustomerId());
 
-        if(groupOrderMembers != null){
-            if(groupOrderMembers.getGroupOrderMembersId() != null) {
-                log.warn("Customer with ID {} attempted to join group order with code {} but is already a member.",
-                        joinGroupMembersDto.getCustomerId(), joinGroupMembersDto.getInvitationCode());
+        if (groupOrderMembers != null) {
+            if (groupOrderMembers.getGroupOrderMembersId() != null) {
+                log.warn("Customer with ID {} attempted to join group order with code {} but is already a member.", joinGroupMembersDto.getCustomerId(), joinGroupMembersDto.getInvitationCode());
                 return ResponseEntity.ok(new CoResponseDto("200", "You have already joined this group order!"));
             }
         }
 
-        if(groupOrderInvitation.getOrderType().equals(COConstants.COMMUNITY_ORDER_ORDER_TYPE)){
-            ResponseEntity<CoResponseDto> validationResponse = validateCommunityOrderMember(groupOrderInvitation,joinGroupMembersDto);
+        if (groupOrderInvitation.getOrderType().equals(COConstants.COMMUNITY_ORDER_ORDER_TYPE)) {
+            ResponseEntity<CoResponseDto> validationResponse = validateCommunityOrderMember(groupOrderInvitation, joinGroupMembersDto);
             // If validation returned an error status, stop immediately and return it to Postman
             if (validationResponse != null && validationResponse.getStatusCode().isError()) {
                 return validationResponse;
             }
-        }else if(groupOrderInvitation.getOrderType().equals(COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE)){
+        } else if (groupOrderInvitation.getOrderType().equals(COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE)) {
 
-            CustomerDeliveryAddressProjection deliveryAddressProjection= customerDeliveryAddressRepository
-                    .findByDeliveryAddressId(joinGroupMembersDto.getDeliveryAddressId());
+            CustomerDeliveryAddressProjection deliveryAddressProjection = customerDeliveryAddressRepository.findByDeliveryAddressId(joinGroupMembersDto.getDeliveryAddressId());
 
-            Optional<CoCommunity> community = communityRepository.findCustomerInCommunity
-                    (deliveryAddressProjection.getLatitude(),deliveryAddressProjection.getLongitude());
+            Optional<CoCommunity> community = communityRepository.findCustomerInCommunity(deliveryAddressProjection.getLatitude(), deliveryAddressProjection.getLongitude());
 
-            if(!community.isPresent()){
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new CoResponseDto("400", "Given delivery address does not belongs to community"));
+            if (!community.isPresent()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoResponseDto("400", "Given delivery address does not belongs to community"));
             }
-        }else{
-            if(joinGroupMembersDto.getDeliveryAddressId() == null){
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new CoResponseDto("400", "Delivery address is required for the first member (Host)."));
+        } else {
+            if (joinGroupMembersDto.getDeliveryAddressId() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoResponseDto("400", "Delivery address is required for the first member (Host)."));
             }
 
         }
@@ -264,43 +237,36 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
     private ResponseEntity<CoResponseDto> validateCommunityOrderMember(GroupOrderInvitation groupOrderInvitation, JoinGroupMembersDto joinGroupMembersDto) {
 
-        Optional<CoCommunityEvents> coCommunityEvents = customerCommunityRepository.isCustomerInCommunityForInvitation
-                (groupOrderInvitation.getGroupOrdersInvitationId(),joinGroupMembersDto.getCustomerId());
-        if(coCommunityEvents.isEmpty()){
+        Optional<CoCommunityEvents> coCommunityEvents = customerCommunityRepository.isCustomerInCommunityForInvitation(groupOrderInvitation.getGroupOrdersInvitationId(), joinGroupMembersDto.getCustomerId());
+        if (coCommunityEvents.isEmpty()) {
             log.error("Customer does not belongs to this community {}", joinGroupMembersDto.getCustomerId());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CoResponseDto("500",
-                    "Customer does not belongs to this community"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CoResponseDto("500", "Customer does not belongs to this community"));
         }
         //  Check if this is the FIRST member joining this group order invitation
-        Optional<GroupOrderMembers> groupOrderMembers1 = groupOrderMemberRepository.getMembersByGroupOrdersInvitationId(
-                groupOrderInvitation.getGroupOrdersInvitationId());
+        Optional<GroupOrderMembers> groupOrderMembers1 = groupOrderMemberRepository.getMembersByGroupOrdersInvitationId(groupOrderInvitation.getGroupOrdersInvitationId());
 
         if (groupOrderMembers1.isEmpty()) {
             if (joinGroupMembersDto.getDeliveryAddressId() == null) {
 
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new CoResponseDto("400", "Delivery address is required for the first member (Host)."));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CoResponseDto("400", "Delivery address is required for the first member (Host)."));
             }
             // Get first customer added in community and save them as host
             groupOrderInvitation.setHostCustomerId(joinGroupMembersDto.getCustomerId());
             groupOrderInvitationRepository.save(groupOrderInvitation);
-        }else{
+        } else {
             joinGroupMembersDto.setDeliveryAddressId(groupOrderMembers1.get().getDeliveryAddressId());
         }
 
-        CustomerDeliveryAddressProjection deliveryAddressProjection= customerDeliveryAddressRepository
-                .findByDeliveryAddressId(joinGroupMembersDto.getDeliveryAddressId());
-        log.info("========================================="+deliveryAddressProjection.getLatitude()+deliveryAddressProjection.getLongitude()+coCommunityEvents.get().getCommunityId());
+        CustomerDeliveryAddressProjection deliveryAddressProjection = customerDeliveryAddressRepository.findByDeliveryAddressId(joinGroupMembersDto.getDeliveryAddressId());
+        log.info("=========================================" + deliveryAddressProjection.getLatitude() + deliveryAddressProjection.getLongitude() + coCommunityEvents.get().getCommunityId());
 
-        Optional<CoCommunity> community = communityRepository.checkCustomerAddressWithCommunity
-                (deliveryAddressProjection.getLatitude(),deliveryAddressProjection.getLongitude(),coCommunityEvents.get().getCommunityId());
+        Optional<CoCommunity> community = communityRepository.checkCustomerAddressWithCommunity(deliveryAddressProjection.getLatitude(), deliveryAddressProjection.getLongitude(), coCommunityEvents.get().getCommunityId());
 
-        if(!community.isPresent()){
+        if (!community.isPresent()) {
             log.error("Customer address is not community address {}", joinGroupMembersDto.getDeliveryAddressId());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CoResponseDto("404",
-                    "Customer address is not community address "));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CoResponseDto("404", "Customer address is not community address "));
         }
-        return  null;
+        return null;
     }
 
     @Transactional
@@ -308,27 +274,22 @@ public class GroupOrderServiceImpl implements GroupOrderService {
     public ResponseEntity<CoResponseDto> addItemsToGroupCart(CoGroupCartItemsDto groupCartItemsDto) {
 
         //  Fetch the active group invitation session using the code from the shared link
-        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findById(groupCartItemsDto.getGroupOrderInvitationId())
-                .orElseThrow(() -> {
-                    log.error("Group order invitation not found with ID: {}", groupCartItemsDto.getGroupOrderInvitationId());
-                    return new CoResourceNotFoundException("Group order invitation not found with ID: "
-                            + groupCartItemsDto.getGroupOrderInvitationId());
-                });
+        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findById(groupCartItemsDto.getGroupOrderInvitationId()).orElseThrow(() -> {
+            log.error("Group order invitation not found with ID: {}", groupCartItemsDto.getGroupOrderInvitationId());
+            return new CoResourceNotFoundException("Group order invitation not found with ID: " + groupCartItemsDto.getGroupOrderInvitationId());
+        });
 
         // Check whether the group session status is active or not
         if (!"ACTIVE".equals(groupOrderInvitation.getStatus())) {
-            log.warn("Attempt to add items to group cart for invitation ID {} which is not active. Current status: {}",
-                    groupCartItemsDto.getGroupOrderInvitationId(), groupOrderInvitation.getStatus());
+            log.warn("Attempt to add items to group cart for invitation ID {} which is not active. Current status: {}", groupCartItemsDto.getGroupOrderInvitationId(), groupOrderInvitation.getStatus());
             throw new IllegalStateException("This group order is locked and no longer accepting items.");
         }
 
         //  Check whether the customer exists or not
-        CoCustomer customer = customerRepository.findById(groupCartItemsDto.getCustomerId())
-                .orElseThrow(() -> {
-                    log.warn("Customer with ID: {} does not belong to this group ", groupCartItemsDto.getCustomerId());
-                    return new CoBadRequestException("Customer not found with id: "
-                            + groupCartItemsDto.getCustomerId());
-                });
+        CoCustomer customer = customerRepository.findById(groupCartItemsDto.getCustomerId()).orElseThrow(() -> {
+            log.warn("Customer with ID: {} does not belong to this group ", groupCartItemsDto.getCustomerId());
+            return new CoBadRequestException("Customer not found with id: " + groupCartItemsDto.getCustomerId());
+        });
         //  Business Validation: Verify this customer actually joined this specific group session first
         boolean isMember = groupOrderMemberRepository.existsByGroupOrdersInvitationAndCustomer(groupOrderInvitation, customer);
         if (!isMember) {
@@ -336,21 +297,17 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         }
 
         // 6. Everything is valid! Proceed to save or update the item inside group_cart_items
-        Optional<GroupCartItems> existingCartItem = groupCartItemsRepository
-                .findByGroupOrdersAndCustomerAndProductId(groupOrderInvitation.getGroupOrdersInvitationId(),
-                        customer.getCustomerId(),
-                        groupCartItemsDto.getProductId());
+        Optional<GroupCartItems> existingCartItem = groupCartItemsRepository.findByGroupOrdersAndCustomerAndProductId(groupOrderInvitation.getGroupOrdersInvitationId(), customer.getCustomerId(), groupCartItemsDto.getProductId());
 
         if (existingCartItem.isPresent()) {
             // If the item already exists in their basket, update the quantity
             GroupCartItems cartItem = existingCartItem.get();
 
-            if(groupCartItemsDto.getQuantity() == 0){
+            if (groupCartItemsDto.getQuantity() == 0) {
                 groupCartItemsRepository.delete(cartItem);
-                sendWebSocketEvent(cartItem,groupOrderInvitation,COConstants.ACTION_ITEM_REMOVED);
+                sendWebSocketEvent(cartItem, groupOrderInvitation, COConstants.ACTION_ITEM_REMOVED);
 
-                log.info("Customer with ID {} successfully removed Product ID {} from group cart for invitation ID {}.",
-                        groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
+                log.info("Customer with ID {} successfully removed Product ID {} from group cart for invitation ID {}.", groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
 
                 return ResponseEntity.ok(new CoResponseDto("200", "Item successfully removed from the group cart!"));
             }
@@ -359,10 +316,9 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             cartItem.setUpdatedAt(LocalDateTime.now());
             groupCartItemsRepository.save(cartItem);
 
-            sendWebSocketEvent(cartItem,groupOrderInvitation,COConstants.ACTION_QUANTITY_UPDATED);
+            sendWebSocketEvent(cartItem, groupOrderInvitation, COConstants.ACTION_QUANTITY_UPDATED);
 
-            log.info("Customer with ID {} successfully updated quantity with Product ID {} to group cart for invitation ID {}.",
-                    groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
+            log.info("Customer with ID {} successfully updated quantity with Product ID {} to group cart for invitation ID {}.", groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
 
             return ResponseEntity.ok(new CoResponseDto("200", "Item qunatity successfully updated to the group cart!"));
 
@@ -376,17 +332,16 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
             // Set prices (Usually pulled via a Product/Menu Service)
             newCartItem.setOnlineUnitPrice(groupCartItemsDto.getOnlineUnitPrice());
-           // newCartItem.setMerchantUnitPrice(groupCartItemsDto.getMerchantUnitPrice());
+            // newCartItem.setMerchantUnitPrice(groupCartItemsDto.getMerchantUnitPrice());
 
             newCartItem.setCreatedAt(LocalDateTime.now());
             newCartItem.setUpdatedAt(LocalDateTime.now());
 
             groupCartItemsRepository.save(newCartItem);
 
-            sendWebSocketEvent(newCartItem,groupOrderInvitation,COConstants.ACTION_ITEM_ADDED);
+            sendWebSocketEvent(newCartItem, groupOrderInvitation, COConstants.ACTION_ITEM_ADDED);
 
-            log.info("Customer with ID {} successfully added/updated item with Product ID {} to group cart for invitation ID {}.",
-                    groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
+            log.info("Customer with ID {} successfully added/updated item with Product ID {} to group cart for invitation ID {}.", groupCartItemsDto.getCustomerId(), groupCartItemsDto.getProductId(), groupCartItemsDto.getGroupOrderInvitationId());
 
             return ResponseEntity.ok(new CoResponseDto("200", "Item successfully added to the group cart!"));
         }
@@ -398,57 +353,70 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         CoFmProductDto productDto = fmFeignClient.getSettlementProductById(cartItem.getProductId());
 
         // 2. Build update event payload
-        CartUpdateEventDto event = new CartUpdateEventDto(
-                action,
-                groupOrderInvitation.getGroupOrdersInvitationId(),
-                cartItem.getCustomer().getCustomerId(),
-                cartItem.getCustomer().getFirstName() + " " +cartItem.getCustomer().getLastName(),
-                productDto.getProductName(),
-                cartItem.getQuantity(),
-                cartItem.getOnlineUnitPrice()
-        );
+        CartUpdateEventDto event = new CartUpdateEventDto(action, groupOrderInvitation.getGroupOrdersInvitationId(), cartItem.getCustomer().getCustomerId(), cartItem.getCustomer().getFirstName() + " " + cartItem.getCustomer().getLastName(), productDto.getProductName(), cartItem.getQuantity(), cartItem.getOnlineUnitPrice());
 
         // 3. Broadcast to all subscribers of this specific group invitation
-        String destination ="/topic/group-order/" + groupOrderInvitation.getGroupOrdersInvitationId();
+        String destination = "/topic/group-order/" + groupOrderInvitation.getGroupOrdersInvitationId();
         log.info("Broadcasting cart update to channel: {}", destination);
 
         messagingTemplate.convertAndSend(destination, event);
     }
 
     @Override
-    public ResponseEntity<GroupOrderCheckoutDto> groupOrderCheckOut(Integer groupOrdersInvitationId, Integer hostCustomerId,
-            Double couponDiscount, Double deliveryTip)
-    {
+    public ResponseEntity<GroupOrderCheckoutDto> groupOrderCheckOut(Integer groupOrdersInvitationId, Integer hostCustomerId, Double couponDiscount, Double deliveryTip) {
         log.info("Initiating checkout for group order invitation ID: {} by host customer ID: {}", groupOrdersInvitationId, hostCustomerId);
 
         //  Fetch the active group invitation session using the code from the shared link
-        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findById(groupOrdersInvitationId)
-                .orElseThrow(() -> {
-                    log.error("Group order invitation not found with ID: {}", groupOrdersInvitationId);
-                    return new CoResourceNotFoundException("Group order invitation not found with ID: "
-                            + groupOrdersInvitationId);
-                });
+        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findById(groupOrdersInvitationId).orElseThrow(() -> {
+            log.error("Group order invitation not found with ID: {}", groupOrdersInvitationId);
+            return new CoResourceNotFoundException("Group order invitation not found with ID: " + groupOrdersInvitationId);
+        });
 
         // Check whether the group session status is active or not
         if (!"ACTIVE".equals(groupOrderInvitation.getStatus())) {
-            log.warn("Attempt to checkout group order for invitation ID {} which is not active. Current status: {}",
-                    groupOrdersInvitationId, groupOrderInvitation.getStatus());
+            log.warn("Attempt to checkout group order for invitation ID {} which is not active. Current status: {}", groupOrdersInvitationId, groupOrderInvitation.getStatus());
             throw new IllegalStateException("This group order is locked and cannot be checked out.");
         }
         //groupOrderInvitation.setStatus(COConstants.GROUP_ORDER_STATUS_LOCKED);
         groupOrderInvitationRepository.save(groupOrderInvitation);
+// GET OUTLET AREA
+        Integer outletId = groupOrderInvitation.getOutletId();
 
-        //get platform fee,surge fee etc.., from OrderSettings
+        Integer areaId = getAreaId(outletId);
 
-        CoOrderSettings orderSettings = orderSettingsRepository.findAll().stream().findFirst().orElseThrow(() -> {
-            log.error("ORDER_SETTINGS_NOT_FOUND");
-            return new CoBadRequestException(COConstants.MSG_ORDER_SETTINGS_NOT_FOUND);
-        });
+        log.info("GROUP_CHECKOUT_AREA_RESOLVED | outletId={} | areaId={}", outletId, areaId);
+// GET FEE CONFIGURATION BY AREA
 
+        CoOrderCheckoutFee feeConfig = getFeeConfiguration(areaId);
+// GET GST CONFIGURATION
+        CoOrderCheckoutTax taxConfig = getTaxConfiguration();
+
+        BigDecimal platformFee = defaultValue(feeConfig.getPlatformFee());
+
+        BigDecimal surgeFee = defaultValue(feeConfig.getSurgeFee());
+
+        BigDecimal packagingFee = defaultValue(feeConfig.getPackagingFee());
+
+        boolean platformFeeToggle = Boolean.TRUE.equals(feeConfig.getPlatformFeeToggle());
+
+        boolean surgeFeeToggle = Boolean.TRUE.equals(feeConfig.getSurgeFeeToggle());
+
+        boolean packagingFeeToggle = Boolean.TRUE.equals(feeConfig.getPackagingFeeToggle());
+
+        BigDecimal platformFeeTax = calculatePercentage(platformFee, taxConfig.getPlatformFeeTax());
+
+        BigDecimal surgeFeeTax = calculatePercentage(surgeFee, taxConfig.getSurgeFeeTax());
+
+        BigDecimal packagingFeeTax = calculatePercentage(packagingFee, taxConfig.getPackagingFeeTax());
+// BUILD GROUP CHECKOUT RESPONSE
         GroupOrderCheckoutDto groupOrderCheckoutDto = new GroupOrderCheckoutDto();
-        groupOrderCheckoutDto.setPlatformFee(orderSettings.getPlatformFee());
-        groupOrderCheckoutDto.setPackagingFee(orderSettings.getPackagingFee());
-        groupOrderCheckoutDto.setSurgeFee(orderSettings.getSurgeFee());
+
+        groupOrderCheckoutDto.setPlatformFee(feeConfig.getPlatformFee());
+
+        groupOrderCheckoutDto.setPackagingFee(feeConfig.getPackagingFee());
+
+        groupOrderCheckoutDto.setSurgeFee(feeConfig.getSurgeFee());
+
         groupOrderCheckoutDto.setGroupOrdersInvitationId(groupOrdersInvitationId);
 
         List<GroupOrderCartItemsProjection> groupCartItems = groupCartItemsRepository.findBygroupOrdersInvitationId(groupOrdersInvitationId);
@@ -495,7 +463,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
                 activeAddressGroup.getGroupOrderCheckoutItemsDtoList().add(customerDto);
 
 
-                GroupOrderMembers groupOrderMembers = groupOrderMemberRepository.findByCustomerAndGroupOrdersInvitation(customer,groupOrderInvitation);
+                GroupOrderMembers groupOrderMembers = groupOrderMemberRepository.findByCustomerAndGroupOrdersInvitation(customer, groupOrderInvitation);
                 groupOrderMembers.setOrderPlaced(COConstants.GROUP_ORDER_PLACED_TRUE);
                 groupOrderMembers.setUpdatedAt(LocalDateTime.now());
                 groupOrderMemberRepository.save(groupOrderMembers);
@@ -538,8 +506,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             deliveryChargeCalculationRequestDto.setCustomerAddressId(addressGroup.getDeliveryAddressId());
             deliveryChargeCalculationRequestDto.setOrderAmount(addressGroup.getItemsTotal());
 
-            DeliveryChargeCalculationResponseDto deliveryChargeResponse =
-                    driverFeignClient.calculateDeliveryCharge(deliveryChargeCalculationRequestDto);
+            DeliveryChargeCalculationResponseDto deliveryChargeResponse = driverFeignClient.calculateDeliveryCharge(deliveryChargeCalculationRequestDto);
 
             // Apply delivery specifics
             addressGroup.setDeliveryCharge(deliveryChargeResponse.getDeliveryCharge());
@@ -548,24 +515,44 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             addressGroup.setTotalDeliveryCharge(deliveryChargeResponse.getTotalDeliveryCharge());
 
             // Calculate Food Tax for this section's items
-            BigDecimal foodTax = calculatePercentage(addressGroup.getItemsTotal(), orderSettings.getFoodTotalAmountTax());
+            BigDecimal foodTax = calculatePercentage(addressGroup.getItemsTotal(), taxConfig.getFoodAmountTax());
             addressGroup.setFoodTax(foodTax);
-
+            BigDecimal deliveryTax = calculatePercentage(addressGroup.getTotalDeliveryCharge(), taxConfig.getDeliveryFeeTax());
             // Aggregate this address bundle's financial share to your master summary total
-            totalAmountNet = totalAmountNet.add(addressGroup.getItemsTotal())
-                    .add(addressGroup.getTotalDeliveryCharge())
-                    .add(foodTax);
+            totalAmountNet = totalAmountNet.add(addressGroup.getItemsTotal()).add(addressGroup.getTotalDeliveryCharge()).add(foodTax).add(deliveryTax);
         }
+// 4. ADD GLOBAL SHARED FEES
+// Fee amount is added ONLY when toggle is TRUE.
+// GST is ALWAYS added regardless of toggle.
 
-// 4. Incorporate Global Shared Fixed Fees once at the top level
-        totalAmountNet = totalAmountNet.add(orderSettings.getPlatformFee())
-                .add(orderSettings.getSurgeFee())
-                .add(orderSettings.getPackagingFee())
+        BigDecimal applicablePlatformFee = platformFeeToggle ? platformFee : BigDecimal.ZERO;
+
+        BigDecimal applicableSurgeFee = surgeFeeToggle ? surgeFee : BigDecimal.ZERO;
+
+        BigDecimal applicablePackagingFee = packagingFeeToggle ? packagingFee : BigDecimal.ZERO;
+
+// 5. ADD FEE GST
+
+        BigDecimal totalFeeTax = platformFeeTax.add(surgeFeeTax).add(packagingFeeTax);
+
+// 6. ADD FEES + GST + TIP - COUPON
+
+        totalAmountNet = totalAmountNet.add(applicablePlatformFee).add(applicableSurgeFee).add(applicablePackagingFee)
+
+                // GST is ALWAYS added
+                .add(totalFeeTax)
+
+                // Delivery tip
                 .add(deliveryTip != null ? BigDecimal.valueOf(deliveryTip) : BigDecimal.ZERO)
+
+                // Coupon discount
                 .subtract(couponDiscount != null ? BigDecimal.valueOf(couponDiscount) : BigDecimal.ZERO)
+
                 .setScale(2, RoundingMode.HALF_UP);
+// 7. SET RESPONSE
 
         groupOrderCheckoutDto.setTotalNetAmount(totalAmountNet);
+
         groupOrderCheckoutDto.setDeliveryCheckOutItemsDtoList(finalAddressList);
 
         return ResponseEntity.ok(groupOrderCheckoutDto);
@@ -589,43 +576,75 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         }
 
         //  Fetch the active group invitation session using the code from the shared link
-        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findById(groupOrdersId)
-                .orElseThrow(() -> {
-                    log.error("Group order invitation not found with ID: {}", groupOrdersId);
-                    return new CoResourceNotFoundException("Group order invitation not found with ID: "
-                            + groupOrdersId);
-                });
+        GroupOrderInvitation groupOrderInvitation = groupOrderInvitationRepository.findById(groupOrdersId).orElseThrow(() -> {
+            log.error("Group order invitation not found with ID: {}", groupOrdersId);
+            return new CoResourceNotFoundException("Group order invitation not found with ID: " + groupOrdersId);
+        });
 
         // 1. Calculate total unique customers across ALL addresses to split global shared fees fairly
         int totalCustomers = 0;
         for (GroupOrderDeliveryChargeDetailsDto deliveryGroup : groupPaymentDetailsDto.getGroupOrderDeliveryChargeDetailsDtoList()) {
             if (deliveryGroup.getCustomerPaymentDetailsDtoList() != null) {
                 totalCustomers += deliveryGroup.getCustomerPaymentDetailsDtoList().size();
-                log.info("Total customers in GroupID : {} are : {}",groupOrderInvitation.getGroupOrdersInvitationId(),
-                        totalCustomers);
+                log.info("Total customers in GroupID : {} are : {}", groupOrderInvitation.getGroupOrdersInvitationId(), totalCustomers);
             }
         }
 
         if (totalCustomers == 0) {
             throw new IllegalArgumentException("Cannot process checkout with zero group customers.");
         }
+        // 2. GET AREA-BASED FEE CONFIGURATION
 
-        // 2. Compute individual shares of global fixed costs
-        BigDecimal platformFee = groupPaymentDetailsDto.getPlatformFee() != null ?
-                groupPaymentDetailsDto.getPlatformFee() : BigDecimal.ZERO;
-        BigDecimal surgeFee = groupPaymentDetailsDto.getSurgeFee() != null ?
-                groupPaymentDetailsDto.getSurgeFee() : BigDecimal.ZERO;
-        BigDecimal packagingFee = groupPaymentDetailsDto.getPackagingFee() != null ?
-                groupPaymentDetailsDto.getPackagingFee() : BigDecimal.ZERO;
 
-        BigDecimal individualSurgeShare = surgeFee.divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
-        BigDecimal individualPackagingShare = packagingFee.divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
-        BigDecimal individualPlatformShare = platformFee.divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
+        Integer outletId = groupOrderInvitation.getOutletId();
 
-        log.info("Individual Surge Fee Share :{} ",individualSurgeShare);
-        log.info("Individual Packaging Fee Share :{} ",individualPackagingShare);
-        log.info("Individual Platform Fee Share :{} ",individualPlatformShare);
+        Integer areaId = getAreaId(outletId);
 
+        CoOrderCheckoutFee feeConfig = getFeeConfiguration(areaId);
+
+        CoOrderCheckoutTax taxConfig = getTaxConfiguration();
+        // 3. GET FEE VALUES
+
+        BigDecimal platformFee = defaultValue(feeConfig.getPlatformFee());
+
+        BigDecimal surgeFee = defaultValue(feeConfig.getSurgeFee());
+
+        BigDecimal packagingFee = defaultValue(feeConfig.getPackagingFee());
+
+// 4. GET TOGGLES
+
+        boolean platformFeeToggle = Boolean.TRUE.equals(feeConfig.getPlatformFeeToggle());
+
+        boolean surgeFeeToggle = Boolean.TRUE.equals(feeConfig.getSurgeFeeToggle());
+
+        boolean packagingFeeToggle = Boolean.TRUE.equals(feeConfig.getPackagingFeeToggle());
+// 5. CALCULATE GST
+// GST IS ALWAYS APPLIED
+        BigDecimal platformFeeTax = calculatePercentage(platformFee, taxConfig.getPlatformFeeTax());
+
+        BigDecimal surgeFeeTax = calculatePercentage(surgeFee, taxConfig.getSurgeFeeTax());
+
+        BigDecimal packagingFeeTax = calculatePercentage(packagingFee, taxConfig.getPackagingFeeTax());
+
+// 6. ONLY ENABLED FEE IS CHARGED
+        BigDecimal applicablePlatformFee = platformFeeToggle ? platformFee : BigDecimal.ZERO;
+
+        BigDecimal applicableSurgeFee = surgeFeeToggle ? surgeFee : BigDecimal.ZERO;
+
+        BigDecimal applicablePackagingFee = packagingFeeToggle ? packagingFee : BigDecimal.ZERO;
+
+// 7. SPLIT FEE BETWEEN CUSTOMERS
+        BigDecimal individualPlatformShare = applicablePlatformFee.divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
+
+        BigDecimal individualSurgeShare = applicableSurgeFee.divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
+
+        BigDecimal individualPackagingShare = applicablePackagingFee.divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
+// 8. SPLIT FEE GST BETWEEN CUSTOMERS
+        BigDecimal totalFeeTax = platformFeeTax.add(surgeFeeTax).add(packagingFeeTax);
+
+        BigDecimal individualFeeTax = totalFeeTax.divide(BigDecimal.valueOf(totalCustomers), 2, RoundingMode.HALF_UP);
+
+        log.info("GROUP_FEE_SPLIT | totalCustomers={} | " + "platformFee={} | platformToggle={} | " + "surgeFee={} | surgeToggle={} | " + "packagingFee={} | packagingToggle={} | " + "totalFeeTax={}", totalCustomers, platformFee, platformFeeToggle, surgeFee, surgeFeeToggle, packagingFee, packagingFeeToggle, totalFeeTax);
         List<GroupOrderPriceBreakup> groupOrderPriceBreakupList = new ArrayList<>();
         List<GroupOrderPayment> groupOrderPaymentList = new ArrayList<>();
 
@@ -638,64 +657,86 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
             int customerCountAtAddress = addressCustomers.size();
 
-            BigDecimal totalDeliveryCharge = deliveryGroup.getTotalDeliveryCharge() != null
-                    ? deliveryGroup.getTotalDeliveryCharge() : BigDecimal.ZERO;
-            BigDecimal totalFoodTax = deliveryGroup.getFoodTax() != null ?
-                    deliveryGroup.getFoodTax() : BigDecimal.ZERO;
+            BigDecimal totalDeliveryCharge = deliveryGroup.getTotalDeliveryCharge() != null ? deliveryGroup.getTotalDeliveryCharge() : BigDecimal.ZERO;
+            BigDecimal totalFoodTax = deliveryGroup.getFoodTax() != null ? deliveryGroup.getFoodTax() : BigDecimal.ZERO;
 
             // Split metrics for this specific location block
             BigDecimal individualDeliveryShare = totalDeliveryCharge.divide(BigDecimal.valueOf(customerCountAtAddress), 2, RoundingMode.HALF_UP);
             BigDecimal individualTaxShare = totalFoodTax.divide(BigDecimal.valueOf(customerCountAtAddress), 2, RoundingMode.HALF_UP);
 
-            log.info("Individual Delivery Fee Share :{} ",individualDeliveryShare);
-            log.info("Individual Tax Fee Share :{} ",individualTaxShare);
+            log.info("Individual Delivery Fee Share :{} ", individualDeliveryShare);
+            log.info("Individual Tax Fee Share :{} ", individualTaxShare);
 
             for (GroupOrderCustomerPaymentDetailsDto customerDto : addressCustomers) {
-                BigDecimal baseOrderAmount = customerDto.getAmountToPay() != null
-                        ? customerDto.getAmountToPay() : BigDecimal.ZERO;
 
-                // Sum up everything for this user to get their total bill invoice amount
-                BigDecimal finalCustomerTotalAmount = baseOrderAmount
-                        .add(individualDeliveryShare)
-                        .add(individualSurgeShare)
-                        .add(individualPackagingShare)
-                        .add(individualTaxShare)
-                        .add(individualPlatformShare) // optional, add if platform fee is included in total net billing
-                        .setScale(2, RoundingMode.HALF_UP);
+                BigDecimal baseOrderAmount = customerDto.getAmountToPay() != null ? customerDto.getAmountToPay() : BigDecimal.ZERO;
+                // CUSTOMER FINAL TOTAL
+                //
+                // Includes:
+                // 1. Base order amount
+                // 2. Delivery share
+                // 3. Food + delivery GST
+                // 4. Platform/Surge/Packaging GST - ALWAYS
+                // 5. Platform/Surge/Packaging fee - ONLY IF TOGGLE = TRUE
+                //
 
-                // --- BUILD BREAKDOWN RECORD ---
+                BigDecimal finalCustomerTotalAmount = baseOrderAmount.add(individualDeliveryShare).add(individualTaxShare).add(individualFeeTax).add(individualPlatformShare).add(individualSurgeShare).add(individualPackagingShare).setScale(2, RoundingMode.HALF_UP);
+
+                log.info("GROUP_CUSTOMER_TOTAL | customerId={} | " + "baseAmount={} | deliveryShare={} | " + "baseGst={} | feeGst={} | " + "platformFee={} | surgeFee={} | packagingFee={} | " + "finalAmount={}", customerDto.getCustomerId(), baseOrderAmount, individualDeliveryShare, individualTaxShare, individualFeeTax, individualPlatformShare, individualSurgeShare, individualPackagingShare, finalCustomerTotalAmount);
+
+                // BUILD PRICE BREAKUP
+
                 GroupOrderPriceBreakup groupOrderPriceBreakup = new GroupOrderPriceBreakup();
-                groupOrderPriceBreakup.setGroupOrderInvitation(groupOrderInvitation);
-                groupOrderPriceBreakup.setCustomerId(customerDto.getCustomerId());
-                groupOrderPriceBreakup.setOrderAmount(baseOrderAmount);
-                groupOrderPriceBreakup.setDeliverCharges(individualDeliveryShare);
-                groupOrderPriceBreakup.setSurgeFee(individualSurgeShare);
-                groupOrderPriceBreakup.setPackagingFee(individualPackagingShare);
-                groupOrderPriceBreakup.setGst(individualTaxShare);
-                groupOrderPriceBreakup.setOrderTotalAmount(finalCustomerTotalAmount);
-                groupOrderPriceBreakup.setCreatedAt(now);
-                groupOrderPriceBreakup.setCreatedBy(hostId);
 
-                Optional<GroupOrderPriceBreakup> existingGroupOrderPriceBreakup =
-                        priceBreakupRepository.findByGroupOrderInvitationIdAndCustomerId(groupOrderInvitation.getGroupOrdersInvitationId(),
-                                customerDto.getCustomerId());
-                if(!existingGroupOrderPriceBreakup.isPresent()){
+                groupOrderPriceBreakup.setGroupOrderInvitation(groupOrderInvitation);
+
+                groupOrderPriceBreakup.setCustomerId(customerDto.getCustomerId());
+
+                groupOrderPriceBreakup.setOrderAmount(baseOrderAmount);
+
+                groupOrderPriceBreakup.setDeliverCharges(individualDeliveryShare);
+
+                groupOrderPriceBreakup.setSurgeFee(individualSurgeShare);
+
+                groupOrderPriceBreakup.setPackagingFee(individualPackagingShare);
+
+                // Food GST + Delivery GST
+                // + Platform GST
+                // + Surge GST
+                // + Packaging GST
+                groupOrderPriceBreakup.setGst(individualTaxShare.add(individualFeeTax).setScale(2, RoundingMode.HALF_UP));
+
+                groupOrderPriceBreakup.setOrderTotalAmount(finalCustomerTotalAmount);
+
+                groupOrderPriceBreakup.setCreatedAt(now);
+
+                groupOrderPriceBreakup.setCreatedBy(hostId);
+                // CHECK EXISTING PRICE BREAKUP
+
+                Optional<GroupOrderPriceBreakup> existingGroupOrderPriceBreakup = priceBreakupRepository.findByGroupOrderInvitationIdAndCustomerId(groupOrderInvitation.getGroupOrdersInvitationId(), customerDto.getCustomerId());
+
+                if (existingGroupOrderPriceBreakup.isEmpty()) {
+
                     groupOrderPriceBreakupList.add(groupOrderPriceBreakup);
                 }
+                // BUILD PENDING PAYMENt
 
-                // --- BUILD PENDING PAYMENT TRANSACTION RECORD ---
                 GroupOrderPayment groupOrderPayment = new GroupOrderPayment();
-                groupOrderPayment.setGroupOrderInvitation(groupOrderInvitation);
-                groupOrderPayment.setCustomerId(customerDto.getCustomerId());
-                groupOrderPayment.setAmountToPay(finalCustomerTotalAmount);
-                groupOrderPayment.setPaymentStatus("PENDING");
 
-                Optional<GroupOrderPayment> existingGroupOrderPayment = paymentRepository.
-                        findByGroupInvitationIdAndCustomerId(groupOrderInvitation.getGroupOrdersInvitationId(),customerDto.getCustomerId());
-                if(!existingGroupOrderPayment.isPresent()){
+                groupOrderPayment.setGroupOrderInvitation(groupOrderInvitation);
+
+                groupOrderPayment.setCustomerId(customerDto.getCustomerId());
+
+                groupOrderPayment.setAmountToPay(finalCustomerTotalAmount);
+
+                groupOrderPayment.setPaymentStatus("PENDING");
+                // CHECK EXISTING PAYMENT
+                Optional<GroupOrderPayment> existingGroupOrderPayment = paymentRepository.findByGroupInvitationIdAndCustomerId(groupOrderInvitation.getGroupOrdersInvitationId(), customerDto.getCustomerId());
+
+                if (existingGroupOrderPayment.isEmpty()) {
+
                     groupOrderPaymentList.add(groupOrderPayment);
                 }
-
             }
         }
 
@@ -703,12 +744,10 @@ public class GroupOrderServiceImpl implements GroupOrderService {
         if (!groupOrderPriceBreakupList.isEmpty()) {
             priceBreakupRepository.saveAll(groupOrderPriceBreakupList);
             paymentRepository.saveAll(groupOrderPaymentList);
-            log.info("Successfully persisted {} pricing items and {} ledger entries for Group Order: {}",
-                    groupOrderPriceBreakupList.size(), groupOrderPaymentList.size(), groupOrdersId);
+            log.info("Successfully persisted {} pricing items and {} ledger entries for Group Order: {}", groupOrderPriceBreakupList.size(), groupOrderPaymentList.size(), groupOrdersId);
         }
 
-        GroupOrderPaymentDetailsResponseDto  groupOrderPaymentDetailsResponseDto = generateResponse(groupOrderInvitation.getGroupOrdersInvitationId(),
-                groupPaymentDetailsDto.getTotalNetAmount());
+        GroupOrderPaymentDetailsResponseDto groupOrderPaymentDetailsResponseDto = generateResponse(groupOrderInvitation.getGroupOrdersInvitationId(), groupPaymentDetailsDto.getTotalNetAmount());
         return ResponseEntity.ok(groupOrderPaymentDetailsResponseDto);
     }
 
@@ -720,11 +759,11 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
         List<GroupOrderCustomerPaymentsResponseDto> gcCustomerPaymentResponseDtoList = new ArrayList<>();
 
-        List<GroupOrderPayment> groupOrderPaymentList  = paymentRepository.findAllByGroupInvitationId(groupOrdersInvitationId);
+        List<GroupOrderPayment> groupOrderPaymentList = paymentRepository.findAllByGroupInvitationId(groupOrdersInvitationId);
 
-        log.info("Customers list size for payment in group : {} is : {}",groupOrdersInvitationId,groupOrderPaymentList.size());
+        log.info("Customers list size for payment in group : {} is : {}", groupOrdersInvitationId, groupOrderPaymentList.size());
 
-        for(GroupOrderPayment groupOrderPayment: groupOrderPaymentList){
+        for (GroupOrderPayment groupOrderPayment : groupOrderPaymentList) {
             GroupOrderCustomerPaymentsResponseDto groupOrderCustomerPaymentsResponseDto = new GroupOrderCustomerPaymentsResponseDto();
 
             groupOrderCustomerPaymentsResponseDto.setGroupOrderPaymentsId(groupOrderPayment.getGroupOrderPaymentId());
@@ -733,43 +772,35 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             groupOrderCustomerPaymentsResponseDto.setPaymentStatus(groupOrderPayment.getPaymentStatus());
 
             Optional<CoCustomer> customer = customerRepository.findById(groupOrderPayment.getCustomerId());
-            customer.ifPresent(coCustomer ->
-                    groupOrderCustomerPaymentsResponseDto.setCustomerName(
-                            coCustomer.getFirstName() + " " + coCustomer.getLastName()));
+            customer.ifPresent(coCustomer -> groupOrderCustomerPaymentsResponseDto.setCustomerName(coCustomer.getFirstName() + " " + coCustomer.getLastName()));
 
             gcCustomerPaymentResponseDtoList.add(groupOrderCustomerPaymentsResponseDto);
         }
         groupOrderPaymentDetailsResponseDto.setGroupOrderCustomerPaymentsResponeDtoList(gcCustomerPaymentResponseDtoList);
-        return  groupOrderPaymentDetailsResponseDto;
+        return groupOrderPaymentDetailsResponseDto;
     }
 
     @Override
     public ResponseEntity<CoResponseDto> placeGroupOrder(PlaceGroupOrderRequestDto placeGroupOrderRequestDto) {
         // 1. Fetch group order
-        GroupOrderInvitation invitation = groupOrderInvitationRepository.findById(placeGroupOrderRequestDto.getGroupOrderInvitationId())
-                .orElseThrow(() -> new NoSuchElementException("Group order session not found: " + placeGroupOrderRequestDto.getGroupOrderInvitationId()));
+        GroupOrderInvitation invitation = groupOrderInvitationRepository.findById(placeGroupOrderRequestDto.getGroupOrderInvitationId()).orElseThrow(() -> new NoSuchElementException("Group order session not found: " + placeGroupOrderRequestDto.getGroupOrderInvitationId()));
 
         Integer hostId = invitation.getHostCustomerId();
         Integer outletId = invitation.getOutletId();
         Integer goInvitationId = placeGroupOrderRequestDto.getGroupOrderInvitationId();
 
         // 2. Fetch active members participating in this order sequence
-        List<GroupOrderMembers> activeMembers = groupOrderMemberRepository
-                .findByGOInvitationIdAndOrderPlaced(goInvitationId,COConstants.GROUP_ORDER_PLACED_TRUE,
-                        COConstants.GROUP_ORDER_IS_DROPPED_TRUE);
+        List<GroupOrderMembers> activeMembers = groupOrderMemberRepository.findByGOInvitationIdAndOrderPlaced(goInvitationId, COConstants.GROUP_ORDER_PLACED_TRUE, COConstants.GROUP_ORDER_IS_DROPPED_TRUE);
 
         if (activeMembers.isEmpty()) {
             log.warn("No active members found with finalized carts for group invitation: {}", goInvitationId);
-            return  ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CoResponseDto("500",
-                    "No active members found with finalized carts for group invitation: "+goInvitationId));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CoResponseDto("500", "No active members found with finalized carts for group invitation: " + goInvitationId));
         }
 
         // 3. Map out which customers belong to which specific delivery addresses
         Map<Integer, List<Integer>> addressToCustomersMap = new HashMap<>();
         for (GroupOrderMembers member : activeMembers) {
-            addressToCustomersMap
-                    .computeIfAbsent(member.getDeliveryAddressId(), k -> new ArrayList<>())
-                    .add(member.getCustomer().getCustomerId());
+            addressToCustomersMap.computeIfAbsent(member.getDeliveryAddressId(), k -> new ArrayList<>()).add(member.getCustomer().getCustomerId());
         }
 
         // 4. Process each unique delivery address as an independent final order destination
@@ -778,8 +809,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             List<Integer> customersAtAddress = entry.getValue();
 
             // Fetch pricing breakdowns matching these exact customers to aggregate totals
-            List<GroupOrderPriceBreakup> individualBreakups = priceBreakupRepository
-                    .findByGroupOrderInvitationIdAndCustomerIds(goInvitationId, customersAtAddress);
+            List<GroupOrderPriceBreakup> individualBreakups = priceBreakupRepository.findByGroupOrderInvitationIdAndCustomerIds(goInvitationId, customersAtAddress);
 
             BigDecimal totalOrderAmount = BigDecimal.ZERO;
             BigDecimal totalDeliveryCharges = BigDecimal.ZERO;
@@ -799,13 +829,13 @@ public class GroupOrderServiceImpl implements GroupOrderService {
 
             // --- B. AGGREGATE AND INSERT INTO JIPPY_CUSTOMER_AND_ORDER.ORDER_ITEMS ---
             CoPlaceOrderRequestDto orderRequestDto = new CoPlaceOrderRequestDto();
-            System.out.println("======================"+customersAtAddress.size()+"==="+customersAtAddress);
+            System.out.println("======================" + customersAtAddress.size() + "===" + customersAtAddress);
 
             orderRequestDto.setGroupOrderInvitationId(goInvitationId);
             orderRequestDto.setCustomerId(customersAtAddress.get(0));
 
             Optional<CoCustomer> customer = customerRepository.findById(customersAtAddress.get(0));
-            if(customer.isPresent()) {
+            if (customer.isPresent()) {
                 orderRequestDto.setCustomerPhone(customer.get().getPhoneNumber());
                 orderRequestDto.setCreatedBy(customer.get().getCustomerId());
             }
@@ -823,8 +853,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             orderRequestDto.setOrderTotalAmount(totalOrderAmountWithFees);
 
             // Fetch food products added to cart lines by all consumers registered to this location drop point
-            List<GroupCartItems> addressCartItems = groupCartItemsRepository
-                    .findByGroupOrdersInvitationIdAndCustomerIdIn(goInvitationId, customersAtAddress);
+            List<GroupCartItems> addressCartItems = groupCartItemsRepository.findByGroupOrdersInvitationIdAndCustomerIdIn(goInvitationId, customersAtAddress);
 
             // Consolidate identical items together into one row if multiple people ordered the same dish
             Map<Integer, CoOrderItemDto> consolidatedItemsMap = new HashMap<>();
@@ -833,8 +862,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
                 Integer productId = cartLine.getProductId();
                 int additionQuantity = cartLine.getQuantity();
                 BigDecimal onlineUnitPrice = cartLine.getOnlineUnitPrice();
-                BigDecimal merchantUnitPrice = cartLine.getMerchantUnitPrice()!= null ?
-                        cartLine.getMerchantUnitPrice() : onlineUnitPrice; // Fallback match protection
+                BigDecimal merchantUnitPrice = cartLine.getMerchantUnitPrice() != null ? cartLine.getMerchantUnitPrice() : onlineUnitPrice; // Fallback match protection
 
                 if (consolidatedItemsMap.containsKey(productId)) {
                     CoOrderItemDto existingLine = consolidatedItemsMap.get(productId);
@@ -856,38 +884,84 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             }
             List<CoOrderItemDto> finalItemsList = new ArrayList<>(consolidatedItemsMap.values());
             orderRequestDto.setItems(finalItemsList);
-            List<CoOrder> ordersLIst = orderRepository.findByGroupOrderInvitationIdAndCustomerId(goInvitationId,customersAtAddress.get(0));
+            List<CoOrder> ordersLIst = orderRepository.findByGroupOrderInvitationIdAndCustomerId(goInvitationId, customersAtAddress.get(0));
 
-            if(!(ordersLIst.size() > 0)){
+            if (!(ordersLIst.size() > 0)) {
                 orderService.placeOrder(orderRequestDto);
             }
 
-            log.info("Successfully generated split branch records for Order ID: {} targeting Destination Address ID: {}",
-                    goInvitationId, currentAddressId);
+            log.info("Successfully generated split branch records for Order ID: {} targeting Destination Address ID: {}", goInvitationId, currentAddressId);
         }
-        return  ResponseEntity.status(HttpStatus.OK).body(new CoResponseDto("200",
-                "Group Placed placed for invitation id : "+goInvitationId));
+        return ResponseEntity.status(HttpStatus.OK).body(new CoResponseDto("200", "Group Placed placed for invitation id : " + goInvitationId));
     }
 
     @Override
     public ResponseEntity<?> getActiveGroupOrder(Integer hostCustomerId) {
 
-        Optional<GroupOrderInvitation> groupOrderInvitation = groupOrderInvitationRepository.
-                getActiveGroupOrderByCustomerId(hostCustomerId,COConstants.GROUP_ORDER_INVITATION_ACTIVE);
+        Optional<GroupOrderInvitation> groupOrderInvitation = groupOrderInvitationRepository.getActiveGroupOrderByCustomerId(hostCustomerId, COConstants.GROUP_ORDER_INVITATION_ACTIVE);
 
         GroupOrderInvitationDto groupOrderInvitationDto = new GroupOrderInvitationDto();
-        if(groupOrderInvitation.isPresent()){
-            groupOrderInvitationDto =  GroupOrderMapper.toGroupOrderInvitationResponseDto(groupOrderInvitation.get());
-            log.info("Active Group order found with host customer Id :{}, and Group order details {}",
-                    hostCustomerId,groupOrderInvitation.get().getOutletId());
+        if (groupOrderInvitation.isPresent()) {
+            groupOrderInvitationDto = GroupOrderMapper.toGroupOrderInvitationResponseDto(groupOrderInvitation.get());
+            log.info("Active Group order found with host customer Id :{}, and Group order details {}", hostCustomerId, groupOrderInvitation.get().getOutletId());
 
             return ResponseEntity.status(HttpStatus.OK).body(groupOrderInvitationDto);
-        }else{
+        } else {
             log.info("No active group found with this host customer Id : {}", hostCustomerId);
-            return  ResponseEntity.status(HttpStatus.NOT_FOUND).body("No active group found with this host customer Id: "+hostCustomerId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No active group found with this host customer Id: " + hostCustomerId);
         }
     }
 
+    private Integer getAreaId(Integer outletId) {
 
+        log.info("GROUP_GET_AREA_ID | outletId={}", outletId);
+
+        try {
+
+            Integer areaId = fmFeignClient.getAreaIdByOutletId(outletId);
+
+            if (areaId == null) {
+
+                log.error("GROUP_AREA_ID_NULL | outletId={}", outletId);
+
+                throw new CoBadRequestException("Area not found for outlet id : " + outletId);
+            }
+
+            return areaId;
+
+        } catch (FeignException ex) {
+
+            log.error("GROUP_FM_SERVICE_CALL_FAILED | outletId={} | error={}", outletId, ex.getMessage(), ex);
+
+            throw new CoBadRequestException("Unable to fetch outlet area");
+        }
+    }
+
+    private CoOrderCheckoutFee getFeeConfiguration(Integer areaId) {
+
+        log.info("GROUP_GET_CHECKOUT_FEE | areaId={}", areaId);
+
+        return feeRepository.findByAreaId(areaId).orElseThrow(() -> {
+
+            log.error("GROUP_CHECKOUT_FEE_NOT_FOUND | areaId={}", areaId);
+
+            return new CoBadRequestException("Checkout fee configuration not found for area id : " + areaId);
+        });
+    }
+
+    private CoOrderCheckoutTax getTaxConfiguration() {
+
+        log.info("GROUP_GET_CHECKOUT_TAX_CONFIGURATION");
+
+        return taxRepository.findAll().stream().findFirst().orElseThrow(() -> {
+
+            log.error("GROUP_CHECKOUT_TAX_CONFIGURATION_NOT_FOUND");
+
+            return new CoBadRequestException("Checkout tax configuration not found");
+        });
+    }
+
+    private BigDecimal defaultValue(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
 }
-

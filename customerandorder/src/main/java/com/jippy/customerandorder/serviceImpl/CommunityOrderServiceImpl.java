@@ -56,8 +56,8 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
     @Override
     public ResponseEntity<CoResponseDto> createEvents(CoCommunityEventsDto communityEventsDto) {
 
-       Optional<CoCommunityEvents> communityEvents = communityEventsRepository.
-               findByCommunityIdAndEventTitle(communityEventsDto.getCommunityId(),communityEventsDto.getEventTitle());
+        Optional<CoCommunityEvents> communityEvents = communityEventsRepository.
+                findByCommunityIdAndEventTitle(communityEventsDto.getCommunityId(),communityEventsDto.getEventTitle());
         if(communityEvents.isPresent()){
             log.warn("Already event exists with same event name and in the given community");
             return ResponseEntity.status(500).body(new CoResponseDto("500","Already event exists with same event name and in the given community "));
@@ -117,7 +117,7 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
                 "Community events: "+communityEventsDto.getEventTitle() +" saved successfully " ));
     }
 
-     public static ResponseEntity<CoResponseDto> validateEventDates(
+    public static ResponseEntity<CoResponseDto> validateEventDates(
             LocalDateTime eventStartDate,
             LocalDateTime eventEndDate,
             LocalDateTime bookingStartDate,
@@ -175,22 +175,22 @@ public class CommunityOrderServiceImpl implements CommunityOrderService {
         }
         if(addOrDropMembersFromCommunityDto.getType().equals(COConstants.DROP_COMMUNITY_TYPE)){
 
-           Optional<CoCustomerCommunities> customerCommunities =  customerCommunityRepository.
-                   findByCustomerIdAndCommunityId(addOrDropMembersFromCommunityDto.getCustomerId()
-                    ,addOrDropMembersFromCommunityDto.getCommunityId());
+            Optional<CoCustomerCommunities> customerCommunities =  customerCommunityRepository.
+                    findByCustomerIdAndCommunityId(addOrDropMembersFromCommunityDto.getCustomerId()
+                            ,addOrDropMembersFromCommunityDto.getCommunityId());
 
-           if(customerCommunities.isPresent()){
-               customerCommunityRepository.delete(customerCommunities.get());
-               log.info(" Customer with ID: {} is deleted from community :{} ",
-                       addOrDropMembersFromCommunityDto.getCustomerId(),community.get().getCommunityName());
-               return  ResponseEntity.status(200).body(new CoResponseDto("200", "Customer with ID :"+ addOrDropMembersFromCommunityDto.getCustomerId()+
-                       " is dropped from community : "+community.get().getCommunityName()));
-           }else{
-               log.warn("Customer with ID: {} is not in the community : {} ",
-                       addOrDropMembersFromCommunityDto.getCustomerId(),community.get().getCommunityName());
-               return  ResponseEntity.status(500).body(new CoResponseDto("500", "Customer with ID :"+ addOrDropMembersFromCommunityDto.getCustomerId()+
-                       " is not in community : "+community.get().getCommunityName()));
-           }
+            if(customerCommunities.isPresent()){
+                customerCommunityRepository.delete(customerCommunities.get());
+                log.info(" Customer with ID: {} is deleted from community :{} ",
+                        addOrDropMembersFromCommunityDto.getCustomerId(),community.get().getCommunityName());
+                return  ResponseEntity.status(200).body(new CoResponseDto("200", "Customer with ID :"+ addOrDropMembersFromCommunityDto.getCustomerId()+
+                        " is dropped from community : "+community.get().getCommunityName()));
+            }else{
+                log.warn("Customer with ID: {} is not in the community : {} ",
+                        addOrDropMembersFromCommunityDto.getCustomerId(),community.get().getCommunityName());
+                return  ResponseEntity.status(500).body(new CoResponseDto("500", "Customer with ID :"+ addOrDropMembersFromCommunityDto.getCustomerId()+
+                        " is not in community : "+community.get().getCommunityName()));
+            }
         }
         return  null;
     }
