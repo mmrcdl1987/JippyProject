@@ -1,6 +1,5 @@
 package com.jippy.customerandorder.dto;
 
-import com.jippy.customerandorder.dto.CoCartItemResponseDto;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -17,11 +16,31 @@ public class CoCheckoutResponseDto {
 
     private BigDecimal deliveryCharge;
 
+    // ================= PLATFORM FEE =================
+
     private BigDecimal platformFee;
+
+    private BigDecimal platformFeeTax;
+
+    private Boolean platformFeeToggle;
+
+    // ================= SURGE FEE =================
 
     private BigDecimal surgeFee;
 
+    private BigDecimal surgeFeeTax;
+
+    private Boolean surgeFeeToggle;
+
+    // ================= PACKAGING FEE =================
+
     private BigDecimal packagingFee;
+
+    private BigDecimal packagingFeeTax;
+
+    private Boolean packagingFeeToggle;
+
+    // ================= TAXES =================
 
     private BigDecimal foodTax;
 
@@ -29,9 +48,13 @@ public class CoCheckoutResponseDto {
 
     private BigDecimal taxesAndCharges;
 
+    // ================= DISCOUNT / TIP =================
+
     private BigDecimal couponDiscount;
 
     private BigDecimal deliveryTip;
+
+    // ================= FINAL =================
 
     private BigDecimal toPay;
 
