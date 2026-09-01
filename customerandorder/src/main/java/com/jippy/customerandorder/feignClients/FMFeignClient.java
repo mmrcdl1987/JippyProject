@@ -102,7 +102,7 @@ public interface FMFeignClient {
             @PathVariable("outletId") Integer outletId
     );
 
-    @GetMapping("/getOrderProductItemsForMerchant")
+    @GetMapping("/api/fm/products/getOrderProductItemsForMerchant")
     public ResponseEntity<List<CoOrderItemsEvent>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
             @RequestParam List<Integer> productVariantIds);
 

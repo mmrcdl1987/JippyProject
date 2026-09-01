@@ -51,6 +51,10 @@ public class CoOrderMapper {
         //exists only in group ordering
         order.setGroupOrderInvitationId(requestDto.getGroupOrderInvitationId());
 
+        order.setCookingInstructions(requestDto.getCookingInstructions());
+
+        order.setIsCutleryRequired(requestDto.getIsCutleryRequired());
+
         log.info("MAPPER_END | MAP_ORDER_SUCCESS | customerId={}", requestDto.getCustomerId());
 
         return order;
@@ -77,7 +81,7 @@ public class CoOrderMapper {
 
         orderItem.setOnlineUnitPrice(defaultValue(orderItemDto.getOnlineUnitPrice()));
 
-        orderItem.setMerchantUnitPrice(defaultValue(orderItemDto.getMerchantUnitPrice()));
+        //orderItem.setMerchantUnitPrice(defaultValue(orderItemDto.getMerchantUnitPrice()));
 
         /*
          * ONLINE TOTAL
@@ -87,7 +91,7 @@ public class CoOrderMapper {
         /*
          * MERCHANT TOTAL
          */
-        orderItem.setMerchantPriceTotal(calculateTotalPrice(orderItemDto.getMerchantUnitPrice(), orderItemDto.getQuantity()));
+        //orderItem.setMerchantPriceTotal(calculateTotalPrice(orderItemDto.getMerchantUnitPrice(), orderItemDto.getQuantity()));
 
         orderItem.setCreatedAt(LocalDateTime.now());
 
@@ -101,6 +105,7 @@ public class CoOrderMapper {
      */
     public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto requestDto, CoOrder order) {
 
+        System.out.println("==========================="+requestDto.getPackagingFeeToggle()+requestDto.getPlatformFeeToggle()+requestDto.getSurgeFeeToggle());
         log.info("MAPPER_START | MAP_PRICE_BREAKUP | orderId={}", order.getOrderId());
 
         CoOrderPriceBreakup breakup = new CoOrderPriceBreakup();
@@ -111,21 +116,41 @@ public class CoOrderMapper {
 
         breakup.setOrderAmount(defaultValue(requestDto.getOrderAmount()));
 
-        breakup.setPlatformFee(defaultValue(requestDto.getPlatformFee()));
+        if(requestDto.getPackagingFeeToggle()){
+            breakup.setPackagingFee(defaultValue(requestDto.getPackagingFee()));
+        } else {
+            breakup.setPackagingFee(BigDecimal.ZERO);
+        }
 
-        breakup.setDeliveryFee(defaultValue(requestDto.getDeliveryFee()));
+        if(requestDto.getPlatformFeeToggle()){
+            breakup.setPlatformFee(defaultValue(requestDto.getPlatformFee()));
+        } else {
+            breakup.setPlatformFee(BigDecimal.ZERO);
+        }
 
-        breakup.setSurgeFee(defaultValue(requestDto.getSurgeFee()));
+        if(requestDto.getSurgeFeeToggle()){
+            breakup.setSurgeFee(defaultValue(requestDto.getSurgeFee()));
+        } else {
+            breakup.setSurgeFee(BigDecimal.ZERO);
+        }
 
-        breakup.setPackagingFee(defaultValue(requestDto.getPackagingFee()));
 
-        breakup.setGst(defaultValue(requestDto.getGst()));
+        breakup.setPlatformFeeTax(defaultValue(requestDto.getPlatformFeeTax()));
+
+        breakup.setPackagingFeeTax(defaultValue(requestDto.getPackagingFeeTax()));
+
+        breakup.setSurgeFeeTax(defaultValue(requestDto.getSurgeFeeTax()));
+
+        breakup.setFoodTax(defaultValue(requestDto.getFoodTax()));
+
+        breakup.setTotalTax(defaultValue(requestDto.getTotalTax()));
 
         breakup.setOrderTotalAmount(defaultValue(requestDto.getOrderTotalAmount()));
 
         breakup.setCouponDiscount(defaultValue(requestDto.getCouponDiscount()));
 
-        breakup.setOrderAmountDiscounted(defaultValue(requestDto.getWalletAmount()));
+        breakup.setOrderAmountDiscounted(requestDto.getOrderAmount().
+                subtract(requestDto.getCouponDiscount() != null ? requestDto.getCouponDiscount() : BigDecimal.ZERO));
 
         breakup.setWalletAmount(defaultValue(requestDto.getWalletAmount()));
 
@@ -137,7 +162,9 @@ public class CoOrderMapper {
 
         breakup.setPickUpCharges(requestDto.getPickUpCharges());
 
-        breakup.setDeliveryCharges(requestDto.getDeliveryCharges());
+        breakup.setDeliveryFee(requestDto.getDeliveryFee());
+
+        breakup.setDeliveryFeeTax(requestDto.getDeliveryFeeTax());
 
         log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", order.getOrderId());
 

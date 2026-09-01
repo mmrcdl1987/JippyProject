@@ -102,6 +102,8 @@ public class DivPaymentServiceImpl implements DivPaymentService {
           ResponseEntity<DivOrderDto> placeOrderRequestDtoResponseEntity =
                   coFeignClient.placeOrder(placeOrderRequestDto);
 
+          //System.out.println("==============================="+placeOrderRequestDto.getDeliveryFee()+placeOrderRequestDto.getDeliveryFeeTax());
+
           DivOrderDto orderDto = placeOrderRequestDtoResponseEntity.getBody();
 
           log.info("Initiating payu payment for order: {}", placeOrderRequestDto.getOrderId());
@@ -109,7 +111,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
           if(orderDto == null) {
               throw new RuntimeException("Order is not created because of some issue, Please try again " );
           }
-          System.out.println("=========================="+orderDto.toString());
+         // System.out.println("=========================="+orderDto.toString());
 
           // Convert order total to subunits (Paise)
           int amountInPaise = orderDto.getOrderTotalAmount().multiply(new BigDecimal(100)).intValue();
@@ -146,15 +148,15 @@ public class DivPaymentServiceImpl implements DivPaymentService {
 
           Map<String, String> hashData = payUService.generatePaymentHash(hashRequestDto);
 
-          Map<String, String> payUParams = new HashMap<>();
-          payUParams.put("email", customerResponseDto.getEmail());
-          payUParams.put("firstname",customerResponseDto.getFirstName());
-          payUParams.put("productinfo", "Food ordered #" + orderDto.getOrderId());
-          payUParams.put("status","success");
-          payUParams.put("amount", orderDto.getOrderTotalAmount().toString());
-          payUParams.put("txnid",orderDto.getOrderId());
-          payUParams.put("key", payUMerchantKey);
-          System.out.println("=============================="+payUService.verifyResponseHash(payUParams));
+//          Map<String, String> payUParams = new HashMap<>();
+//          payUParams.put("email", customerResponseDto.getEmail());
+//          payUParams.put("firstname",customerResponseDto.getFirstName());
+//          payUParams.put("productinfo", "Food ordered #" + orderDto.getOrderId());
+//          payUParams.put("status","success");
+//          payUParams.put("amount", orderDto.getOrderTotalAmount().toString());
+//          payUParams.put("txnid",orderDto.getOrderId());
+//          payUParams.put("key", payUMerchantKey);
+//          System.out.println("=============================="+payUService.verifyResponseHash(payUParams));
 
           log.info("Payment initiated successfully for order: {} with payU Hash {}", orderDto.getOrderId(), hashData.get("paymentHash"));
 

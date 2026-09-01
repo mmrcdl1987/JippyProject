@@ -17,8 +17,6 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true) // Ignores any extra fields the order service sends back
 public class DivPlaceOrderRequestDto {
 
-    private String orderId;
-
     @NotNull(message = "Outlet id is required")
     private Integer outletId;
 
@@ -41,18 +39,39 @@ public class DivPlaceOrderRequestDto {
 
     private BigDecimal platformFee;
 
+    private BigDecimal platformFeeTax;
+
+    private Boolean platformFeeToggle;
+
     private BigDecimal deliveryFee;
+
+    private BigDecimal deliveryFeeTax;
 
     private BigDecimal surgeFee;
 
+    private BigDecimal surgeFeeTax;
+
+    private Boolean surgeFeeToggle;
+
     private BigDecimal packagingFee;
 
-    private BigDecimal gst;
+    private BigDecimal packagingFeeTax;
+
+    private Boolean packagingFeeToggle;
+
+    private BigDecimal foodTax;
+
+    private BigDecimal totalTax;
 
     @NotNull(message = "Order total amount is required")
     private BigDecimal orderTotalAmount;
 
     private BigDecimal couponDiscount;
+
+    /*
+     * WALLET USAGE
+     */
+    private Boolean useWallet;
 
     private BigDecimal walletAmount;
 
@@ -62,8 +81,6 @@ public class DivPlaceOrderRequestDto {
     private BigDecimal pickUpDistanceKms;
     private BigDecimal deliveryDistanceKms;
     private BigDecimal pickUpCharges;
-    private BigDecimal deliveryCharges;
-
     /*
      * NORMAL
      * SCHEDULED_RECURRING
@@ -111,5 +128,13 @@ public class DivPlaceOrderRequestDto {
 
     // used only in group orders
     private Integer groupOrderInvitationId;
+
+    private String orderId;
+
+    private String orderStatus;
+
+    private String cookingInstructions;
+
+    private  Boolean isCutleryRequired;
 
 }

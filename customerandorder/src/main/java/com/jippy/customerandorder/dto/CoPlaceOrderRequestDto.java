@@ -33,13 +33,29 @@ public class CoPlaceOrderRequestDto {
 
     private BigDecimal platformFee;
 
+    private BigDecimal platformFeeTax;
+
+    private Boolean platformFeeToggle;
+
     private BigDecimal deliveryFee;
+
+    private BigDecimal deliveryFeeTax;
 
     private BigDecimal surgeFee;
 
+    private BigDecimal surgeFeeTax;
+
+    private Boolean surgeFeeToggle;
+
     private BigDecimal packagingFee;
 
-    private BigDecimal gst;
+    private BigDecimal packagingFeeTax;
+
+    private Boolean packagingFeeToggle;
+
+    private BigDecimal foodTax;
+
+    private BigDecimal totalTax;
 
     @NotNull(message = "Order total amount is required")
     private BigDecimal orderTotalAmount;
@@ -112,4 +128,8 @@ public class CoPlaceOrderRequestDto {
     private String orderId;
 
     private String orderStatus;
+
+    private String cookingInstructions;
+
+    private  Boolean isCutleryRequired;
 }
