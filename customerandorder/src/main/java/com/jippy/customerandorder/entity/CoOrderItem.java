@@ -24,6 +24,9 @@ public class CoOrderItem {
     @Column(name = "product_id", nullable = false)
     private Integer productId;
 
+    @Column(name = "variant_option_id")
+    private Integer variantOptionId;
+
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 

@@ -14,6 +14,12 @@ public class CoOrderItemDto {
     @NotNull(message = "Product id is required")
     private Integer productId;
 
+    /**
+     * NULL for products without a variant.
+     * Contains the selected variant option ID for variant products.
+     */
+    private Integer variantOptionId;
+
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be greater than zero")
     private Integer quantity;

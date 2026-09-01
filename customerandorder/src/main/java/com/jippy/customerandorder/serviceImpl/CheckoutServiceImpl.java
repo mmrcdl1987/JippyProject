@@ -2,12 +2,16 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
-import com.jippy.customerandorder.entity.CoOrderSettings;
+import com.jippy.customerandorder.entity.CoOrderCheckoutFee;
+import com.jippy.customerandorder.entity.CoOrderCheckoutTax;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.feignClients.DriverFeignClient;
+
+import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.ICartService;
 import com.jippy.customerandorder.iservice.ICheckoutService;
-import com.jippy.customerandorder.repository.CoOrderSettingsRepository;
+import com.jippy.customerandorder.repository.CoOrderCheckoutFeeRepository;
+import com.jippy.customerandorder.repository.CoOrderCheckoutTaxRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,52 +31,120 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
     private final DriverFeignClient driverFeignClient;
 
-    private final CoOrderSettingsRepository coOrderSettingsRepository;
+    private final FMFeignClient fmFeignClient;
+
+    private final CoOrderCheckoutFeeRepository feeRepository;
+
+    private final CoOrderCheckoutTaxRepository taxRepository;
 
     @Override
     public CoCheckoutResponseDto checkout(CoCheckoutRequestDto requestDto) {
 
-        log.info("SERVICE_START | CHECKOUT | customerId={} | outletId={}", requestDto.getCustomerId(), requestDto.getOutletId());
+        log.info("SERVICE_START | CHECKOUT | customerId={} | outletId={}", requestDto != null ? requestDto.getCustomerId() : null, requestDto != null ? requestDto.getOutletId() : null);
 
         validateRequest(requestDto);
 
         try {
-
+            // CART
             CoCartResponseDto cartResponse = cartService.getCart(requestDto.getCustomerId());
 
             validateCart(cartResponse, requestDto.getCustomerId(), requestDto.getOutletId());
-
-            CoOrderSettings coOrderSettings = getOrderSettings();
-
+            // ITEM TOTAL
             BigDecimal itemTotal = calculateItemTotal(cartResponse);
 
             log.info("ITEM_TOTAL_CALCULATED | customerId={} | itemTotal={}", requestDto.getCustomerId(), itemTotal);
 
+            // GET AREA ID FROM OUTLET ID
+
+            Integer areaId = getAreaId(requestDto.getOutletId());
+
+            log.info("AREA_ID_RESOLVED | outletId={} | areaId={}", requestDto.getOutletId(), areaId);
+
+            // GET FEE CONFIGURATION BY AREA
+
+            CoOrderCheckoutFee feeConfig = getFeeConfiguration(areaId);
+            // GET GST CONFIGURATION
+            CoOrderCheckoutTax taxConfig = getTaxConfiguration();
+            // DELIVERY CHARGE
+
             DeliveryChargeCalculationResponseDto deliveryResponse = getDeliveryCharge(requestDto, itemTotal);
 
-            BigDecimal finalDeliveryCharge = defaultValue(deliveryResponse.getTotalDeliveryCharge());
+            BigDecimal deliveryCharge = defaultValue(deliveryResponse.getTotalDeliveryCharge());
 
-            BigDecimal deliveryTax = defaultValue(deliveryResponse.getTaxAmount());
 
-            BigDecimal foodTax = calculatePercentage(itemTotal, defaultValue(coOrderSettings.getFoodTotalAmountTax()));
+            // GST CALCULATION
+            //
+            // GST IS ALWAYS CALCULATED
+            // REGARDLESS OF FEE TOGGLE
 
-            BigDecimal taxesAndCharges = foodTax.add(deliveryTax);
+            BigDecimal foodTax = calculatePercentage(itemTotal, taxConfig.getFoodAmountTax());
 
-            BigDecimal platformFee = defaultValue(coOrderSettings.getPlatformFee());
+            BigDecimal deliveryTax = calculatePercentage(deliveryCharge, taxConfig.getDeliveryFeeTax());
 
-            BigDecimal surgeFee = defaultValue(coOrderSettings.getSurgeFee());
+            BigDecimal platformFee = defaultValue(feeConfig.getPlatformFee());
 
-            BigDecimal packagingFee = defaultValue(coOrderSettings.getPackagingFee());
+            BigDecimal platformFeeTax = calculatePercentage(platformFee, taxConfig.getPlatformFeeTax());
 
+            BigDecimal surgeFee = defaultValue(feeConfig.getSurgeFee());
+
+            BigDecimal surgeFeeTax = calculatePercentage(surgeFee, taxConfig.getSurgeFeeTax());
+
+            BigDecimal packagingFee = defaultValue(feeConfig.getPackagingFee());
+
+            BigDecimal packagingFeeTax = calculatePercentage(packagingFee, taxConfig.getPackagingFeeTax());
+            // TOGGLE
+            Boolean platformFeeToggle = Boolean.TRUE.equals(feeConfig.getPlatformFeeToggle());
+
+            Boolean surgeFeeToggle = Boolean.TRUE.equals(feeConfig.getSurgeFeeToggle());
+
+            Boolean packagingFeeToggle = Boolean.TRUE.equals(feeConfig.getPackagingFeeToggle());
+            // TAXES AND CHARGES
+            // GST IS ALWAYS INCLUDED
+
+            BigDecimal taxesAndCharges = foodTax.add(deliveryTax).add(platformFeeTax).add(surgeFeeTax).add(packagingFeeTax).setScale(2, RoundingMode.HALF_UP);
+            // COUPON / TIP
             BigDecimal couponDiscount = defaultValue(requestDto.getCouponDiscount());
 
             BigDecimal deliveryTip = defaultValue(requestDto.getDeliveryTip());
 
-            BigDecimal toPay = calculateFinalAmount(itemTotal, finalDeliveryCharge, platformFee, surgeFee, packagingFee, foodTax, deliveryTip, couponDiscount);
+            // FINAL TO PAY
+            BigDecimal toPay = calculateFinalAmount(itemTotal, deliveryCharge,
 
-            CoCheckoutResponseDto response = buildCheckoutResponse(cartResponse, itemTotal, finalDeliveryCharge, platformFee, surgeFee, packagingFee, foodTax, deliveryTax, taxesAndCharges, couponDiscount, deliveryTip, toPay, deliveryResponse.getCodAvailable());
+                    platformFee, platformFeeTax, platformFeeToggle,
 
-            log.info("SERVICE_END | CHECKOUT_SUCCESS | customerId={} | toPay={}", requestDto.getCustomerId(), toPay);
+                    surgeFee, surgeFeeTax, surgeFeeToggle,
+
+                    packagingFee, packagingFeeTax, packagingFeeToggle,
+
+                    foodTax, deliveryTax,
+
+                    deliveryTip, couponDiscount);
+
+            // RESPONSE
+
+            CoCheckoutResponseDto response = buildCheckoutResponse(cartResponse,
+
+                    itemTotal,
+
+                    deliveryCharge,
+
+                    platformFee, platformFeeTax, platformFeeToggle,
+
+                    surgeFee, surgeFeeTax, surgeFeeToggle,
+
+                    packagingFee, packagingFeeTax, packagingFeeToggle,
+
+                    foodTax, deliveryTax,
+
+                    taxesAndCharges,
+
+                    couponDiscount, deliveryTip,
+
+                    toPay,
+
+                    deliveryResponse.getCodAvailable());
+
+            log.info("SERVICE_END | CHECKOUT_SUCCESS | customerId={} | areaId={} | toPay={}", requestDto.getCustomerId(), areaId, toPay);
 
             return response;
 
@@ -90,7 +162,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
         }
     }
 
-    // ================= VALIDATIONS =================
+    // VALIDATION
 
     private void validateRequest(CoCheckoutRequestDto requestDto) {
 
@@ -123,6 +195,8 @@ public class CheckoutServiceImpl implements ICheckoutService {
         }
     }
 
+    // CART VALIDATION
+
     private void validateCart(CoCartResponseDto cartResponse, Integer customerId, Integer requestedOutletId) {
 
         if (cartResponse == null || cartResponse.getItems() == null || cartResponse.getItems().isEmpty()) {
@@ -147,20 +221,58 @@ public class CheckoutServiceImpl implements ICheckoutService {
         }
     }
 
-    // ================= ORDER SETTINGS =================
+    // GET AREA ID FROM FOOD MART
 
-    private CoOrderSettings getOrderSettings() {
+    private Integer getAreaId(Integer outletId) {
 
-        return coOrderSettingsRepository.findAll().stream().findFirst().orElseThrow(() -> {
+        log.info("GET_AREA_ID | outletId={}", outletId);
 
-            log.error("ORDER_SETTINGS_NOT_FOUND");
+        try {
 
-            return new CoBadRequestException(COConstants.MSG_ORDER_SETTINGS_NOT_FOUND);
+            Integer areaId = fmFeignClient.getAreaIdByOutletId(outletId);
+
+            if (areaId == null) {
+
+                log.error("AREA_ID_NULL | outletId={}", outletId);
+
+                throw new CoBadRequestException("Area not found for outlet id : " + outletId);
+            }
+
+            return areaId;
+
+        } catch (FeignException ex) {
+
+            log.error("FM_SERVICE_CALL_FAILED | GET_AREA_ID | outletId={} | error={}", outletId, ex.getMessage(), ex);
+
+            throw new CoBadRequestException("Unable to fetch outlet area");
+        }
+    }
+    // GET FEE BY AREA
+    private CoOrderCheckoutFee getFeeConfiguration(Integer areaId) {
+
+        log.info("GET_CHECKOUT_FEE | areaId={}", areaId);
+
+        return feeRepository.findByAreaId(areaId).orElseThrow(() -> {
+
+            log.error("CHECKOUT_FEE_NOT_FOUND | areaId={}", areaId);
+
+            return new CoBadRequestException("Checkout fee configuration not found for area id : " + areaId);
         });
     }
+    // GET GST CONFIGURATION
 
-    // ================= DELIVERY CHARGE =================
+    private CoOrderCheckoutTax getTaxConfiguration() {
 
+        log.info("GET_CHECKOUT_TAX_CONFIGURATION");
+
+        return taxRepository.findAll().stream().findFirst().orElseThrow(() -> {
+
+            log.error("CHECKOUT_TAX_CONFIGURATION_NOT_FOUND");
+
+            return new CoBadRequestException("Checkout tax configuration not found");
+        });
+    }
+    // DELIVERY CHARGE
     private DeliveryChargeCalculationResponseDto getDeliveryCharge(CoCheckoutRequestDto requestDto, BigDecimal itemTotal) {
 
         DeliveryChargeCalculationRequestDto deliveryRequest = new DeliveryChargeCalculationRequestDto();
@@ -192,8 +304,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
         }
     }
 
-    // ================= CALCULATIONS =================
-
+    // ITEM TOTAL
     private BigDecimal calculateItemTotal(CoCartResponseDto cartResponse) {
 
         BigDecimal itemTotal = BigDecimal.ZERO;
@@ -205,22 +316,94 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
         return itemTotal.setScale(2, RoundingMode.HALF_UP);
     }
+    // FINAL AMOUNT
 
-    private BigDecimal calculateFinalAmount(BigDecimal itemTotal, BigDecimal deliveryCharge, BigDecimal platformFee, BigDecimal surgeFee, BigDecimal packagingFee, BigDecimal foodTax, BigDecimal deliveryTip, BigDecimal couponDiscount) {
+    private BigDecimal calculateFinalAmount(BigDecimal itemTotal, BigDecimal deliveryCharge,
 
-        BigDecimal totalAmount = itemTotal.add(deliveryCharge).add(platformFee).add(surgeFee).add(packagingFee).add(foodTax).add(deliveryTip).subtract(couponDiscount).setScale(2, RoundingMode.HALF_UP);
+                                            BigDecimal platformFee, BigDecimal platformFeeTax, Boolean platformFeeToggle,
+
+                                            BigDecimal surgeFee, BigDecimal surgeFeeTax, Boolean surgeFeeToggle,
+
+                                            BigDecimal packagingFee, BigDecimal packagingFeeTax, Boolean packagingFeeToggle,
+
+                                            BigDecimal foodTax, BigDecimal deliveryTax,
+
+                                            BigDecimal deliveryTip, BigDecimal couponDiscount) {
+
+
+        // BASE AMOUNT
+        BigDecimal totalAmount = itemTotal.add(deliveryCharge)
+                .add(foodTax)
+                .add(deliveryTax)
+                .add(platformFeeTax)
+                .add(surgeFeeTax)
+                .add(packagingFeeTax);
+
+
+        // PLATFORM FEE
+        // Only fee amount depends on toggle
+
+        if (Boolean.TRUE.equals(platformFeeToggle)) {
+
+            totalAmount = totalAmount.add(platformFee);
+        }
+        // SURGE FEE
+        // Only fee amount depends on toggle
+
+        if (Boolean.TRUE.equals(surgeFeeToggle)) {
+
+            totalAmount = totalAmount.add(surgeFee);
+        }
+
+        // PACKAGING FEE
+        // Only fee amount depends on toggle
+
+
+        if (Boolean.TRUE.equals(packagingFeeToggle)) {
+
+            totalAmount = totalAmount.add(packagingFee);
+        }
+
+        // TIP / COUPON
+
+
+        totalAmount = totalAmount.add(deliveryTip).subtract(couponDiscount).setScale(2, RoundingMode.HALF_UP);
 
         return totalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalAmount;
     }
 
+
+    // GST PERCENTAGE
+
     private BigDecimal calculatePercentage(BigDecimal amount, BigDecimal percentage) {
 
-        return amount.multiply(percentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        return amount.multiply(defaultValue(percentage)).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
-    //================ RESPONSE =================
 
-    private CoCheckoutResponseDto buildCheckoutResponse(CoCartResponseDto cartResponse, BigDecimal itemTotal, BigDecimal deliveryCharge, BigDecimal platformFee, BigDecimal surgeFee, BigDecimal packagingFee, BigDecimal foodTax, BigDecimal deliveryTax, BigDecimal taxesAndCharges, BigDecimal couponDiscount, BigDecimal deliveryTip, BigDecimal toPay, Boolean codAvailable) {
+    // RESPONSE
+
+    private CoCheckoutResponseDto buildCheckoutResponse(CoCartResponseDto cartResponse,
+
+                                                        BigDecimal itemTotal,
+
+                                                        BigDecimal deliveryCharge,
+
+                                                        BigDecimal platformFee, BigDecimal platformFeeTax, Boolean platformFeeToggle,
+
+                                                        BigDecimal surgeFee, BigDecimal surgeFeeTax, Boolean surgeFeeToggle,
+
+                                                        BigDecimal packagingFee, BigDecimal packagingFeeTax, Boolean packagingFeeToggle,
+
+                                                        BigDecimal foodTax, BigDecimal deliveryTax,
+
+                                                        BigDecimal taxesAndCharges,
+
+                                                        BigDecimal couponDiscount, BigDecimal deliveryTip,
+
+                                                        BigDecimal toPay,
+
+                                                        Boolean codAvailable) {
 
         CoCheckoutResponseDto response = new CoCheckoutResponseDto();
 
@@ -231,19 +414,31 @@ public class CheckoutServiceImpl implements ICheckoutService {
         response.setItemTotal(itemTotal);
 
         response.setDeliveryCharge(deliveryCharge);
-
+        // PLATFORM
         response.setPlatformFee(platformFee);
 
+        response.setPlatformFeeTax(platformFeeTax);
+
+        response.setPlatformFeeToggle(platformFeeToggle);
+        // SURGE
         response.setSurgeFee(surgeFee);
 
+        response.setSurgeFeeTax(surgeFeeTax);
+
+        response.setSurgeFeeToggle(surgeFeeToggle);
+        // PACKAGING
         response.setPackagingFee(packagingFee);
 
+        response.setPackagingFeeTax(packagingFeeTax);
+
+        response.setPackagingFeeToggle(packagingFeeToggle);
+        // GST
         response.setFoodTax(foodTax);
 
         response.setDeliveryTax(deliveryTax);
 
         response.setTaxesAndCharges(taxesAndCharges);
-
+        // OTHER
         response.setCouponDiscount(couponDiscount);
 
         response.setDeliveryTip(deliveryTip);
@@ -255,7 +450,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
         return response;
     }
 
-    // ================= COMMON METHODS =================
+    // COMMON
 
     private BigDecimal defaultValue(BigDecimal value) {
 

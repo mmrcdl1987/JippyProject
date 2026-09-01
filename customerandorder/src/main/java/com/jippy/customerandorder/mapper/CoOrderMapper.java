@@ -71,6 +71,8 @@ public class CoOrderMapper {
 
         orderItem.setProductId(orderItemDto.getProductId());
 
+        orderItem.setVariantOptionId(orderItemDto.getVariantOptionId());
+
         orderItem.setQuantity(orderItemDto.getQuantity());
 
         orderItem.setOnlineUnitPrice(defaultValue(orderItemDto.getOnlineUnitPrice()));

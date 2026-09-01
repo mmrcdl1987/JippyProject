@@ -150,6 +150,10 @@ public class COOrderService implements IOrderService {
         updatedDto.setPaymentModeId(savedOrder.getPaymentModeId());
         updatedDto.setWalletAmount(walletDeduction);
         publishOrderEvent(order);
+        clearCustomerCart(
+                dto.getCustomerId(),
+                orderId
+        );
 
         log.info("SERVICE_END | PROCESS_NORMAL_ORDER_SUCCESS | orderId={}", orderId);
 
@@ -489,6 +493,8 @@ public class COOrderService implements IOrderService {
     private void saveOrderItems(List<CoOrderItemDto> items, String orderId) {
 
         for (CoOrderItemDto item : items) {
+
+            log.info("ORDER_ITEM_SAVE | orderId={} | productId={} | variantOptionId={} | quantity={}", orderId, item.getProductId(), item.getVariantOptionId(), item.getQuantity());
 
             orderItemRepository.save(orderMapper.mapToItem(item, orderId));
         }
@@ -862,6 +868,24 @@ public class COOrderService implements IOrderService {
         }
 
         log.info("SERVICE_END | VALIDATE_CART_OUTLET_SUCCESS | customerId={} | outletId={}", dto.getCustomerId(), cartOutletId);
+    }
+
+    private void clearCustomerCart(Integer customerId, String orderId) {
+
+        log.info("CART_CLEAR_START | customerId={} | orderId={}", customerId, orderId);
+
+        List<CoCustomerCart> cartItems = cartRepository.findByCustomerId(customerId);
+
+        if (cartItems == null || cartItems.isEmpty()) {
+
+            log.info("CART_ALREADY_EMPTY | customerId={} | orderId={}", customerId, orderId);
+
+            return;
+        }
+
+        cartRepository.deleteAll(cartItems);
+
+        log.info("CART_CLEARED_SUCCESS | customerId={} | orderId={} | itemCount={}", customerId, orderId, cartItems.size());
     }
 
 

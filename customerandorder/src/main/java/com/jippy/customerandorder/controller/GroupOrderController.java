@@ -45,7 +45,7 @@ public class GroupOrderController {
                                       "isDropped" : false,
                                      "createdBy": 102
                                    },
-           For Community Order when joining other customers no need of delivery addressId we will use first customer delivery address Id. 
+           For Community Order when joining other customers no need of delivery addressId we will use first customer delivery address Id.
            For Group Order or Community group order delivery address id is mandatory in joining members
           """)
     public ResponseEntity<CoResponseDto>  joinGroupMembers(@Valid @RequestBody
