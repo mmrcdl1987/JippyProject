@@ -1,11 +1,7 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProduct;
-import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
-import com.jippy.foodandmart.projections.FmOutletProductProjection;
-import com.jippy.foodandmart.projections.FmProductCategoryProjection;
-import com.jippy.foodandmart.projections.FmProductPriceProjection;
-import com.jippy.foodandmart.projections.OutletProductPricingProjection;
+import com.jippy.foodandmart.projections.*;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -724,6 +720,35 @@ public interface FmProductRepository
             ORDER BY oc.outlet_category_id, p.product_id
             """, nativeQuery = true)
     List<FmOutletProductProjection> findProductsByOutletIds(@Param("outletId") Integer outletId);
+
+    @Query(value = """
+            SELECT 
+                p.product_id,
+                p.product_name,
+                -- Main pricing logic based on variant presence
+                CASE 
+                    WHEN pvo.product_variant_options_id IS NULL THEN p.merchant_price
+                    WHEN UPPER(pvo.price_type) = 'MAIN' THEN pvo.variant_price
+                    ELSE p.merchant_price
+                END AS product_price,
+            
+                -- Variant Details (if available)
+                pvo.product_variant_options_id,
+                pvo.price_type,
+                pvo.variant_price,
+                pvgv.variant_name
+            
+            FROM jippy_fm.products p 
+             JOIN jippy_fm.product_variant_options pvo 
+                ON pvo.product_id = p.product_id
+             JOIN jippy_fm.product_variant_group_values pvgv 
+                ON pvgv.product_variant_group_values_id = pvo.product_variant_group_values_id
+            
+                where p.product_id IN (:productIds)  and pvo.product_variant_options_id in (:productVariantIds)
+    """,nativeQuery = true)
+    List<FmOrderProductItemsForMerchantProjection> getOrderProductItemsForMerchant(
+            @Param("productIds") List<Integer> productIds,
+            @Param("productVariantIds") List<Integer> productVariantIds);
 }
 
 

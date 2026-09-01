@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "orders", schema = "jippy_customer_and_order")
@@ -75,5 +77,19 @@ public class CoOrder {
 
     @Column(name = "group_order_invitation_id")
     private Integer groupOrderInvitationId;
+
+    @Column(name = "cooking_instructions")
+    private String cookingInstructions;
+
+    @Column(name = "is_cutlery_required")
+    private Boolean isCutleryRequired;
+
+    // One Order has Many Order Items
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CoOrderItem> orderItems = new ArrayList<>();
+
+    // For normal orders, this will have only one entry. For group orders/community orders, this will have multiple entries for each participant.
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CoOrderPriceBreakup> priceBreakups = new ArrayList<>();
 
 }

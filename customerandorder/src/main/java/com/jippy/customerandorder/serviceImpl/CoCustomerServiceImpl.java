@@ -222,10 +222,11 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         // CHECK EMAIL
         // ==========================================
 
-        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
-
+        if(dto.getEmail().isBlank()){
+            throw  new CoBadRequestException("Email can not be blank");
+        }else{
             Optional<CoCustomer> existingEmail = customerRepository.findByEmail(
-                            dto.getEmail().trim());
+                    dto.getEmail().trim());
 
             if (existingEmail.isPresent() &&
                     !existingEmail.get().getCustomerId()

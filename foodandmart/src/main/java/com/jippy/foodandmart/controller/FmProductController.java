@@ -379,4 +379,15 @@ public class FmProductController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/getOrderProductItemsForMerchant")
+    public ResponseEntity<List<FmOrderItemsEvent>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
+            @RequestParam List<Integer> productVariantIds) {
+
+        log.info("Get order product items for merchant  | productIds:{} , product variant ids:{} ", productIds,productVariantIds);
+
+        List<FmOrderItemsEvent> products = productMappingService.getOrderProductItemsForMerchant(productIds,productVariantIds);
+
+        return ResponseEntity.ok(products);
+    }
 }

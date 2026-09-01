@@ -1,4 +1,4 @@
-package com.jippy.division.serviceImpl;
+package com.jippy.division.scheduler;
 
 import com.jippy.division.constants.DivAppConstants;
 import com.jippy.division.dto.DivOrderDto;
@@ -16,7 +16,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -27,7 +26,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RefundStatusScheduler {
+public class PaytmRefundStatusScheduler {
 
     private final OrderRefundRepository orderRefundRepository;
     private final TransactionRepository transactionRepository;
@@ -40,7 +39,7 @@ public class RefundStatusScheduler {
     private final RestTemplate restTemplate = new RestTemplate();
 
     // Runs every 4 hours automatically to reconcile stuck or pending states
-    @Scheduled(cron = "0 0 */4 * * *")
+    // @Scheduled(cron = "0 0 */4 * * *")
     @Transactional
     public void checkPendingPaytmRefunds() {
         log.info("Paytm pending refunds schedular initiated");
@@ -86,7 +85,7 @@ public class RefundStatusScheduler {
 
                 // 4. Update internal records upon successful completion matching
                 if ("TXN_SUCCESS".equals(resultStatus)) {
-                    refund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
+                    refund.setRefundStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
 
                     // Paytm returns the official bank network transaction tracking id here
                     String bankTxnId = (String) resultBody.get("bankTxnId");
@@ -102,7 +101,7 @@ public class RefundStatusScheduler {
 
                     log.info("Refund is processed successfully for refund transaction id: {} ",refund.getRefundTransactionsId());
                 } else if ("TXN_FAILURE".equals(resultStatus)) {
-                    refund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_FAILED);
+                    refund.setRefundStatus(DivAppConstants.PAYMENT_STATUS_REFUND_FAILED);
                     orderRefundRepository.save(refund);
 
                     paymentTransaction.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
@@ -122,3 +121,4 @@ public class RefundStatusScheduler {
         }
     }
 }
+
