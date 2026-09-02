@@ -2281,23 +2281,85 @@ public class FmOutletServiceImpl implements IFmOutletService {
     //   for feign client to save address details of driver service implementation
     @Override
     @Transactional
-    public FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto) {
+    public FmAddressRequestDto saveAddressDetails(
+            FmAddressRequestDto fmAddressRequestDto) {
 
-        boolean exists = addressRepository.existsByJippyAddressIdAndAddressType(fmAddressRequestDto.getJippyAddressId(), fmAddressRequestDto.getAddressType());
+        Optional<FmOutletAddress> existingAddress =
+                addressRepository.findByJippyAddressIdAndAddressType(
+                        fmAddressRequestDto.getJippyAddressId(),
+                        fmAddressRequestDto.getAddressType());
 
-        if (exists) {
-            throw new DuplicateResourceException(String.format("%s address already exists for Jippy Address Id %d", fmAddressRequestDto.getAddressType(), fmAddressRequestDto.getJippyAddressId()));
+        FmOutletAddress address;
+
+        if (existingAddress.isPresent()) {
+
+            // Existing address → UPDATE
+            address = existingAddress.get();
+
+            address.setBuildingNumber(
+                    fmAddressRequestDto.getBuildingNumber());
+
+            address.setRoad(
+                    fmAddressRequestDto.getRoad());
+
+            address.setLandmark(
+                    fmAddressRequestDto.getLandmark());
+
+            address.setCityId(
+                    fmAddressRequestDto.getCityId());
+
+            address.setStateId(
+                    fmAddressRequestDto.getStateId());
+
+            address.setAreaId(
+                    fmAddressRequestDto.getAreaId());
+
+            // Update location if latitude and longitude are provided
+            if (fmAddressRequestDto.getLatitude() != null
+                    && fmAddressRequestDto.getLongitude() != null) {
+
+                GeometryFactory geometryFactory =
+                        new GeometryFactory();
+
+                Point point = geometryFactory.createPoint(
+                        new Coordinate(
+                                fmAddressRequestDto.getLongitude(),
+                                fmAddressRequestDto.getLatitude()
+                        )
+                );
+
+                point.setSRID(4326);
+
+                address.setLocation(point);
+            }
+
+            log.info(
+                    "Updating existing {} address for Jippy Address Id {}, addressId={}",
+                    fmAddressRequestDto.getAddressType(),
+                    fmAddressRequestDto.getJippyAddressId(),
+                    address.getAddressId());
+
+        } else {
+
+            // Address does not exist → CREATE
+            address = FmOutletMapper.toAddressEntity(
+                    fmAddressRequestDto);
+
+            log.info(
+                    "Creating new {} address for Jippy Address Id {}",
+                    fmAddressRequestDto.getAddressType(),
+                    fmAddressRequestDto.getJippyAddressId());
         }
 
-        FmOutletAddress address = FmOutletMapper.toAddressEntity(fmAddressRequestDto);
+        FmOutletAddress savedAddress =
+                addressRepository.save(address);
 
-        FmOutletAddress savedAddress = addressRepository.save(address);
-
-        log.info("Address saved successfully with addressId={}", savedAddress.getAddressId());
+        log.info(
+                "Address saved successfully with addressId={}",
+                savedAddress.getAddressId());
 
         return FmOutletMapper.toAddressRequestDto(savedAddress);
     }
-
 
     //    for feign client to get address details of driver service implementation
     @Override

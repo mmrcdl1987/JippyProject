@@ -1,5 +1,5 @@
 
-        package com.jippy.foodandmart.serviceImpl;
+ package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
@@ -132,35 +132,90 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public FmMerchant createMerchant(FmMerchantRequestDTO dto) {
 
-        log.info("[MERCHANT] Creating merchant: email={}, phone={}", dto.getEmail(), dto.getPhone());
+        log.info(
+                "[MERCHANT] Creating merchant: email={}, phone={}",
+                dto.getEmail(),
+                dto.getPhone()
+        );
 
-        validateUniqueness(dto.getEmail(), dto.getPhone(), dto.getPan(), dto.getAdhar(), dto.getFssai(), dto.getAccountNumber());
+        validateUniqueness(
+                dto.getEmail(),
+                dto.getPhone(),
+                dto.getPan(),
+                dto.getAdhar(),
+                dto.getFssai(),
+                dto.getAccountNumber()
+        );
+
+        // ============================================================
+        // CREATE MERCHANT
+        // ============================================================
 
         FmMerchant merchant = FmMerchantMapper.toEntity(dto);
 
         merchant = merchantRepository.save(merchant);
 
-        log.info("[MERCHANT] Saved: merchantId={}, name={}", merchant.getMerchantId(), merchant.getMerchantName());
+        log.info(
+                "[MERCHANT] Saved: merchantId={}, name={}",
+                merchant.getMerchantId(),
+                merchant.getMerchantName()
+        );
 
-        /*
-         * Existing approval flow.
-         */
-        approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), merchant.getMerchantId());
+        // ============================================================
+        // APPROVAL
+        // ============================================================
+
+        approvalRequestService.createApprovalRequest(
+                FmAppConstants.TYPE_MERCHANT,
+                merchant.getMerchantId(),
+                merchant.getMerchantId()
+        );
+
+        // ============================================================
+        // KYC -- Details
+        // ============================================================
 
         saveKyc(dto, merchant);
 
+        // ============================================================
+        // BANK DETAILS
+        // ============================================================
+
         saveBankDetails(dto, merchant.getMerchantId());
+
+        // ============================================================
+        // MERCHANT ADDRESS
+        // ============================================================
+
+        saveMerchantAddressForSingleCreate(
+                dto,
+                merchant.getMerchantId()
+        );
+        // ============================================================
+        // MERCHANT USER
+        // ============================================================
 
         createMerchantUser(dto, merchant.getMerchantId());
 
-        log.info("[MERCHANT] Onboarding complete: merchantId={}", merchant.getMerchantId());
+        log.info(
+                "[MERCHANT] Onboarding complete: merchantId={}",
+                merchant.getMerchantId()
+        );
 
-        /*
-         * Existing single merchant email flow.
-         */
-        emailService.sendMerchantRegistrationEmail(merchant.getMerchantEmail(), merchant.getMerchantName());
+        // ============================================================
+        // EMAIL Sending to the User/Driver
+        // ============================================================
 
-        log.info("[MERCHANT] Registration email triggered: merchantId={}, email={}", merchant.getMerchantId(), merchant.getMerchantEmail());
+        emailService.sendMerchantRegistrationEmail(
+                merchant.getMerchantEmail(),
+                merchant.getMerchantName()
+        );
+
+        log.info(
+                "[MERCHANT] Registration email triggered: merchantId={}, email={}",
+                merchant.getMerchantId(),
+                merchant.getMerchantEmail()
+        );
 
         return merchant;
     }
@@ -642,7 +697,10 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         // CHECK ADDRESS DATA
         // ============================================================
 
-        boolean hasAddressData = !isBlank(dto.getBuildingNumber()) || !isBlank(dto.getRoad()) || !isBlank(dto.getLandmark()) || !isBlank(dto.getStateName()) || !isBlank(dto.getCityName()) || !isBlank(dto.getAreaName());
+        boolean hasAddressData = !isBlank(dto.getBuildingNumber()) ||
+                !isBlank(dto.getRoad()) || !isBlank(dto.getLandmark()) ||
+                !isBlank(dto.getStateName()) || !isBlank(dto.getCityName()) ||
+                !isBlank(dto.getAreaName());
 
 
         /*
@@ -1096,65 +1154,102 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
 
     // ================================================================
-    // NORMAL SINGLE MERCHANT USER
-    //
-    // IMPORTANT:
-    // This is your existing single merchant user flow.
-    // It is NOT used by bulk upload.
-    // ================================================================
+// NORMAL SINGLE MERCHANT USER
+//
+// IMPORTANT:
+// This is your existing single merchant user flow.
+// It is NOT used by bulk upload.
+// ================================================================
 
-    private void createMerchantUser(FmMerchantRequestDTO dto, Integer merchantId) {
+    private void createMerchantUser(
+            FmMerchantRequestDTO dto,
+            Integer merchantId) {
 
         String username = dto.getUsername().trim();
 
-
-        Optional<FmUser> existingUser = userRepository.findByUsernameAndUserType(username, FmAppConstants.TYPE_MERCHANT);
-
+        Optional<FmUser> existingUser =
+                userRepository.findByUsernameAndUserType(
+                        username,
+                        FmAppConstants.TYPE_MERCHANT
+                );
 
         if (existingUser.isPresent()) {
 
-            throw new MerchantAlreadyExistsException("Username already exists.");
+            throw new MerchantAlreadyExistsException(
+                    "Username already exists."
+            );
         }
 
+        String encodedPassword =
+                passwordEncoder.encode(dto.getPassword());
 
-        String encodedPassword = passwordEncoder.encode(dto.getPassword());
-
-
-        FmUser user = FmMerchantMapper.toUserEntity(username, encodedPassword, merchantId, FmAppConstants.TYPE_MERCHANT);
-
+        FmUser user =
+                FmMerchantMapper.toUserEntity(
+                        username,
+                        encodedPassword,
+                        merchantId,
+                        FmAppConstants.TYPE_MERCHANT
+                );
 
         user = userRepository.save(user);
 
-
-        FmRoles role = roleRepository.findByRoleName(FmAppConstants.ROLE_MERCHANT);
-
+        FmRoles role =
+                roleRepository.findByRoleName(
+                        FmAppConstants.ROLE_MERCHANT
+                );
 
         if (role == null) {
 
-            throw new ResourceNotFoundException("Merchant role not found.");
+            throw new ResourceNotFoundException(
+                    "Merchant role not found."
+            );
         }
 
+        List<FmRolePermissions> rolePermissions =
+                rolePermissionsRepository.findByRole(role);
 
-        List<FmRolePermissions> rolePermissions = rolePermissionsRepository.findByRole(role);
-
+        log.info(
+                "Merchant role found: roleId={}, roleName={}, permissionsCount={}",
+                role.getRoleId(),
+                role.getRoleName(),
+                rolePermissions.size()
+        );
 
         if (rolePermissions.isEmpty()) {
 
-            throw new ResourceNotFoundException("No permissions mapped to Merchant role.");
+            throw new ResourceNotFoundException(
+                    "No permissions mapped to Merchant role."
+            );
         }
-
 
         for (FmRolePermissions permission : rolePermissions) {
 
-            FmUserRolePermissions userRole = FmMerchantMapper.toUserRolesEntity(user, permission);
+            log.info(
+                    "Creating user-role-permission: userId={}, rolePermissionId={}",
+                    user.getUsersId(),
+                    permission.getRolePermissionId()
+            );
 
-            userRolesRepository.save(userRole);
+            FmUserRolePermissions userRole =
+                    FmMerchantMapper.toUserRolesEntity(
+                            user,
+                            permission
+                    );
+
+            FmUserRolePermissions savedUserRole =
+                    userRolesRepository.save(userRole);
+
+            log.info(
+                    "User-role-permission saved: id={}",
+                    savedUserRole.getUserRolePermissionId()
+            );
         }
 
-
-        log.info("Merchant login created successfully. username={}", username);
+        log.info(
+                "Merchant login created successfully. username={}",
+                username
+        );
     }
-
 
     // ================================================================
     // BULK ERROR RESULT
@@ -1338,5 +1433,38 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
 
         return new FmResponseDto("200", "Profile picture url: " + merchantDto.getProfilePicUrl());
+    }
+//    ================================================================================
+//    ========================= saveMerchantAddressForSingleCreate =============
+//    ================================================================================
+// ================================================================================
+// ========================= saveMerchantAddressForSingleCreate =================
+// ================================================================================
+
+    private void saveMerchantAddressForSingleCreate(
+            FmMerchantRequestDTO dto,
+            Integer merchantId) {
+
+        if (dto.getStateId() == null) {
+            throw new IllegalArgumentException("State is required");
+        }
+
+        if (dto.getCityId() == null) {
+            throw new IllegalArgumentException("City is required");
+        }
+
+        if (dto.getAreaId() == null) {
+            throw new IllegalArgumentException("Area is required");
+        }
+
+        FmAddress address = FmMerchantMapper.toAddressEntity(dto, merchantId);
+
+        addressRepository.save(address);
+
+        log.info(
+                "[MERCHANT] Address saved successfully: merchantId={}, addressId={}",
+                merchantId,
+                address.getAddressId()
+        );
     }
 }
