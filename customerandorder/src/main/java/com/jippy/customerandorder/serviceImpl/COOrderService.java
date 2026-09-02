@@ -113,6 +113,13 @@ public class COOrderService implements IOrderService {
         saveOrderItems(dto.getItems(), savedOrder);
 
         BigDecimal currentTotal = dto.getOrderTotalAmount() != null ? dto.getOrderTotalAmount() : BigDecimal.ZERO;
+        log.info(
+                "ORDER_AMOUNT_DISCOUNTED | orderId={} | itemAmount={} | couponDiscount={} | orderAmountDiscounted={}",
+                orderId,
+                dto.getOrderAmount(),
+                dto.getCouponDiscount(),
+                dto.getOrderAmountDiscounted()
+        );
         BigDecimal walletDeduction = processWalletDeduction(dto, orderId, currentTotal);
 
         BigDecimal finalOrderTotal = currentTotal.subtract(walletDeduction).setScale(2, RoundingMode.HALF_UP);

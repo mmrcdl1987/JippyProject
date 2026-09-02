@@ -105,6 +105,8 @@ public class CheckoutServiceImpl implements ICheckoutService {
             // COUPON / TIP
             BigDecimal couponDiscount = defaultValue(requestDto.getCouponDiscount());
 
+            BigDecimal orderAmountDiscounted = itemTotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+
             BigDecimal deliveryTip = defaultValue(requestDto.getDeliveryTip());
 
             //deduct wallet amount
@@ -128,6 +130,8 @@ public class CheckoutServiceImpl implements ICheckoutService {
             CoCheckoutResponseDto response = buildCheckoutResponse(cartResponse,
 
                     itemTotal,
+
+                    orderAmountDiscounted,
 
                     deliveryCharge,
 
@@ -394,6 +398,8 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
                                                         BigDecimal itemTotal,
 
+                                                        BigDecimal orderAmountDiscounted,
+
                                                         BigDecimal deliveryCharge,
 
                                                         BigDecimal platformFee, BigDecimal platformFeeTax, Boolean platformFeeToggle,
@@ -419,6 +425,10 @@ public class CheckoutServiceImpl implements ICheckoutService {
         response.setItems(cartResponse.getItems());
 
         response.setItemTotal(itemTotal);
+
+        response.setOrderAmountDiscounted(
+                orderAmountDiscounted
+        );
 
         response.setDeliveryCharge(deliveryCharge);
         // PLATFORM
