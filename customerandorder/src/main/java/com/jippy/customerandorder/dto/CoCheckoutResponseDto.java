@@ -14,6 +14,8 @@ public class CoCheckoutResponseDto {
 
     private BigDecimal itemTotal;
 
+    private BigDecimal orderAmountDiscounted;
+
     private BigDecimal deliveryCharge;
 
     // ================= PLATFORM FEE =================

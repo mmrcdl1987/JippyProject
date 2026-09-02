@@ -55,6 +55,7 @@ public class FmProductServiceImpl implements FmProductService {
 
     private final CacheInvalidateServiceImpl cacheInvalidateService;
 
+    private final FmPricingRepository pricingRepository;
 
     private final FmDaysOfWeekRepository daysOfWeekRepository;
 
@@ -2057,9 +2058,24 @@ public class FmProductServiceImpl implements FmProductService {
              */
             if (!Boolean.TRUE.equals(product.getHasProductVariants())) {
 
+                BigDecimal onlinePrice = pricingRepository
+                        .findPricingRecord(
+                                product.getProductId(),
+                                product.getOutletCategoryId(),
+                                null
+                        )
+                        .map(FmProductOnlinePricing::getOnlinePrice)
+                        .orElse(null);
+
+
+
                 response.setVariantGroups(new ArrayList<>());
 
-                log.info("[PRODUCT-DETAIL] NO_VARIANTS | productId={}", productId);
+                log.info(
+                        "[PRODUCT-DETAIL] NO_VARIANTS | productId={} | onlinePrice={}",
+                        productId,
+                        onlinePrice
+                );
 
                 return response;
             }
@@ -2154,6 +2170,16 @@ public class FmProductServiceImpl implements FmProductService {
                 optionDto.setPriceType(option.getPriceType());
 
                 optionDto.setVariantPrice(option.getVariantPrice());
+
+                BigDecimal onlinePrice = pricingRepository
+                        .findPricingRecord(
+                                product.getProductId(),
+                                product.getOutletCategoryId(),
+                                option.getProductVariantOptionsId()
+                        )
+                        .map(FmProductOnlinePricing::getOnlinePrice)
+                        .orElse(null);
+
 
                 /*
                  * --------------------------------------------------------
