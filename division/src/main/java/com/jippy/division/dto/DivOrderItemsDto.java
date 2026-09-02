@@ -14,6 +14,8 @@ public class DivOrderItemsDto {
     @NotNull(message = "Product id is required")
     private Integer productId;
 
+    private Integer variantOptionId;
+
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be greater than zero")
     private Integer quantity;

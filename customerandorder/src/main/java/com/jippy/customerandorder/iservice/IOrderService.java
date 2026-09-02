@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.iservice;
 
 import com.jippy.customerandorder.dto.CoOrderDto;
+import com.jippy.customerandorder.dto.CoOrderPriceBreakupDto;
 import com.jippy.customerandorder.dto.CoPlaceOrderRequestDto;
 import com.jippy.customerandorder.dto.CoPlaceOrderResponseDto;
 
@@ -17,4 +18,6 @@ public interface IOrderService {
     CoOrderDto getOrder(String orderId);
 
     void updateOrderStatus(CoOrderDto orderDto);
+
+    CoOrderPriceBreakupDto getOrderPriceBreakup(String orderId);
 }

@@ -11,5 +11,7 @@ public class DivPaymentInitiateResponse {
     private String razorpayOrderId;
     private BigDecimal toPayAmount;
     private String paytmTxnToken;
+    private String payUHash;
+    private String payUMerchantKey;
 
 }

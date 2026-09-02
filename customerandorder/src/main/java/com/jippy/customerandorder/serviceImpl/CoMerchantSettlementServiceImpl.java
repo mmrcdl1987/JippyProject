@@ -87,7 +87,7 @@ public class CoMerchantSettlementServiceImpl implements CoMerchantSettlementServ
 
 //             Fetch order items using order id for calculating total price
 //             and fetching product details
-            List<CoOrderItem> orderItems = coOrderItemsRepository.findByOrderId(order.getOrderId());
+            List<CoOrderItem> orderItems = coOrderItemsRepository.findByOrder_OrderId(order.getOrderId());
 
             log.info("Total products found for order {} : {}", order.getOrderId(), orderItems.size());
 

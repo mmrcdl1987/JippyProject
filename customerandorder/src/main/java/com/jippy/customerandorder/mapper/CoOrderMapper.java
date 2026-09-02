@@ -51,6 +51,10 @@ public class CoOrderMapper {
         //exists only in group ordering
         order.setGroupOrderInvitationId(requestDto.getGroupOrderInvitationId());
 
+        order.setCookingInstructions(requestDto.getCookingInstructions());
+
+        order.setIsCutleryRequired(requestDto.getIsCutleryRequired());
+
         log.info("MAPPER_END | MAP_ORDER_SUCCESS | customerId={}", requestDto.getCustomerId());
 
         return order;
@@ -59,15 +63,15 @@ public class CoOrderMapper {
     /*
      * MAP ORDER ITEM
      */
-    public CoOrderItem mapToItem(CoOrderItemDto orderItemDto, String orderId) {
+    public CoOrderItem mapToItem(CoOrderItemDto orderItemDto, CoOrder order) {
 
         validateOrderItem(orderItemDto);
 
-        log.info("MAPPER_START | MAP_ORDER_ITEM | orderId={} | productId={}", orderId, orderItemDto.getProductId());
+        log.info("MAPPER_START | MAP_ORDER_ITEM | orderId={} | productId={}", order.getOrderId(), orderItemDto.getProductId());
 
         CoOrderItem orderItem = new CoOrderItem();
 
-        orderItem.setOrderId(orderId);
+        orderItem.setOrder(order);
 
         orderItem.setProductId(orderItemDto.getProductId());
 
@@ -77,7 +81,7 @@ public class CoOrderMapper {
 
         orderItem.setOnlineUnitPrice(defaultValue(orderItemDto.getOnlineUnitPrice()));
 
-        orderItem.setMerchantUnitPrice(defaultValue(orderItemDto.getMerchantUnitPrice()));
+        //orderItem.setMerchantUnitPrice(defaultValue(orderItemDto.getMerchantUnitPrice()));
 
         /*
          * ONLINE TOTAL
@@ -87,11 +91,11 @@ public class CoOrderMapper {
         /*
          * MERCHANT TOTAL
          */
-        orderItem.setMerchantPriceTotal(calculateTotalPrice(orderItemDto.getMerchantUnitPrice(), orderItemDto.getQuantity()));
+        //orderItem.setMerchantPriceTotal(calculateTotalPrice(orderItemDto.getMerchantUnitPrice(), orderItemDto.getQuantity()));
 
         orderItem.setCreatedAt(LocalDateTime.now());
 
-        log.info("MAPPER_END | MAP_ORDER_ITEM_SUCCESS | orderId={} | productId={}", orderId, orderItemDto.getProductId());
+        log.info("MAPPER_END | MAP_ORDER_ITEM_SUCCESS | orderId={} | productId={}", order.getOrderId(), orderItemDto.getProductId());
 
         return orderItem;
     }
@@ -99,33 +103,54 @@ public class CoOrderMapper {
     /*
      * MAP PRICE BREAKUP
      */
-    public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto requestDto, String orderId) {
+    public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto requestDto, CoOrder order) {
 
-        log.info("MAPPER_START | MAP_PRICE_BREAKUP | orderId={}", orderId);
+        System.out.println("==========================="+requestDto.getPackagingFeeToggle()+requestDto.getPlatformFeeToggle()+requestDto.getSurgeFeeToggle());
+        log.info("MAPPER_START | MAP_PRICE_BREAKUP | orderId={}", order.getOrderId());
 
         CoOrderPriceBreakup breakup = new CoOrderPriceBreakup();
 
-        breakup.setOrderId(orderId);
+        breakup.setOrder(order);
 
         breakup.setCouponId(requestDto.getCouponId());
 
         breakup.setOrderAmount(defaultValue(requestDto.getOrderAmount()));
 
-        breakup.setPlatformFee(defaultValue(requestDto.getPlatformFee()));
+        if(requestDto.getPackagingFeeToggle()){
+            breakup.setPackagingFee(defaultValue(requestDto.getPackagingFee()));
+        } else {
+            breakup.setPackagingFee(BigDecimal.ZERO);
+        }
 
-        breakup.setDeliveryFee(defaultValue(requestDto.getDeliveryFee()));
+        if(requestDto.getPlatformFeeToggle()){
+            breakup.setPlatformFee(defaultValue(requestDto.getPlatformFee()));
+        } else {
+            breakup.setPlatformFee(BigDecimal.ZERO);
+        }
 
-        breakup.setSurgeFee(defaultValue(requestDto.getSurgeFee()));
+        if(requestDto.getSurgeFeeToggle()){
+            breakup.setSurgeFee(defaultValue(requestDto.getSurgeFee()));
+        } else {
+            breakup.setSurgeFee(BigDecimal.ZERO);
+        }
 
-        breakup.setPackagingFee(defaultValue(requestDto.getPackagingFee()));
 
-        breakup.setGst(defaultValue(requestDto.getGst()));
+        breakup.setPlatformFeeTax(defaultValue(requestDto.getPlatformFeeTax()));
+
+        breakup.setPackagingFeeTax(defaultValue(requestDto.getPackagingFeeTax()));
+
+        breakup.setSurgeFeeTax(defaultValue(requestDto.getSurgeFeeTax()));
+
+        breakup.setFoodTax(defaultValue(requestDto.getFoodTax()));
+
+        breakup.setTotalTax(defaultValue(requestDto.getTotalTax()));
 
         breakup.setOrderTotalAmount(defaultValue(requestDto.getOrderTotalAmount()));
 
         breakup.setCouponDiscount(defaultValue(requestDto.getCouponDiscount()));
 
-        breakup.setOrderAmountDiscounted(defaultValue(requestDto.getWalletAmount()));
+        breakup.setOrderAmountDiscounted(requestDto.getOrderAmount().
+                subtract(requestDto.getCouponDiscount() != null ? requestDto.getCouponDiscount() : BigDecimal.ZERO));
 
         breakup.setWalletAmount(defaultValue(requestDto.getWalletAmount()));
 
@@ -137,9 +162,11 @@ public class CoOrderMapper {
 
         breakup.setPickUpCharges(requestDto.getPickUpCharges());
 
-        breakup.setDeliveryCharges(requestDto.getDeliveryCharges());
+        breakup.setDeliveryFee(requestDto.getDeliveryFee());
 
-        log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", orderId);
+        breakup.setDeliveryFeeTax(requestDto.getDeliveryFeeTax());
+
+        log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", order.getOrderId());
 
         return breakup;
     }

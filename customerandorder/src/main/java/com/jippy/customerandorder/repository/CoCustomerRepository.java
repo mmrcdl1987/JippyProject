@@ -51,4 +51,6 @@ public interface CoCustomerRepository extends JpaRepository<CoCustomer, Integer>
         ORDER BY customer_id
         """, nativeQuery = true)
     List<CoCustomer> findAllCustomersForMealReminder();
+
+    Optional<CoCustomer> findByCustomerId(Integer customerId);
 }

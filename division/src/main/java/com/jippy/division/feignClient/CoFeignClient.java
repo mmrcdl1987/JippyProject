@@ -1,5 +1,6 @@
 package com.jippy.division.feignClient;
 
+import com.jippy.division.dto.DivCustomerResponseDto;
 import com.jippy.division.dto.DivOrderDto;
 import com.jippy.division.dto.DivPaymentModesDto;
 import com.jippy.division.dto.DivPlaceOrderRequestDto;
@@ -22,4 +23,7 @@ public interface CoFeignClient {
 
     @GetMapping("/api/co/order-settings/getPaymentModeById")
     public ResponseEntity<DivPaymentModesDto> getPaymentModeById(@RequestParam Integer paymentModeId);
+
+    @GetMapping("/api/co/customers/{customerId}")
+    public ResponseEntity<DivCustomerResponseDto> getCustomer(@PathVariable Integer customerId);
 }

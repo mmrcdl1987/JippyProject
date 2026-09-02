@@ -77,7 +77,7 @@ public class CoWalletPointsServiceImpl
 
         // 4. Fetch price breakup
         CoOrderPriceBreakup priceBreakup =
-                priceBreakupRepository.findByOrderId(orderId);
+                priceBreakupRepository.findByOrder_OrderId(orderId);
 
         if (priceBreakup == null) {
 

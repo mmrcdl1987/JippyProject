@@ -18,8 +18,9 @@ public class CoOrderPriceBreakup {
     @Column(name = "order_price_breakup_id")
     private Long orderPriceBreakupId;
 
-    @Column(name = "order_id", nullable = false)
-    private String orderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    private CoOrder order;
 
     @Column(name = "coupon_id")
     private Integer couponId;
@@ -30,17 +31,32 @@ public class CoOrderPriceBreakup {
     @Column(name = "platform_fee")
     private BigDecimal platformFee;
 
+    @Column(name = "platform_fee_tax")
+    private BigDecimal platformFeeTax;
+
     @Column(name = "delivery_fee")
     private BigDecimal deliveryFee;
+
+    @Column(name = "delivery_fee_tax")
+    private BigDecimal deliveryFeeTax;
 
     @Column(name = "surge_fee")
     private BigDecimal surgeFee;
 
+    @Column(name = "surge_fee_tax")
+    private BigDecimal surgeFeeTax;
+
     @Column(name = "packaging_fee")
     private BigDecimal packagingFee;
 
-    @Column(name = "gst")
-    private BigDecimal gst;
+    @Column(name = "packaging_fee_tax")
+    private BigDecimal packagingFeeTax;
+
+    @Column(name = "food_tax")
+    private BigDecimal foodTax;
+
+    @Column(name = "total_tax")
+    private BigDecimal totalTax;
 
     @Column(name = "order_total_amount", nullable = false)
     private BigDecimal orderTotalAmount;
@@ -72,10 +88,8 @@ public class CoOrderPriceBreakup {
     @Column(name = "pick_up_charges")
     private BigDecimal pickUpCharges;
 
-    @Column(name = "deliver_charges")
-    private BigDecimal deliveryCharges;
-
-
+    @Column(name = "tip")
+    private BigDecimal tip;
     /**
      * Amount used for wallet points.
      */

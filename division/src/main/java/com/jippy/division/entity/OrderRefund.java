@@ -22,12 +22,12 @@ public class OrderRefund {
 
     //private UUID transactionId;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "transaction_id", nullable = false)
+    @JoinColumn(name = "payment_transactions_id", nullable = false)
     private PaymentTransaction paymentTransaction;
 
     private String gatewayRefundId; //holds either Razorpay refund_id or Paytm refundId
     private Integer amountInPaise;
-    private String status; // refund_status
+    private String refundStatus; // refund_status
     private String reason;
     private String bankArn; // Can hold either Razorpay bank_arn or Paytm bankTxnId
     private LocalDateTime createdAt;

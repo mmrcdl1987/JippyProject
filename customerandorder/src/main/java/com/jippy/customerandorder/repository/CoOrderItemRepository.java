@@ -9,5 +9,5 @@ import java.util.List;
 public interface CoOrderItemRepository extends JpaRepository<CoOrderItem,Long> {
 
 // Fetch order items using order id
-    List<CoOrderItem> findByOrderId(String orderId);
+    List<CoOrderItem> findByOrder_OrderId(String orderId);
 }

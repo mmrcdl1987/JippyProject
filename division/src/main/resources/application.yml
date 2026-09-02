@@ -110,3 +110,8 @@ paytm:
   refund-url: "https://securegw-stage.paytm.in/refund/api/v1/asyncRefund"
   refund-status-url: "https://securegw-stage.paytm.in/v2/refund/status"
 
+payu:
+  merchant-key: ${MERCHANT_KEY}
+  merchant-salt: ${MERCHANT_SALT}
+  post-service-url: https://test.payu.in/merchant/postservice.php?form=1
+

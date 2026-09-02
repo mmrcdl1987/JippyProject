@@ -11,10 +11,9 @@ import com.jippy.division.mapper.DivPaymentMapper;
 import com.jippy.division.repositary.OrderRefundRepository;
 import com.jippy.division.repositary.TransactionRepository;
 import com.jippy.division.service.DivPaymentService;
+import com.jippy.division.service.PayUService;
 import com.paytm.pg.merchant.PaytmChecksum;
-import com.razorpay.RazorpayClient;
-import com.razorpay.RazorpayException;
-import com.razorpay.Utils;
+import com.razorpay.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +28,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -41,7 +42,6 @@ public class DivPaymentServiceImpl implements DivPaymentService {
     @Autowired
     private RazorpayClient razorpayClient;
     private final TransactionRepository transactionRepository;
-    private final OrderRefundRepository refundRepository;
     private final CoFeignClient coFeignClient;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -63,6 +63,11 @@ public class DivPaymentServiceImpl implements DivPaymentService {
     @Value("${paytm.refund-url}")
     private String paytmRefundUrl;
 
+    @Value("${payu.merchant-key}")
+    private String payUMerchantKey;
+
+    private final PayUService payUService;
+
     @Override
     public DivPaymentInitiateResponse initiatePayment(DivPlaceOrderRequestDto placeOrderRequestDto) throws RazorpayException {
 
@@ -74,6 +79,9 @@ public class DivPaymentServiceImpl implements DivPaymentService {
             throw new RuntimeException("Payment mode not found for ID: " + placeOrderRequestDto.getPaymentModeId());
         }
         DivPaymentInitiateResponse response = new DivPaymentInitiateResponse();
+
+        log.info("Payment mode for this order : {}",paymentModesDto.getPaymentMode());
+
         if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_RAZOR_PAY)){
             response = initiateRazorPayPayment(placeOrderRequestDto);
             return response;
@@ -82,8 +90,85 @@ public class DivPaymentServiceImpl implements DivPaymentService {
             response = initiatePaytmPayment(placeOrderRequestDto);
             return response;
         }
+        if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_PAYU)){
+            response = initiatePayuPayment(placeOrderRequestDto);
+            return response;
+        }
         return response;
     }
+
+      private DivPaymentInitiateResponse initiatePayuPayment(DivPlaceOrderRequestDto placeOrderRequestDto) {
+
+          ResponseEntity<DivOrderDto> placeOrderRequestDtoResponseEntity =
+                  coFeignClient.placeOrder(placeOrderRequestDto);
+
+          //System.out.println("==============================="+placeOrderRequestDto.getDeliveryFee()+placeOrderRequestDto.getDeliveryFeeTax());
+
+          DivOrderDto orderDto = placeOrderRequestDtoResponseEntity.getBody();
+
+          log.info("Initiating payu payment for order: {}", placeOrderRequestDto.getOrderId());
+
+          if(orderDto == null) {
+              throw new RuntimeException("Order is not created because of some issue, Please try again " );
+          }
+         // System.out.println("=========================="+orderDto.toString());
+
+          // Convert order total to subunits (Paise)
+          int amountInPaise = orderDto.getOrderTotalAmount().multiply(new BigDecimal(100)).intValue();
+
+          // Save transaction trace as PENDING
+          PaymentTransaction transaction = DivPaymentMapper.mapToTransactions(orderDto, null, amountInPaise);
+          transactionRepository.save(transaction);
+
+          DivOrderDto divOrderDto =  coFeignClient.getOrder(transaction.getApplicationOrderId());
+          divOrderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_PENDING);
+          coFeignClient.updateOrderStatus(divOrderDto);
+
+          ResponseEntity<DivCustomerResponseDto> customerResponseDtoResponseEntity =
+                  coFeignClient.getCustomer(orderDto.getCustomerId());
+
+          DivCustomerResponseDto customerResponseDto = new DivCustomerResponseDto();
+          if(customerResponseDtoResponseEntity != null){
+              customerResponseDto = customerResponseDtoResponseEntity.getBody();
+          }
+
+          // Amount formatted to 2 decimals as saved/calculated during initiation
+          String amountStr = String.format("%.2f", transaction.getAmount() / 100.0);
+
+          PaymentHashRequestDto hashRequestDto = new PaymentHashRequestDto();
+
+          if( customerResponseDto != null){
+              hashRequestDto.setEmail(customerResponseDto.getEmail());
+              hashRequestDto.setCustomerName(customerResponseDto.getFirstName());
+          }
+
+          hashRequestDto.setAmount(amountStr);
+          hashRequestDto.setTxnid(orderDto.getOrderId());
+          hashRequestDto.setProductinfo("Food ordered #"+orderDto.getOrderId());
+
+          Map<String, String> hashData = payUService.generatePaymentHash(hashRequestDto);
+
+//          Map<String, String> payUParams = new HashMap<>();
+//          payUParams.put("email", customerResponseDto.getEmail());
+//          payUParams.put("firstname",customerResponseDto.getFirstName());
+//          payUParams.put("productinfo", "Food ordered #" + orderDto.getOrderId());
+//          payUParams.put("status","success");
+//          payUParams.put("amount", orderDto.getOrderTotalAmount().toString());
+//          payUParams.put("txnid",orderDto.getOrderId());
+//          payUParams.put("key", payUMerchantKey);
+//          System.out.println("=============================="+payUService.verifyResponseHash(payUParams));
+
+          log.info("Payment initiated successfully for order: {} with payU Hash {}", orderDto.getOrderId(), hashData.get("paymentHash"));
+
+          DivPaymentInitiateResponse response = new DivPaymentInitiateResponse();
+          response.setOrderId(orderDto.getOrderId());
+          response.setToPayAmount(orderDto.getOrderTotalAmount());
+          response.setPayUHash(hashData.get("paymentHash"));
+          response.setPayUMerchantKey(hashData.get("merchantKey"));
+
+          return  response;
+
+       }
 
     private DivPaymentInitiateResponse initiateRazorPayPayment(DivPlaceOrderRequestDto placeOrderRequestDto) throws RazorpayException {
 
@@ -99,7 +184,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
         }
         System.out.println("=========================="+orderDto.toString());
         // Convert order total to subunits (Paise)
-        int amountInPaise = orderDto.getOrderTotalAmount().multiply(new java.math.BigDecimal(100)).intValue();
+        int amountInPaise = orderDto.getOrderTotalAmount().multiply(new BigDecimal(100)).intValue();
 
         // Construct Razorpay payload
         JSONObject orderRequest = new JSONObject();
@@ -109,7 +194,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
 
         System.out.println("==================call razor pay========");
         // Call Razorpay API
-        com.razorpay.Order rzpOrder = razorpayClient.orders.create(orderRequest);
+        Order rzpOrder = razorpayClient.orders.create(orderRequest);
         String rzpOrderId = rzpOrder.get("id");
         System.out.println("==================received razor pay========"+rzpOrderId);
 
@@ -141,7 +226,113 @@ public class DivPaymentServiceImpl implements DivPaymentService {
      * Step 3B: Crytographically verify the payment signature received from frontend.
      */
     @Transactional
-    public boolean verifyPaymentSignature(PaymentVerifyRequestDto request) {
+    public boolean verifyAndCompletePayment(PaymentVerifyRequestDto request) {
+
+        if(request.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_RAZOR_PAY)){
+             return verifyAndCompleteRazorPayPayment(request);
+        }
+        if(request.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_PAYU)){
+            return verifyAndCompletePayUPayment(request);
+        }
+        return false;
+    }
+
+    private boolean verifyAndCompletePayUPayment(PaymentVerifyRequestDto request) {
+        try{
+
+            Map<String, String> payUParams = convertResponseHashToMap(request);
+            boolean isValidSignature = payUService.verifyResponseHash(payUParams);
+
+            if (!isValidSignature) {
+                log.warn("Invalid payU payment signature / hash mismatch!");
+                throw new IllegalArgumentException("Invalid payU payment signature / hash mismatch!");
+            }
+
+            // 2. Fetch transaction record from DB
+            PaymentTransaction transaction = transactionRepository
+                    .findByApplicationOrderId(request.getApplicationOrderId())
+                    .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+            // 3. Update DB record based on gateway status
+            boolean isSuccess = (request.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_PAYU))
+                    || ("success".equalsIgnoreCase(request.getPayuStatus()));
+
+            if (isSuccess) {
+                transaction.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_SUCCESS);
+                transaction.setGatewayPaymentId(request.getPayuPaymentId());
+                transaction.setGatewaySignature(request.getPayuHash());
+                transaction.setTxnRrn(request.getBankRefNum());
+
+                log.info("PayU Payment success : Updated record in db for orderId : {} ",request.getApplicationOrderId());
+            } else {
+
+                log.info("PayU Payment failed : Updated record in db for orderId : {} ",request.getApplicationOrderId());
+                transaction.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_SUCCESS);
+            }
+
+            transaction.setUpdatedAt(LocalDateTime.now());
+            transactionRepository.save(transaction);
+
+            //After payment successful/failed update order record in db
+            updateOrderStatus(request,isSuccess);
+
+            return isSuccess;
+
+        }catch (Exception e){
+            log.error(e.getMessage());
+        }
+       return false;
+    }
+
+    void updateOrderStatus(PaymentVerifyRequestDto paymentVerifyRequestDto, boolean isSuccess){
+
+        DivOrderDto orderDto = new DivOrderDto();
+
+        if(isSuccess){
+            orderDto.setOrderStatus(DivAppConstants.ORDER_PLACED);
+        }else{
+            orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_FAILED);
+        }
+
+        orderDto.setOrderId(paymentVerifyRequestDto.getApplicationOrderId());
+        orderDto.setCustomerId(paymentVerifyRequestDto.getCustomerId());
+
+        coFeignClient.updateOrderStatus(orderDto);
+    }
+
+
+    Map<String, String> convertResponseHashToMap(PaymentVerifyRequestDto paymentVerifyRequestDto) {
+        if (paymentVerifyRequestDto == null || paymentVerifyRequestDto.getPayuHash() == null) {
+            return new HashMap<>();
+        }
+
+        // Build map and delegate logic to existing Map method
+        Map<String, String> payuParams = new HashMap<>();
+
+        ResponseEntity<DivCustomerResponseDto> customerResponseDtoResponseEntity =
+                coFeignClient.getCustomer(paymentVerifyRequestDto.getCustomerId());
+
+        DivCustomerResponseDto customerResponseDto = new DivCustomerResponseDto();
+        if(customerResponseDtoResponseEntity != null){
+            customerResponseDto = customerResponseDtoResponseEntity.getBody();
+
+            payuParams.put("email", customerResponseDto.getEmail());
+            payuParams.put("firstname",customerResponseDto.getFirstName());
+            payuParams.put("productinfo", "Food ordered #" + paymentVerifyRequestDto.getApplicationOrderId());
+        }
+
+
+        payuParams.put("hash", paymentVerifyRequestDto.getPayuHash());
+        payuParams.put("status", paymentVerifyRequestDto.getPayuStatus());
+        payuParams.put("amount", paymentVerifyRequestDto.getAmount() != null ? paymentVerifyRequestDto.getAmount() : "");
+        payuParams.put("txnid", paymentVerifyRequestDto.getApplicationOrderId() != null ? paymentVerifyRequestDto.getApplicationOrderId() : "");
+        payuParams.put("key", payUMerchantKey);
+
+        return payuParams;
+    }
+
+
+    private boolean verifyAndCompleteRazorPayPayment(PaymentVerifyRequestDto request) {
         try {
             log.info("Verifying payment signature for Razorpay Order ID: {}", request.getRzpOrderId());
 
@@ -161,7 +352,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
                 DivOrderDto orderDto =  coFeignClient.getOrder(request.getApplicationOrderId());
 
                 if(orderDto != null){
-                    orderDto.setOrderStatus(DivAppConstants.START_PREPARING);
+                    orderDto.setOrderStatus(DivAppConstants.ORDER_PLACED);
                     coFeignClient.updateOrderStatus(orderDto);
                 }
 
@@ -179,170 +370,11 @@ public class DivPaymentServiceImpl implements DivPaymentService {
         return false;
     }
 
-    @Override
-    public String orderRefund(String orderId, String reason)  {
-        log.info("Initiating refund for orderId: {}, reason: {}", orderId, reason);
-
-        // 1. Fetch original Order and completed Transaction
-        DivOrderDto orderDto =  coFeignClient.getOrder(orderId);
-        if(orderDto == null) {
-            throw new RuntimeException("Order not found for refund: " + orderId);
-        }
-
-        PaymentTransaction tx = transactionRepository.findByApplicationOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Transaction record not found"));
-
-        if (!"SUCCESS".equals(tx.getPaymentStatus())) {
-            throw new IllegalStateException("Cannot refund an un-captured or failed transaction.");
-        }
-
-        ResponseEntity<DivPaymentModesDto> paymentModesDtoResponseEntity =
-                coFeignClient.getPaymentModeById(tx.getPaymentMethodType());
-
-        DivPaymentModesDto paymentModesDto = paymentModesDtoResponseEntity.getBody();
-        if(paymentModesDto == null) {
-            throw new RuntimeException("Payment mode not found for ID: " + tx.getPaymentMethodType());
-        }
-
-        String response = "";
-        if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_RAZOR_PAY)){
-            response= initiateRazorPayRefund(orderId,tx,reason,orderDto);
-            return response;
-        }
-        if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_PAYTM)){
-            response = initiatePaytmRefund(orderId,tx,reason,orderDto);
-            return response;
-        }
-        return "Refund request failed for orderId: " + orderId + ". Please check payment gateway dashboard for details.";
-    }
-
-    @Transactional
-    private String initiatePaytmRefund(String orderId, PaymentTransaction tx, String reason, DivOrderDto orderDto) {
-
-        // 1. Generate a unique refund reference ID for your internal tracking
-        OrderRefund orderRefund = DivPaymentMapper.mapToRefundOrder(orderDto, tx, null, reason);
-
-        // Convert paise back to standard rupees formatting matching Paytm requirement (e.g. "100.50")
-        double decimalAmount = tx.getAmount() / 100.0;
-        String formattedAmount = String.format("%.2f", decimalAmount);
-
-        // 2. Build Request Body Map
-        Map<String, Object> body = new HashMap<>();
-        body.put("mid", paytmMid);
-        body.put("orderId", orderId);
-        body.put("txnId", tx.getGatewayPaymentId());
-        body.put("refId", orderRefund.getRefundTransactionsId().toString());
-        body.put("refundAmount", formattedAmount);
-        body.put("refundReason", reason);
-
-        try {
-            // 3. Generate Security Checksum
-            String jsonBody = new ObjectMapper().writeValueAsString(body);
-            String checksum = PaytmChecksum.generateSignature(jsonBody, paytmMerchantKey);
-
-            // 4. Set Request Headers & Package Request Envelope
-            Map<String, String> head = new HashMap<>();
-            head.put("signature", checksum);
-
-            Map<String, Object> paytmRefundPayload = new HashMap<>();
-            paytmRefundPayload.put("body", body);
-            paytmRefundPayload.put("head", head);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(paytmRefundPayload, headers);
-
-            // 5. Post payload directly to Paytm Gateway
-            ResponseEntity<Map> response = restTemplate.postForEntity(paytmRefundUrl, entity, Map.class);
-            Map<String, Object> responseMap = response.getBody();
-
-            Map<String, Object> resultBody = (Map<String, Object>) responseMap.get("body");
-            Map<String, Object> resultInfo = (Map<String, Object>) resultBody.get("resultInfo");
-
-            String resultStatus = (String) resultInfo.get("resultStatus"); // "PENDING" or "TXN_SUCCESS" or "TXN_FAILURE"
-
-            // 6. Persist status adjustments inside your tracking layers
-            if ("TXN_SUCCESS".equals(resultStatus) || "PENDING".equals(resultStatus)) {
-
-                // Extract the gateway refund tracking ID returned by Paytm
-                String paytmRefundId = (String) resultBody.get("refundId");
-
-                // A. Update the OrderRefund table details
-                if ("TXN_SUCCESS".equals(resultStatus)) {
-                    orderRefund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
-                    // tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
-                    orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
-                } else {
-                    orderRefund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED); // Bank processing is asynchronous
-                    // tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
-                    orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
-                }
-
-                orderRefund.setGatewayRefundId(paytmRefundId); // Storing Paytm's refundId in your generalized column
-                refundRepository.save(orderRefund);
-
-                // transactionRepository.save(tx);
-
-                coFeignClient.updateOrderStatus(orderDto);
-
-                log.info("Refund request processed successfully for orderId: {}, Paytm Refund ID: {}, Status: {}", orderId, paytmRefundId, orderRefund.getStatus());
-
-                return "Refund request processed successfully for orderId: " + orderId + ", Paytm Refund ID: " + orderRefund.getGatewayRefundId() + ", Status: " + orderRefund.getStatus();
-            }
-        } catch (Exception e) {
-            orderRefund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_FAILED);
-            //tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_FAILED);
-            orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_REFUND_FAILED);
-
-            coFeignClient.updateOrderStatus(orderDto);
-            //transactionRepository.save(tx);
-            refundRepository.save(orderRefund);
-            throw new RuntimeException("CRITICAL: Failed to dispatch Paytm refund execution pipeline", e);
-        }
-        return "Refund request failed for orderId: " + orderId + ". Please check Paytm dashboard for details.";
-    }
-
-    @Transactional
-    private String initiateRazorPayRefund(String orderId, PaymentTransaction tx, String reason, DivOrderDto orderDto) {
-        // 2. Build the Razorpay Refund Payload
-        JSONObject refundRequest = new JSONObject();
-        refundRequest.put("payment_id", tx.getGatewayPaymentId()); // The original payment ID
-        refundRequest.put("amount", tx.getAmount());     // Full refund (or pass less for partial)
-
-        JSONObject notes = new JSONObject();
-        notes.put("order_id",orderId);
-        notes.put("reason", reason);
-        refundRequest.put("notes", notes);
-
-        try{
-            // 3. Execute call against Razorpay
-            com.razorpay.Refund rzpRefund = razorpayClient.refunds.create(refundRequest);
-            String rzpRefundId = rzpRefund.get("id");
-
-            // 4. Update local state
-            orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
-            coFeignClient.updateOrderStatus(orderDto);
-
-      /*  tx.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
-        transactionRepository.save(tx);*/
-
-            // 5. Audit the refund ledger
-            OrderRefund orderRefund = DivPaymentMapper.mapToRefundOrder(orderDto, tx, rzpRefundId, reason);
-
-            refundRepository.save(orderRefund);
-
-            log.info("Refund initiated successfully for orderId: {},  Razorpay Refund ID: {}", orderId, rzpRefundId);
-
-            return "Refund initiated successfully for orderId: " + orderId + ", Razorpay Refund ID: " + rzpRefundId;
-            // Note: Emit a Kafka event here (e.g., "order-refunded")
-            // to instantly text the user or notify the driver app to halt.
-
-        }catch (Exception e){
-            throw new RuntimeException("Exception occurred in initiating razor pay refund: "+e.getMessage());
-        }
 
 
-    }
+
+
+
 
     @Transactional
     private DivPaymentInitiateResponse initiatePaytmPayment(DivPlaceOrderRequestDto placeOrderRequestDto) {
@@ -354,7 +386,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
 
         log.info("Initiating Paytm payment for order: {}", orderDto.getOrderId());
 
-        int amount = orderDto.getOrderTotalAmount().multiply(new java.math.BigDecimal(100)).intValue();
+        int amount = orderDto.getOrderTotalAmount().multiply(new BigDecimal(100)).intValue();
         PaymentTransaction transaction = DivPaymentMapper.mapToTransactions(orderDto, null,
                 amount);
 
@@ -487,7 +519,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
                     transactionRepository.save(tx);
 
                     DivOrderDto divOrderDto =  coFeignClient.getOrder(orderId);
-                    divOrderDto.setOrderStatus(DivAppConstants.START_PREPARING);
+                    divOrderDto.setOrderStatus(DivAppConstants.ORDER_PLACED);
                     coFeignClient.updateOrderStatus(divOrderDto);
 
                     return ResponseEntity.ok("Success");

@@ -245,4 +245,6 @@ public interface FmProductService {
             Integer productId,
             FmMerchantPriceUpdateRequest request
     );
+
+    List<FmOrderItemsEvent> getOrderProductItemsForMerchant(List<Integer> productIds, List<Integer> productVariantIds);
 }
