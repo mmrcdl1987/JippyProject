@@ -107,6 +107,9 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             BigDecimal deliveryTip = defaultValue(requestDto.getDeliveryTip());
 
+            //deduct wallet amount
+            BigDecimal walletAmount = defaultValue(requestDto.getWalletAmount());
+
             // FINAL TO PAY
             BigDecimal toPay = calculateFinalAmount(itemTotal, deliveryCharge,
 
@@ -118,7 +121,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
                     foodTax, deliveryTax,
 
-                    deliveryTip, couponDiscount);
+                    deliveryTip, couponDiscount,walletAmount);
 
             // RESPONSE
 
@@ -328,7 +331,10 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
                                             BigDecimal foodTax, BigDecimal deliveryTax,
 
-                                            BigDecimal deliveryTip, BigDecimal couponDiscount) {
+                                            BigDecimal deliveryTip, BigDecimal couponDiscount,
+
+                                            BigDecimal walletAmount
+    ) {
 
 
         // BASE AMOUNT
@@ -367,7 +373,8 @@ public class CheckoutServiceImpl implements ICheckoutService {
         // TIP / COUPON
 
 
-        totalAmount = totalAmount.add(deliveryTip).subtract(couponDiscount).setScale(2, RoundingMode.HALF_UP);
+        totalAmount = totalAmount.add(deliveryTip).subtract(couponDiscount).subtract(walletAmount)
+                .setScale(2, RoundingMode.HALF_UP);
 
         return totalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalAmount;
     }

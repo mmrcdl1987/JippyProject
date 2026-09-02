@@ -19,7 +19,7 @@ public class CoOrderPriceBreakupDto {
 
     private BigDecimal packagingFee;
 
-    private BigDecimal gst;
+    private BigDecimal totalTax;
 
     private BigDecimal orderTotalAmount;
 

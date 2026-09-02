@@ -843,7 +843,7 @@ public class COOrderService implements IOrderService {
 
         orderRepository.save(order);
 
-        if ("PAYMENT_SUCCESS".equalsIgnoreCase(orderDto.getOrderStatus())) {
+        if ("ORDER_PLACED".equalsIgnoreCase(orderDto.getOrderStatus())) {
 
             Optional<CoCustomer> optionalCoCustomer = customerRepository.findByCustomerId(order.getCustomerId());
             CoCustomer customer = new CoCustomer();
@@ -1017,7 +1017,7 @@ public class COOrderService implements IOrderService {
 
         dto.setPackagingFee(breakup.getPackagingFee());
 
-        dto.setGst(breakup.getGst());
+        dto.setTotalTax(breakup.getTotalTax());
 
         dto.setOrderTotalAmount(breakup.getOrderTotalAmount());
 
