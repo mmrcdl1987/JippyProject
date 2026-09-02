@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -73,7 +72,8 @@ public class FmLoginController {
 
         } catch (AuthenticationException e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("INVALID CREDENTIALS [ Enter Valid Credentials] " +
+                    "OR You Are Not APPROVED [ Check your APPROVAL STATUS]");
         }
     }
 

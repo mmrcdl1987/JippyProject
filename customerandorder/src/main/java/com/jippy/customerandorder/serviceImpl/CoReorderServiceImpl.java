@@ -122,7 +122,7 @@ public class CoReorderServiceImpl implements ICoReorderService {
 
             cart.setProductId(item.getProductId());
 
-            cart.setVariantOptionId(item.getVariantOptionId());
+//            cart.setVariantOptionId(item.getVariantOptionId());
 
             cart.setQuantity(item.getQuantity());
 

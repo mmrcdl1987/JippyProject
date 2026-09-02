@@ -152,6 +152,9 @@ public class CoOrderMapper {
         breakup.setOrderAmountDiscounted(requestDto.getOrderAmount().
                 subtract(requestDto.getCouponDiscount() != null ? requestDto.getCouponDiscount() : BigDecimal.ZERO));
 
+        breakup.setOrderAmountDiscounted(
+                defaultValue(requestDto.getOrderAmountDiscounted())
+        );
         breakup.setWalletAmount(defaultValue(requestDto.getWalletAmount()));
 
         breakup.setCreatedAt(LocalDateTime.now());

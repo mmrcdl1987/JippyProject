@@ -9,4 +9,5 @@ public class DriverUserDto {
     private String password;
     private Integer userId;
     private String userType;
+    private String isActive;
 }

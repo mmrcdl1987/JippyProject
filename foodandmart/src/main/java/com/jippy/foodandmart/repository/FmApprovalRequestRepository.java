@@ -169,8 +169,36 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
              ==========================================================*/
 
               WHERE ar.entity_type = 'OUTLET'
-              AND ar.current_level = :approvalLevel
-              AND ar.status = 'PENDING'
+                AND ar.current_level = :approvalLevel
+                AND ar.status = 'PENDING'
+            
+              /*==========================================================
+               = Approver Area Filtering
+               ==========================================================*/
+              /*
+               * Only return OUTLET requests whose Area is assigned
+               * to the currently logged-in Approver.
+               *
+               * Example:
+               *
+               * Approver 111:
+               *   Area 42
+               *   Area 24
+               *   Area 84
+               *   Area 43
+               *
+               * Outlet:
+               *   Area 84 -> RETURN
+               *   Area 13 -> EXCLUDE
+               *   Area 12 -> EXCLUDE
+               */
+              AND EXISTS (
+                  SELECT 1
+                  FROM jippy_fm.manager_areas ma
+                  WHERE ma.user_id = :approverId
+                    AND ma.area_id = ad.area_id
+              )
+              
 
             /*==========================================================
              = Exclude Requests already approved by THIS Approver
@@ -348,8 +376,22 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
               ==========================================================*/
 
              WHERE ar.entity_type = 'MERCHANT'
-              AND ar.current_level = :approvalLevel
-              AND ar.status = 'PENDING'
+               AND ar.current_level = :approvalLevel
+               AND ar.status = 'PENDING'
+            
+             /*==========================================================
+              = Approver Area Filtering
+              ==========================================================*/
+             /*
+              * Only return MERCHANT requests whose Area is assigned
+              * to the currently logged-in Approver.
+              */
+             AND EXISTS (
+                 SELECT 1
+                 FROM jippy_fm.manager_areas ma
+                 WHERE ma.user_id = :approverId
+                   AND ma.area_id = ad.area_id
+             )
 
             /*==========================================================
              = Exclude Merchant already approved by THIS Approver
@@ -402,7 +444,9 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
             @Param("approvalLevel") String approvalLevel,
             @Param("approverId") Integer approverId);
 
+//    =======================================================================================
     //----------------------------FOR DRIVER APPROVAL-------------------------------------------------
+//    =======================================================================================
     @Query(value = """
             /*==========================================================
              = Fetch Pending Driver Approval Requests
@@ -429,6 +473,20 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
             FROM jippy_fm.approval_requests ar
             
             /*==========================================================
+             = Join Driver Address
+             ==========================================================*/
+            /*
+             * Driver details are maintained in Driver Microservice,
+             * but Driver address is stored in FM address table.
+             *
+             * approval_requests.entity_id = Driver Id
+             * address.jippy_address_id    = Driver Id
+             */
+            LEFT JOIN jippy_fm.address ad
+                   ON ad.jippy_address_id = ar.entity_id
+                  AND ad.address_type = 'DRIVER'
+                
+            /*==========================================================
              = Filters
              ==========================================================*/
             
@@ -436,6 +494,21 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
             WHERE ar.entity_type = 'DRIVER'
               AND ar.current_level = :approvalLevel
               AND ar.status = 'PENDING'
+              
+              
+        /*==========================================================
+         = Approver Area Filtering
+         ==========================================================*/
+        /*
+         * Only return DRIVER requests where the Driver s
+         * address area is assigned to the logged-in Approver.
+         */
+        AND EXISTS (
+            SELECT 1
+            FROM jippy_fm.manager_areas ma
+            WHERE ma.user_id = :approverId
+              AND ma.area_id = ad.area_id
+        )
 
             /*==========================================================
              = Exclude Driver already approved by THIS Approver
@@ -487,8 +560,10 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
     List<FmDriverLevel1PendingApprovalProjection> getDriverLevel1PendingRequests(
             @Param("approvalLevel") String approvalLevel,
             @Param("approverId") Integer approverId);
-//
+
+//==========================================================================================
 //-----------------------------GET DRIVER ADDRESS--------------------------------------------
+//==========================================================================================
 
     /**
      * ===========================================================

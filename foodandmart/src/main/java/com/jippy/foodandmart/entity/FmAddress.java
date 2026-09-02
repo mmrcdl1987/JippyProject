@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class FmAddress {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "address_id")
     private Integer addressId;
 

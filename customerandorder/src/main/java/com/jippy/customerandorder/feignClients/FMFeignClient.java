@@ -106,4 +106,9 @@ public interface FMFeignClient {
     public ResponseEntity<List<CoOrderItemsEvent>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
             @RequestParam List<Integer> productVariantIds);
 
+    @PostMapping("/api/fm/pricing/current-online-prices")
+    List<CoCurrentOnlinePriceResponseDto> getCurrentOnlinePrices(
+            @RequestBody CoCurrentOnlinePriceRequestDto request
+    );
+
 }

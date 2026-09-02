@@ -47,6 +47,8 @@ public class FmProductController {
     }
 
 
+
+
     /**
      * POST /api/fm/products/map-from-master-category/{outletCategoryId}
      *
@@ -325,11 +327,7 @@ public class FmProductController {
 
         return ResponseEntity.ok(products);
     }
-
-
-    // =================================================================================================
     // ================================= PRODUCT DETAILS ===============================================
-    // =================================================================================================
 
     /**
      * GET /api/fm/products/productdetails/{productId}
@@ -350,10 +348,7 @@ public class FmProductController {
 
         return ResponseEntity.ok(response);
     }
-    // =================================================================================================
-// ================================= MERCHANT PRICE UPDATE =========================================
-// =================================================================================================
-
+    // ================================= MERCHANT PRICE UPDATE =========================================
     @PutMapping("/{productId}/merchant-price")
     @Operation(summary = "Update merchant price", description = """
             Updates merchant price for a product.

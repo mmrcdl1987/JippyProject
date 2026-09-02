@@ -1,8 +1,8 @@
 package com.jippy.foodandmart.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDateTime;
 
@@ -30,7 +30,7 @@ public class FmOutletAddress {
 
     @Column(name = "jippy_address_id", nullable = false)
     private Integer jippyAddressId;
-    @Column(name = "building_number", length = 50, nullable = false)
+    @Column(name = "building_number", nullable = false)
     private String buildingNumber;
     @Column(name = "road", length = 100, nullable = false)
     private String road;
@@ -64,6 +64,12 @@ public class FmOutletAddress {
     private LocalDateTime updatedAt;
     @Column(name = "updated_by")
     private Integer updatedBy;
+
+    @Column(
+            name = "location",
+            columnDefinition = "geography(Point,4326)"
+    )
+    private Point location;
 
     @PrePersist
     public void prePersist() {

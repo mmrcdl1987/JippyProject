@@ -31,6 +31,8 @@ public class CoPlaceOrderRequestDto {
     @NotNull(message = "Order amount is required")
     private BigDecimal orderAmount;
 
+    private BigDecimal orderAmountDiscounted;
+
     private BigDecimal platformFee;
 
     private BigDecimal platformFeeTax;

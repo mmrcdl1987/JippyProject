@@ -34,6 +34,12 @@ public interface FMFeignClient {
     @PostMapping("/api/fm/users/createUser")
     ResponseEntity<DriverUserDto> createUser(@RequestBody DriverUserDto dto);
 
+    @GetMapping("/api/fm/users/findByUserIdAndUserType")
+    ResponseEntity<DriverUserDto> findByUserIdAndUserType(
+            @RequestParam("userId") Integer userId,
+            @RequestParam("userType") String userType
+    );
+
     @GetMapping("/api/fm/merchants/fetchByMerchantId")
     ResponseEntity<DriverMerchantDto> getMerchantById(@RequestParam Integer merchantId);
 
