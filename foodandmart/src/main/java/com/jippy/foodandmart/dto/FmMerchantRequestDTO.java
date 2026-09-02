@@ -184,6 +184,7 @@ public class FmMerchantRequestDTO {
     // Kukatpally -> areaId
     // ============================================================
 
+    @NotBlank(message = "Building No ( Total-Address ) is Required")
     @Schema(description = "Merchant building / door number", example = "12-34")
     @Size(max = 500, message = "Building number must not exceed 500 characters")
     private String buildingNumber;
@@ -198,7 +199,26 @@ public class FmMerchantRequestDTO {
     @Size(max = 150, message = "Landmark must not exceed 150 characters")
     private String landmark;
 
+//    =====================================================================================
+//    ============== For MOBILE DropDowns For SINGLE CREATE - DROPDOWN IDs ================
+    // ====================================================================================
+    // SINGLE MERCHANT ADDRESS IDs
+    // Used by dropdowns in single merchant creation
+    // ============================================================
 
+    @Schema(description = "State ID selected from dropdown", example = "36")
+    private Integer stateId;
+
+    @Schema(description = "City ID selected from dropdown", example = "101")
+    private Integer cityId;
+
+    @Schema(description = "Area ID selected from dropdown", example = "1001")
+    private Integer areaId;
+
+
+    // ============================================================
+    // BULK UPLOAD - NAMES
+    // ============================================================
     @Schema(description = "State name from CSV/Excel", example = "Telangana")
     @Size(max = 100, message = "State name must not exceed 100 characters")
     private String stateName;

@@ -325,6 +325,8 @@ CREATE TABLE IF NOT EXISTS jippy_fm.address
     updated_by integer,
     CONSTRAINT outlet_address_pkey PRIMARY KEY (address_id)
 );
+ALTER TABLE jippy_fm.address
+ALTER COLUMN building_number TYPE VARCHAR(500);
 
 
 CREATE TABLE IF NOT EXISTS jippy_fm.days_of_week

@@ -8,6 +8,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class S3ImageService {
@@ -31,8 +33,22 @@ public class S3ImageService {
             extension = originalFileName.substring(originalFileName.lastIndexOf("."));
         }
 
-        String fileName = userType + "/" + userId + "/" +  userType.toLowerCase()+userId+extension;
+//        String fileName = userType + "/" + userId + "/" +
+//        userType.toLowerCase()+userId+extension;
 
+
+// Generate unique filename using current date and time
+        String timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"));
+
+
+        String fileName =
+                userType + "/" +
+                        userId + "/" +
+                        userType.toLowerCase() +
+                        "_" +
+                        timestamp +
+                        extension;
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(fileName)

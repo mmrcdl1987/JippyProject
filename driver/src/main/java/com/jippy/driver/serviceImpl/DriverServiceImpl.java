@@ -1,4 +1,5 @@
 package com.jippy.driver.serviceImpl;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
@@ -22,8 +23,7 @@ import org.locationtech.jts.geom.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -61,8 +61,8 @@ public class DriverServiceImpl implements DriverService {
 
         log.info("Creating driver for phone: {}", dto.getPhoneNumber());
         // ----------------------------------------------------------------------
-// Validate duplicate phone number
-// ----------------------------------------------------------------------
+        // Validate duplicate phone number
+        // ----------------------------------------------------------------------
         if (driverRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
 
             log.error("Phone number already exists : {}", dto.getPhoneNumber());
@@ -130,10 +130,6 @@ public class DriverServiceImpl implements DriverService {
                 savedDriver.getDriverId()
         );
 
-        emailService.sendDriverRegistrationEmail(
-                savedDriver.getEmail(),
-                savedDriver.getFirstName() + " " + savedDriver.getLastName()
-        );
 
         log.info(
                 "Driver Registration Email Sent Successfully. Driver Id : {}, Email : {}",
@@ -145,19 +141,37 @@ public class DriverServiceImpl implements DriverService {
 // then we will save the user details in FM microservice users table
 //  --------------------------------------------------------------------------------
         try {
+
             DriverUserDto userDto = new DriverUserDto();
 
             userDto.setUsername(savedDriver.getEmail());
             userDto.setPassword(dto.getPassword());
             userDto.setUserId(savedDriver.getDriverId());
             userDto.setUserType(DConstants.TYPE_DRIVER);
-            log.info("Creating user in FM for driverId: {}, username: {}", savedDriver.getDriverId(), userDto.getUsername());
-            fmFeignClient.createUser(userDto);
 
-            log.info("User created in FM for driverId: {}", savedDriver.getDriverId());
+            log.info("Calling FM createUser: {}", userDto);
+
+            ResponseEntity<DriverUserDto> response =
+                    fmFeignClient.createUser(userDto);
+
+            log.info(
+                    "FM createUser response: status={}, body={}",
+                    response.getStatusCode(),
+                    response.getBody()
+            );
+
+        } catch (feign.FeignException e) {
+
+            log.error(
+                    "FM createUser FAILED: status={}, responseBody={}",
+                    e.status(),
+                    e.contentUTF8(),
+                    e
+            );
 
         } catch (Exception e) {
-            log.error("User creation failed in FM", e);
+
+            log.error("FM createUser FAILED", e);
         }
 
 //        ----------------------------------------------------------------------
@@ -199,19 +213,27 @@ public class DriverServiceImpl implements DriverService {
         coAddressRequestDto.setStateId(dto.getStateId());
         coAddressRequestDto.setAreaId(dto.getAreaId());
         coAddressRequestDto.setAddressType(DConstants.TYPE_DRIVER);
+        coAddressRequestDto.setLatitude(dto.getLatitude());
+        coAddressRequestDto.setLongitude(dto.getLongitude());
         DriverAddressRequestDto coAddressRequestDtoFeign = null;
         try {
 
             coAddressRequestDtoFeign =
                     fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
 
-        } catch (Exception e) {
+        }  catch (Exception e) {
 
-            log.error("Address creation failed for driver id : {}",
-                    savedDriver.getDriverId(), e);
+            log.error(
+                    "ADDRESS FEIGN FAILED | driverId={} | errorType={} | message={}",
+                    savedDriver.getDriverId(),
+                    e.getClass().getName(),
+                    e.getMessage(),
+                    e
+            );
 
             throw new DriverBusinessException(
-                    "Failed to create driver address.");
+                    "Failed to create driver address: " + e.getMessage()
+            );
         }
 //        create driver wallet details , create entity ,repo
         DriverWallet wallet = new DriverWallet();
@@ -229,7 +251,13 @@ public class DriverServiceImpl implements DriverService {
         driverWalletRepository.save(wallet);
 
         // Convert Entity → DTO
-        DriverDto mapToDriverDto = DriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
+        DriverDto mapToDriverDto =
+                DriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
+
+        emailService.sendDriverRegistrationEmail(
+                savedDriver.getEmail(),
+                savedDriver.getFirstName() + " " + savedDriver.getLastName()
+        );
 
         return mapToDriverDto;
     }
@@ -263,8 +291,8 @@ public class DriverServiceImpl implements DriverService {
             log.error("Failed to create Approval Request for Driver Id: {}", driverId, ex);
         }
     }
-//    ---------------------------------------------------------------------------------------------
-//    ---------------------------------------------------------------------------------------------
+//=========================================================================================
+//=========================================================================================
 
     @Override
     @Transactional
@@ -272,20 +300,65 @@ public class DriverServiceImpl implements DriverService {
 
         log.info("Fetching driver with id: {}", driverId);
 
-        Driver driver = driverRepository.findById(driverId).orElseThrow(() -> {
-            log.error("Driver not found with id: {}", driverId);
-            return new ResourceNotFoundException("Driver not found with id: " + driverId);
-        });
+        // -----------------------------------------
+        // 1. Get Driver + KYC from Driver MS
+        // -----------------------------------------
+        Driver driver = driverRepository.findById(driverId)
+                .orElseThrow(() -> {
+                    log.error("Driver not found with id: {}", driverId);
+                    return new ResourceNotFoundException(
+                            "Driver not found with id: " + driverId
+                    );
+                });
 
+        // -----------------------------------------
+        // 2. Get Address from FM
+        // -----------------------------------------
         DriverAddressRequestDto address = null;
 
         try {
+
             address = fmFeignClient.getAddressDetails(driverId).getBody();
+
         } catch (Exception e) {
-            log.error("Failed to fetch address from FM", e);
+
+            log.error("Failed to fetch address from FM for driverId: {}",
+                    driverId,
+                    e
+            );
         }
 
-        return DriverMapper.mapToDriverDto(driver, address);
+        // -----------------------------------------
+        // 3. Get User Status from FM
+        // -----------------------------------------
+        DriverUserDto user = null;
+
+        try {
+
+            user = fmFeignClient.findByUserIdAndUserType(
+                    driverId,
+                    DConstants.TYPE_DRIVER).getBody();
+
+            log.info("========== FM USER RESPONSE ==========");
+            log.info("User ID     : {}", user != null ? user.getUserId() : null);
+            log.info("Username    : {}", user != null ? user.getUsername() : null);
+            log.info("User Type   : {}", user != null ? user.getUserType() : null);
+            log.info("Is Active   : {}", user != null ? user.getIsActive() : null);
+            log.info("======================================");
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Failed to fetch user details from FM for driverId: {}",
+                    driverId,
+                    e
+            );
+        }
+
+        // -----------------------------------------
+        // 4. Combine everything
+        // -----------------------------------------
+        return DriverMapper.mapToDriverDto(driver, address, user);
     }
 
     @Override
@@ -903,29 +976,29 @@ public class DriverServiceImpl implements DriverService {
         }
 
         // 2. Validate File Type (MIME Type)
-        String contentType = file.getContentType();
-        if (!isValidType(contentType)) {
-            throw new ImageValidationException("Only PNG, JPEG, and JPG are allowed");
-        }
+//        String contentType = file.getContentType();
+//        if (!isValidType(contentType)) {
+//            throw new ImageValidationException("Only PNG, JPEG, and JPG are allowed");
+//        }
 
         // 3. Validate File Size (e.g., Max 5MB)
-        long maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        long maxSize = 10 * 1024 * 1024; // 10MB in bytes
         if (file.getSize() > maxSize) {
-            throw new ImageValidationException("File size exceeds the 5MB limit");
+            throw new ImageValidationException("File size exceeds the 10MB limit");
         }
 
-        //4. Validate Image Dimensions (e.g., Min 200x200 pixels)
-        BufferedImage image = ImageIO.read(file.getInputStream());
-        if (image == null) {
-            throw new ImageValidationException("Invalid image file");
-        }
+//        //4. Validate Image Dimensions (e.g., Min 200x200 pixels)
+//        BufferedImage image = ImageIO.read(file.getInputStream());
+//        if (image == null) {
+//            throw new ImageValidationException("Invalid image file");
+//        }
 
-        int width = image.getWidth();
-        int height = image.getHeight();
-
-        if (width < 200 || height < 200) {
-            throw new ImageValidationException("Image must be at least 200x200 pixels");
-        }
+//        int width = image.getWidth();
+//        int height = image.getHeight();
+//
+//        if (width < 200 || height < 200) {
+//            throw new ImageValidationException("Image must be at least 200x200 pixels");
+//        }
     }
 
     private boolean isValidType(String contentType) {

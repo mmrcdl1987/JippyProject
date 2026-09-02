@@ -26,7 +26,40 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             "/swagger-ui",
             "/webjars",
             "/swagger-ui.html",
-            "/ws-group-order/**"
+            "/ws-group-order/**",
+            // State,city,area - APIs
+            "/api/fm/location/fetchStates",
+            "/api/fm/location/fetchCityInState",
+            "/api/fm/location/fetchAreaInCity",
+            // Address
+            "/api/fm/outlets/saveAddressDetails",
+            // User Creation
+            "/api/fm/users/createUser",
+            // Driver Creation
+            "/api/driver/postDriverDetails",
+            // Merchant Creation
+            "/api/fm/merchants/createMerchant",
+            // Requesting Approval while creation of[OUTLET,MERCHANT,DRIVER]
+            "/api/fm/approval-requests/createApprovalRequest",
+            // OTP APIs
+            "/api/fm/otp/send-signup-otp",
+            "/api/fm/otp/verify-signup-otp",
+            "/api/fm/otp/send-create-outlet-otp",
+            "/api/fm/otp/verify-create-outlet-otp",
+            "/api/fm/otp/resend-signup-otp",
+            "/api/fm/otp/resend-create-outlet-otp",
+
+            // Forgot Password APIs
+            "/api/fm/forgetPasswordForUserTypeBySendingOtpToMail",
+            "/api/fm/validateForgotPasswordOTP",
+            "/api/fm/updateForgotPassword",
+
+            // Find By Email From Driver
+            "/api/driver/findByEmail",
+//            From DIV
+            "/api/div/email/sendOtp"
+
+
     );
 
     public AuthenticationFilter() {

@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -77,6 +76,9 @@ private String nomineeName;
     @Column(name = "is_approved")
     private Boolean isApproved;
 
+    @Column(name = "ready_to_accept_orders")
+    private Boolean readyToAcceptOrders;
+
     // One-to-One mapping with KYC
     @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL)
     private DriverKyc driverKyc;
@@ -84,6 +86,6 @@ private String nomineeName;
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
     private List<DriverOrder> driverOrders;
 
-    @Column(name = "profile_pic_url", length = 100)
+    @Column(name = "profile_pic_url")
     private String profilePicUrl;
 }
