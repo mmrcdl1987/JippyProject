@@ -100,6 +100,46 @@ public class FmUpdateOutletRequestDTO {
     // Address Details
     // ------------------------------------------------------------------
 
+    @Schema(description = "Aadhaar Number", example = "123456789012")
+    @Pattern(
+            regexp = "^$|^[2-9]{1}[0-9]{11}$",
+            message = "Aadhaar must be a valid 12-digit number")
+    private String aadharNumber;
+
+    @Schema(description = "Aadhaar Number URL")
+    @Size(max = 500)
+    private String aadhaarNumberUrl;
+
+    @Schema(description = "PAN Number", example = "ABCDE1234F")
+    @Pattern(
+            regexp = "^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$",
+            message = "PAN must be in format: AAAAA9999A")
+    private String panNumber;
+
+    @Schema(description = "PAN Number URL")
+    @Size(max = 500)
+    private String panNumberUrl;
+
+    @Schema(description = "FSSAI Number", example = "12345678901234")
+    @Pattern(
+            regexp = "^$|^\\d{14}$",
+            message = "FSSAI Number must contain exactly 14 digits when provided")
+    private String fssaiNumber;
+
+    @Schema(description = "FSSAI Number URL")
+    @Size(max = 500)
+    private String fssaiNumberUrl;
+
+    @Schema(description = "GST Number", example = "36ABCDE1234F1Z5")
+    @Pattern(
+            regexp = "^$|^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$",
+            message = "Invalid GST Number")
+    private String gstNumber;
+
+    @Schema(description = "GST Number URL")
+    @Size(max = 500)
+    private String gstNumberUrl;
+
     @Schema(description = "Building Number", example = "10-1-20")
     @NotBlank(message = "Building number is required")
     @Size(max = 50)

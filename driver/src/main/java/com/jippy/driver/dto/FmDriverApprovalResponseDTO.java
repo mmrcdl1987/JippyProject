@@ -51,6 +51,14 @@ public class FmDriverApprovalResponseDTO {
     private String drivingLicenseNumber;
 
     private String rcCopy;
+
+    private String aadharDocUrl;
+
+    private String panDocUrl;
+
+    private String drivingLicenseDocUrl;
+
+    private String rcCopyDocUrl;
     /*==========================================================
      = Driver Approval Status
      ==========================================================*/

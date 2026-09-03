@@ -52,9 +52,20 @@ public class FmOutletCreateResponseDTO {
             " License Number of the outlet.", example = "12345678901234")
     private String fssaiNumber;
 
+    @Schema(description = "Aadhaar Number of the outlet owner", example = "123456789012")
+    private String aadharNumber;
+
+    @Schema(description = "PAN Number of the outlet owner", example = "ABCDE1234F")
+    private String panNumber;
+
     @Schema(description = "Goods and Services Tax (GST) Identification" +
             " Number (GSTIN) of the outlet.", example = "36ABCDE1234F1Z5")
     private String gstNumber;
+
+    private String aadhaarNumberUrl;
+    private String panNumberUrl;
+    private String fssaiNumberUrl;
+    private String gstNumberUrl;
 
     private Boolean isGstApplied;
 //    --------------users Table----------------------
