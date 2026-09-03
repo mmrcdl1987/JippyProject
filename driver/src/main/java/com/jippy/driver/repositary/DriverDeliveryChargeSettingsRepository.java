@@ -55,7 +55,7 @@ public interface DriverDeliveryChargeSettingsRepository
         FROM DriverDeliveryChargeSettings d
         WHERE :deliveryDistance >= d.kmsRangeFrom
           AND :deliveryDistance < d.kmsRangeTo
-          AND UPPER(d.chargeType) = 'PER_KM'
+          AND UPPER(d.chargeType) = 'DELIVERY'
           AND UPPER(d.status) = 'ACTIVE'
         ORDER BY d.kmsRangeFrom
         """)

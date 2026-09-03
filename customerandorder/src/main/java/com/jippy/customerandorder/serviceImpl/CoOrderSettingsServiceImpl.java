@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -236,6 +238,37 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
         paymentModesDto.setPaymentModeId(coPaymentModes.get().getPaymentModeId());
         return  paymentModesDto;
 
+    }
+
+    @Override
+    public List<CoPaymentModesDto> getActivePaymentModes() {
+
+        log.info("GET ACTIVE PAYMENT MODES SERVICE START");
+
+        List<CoPaymentModes> activePaymentModes = coPaymentModeRepository.findByIsActive("Y");
+
+        if (activePaymentModes == null) {
+
+            log.error("NO ACTIVE PAYMENT MODE FOUND");
+
+            throw new CoOrderSettingsException("No active payment mode found");
+        }
+
+        List<CoPaymentModesDto> paymentModesDtoList = new ArrayList<>();
+
+        for(CoPaymentModes paymentModes: activePaymentModes) {
+
+            CoPaymentModesDto paymentModesDto = new CoPaymentModesDto();
+            paymentModesDto.setPaymentMode(paymentModes.getPaymentMode());
+            paymentModesDto.setPaymentModeId(paymentModes.getPaymentModeId());
+            paymentModesDto.setIsActive(paymentModes.getIsActive());
+            paymentModesDtoList.add(paymentModesDto);
+
+        }
+
+        log.info("GET ACTIVE PAYMENT MODES SERVICE END | paymentModeId={}", paymentModesDtoList);
+
+        return paymentModesDtoList;
     }
 
 

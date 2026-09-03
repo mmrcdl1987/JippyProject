@@ -40,8 +40,9 @@ public class COConstants {
     public static final String TYPE_DRIVER = "DRIVER";
     public static final String CUSTOMER = "CUSTOMER";
     public static final String OUTLET = "OUTLET";
-    public static final String ORDER_STATUS_REJECTED = "REJECTED";
+    public static final String ORDER_STATUS_REJECTED = "ORDER REJECTED";
     public static final String ORDER_STATUS_CANCELLED = "CANCELLED";
+    public static final String ORDER_STATUS_ACCEPTED = "ORDER ACCEPTED";
     public static final String STATUS_201 = "201";
     // ── Delivery Charge Settings Messages ──────────────────────────────────────
     public static final String MSG_DELIVERY_CHARGE_CREATED = "Delivery charge setting created successfully";
@@ -209,4 +210,6 @@ public class COConstants {
     public static final String MINIMUM_STREAK_DAYS = "MINIMUM_STREAK_DAYS";
 
     public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};
+
+    public static  final String PAYMENT_TYPE_COD = "COD";
 }

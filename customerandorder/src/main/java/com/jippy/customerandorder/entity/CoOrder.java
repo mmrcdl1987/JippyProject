@@ -36,8 +36,8 @@ public class CoOrder {
     @Column(name = "customer_phone_number", nullable = false)
     private String customerPhoneNumber;
 
-    @Column(name = "preparation_time")
-    private LocalDateTime preparationTime;
+    @Column(name = "preparation_time_in_mins")
+    private Integer preparationTime;
 
     @Column(name = "estimated_delivery_time")
     private LocalDateTime estimatedDeliveryTime;

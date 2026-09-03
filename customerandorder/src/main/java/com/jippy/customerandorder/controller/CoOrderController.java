@@ -168,4 +168,15 @@ public class CoOrderController {
         return ResponseEntity.ok("Order status updated successfully");
     }
 
+    @PostMapping("/acceptOrRejectOrderByOutlet")
+    public ResponseEntity<String> acceptOrRejectOrderByOutlet(@RequestBody  AcceptOrRejectOrderByOutletDto acceptOrRejectOrderByOutletDto) {
+
+        log.info("API_START | acceptOrRejectOrderByOutlet API | orderId={} | newStatus={}", acceptOrRejectOrderByOutletDto.getOrderId(),
+                acceptOrRejectOrderByOutletDto.getOrderStatus());
+
+        String response = orderService.acceptOrRejectOrderByOutlet(acceptOrRejectOrderByOutletDto);
+
+        return ResponseEntity.ok(response);
+    }
+
 }

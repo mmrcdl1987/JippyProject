@@ -25,6 +25,7 @@ public class DivPayuWebhookServiceImpl implements DivPayuWebhookService {
     private final PayUService payUService;
     private final TransactionRepository transactionRepository;
     private final ObjectMapper objectMapper; // Jackson for serializing raw response
+    private final DivUpdateOrderStatusService divUpdateOrderStatusService;
 
     @Override
     @Transactional
@@ -95,7 +96,10 @@ public class DivPayuWebhookServiceImpl implements DivPayuWebhookService {
         // 6. Trigger Order Status Update (Downstream / Feign Service) ONLY IF NOT ALREADY PROCESSED
         if ("success".equalsIgnoreCase(status) && !wasAlreadySuccess) {
             log.info("Triggering downstream order status update for OrderID: {}", txnid);
-            // coFeignClient.updateOrderStatus(...);
+
+            Boolean paymentStatus = true;
+            //After payment successful/failed update order record in db
+            divUpdateOrderStatusService.updateOrderStatus(txnid,paymentStatus);
         } else if (wasAlreadySuccess) {
             log.info("Skipped downstream order status update for TxnID: {} — Order was already processed by verification API.", txnid);
         }

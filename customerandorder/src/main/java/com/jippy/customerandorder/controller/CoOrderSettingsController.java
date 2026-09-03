@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/co/order-settings")
 @RequiredArgsConstructor
@@ -37,6 +39,16 @@ public class CoOrderSettingsController {
        log.info("GET PAYMENT MODE BY ID API START");
 
         CoPaymentModesDto response = orderSettingsService.getPaymentModeById(paymentModeId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/getActivePaymentModes")
+    public ResponseEntity<List<CoPaymentModesDto>> getActivePaymentModes() {
+
+        log.info("GET ACTIVE PAYMENT MODEs API START");
+
+        List<CoPaymentModesDto> response = orderSettingsService.getActivePaymentModes();
 
         return ResponseEntity.ok(response);
     }
