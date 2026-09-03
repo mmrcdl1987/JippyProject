@@ -1,7 +1,6 @@
 package com.jippy.driver.mapper;
 
 
-
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.entity.*;
@@ -9,7 +8,6 @@ import com.jippy.driver.exception.DriverBadRequestException;
 import com.jippy.driver.projection.DriverOrderHistoryProjection;
 import com.jippy.driver.projection.DriverTotalEarningsProjection;
 import org.locationtech.jts.geom.MultiPolygon;
-import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -69,14 +67,13 @@ public class DriverMapper {
         }
 
         // If all KYC fields are empty, skip creation
-        if (dto.getAadharNumber() == null && dto.getPanNumber() == null && dto.getDrivingLicenseNumber() == null && dto.getRcCopy() == null) {
+        if (dto.getAadharNumber() == null && dto.getDrivingLicenseNumber() == null && dto.getRcCopy() == null) {
             return null;
         }
 
         // Create KYC object and set values
         DriverKyc kyc = new DriverKyc();
         kyc.setAadharNumber(dto.getAadharNumber());
-        kyc.setPanNumber(dto.getPanNumber());
         kyc.setDrivingLicenseNumber(dto.getDrivingLicenseNumber());
         kyc.setRcCopy(dto.getRcCopy());
         kyc.setCreatedAt(LocalDateTime.now());
@@ -92,8 +89,8 @@ public class DriverMapper {
 //    to dto and set address details through feign client response
 // used for updating driver details and getting
 // driver details with address details through feign client response
-    public static DriverDto mapToDriverDto(Driver driver, DriverAddressRequestDto coAddressRequestDtoFeign) {
-
+//    for get
+    public static DriverDto mapToDriverDto(Driver driver, DriverAddressRequestDto coAddressRequestDtoFeign, DriverUserDto user) {
         // Check if entity is null
         if (driver == null) {
             throw new DriverBadRequestException("Driver entity must not be null");
@@ -102,11 +99,12 @@ public class DriverMapper {
         DriverDto dto = new DriverDto();
         dto.setDriverId(driver.getDriverId());
         // Set driver details
-//        dto.setDriverId(driver.getDriverId());
         dto.setFirstName(driver.getFirstName());
         dto.setLastName(driver.getLastName());
         dto.setPhoneNumber(driver.getPhoneNumber());
         dto.setEmail(driver.getEmail());
+        // Profile picture - Driver MS
+        dto.setProfilePicUrl(driver.getProfilePicUrl());
 //        newly added feilds after changing requirement
         dto.setNomineeName(driver.getNomineeName());
         dto.setNomineePhoneNumber(driver.getNomineePhoneNumber());
@@ -120,13 +118,8 @@ public class DriverMapper {
         if (driver.getDriverKyc() != null) {
             dto.setDriverKycId(driver.getDriverKyc().getDriverKycId());
             dto.setAadharNumber(driver.getDriverKyc().getAadharNumber());
-            dto.setPanNumber(driver.getDriverKyc().getPanNumber());
             dto.setDrivingLicenseNumber(driver.getDriverKyc().getDrivingLicenseNumber());
             dto.setRcCopy(driver.getDriverKyc().getRcCopy());
-            dto.setAadharDocUrl(driver.getDriverKyc().getAadharDocUrl());
-            dto.setPanDocUrl(driver.getDriverKyc().getPanDocUrl());
-            dto.setDrivingLicenseDocUrl(driver.getDriverKyc().getDrivingLicenseDocUrl());
-            dto.setRcCopyDocUrl(driver.getDriverKyc().getRcCopyDocUrl());
         }
 
 //        set address through feign client response
@@ -137,12 +130,31 @@ public class DriverMapper {
             dto.setCityId(coAddressRequestDtoFeign.getCityId());
             dto.setStateId(coAddressRequestDtoFeign.getStateId());
             dto.setAreaId(coAddressRequestDtoFeign.getAreaId());
+            dto.setLatitude(coAddressRequestDtoFeign.getLatitude());
+            dto.setLongitude(coAddressRequestDtoFeign.getLongitude());
 
+        }
+        // Driver status from Driver MS
+        dto.setIsApproved(driver.getIsApproved());
+        dto.setReadyToAcceptOrders(driver.getReadyToAcceptOrders());
+
+        // ========================================
+        // FM USER STATUS
+        // ========================================
+
+        if (user != null) {
+            dto.setIsActive(user.getIsActive());
         }
 
         return dto;
 
 
+    }
+
+    //    for [Post Driver Details] By Method Over-Riding
+    public static DriverDto mapToDriverDto(Driver driver, DriverAddressRequestDto address) {
+
+        return mapToDriverDto(driver, address, null);
     }
 
     public static DriverZone mapToZoneEntity(DriverZoneDto zoneDto, MultiPolygon multiPolygon) {
@@ -221,53 +233,39 @@ public class DriverMapper {
 //    }
 
     public static DriverOrderHistoryDto mapToDriverOrderHistoryDto(
-            DriverOrderHistoryProjection projection,
-            String orderStatus,
-            String outletName
-    ) {
+            DriverOrderHistoryProjection projection, String orderStatus, String outletName) {
 
-        DriverOrderHistoryDto dto =
-                new DriverOrderHistoryDto();
+        DriverOrderHistoryDto dto = new DriverOrderHistoryDto();
 
         // Set driver id
-        dto.setDriverId(
-                projection.getDriverId());
+        dto.setDriverId(projection.getDriverId());
 
         // Set order id
-        dto.setOrderId(
-                projection.getOrderId());
+        dto.setOrderId(projection.getOrderId());
 
         // Set pick up distance
-        dto.setPickUpDistanceInKms(
-                projection.getPickUpDistanceInKms());
+        dto.setPickUpDistanceInKms(projection.getPickUpDistanceInKms());
 
         // Set delivery distance
-        dto.setDeliveryDistanceInKms(
-                projection.getDeliveryDistanceInKms());
+        dto.setDeliveryDistanceInKms(projection.getDeliveryDistanceInKms());
 
         // Set pick up charges
-        dto.setPickUpCharges(
-                projection.getPickUpCharges());
+        dto.setPickUpCharges(projection.getPickUpCharges());
 
         // Set delivery charges
-        dto.setDeliverCharges(
-                projection.getDeliverCharges());
+        dto.setDeliverCharges(projection.getDeliverCharges());
 
         // Set total delivery fee
-        dto.setTotalDeliveryFee(
-                projection.getTotalDeliveryFee());
+        dto.setTotalDeliveryFee(projection.getTotalDeliveryFee());
 
         // Set surge fee
-        dto.setSurgeFee(
-                projection.getSurgeFee());
+        dto.setSurgeFee(projection.getSurgeFee());
 
         // Set tips
-        dto.setTips(
-                projection.getTips());
+        dto.setTips(projection.getTips());
 
 //        set created at timestamp
-        dto.setCreatedAt(
-                projection.getCreatedAt());
+        dto.setCreatedAt(projection.getCreatedAt());
 
 //--------------------------------------------------------------------
         // from Customer Ms
@@ -345,6 +343,7 @@ public class DriverMapper {
 
         return bonus;
     }
+
     public static DriverOrder mapToDriverOrderEntity(DriverOrderDto driverOrderDto, Driver driver) {
 
         DriverOrder driverOrder = new DriverOrder();
@@ -355,8 +354,7 @@ public class DriverMapper {
         driverOrder.setDeliveryDistanceInKms(driverOrderDto.getDeliveryDistanceInKms());
         driverOrder.setPickUpCharges(driverOrderDto.getPickUpCharges());
         driverOrder.setPickUpDistanceInKms(driverOrderDto.getPickUpDistanceInKms());
-        BigDecimal totalDeliveryFee = driverOrderDto.getDeliverCharges().add(driverOrderDto.getPickUpCharges()).
-                add( driverOrderDto.getTips()).add(driverOrderDto.getSurgeFee());
+        BigDecimal totalDeliveryFee = driverOrderDto.getDeliverCharges().add(driverOrderDto.getPickUpCharges()).add(driverOrderDto.getTips()).add(driverOrderDto.getSurgeFee());
         driverOrder.setTotalDeliveryFee(totalDeliveryFee);
         driverOrder.setSurgeFee(driverOrderDto.getSurgeFee());
         driverOrder.setCreatedAt(LocalDateTime.now());
@@ -365,8 +363,7 @@ public class DriverMapper {
         return driverOrder;
     }
 
-    public static DriverWalletTransactions mapToTransaction(Integer driverWalletId,
-                        String orderId, double orderAmount,Integer driverId) {
+    public static DriverWalletTransactions mapToTransaction(Integer driverWalletId, String orderId, double orderAmount, Integer driverId) {
         DriverWalletTransactions txn = new DriverWalletTransactions();
 
         // Wallet reference
@@ -388,12 +385,7 @@ public class DriverMapper {
         return txn;
     }
 
-    public static DriverIncentiveHistory mapToDriverIncentiveHistory(
-            DriverIncentiveHistory existingHistory,
-            Integer driverId,
-            LocalDate date,
-            Integer orders,
-            BigDecimal bonus) {
+    public static DriverIncentiveHistory mapToDriverIncentiveHistory(DriverIncentiveHistory existingHistory, Integer driverId, LocalDate date, Integer orders, BigDecimal bonus) {
 
         DriverIncentiveHistory history;
 
@@ -461,22 +453,15 @@ public class DriverMapper {
             dto.setAadhaarNumber(driver.getDriverKyc().getAadharNumber());
             dto.setDrivingLicenseNumber(driver.getDriverKyc().getDrivingLicenseNumber());
             dto.setRcCopy(driver.getDriverKyc().getRcCopy());
-            dto.setAadharDocUrl(driver.getDriverKyc().getAadharDocUrl());
-            dto.setPanDocUrl(driver.getDriverKyc().getPanDocUrl());
-            dto.setDrivingLicenseDocUrl(driver.getDriverKyc().getDrivingLicenseDocUrl());
-            dto.setRcCopyDocUrl(driver.getDriverKyc().getRcCopyDocUrl());
         }
 
         return dto;
     }
 
-    public static DriverDto mapToDriverListDto(
-            Driver driver,
-            DriverAddressRequestDto address) {
+    public static DriverDto mapToDriverListDto(Driver driver, DriverAddressRequestDto address) {
 
         if (driver == null) {
-            throw new DriverBadRequestException(
-                    "Driver entity must not be null");
+            throw new DriverBadRequestException("Driver entity must not be null");
         }
 
         DriverDto dto = new DriverDto();
@@ -495,62 +480,35 @@ public class DriverMapper {
 
         // Family member details
         dto.setFamilyMemberName(driver.getFamilyMemberName());
-        dto.setFamilyMemberPhoneNumber(
-                driver.getFamilyMemberPhoneNumber());
-        dto.setIsFamilyMemberVerified(
-                driver.getIsFamilyMemberVerified());
+        dto.setFamilyMemberPhoneNumber(driver.getFamilyMemberPhoneNumber());
+        dto.setIsFamilyMemberVerified(driver.getIsFamilyMemberVerified());
 
         // Driver KYC details
         if (driver.getDriverKyc() != null) {
 
-            dto.setDriverKycId(
-                    driver.getDriverKyc().getDriverKycId());
+            dto.setDriverKycId(driver.getDriverKyc().getDriverKycId());
 
-            dto.setAadharNumber(
-                    driver.getDriverKyc().getAadharNumber());
+            dto.setAadharNumber(driver.getDriverKyc().getAadharNumber());
 
-            dto.setPanNumber(
-                    driver.getDriverKyc().getPanNumber());
+            dto.setDrivingLicenseNumber(driver.getDriverKyc().getDrivingLicenseNumber());
 
-            dto.setDrivingLicenseNumber(
-                    driver.getDriverKyc().getDrivingLicenseNumber());
-
-            dto.setRcCopy(
-                    driver.getDriverKyc().getRcCopy());
-
-            dto.setAadharDocUrl(
-                    driver.getDriverKyc().getAadharDocUrl());
-
-            dto.setPanDocUrl(
-                    driver.getDriverKyc().getPanDocUrl());
-
-            dto.setDrivingLicenseDocUrl(
-                    driver.getDriverKyc().getDrivingLicenseDocUrl());
-
-            dto.setRcCopyDocUrl(
-                    driver.getDriverKyc().getRcCopyDocUrl());
+            dto.setRcCopy(driver.getDriverKyc().getRcCopy());
         }
 
         // Driver Address details from FM
         if (address != null) {
 
-            dto.setBuildingNumber(
-                    address.getBuildingNumber());
+            dto.setBuildingNumber(address.getBuildingNumber());
 
-            dto.setRoad(
-                    address.getRoad());
+            dto.setRoad(address.getRoad());
 
-            dto.setLandmark(
-                    address.getLandmark());
+            dto.setLandmark(address.getLandmark());
 
-            dto.setCityId(
-                    address.getCityId());
+            dto.setCityId(address.getCityId());
 
-            dto.setStateId(
-                    address.getStateId());
+            dto.setStateId(address.getStateId());
 
-            dto.setAreaId(
-                    address.getAreaId());
+            dto.setAreaId(address.getAreaId());
         }
 
         return dto;
