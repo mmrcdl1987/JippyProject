@@ -18,5 +18,10 @@ public interface S3Service {
             Integer categoryId
     );
 
+    String uploadKycDocument(MultipartFile document, String userType, Integer userId, String documentType);
+
+    String replaceKycDocument(MultipartFile document, String userType, Integer userId,
+                              String documentType, String oldFileUrl);
+
     void deleteFile(String fileUrl);
 }

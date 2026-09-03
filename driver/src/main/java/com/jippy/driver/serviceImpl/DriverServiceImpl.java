@@ -95,6 +95,18 @@ public class DriverServiceImpl implements DriverService {
         }
 
 // ----------------------------------------------------------------------
+// Validate duplicate PAN number
+// ----------------------------------------------------------------------
+        if (driverKycRepository.existsByPanNumber(dto.getPanNumber())) {
+
+            log.error("PAN number already exists : {}",
+                    dto.getPanNumber());
+
+            throw new DriverBusinessException(
+                    "PAN number already exists.");
+        }
+
+// ----------------------------------------------------------------------
 // Validate duplicate Driving License Number
 // ----------------------------------------------------------------------
         if (driverKycRepository.existsByDrivingLicenseNumber(
@@ -249,6 +261,76 @@ public class DriverServiceImpl implements DriverService {
         wallet.setCreatedBy(savedDriver.getDriverId());
 
         driverWalletRepository.save(wallet);
+
+        // Handle document uploads if provided
+        if (dto.getAadharDocument() != null || dto.getPanDocument() != null ||
+            dto.getDrivingLicenseDocument() != null || dto.getRcCopyDocument() != null) {
+            try {
+                // Get or create DriverKyc
+                DriverKyc driverKyc = driverKycRepository.findByDriverDriverId(savedDriver.getDriverId())
+                        .orElse(new DriverKyc());
+                driverKyc.setDriver(savedDriver);
+
+                // Upload Aadhar document
+                if (dto.getAadharDocument() != null && !dto.getAadharDocument().isEmpty()) {
+                    validateDocument(dto.getAadharDocument());
+                    String aadharUrl = s3ImageService.uploadDriverDocument(
+                            dto.getAadharDocument(),
+                            savedDriver.getDriverId(),
+                            "aadhar"
+                    );
+                    driverKyc.setAadharDocUrl(aadharUrl);
+                    log.info("Aadhar document uploaded successfully for driver id: {}", savedDriver.getDriverId());
+                }
+
+                // Upload PAN document
+                if (dto.getPanDocument() != null && !dto.getPanDocument().isEmpty()) {
+                    validateDocument(dto.getPanDocument());
+                    String panUrl = s3ImageService.uploadDriverDocument(
+                            dto.getPanDocument(),
+                            savedDriver.getDriverId(),
+                            "pan"
+                    );
+                    driverKyc.setPanDocUrl(panUrl);
+                    log.info("PAN document uploaded successfully for driver id: {}", savedDriver.getDriverId());
+                }
+
+                // Upload Driving License document
+                if (dto.getDrivingLicenseDocument() != null && !dto.getDrivingLicenseDocument().isEmpty()) {
+                    validateDocument(dto.getDrivingLicenseDocument());
+                    String dlUrl = s3ImageService.uploadDriverDocument(
+                            dto.getDrivingLicenseDocument(),
+                            savedDriver.getDriverId(),
+                            "drivingLicense"
+                    );
+                    driverKyc.setDrivingLicenseDocUrl(dlUrl);
+                    log.info("Driving License document uploaded successfully for driver id: {}", savedDriver.getDriverId());
+                }
+
+                // Upload RC Copy document
+                if (dto.getRcCopyDocument() != null && !dto.getRcCopyDocument().isEmpty()) {
+                    validateDocument(dto.getRcCopyDocument());
+                    String rcUrl = s3ImageService.uploadDriverDocument(
+                            dto.getRcCopyDocument(),
+                            savedDriver.getDriverId(),
+                            "rcCopy"
+                    );
+                    driverKyc.setRcCopyDocUrl(rcUrl);
+                    log.info("RC Copy document uploaded successfully for driver id: {}", savedDriver.getDriverId());
+                }
+
+                // Save DriverKyc with document URLs
+                driverKyc.setUpdatedAt(LocalDateTime.now());
+                driverKyc.setUpdatedBy(savedDriver.getDriverId());
+                driverKycRepository.save(driverKyc);
+
+                log.info("Driver KYC documents saved successfully for driver id: {}", savedDriver.getDriverId());
+
+            } catch (IOException e) {
+                log.error("Error uploading documents for driver id: {}", savedDriver.getDriverId(), e);
+                throw new DriverBusinessException("Error uploading documents: " + e.getMessage());
+            }
+        }
 
         // Convert Entity → DTO
         DriverDto mapToDriverDto =
@@ -476,16 +558,32 @@ public class DriverServiceImpl implements DriverService {
         log.info("Driver updated successfully with id: {}", driverId);
 
         // Update address through feign client
+        DriverAddressRequestDto existingAddress = null;
+        boolean incomingAddressComplete = isAddressComplete(dto);
+
+        if (!incomingAddressComplete) {
+            try {
+                existingAddress = fmFeignClient.getAddressDetails(driverId).getBody();
+            } catch (Exception e) {
+                log.warn("No existing address found for driver id : {}", driverId, e);
+            }
+        }
+
         DriverAddressRequestDto addressDto = new DriverAddressRequestDto();
 
         addressDto.setJippyAddressId(driverId);
-        addressDto.setBuildingNumber(dto.getBuildingNumber());
-        addressDto.setRoad(dto.getRoad());
-        addressDto.setLandmark(dto.getLandmark());
-        addressDto.setCityId(dto.getCityId());
-        addressDto.setStateId(dto.getStateId());
-        addressDto.setAreaId(dto.getAreaId());
+        addressDto.setBuildingNumber(resolveAddressValue(dto.getBuildingNumber(), existingAddress != null ? existingAddress.getBuildingNumber() : null));
+        addressDto.setRoad(resolveAddressValue(dto.getRoad(), existingAddress != null ? existingAddress.getRoad() : null));
+        addressDto.setLandmark(resolveAddressValue(dto.getLandmark(), existingAddress != null ? existingAddress.getLandmark() : null));
+        addressDto.setCityId(dto.getCityId() != null ? dto.getCityId() : existingAddress != null ? existingAddress.getCityId() : null);
+        addressDto.setStateId(dto.getStateId() != null ? dto.getStateId() : existingAddress != null ? existingAddress.getStateId() : null);
+        addressDto.setAreaId(dto.getAreaId() != null ? dto.getAreaId() : existingAddress != null ? existingAddress.getAreaId() : null);
         addressDto.setAddressType(DConstants.TYPE_DRIVER);
+
+        if (!isAddressComplete(addressDto)) {
+            throw new DriverBusinessException(
+                    "Driver address details are required when no existing address is available.");
+        }
 
         // Save/update address
         DriverAddressRequestDto updatedAddress = null;
@@ -503,7 +601,110 @@ public class DriverServiceImpl implements DriverService {
         // Convert updated entity → response DTO with updated address details
         DriverDto response = DriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
 
+        // Handle document uploads if provided
+        if (dto.getAadharDocument() != null || dto.getPanDocument() != null ||
+            dto.getDrivingLicenseDocument() != null || dto.getRcCopyDocument() != null) {
+            try {
+                // Get or create DriverKyc
+                DriverKyc driverKyc = driverKycRepository.findByDriverDriverId(driverId)
+                        .orElse(new DriverKyc());
+                driverKyc.setDriver(updatedDriver);
+
+                // Upload Aadhar document
+                if (dto.getAadharDocument() != null && !dto.getAadharDocument().isEmpty()) {
+                    validateDocument(dto.getAadharDocument());
+                    String aadharUrl = s3ImageService.replaceDriverDocument(
+                            dto.getAadharDocument(),
+                            driverId,
+                            "aadhar",
+                            driverKyc.getAadharDocUrl()
+                    );
+                    driverKyc.setAadharDocUrl(aadharUrl);
+                    log.info("Aadhar document uploaded successfully for driver id: {}", driverId);
+                }
+
+                // Upload PAN document
+                if (dto.getPanDocument() != null && !dto.getPanDocument().isEmpty()) {
+                    validateDocument(dto.getPanDocument());
+                    String panUrl = s3ImageService.replaceDriverDocument(
+                            dto.getPanDocument(),
+                            driverId,
+                            "pan",
+                            driverKyc.getPanDocUrl()
+                    );
+                    driverKyc.setPanDocUrl(panUrl);
+                    log.info("PAN document uploaded successfully for driver id: {}", driverId);
+                }
+
+                // Upload Driving License document
+                if (dto.getDrivingLicenseDocument() != null && !dto.getDrivingLicenseDocument().isEmpty()) {
+                    validateDocument(dto.getDrivingLicenseDocument());
+                    String dlUrl = s3ImageService.replaceDriverDocument(
+                            dto.getDrivingLicenseDocument(),
+                            driverId,
+                            "drivingLicense",
+                            driverKyc.getDrivingLicenseDocUrl()
+                    );
+                    driverKyc.setDrivingLicenseDocUrl(dlUrl);
+                    log.info("Driving License document uploaded successfully for driver id: {}", driverId);
+                }
+
+                // Upload RC Copy document
+                if (dto.getRcCopyDocument() != null && !dto.getRcCopyDocument().isEmpty()) {
+                    validateDocument(dto.getRcCopyDocument());
+                    String rcUrl = s3ImageService.replaceDriverDocument(
+                            dto.getRcCopyDocument(),
+                            driverId,
+                            "rcCopy",
+                            driverKyc.getRcCopyDocUrl()
+                    );
+                    driverKyc.setRcCopyDocUrl(rcUrl);
+                    log.info("RC Copy document uploaded successfully for driver id: {}", driverId);
+                }
+
+                // Save DriverKyc with document URLs
+                driverKyc.setUpdatedAt(LocalDateTime.now());
+                driverKyc.setUpdatedBy(driverId);
+                driverKycRepository.save(driverKyc);
+
+                log.info("Driver KYC documents updated successfully for driver id: {}", driverId);
+
+                // Refresh response with updated document URLs
+                response = DriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
+
+            } catch (IOException e) {
+                log.error("Error uploading documents for driver id: {}", driverId, e);
+                throw new DriverBusinessException("Error uploading documents: " + e.getMessage());
+            }
+        }
+
         return response;
+    }
+
+    private static String resolveAddressValue(String incomingValue, String existingValue) {
+        return hasText(incomingValue) ? incomingValue : existingValue;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private static boolean isAddressComplete(DriverAddressRequestDto addressDto) {
+        return hasText(addressDto.getBuildingNumber())
+                && hasText(addressDto.getRoad())
+                && hasText(addressDto.getLandmark())
+                && addressDto.getCityId() != null
+                && addressDto.getStateId() != null
+                && addressDto.getAreaId() != null;
+    }
+
+    private static boolean isAddressComplete(DriverDto dto) {
+        return hasText(dto.getBuildingNumber())
+                && hasText(dto.getRoad())
+                && hasText(dto.getLandmark())
+                && dto.getCityId() != null
+                && dto.getStateId() != null
+                && dto.getAreaId() != null;
     }
 
 
@@ -967,6 +1168,73 @@ public class DriverServiceImpl implements DriverService {
             throw new ImageValidationException("Error validating image file: " + e.getMessage());
         }
         return "";
+    }
+
+    public void validateDocument(MultipartFile file) throws IOException {
+
+        if (file == null || file.isEmpty()) {
+            throw new ImageValidationException("File cannot be empty");
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null || fileName.trim().isEmpty()) {
+            throw new ImageValidationException("File name is required");
+        }
+
+        String extension = "";
+
+        int dotIndex = fileName.lastIndexOf('.');
+
+        if (dotIndex >= 0 && dotIndex < fileName.length() - 1) {
+            extension = fileName
+                    .substring(dotIndex + 1)
+                    .toLowerCase();
+        }
+
+        String contentType = file.getContentType();
+
+        log.info(
+                "Document validation - filename={}, extension={}, contentType={}, size={}",
+                fileName,
+                extension,
+                contentType,
+                file.getSize()
+        );
+
+        boolean validExtension =
+                extension.equals("pdf") ||
+                        extension.equals("png") ||
+                        extension.equals("jpg") ||
+                        extension.equals("jpeg");
+
+        if (!validExtension) {
+            throw new ImageValidationException(
+                    "Only PDF, PNG, JPEG, and JPG files are allowed"
+            );
+        }
+
+        // If MIME type is available, validate it.
+        // Some clients may send application/octet-stream.
+        if (contentType != null &&
+                !contentType.equalsIgnoreCase("application/pdf") &&
+                !contentType.equalsIgnoreCase("image/png") &&
+                !contentType.equalsIgnoreCase("image/jpeg") &&
+                !contentType.equalsIgnoreCase("image/jpg") &&
+                !contentType.equalsIgnoreCase("application/octet-stream")) {
+
+            throw new ImageValidationException(
+                    "Invalid file content type: " + contentType
+            );
+        }
+
+        long maxSize = 10 * 1024 * 1024;
+
+        if (file.getSize() > maxSize) {
+            throw new ImageValidationException(
+                    "File size exceeds the 10MB limit"
+            );
+        }
     }
 
     public void validateImage(MultipartFile file) throws IOException {

@@ -11,6 +11,8 @@ public interface IFmOutletService {
 
     FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto);
 
+    FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto, MultipartFile aadharFile,
+                                           MultipartFile panFile, MultipartFile fssaiFile, MultipartFile gstFile);
     String uploadOrUpdateOutletImage(
             Integer outletId,
             MultipartFile image
@@ -21,6 +23,10 @@ public interface IFmOutletService {
 //    and also updates the outlet timings if provided in the request dto
 
     FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto);
+
+    FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto,
+                                                           MultipartFile aadharFile, MultipartFile panFile,
+                                                           MultipartFile fssaiFile, MultipartFile gstFile);
 
     long countOutlets();
 
@@ -78,4 +84,16 @@ public interface IFmOutletService {
     FmPublicOutletDetailsDto getPublicOutletDetails(Integer outletId);
 
     Integer getAreaIdByOutletId(Integer outletId);
+
+     FmResponseDto updateOutletProfilePic(FmUpdateOutletProfilePicDto outletDto);
+
+    // ================================================================
+    // TOGGLE OUTLET
+    // ================================================================
+    //
+    // Updates the is_toggle value of an outlet.
+    // ================================================================
+
+     FmResponseDto toggleForOutlet(FmToggleOutletRequestDto requestDto);
+
 }

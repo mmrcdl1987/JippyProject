@@ -191,7 +191,7 @@ public final class FmMerchantMapper {
      * Converts Outlet Request DTO into User KYC Entity.
      * <p>
      * Used while creating a new Outlet.
-     * Stores only FSSAI and GST details in user_kyc table.
+     * Stores Aadhaar, PAN, FSSAI and GST details in user_kyc table.
      */
     public static FmUserKyc toOutletKycEntity(FmOutletRequestDTO dto, Integer outletId) {
 
@@ -199,6 +199,8 @@ public final class FmMerchantMapper {
 
         kyc.setEntityId(outletId);
         kyc.setEntityType(FmAppConstants.TYPE_OUTLET);
+        kyc.setAadhaarNumber(dto.getAadharNumber());
+        kyc.setPanNumber(dto.getPanNumber());
         kyc.setFssaiNumber(dto.getFssaiNumber());
         kyc.setGstNumber(dto.getGstNumber());
         kyc.setVerified(false);
@@ -227,9 +229,9 @@ public final class FmMerchantMapper {
 
         kyc.setAadhaarNumber(dto.getAdhar() != null ? dto.getAdhar().trim() : null);
 
-        kyc.setFssaiNumber(dto.getFssai() != null ? dto.getFssai().trim() : null);
-
-        kyc.setGstNumber(dto.getGstNumber() != null ? dto.getGstNumber().toUpperCase().trim() : null);
+//        kyc.setFssaiNumber(dto.getFssai() != null ? dto.getFssai().trim() : null);
+//
+//        kyc.setGstNumber(dto.getGstNumber() != null ? dto.getGstNumber().toUpperCase().trim() : null);
 
         // Default Values
         kyc.setVerified(Boolean.valueOf(FmAppConstants.UN_APPROVED));
@@ -317,6 +319,16 @@ public final class FmMerchantMapper {
         merchant.setMerchantPhone(dto.getMerchantPhone());
         merchant.setMerchantBusinessType(dto.getBusinessType());
         merchant.setStatus(dto.getStatus());
+    }
+
+    public static void updateMerchantKycEntity(FmUserKyc kyc, FmMerchantWithBankDto dto) {
+
+        if (kyc == null || dto == null) {
+            return;
+        }
+
+        kyc.setAadhaarNumber(dto.getAadharNumber());
+        kyc.setPanNumber(dto.getPanNumber());
     }
     /**
      * Updates existing Merchant Bank entity from MerchantWithBank DTO.

@@ -34,7 +34,7 @@ public interface DriverService {
 
     String driverDeliveredOrder(DriverOrderDto driverOrderDto);
 
-    String saveOrUpdateProfilePic(@Valid UploadProfilePicDto uploadProfilePicDto);
+    DriverResponseDto  saveOrUpdateProfilePic(@Valid UploadProfilePicDto uploadProfilePicDto);
 
     DriverDto findByEmail(String email);
 
@@ -58,4 +58,16 @@ public interface DriverService {
 //    Integer findCustomerInCommunity(Double latitude, Double longitude);
 //
 //    Integer checkCustomerAddressWithCommunity(Double latitude, Double longitude, Integer communityId);
+
+    // ================================================================
+    // READY TO ACCEPT ORDERS TOGGLE
+    // ================================================================
+    //
+    // Updates the driver's ready_to_accept_orders value.
+    // ================================================================
+
+    DriverResponseDto readyToAcceptIsToggle(
+            DriverReadyToAcceptRequestDto requestDto
+    );
+
 }

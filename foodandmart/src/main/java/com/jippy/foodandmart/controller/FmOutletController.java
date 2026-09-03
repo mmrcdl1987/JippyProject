@@ -75,13 +75,18 @@ public class FmOutletController {
     // CREATE OUTLET
     // ============================================================
 
-    @PostMapping(value = "/createOutlet", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/createOutlet", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses({@ApiResponse(responseCode = "201", description = "Outlet created successfully"), @ApiResponse(responseCode = "400", description = "Validation Failed"), @ApiResponse(responseCode = "404", description = "Merchant Not Found"), @ApiResponse(responseCode = "409", description = "Duplicate Resource")})
-    public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(@Valid @RequestBody FmOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(
+            @Valid @RequestPart("data") FmOutletRequestDTO dto,
+            @RequestPart(value = "aadhar", required = false) MultipartFile aadhar,
+            @RequestPart(value = "pan", required = false) MultipartFile pan,
+            @RequestPart(value = "fssai", required = false) MultipartFile fssai,
+            @RequestPart(value = "gst", required = false) MultipartFile gst) {
 
         log.info("Received request to create outlet: {}", dto.getOutletName());
 
-        FmOutletCreateResponseDTO response = outletService.createOutlet(dto);
+        FmOutletCreateResponseDTO response = outletService.createOutlet(dto, aadhar, pan, fssai, gst);
 
         log.info("Outlet created successfully. outletId={}", response.getOutletId());
 
@@ -128,9 +133,14 @@ public class FmOutletController {
     @PutMapping("/updateOutletDetailsByMerchant/{outletId}")
     @Operation(summary = "Update Outlet Details By Merchant", description = "Allows Merchant to update outlet details, address, " + "bank details and operating days. " + "[Username and Password cannot be updated].")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid request"), @ApiResponse(responseCode = "404", description = "Outlet or Merchant not found")})
-    public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(@PathVariable Integer outletId, @Valid @RequestBody FmUpdateOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(
+            @PathVariable Integer outletId, @Valid @RequestPart("data") FmUpdateOutletRequestDTO dto,
+            @RequestPart(value = "aadhar", required = false) MultipartFile aadhar,
+            @RequestPart(value = "pan", required = false) MultipartFile pan,
+            @RequestPart(value = "fssai", required = false) MultipartFile fssai,
+            @RequestPart(value = "gst", required = false) MultipartFile gst) {
 
-        FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto);
+        FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto, aadhar, pan, fssai, gst);
 
         return ResponseEntity.ok(FmApiResponse.success("Outlet details updated successfully", response));
     }
@@ -956,37 +966,26 @@ public class FmOutletController {
             return "";
         }
 
-        String normalized = header
-                .replace("\uFEFF", "")
-                .trim();
+        String normalized = header.replace("\uFEFF", "").trim();
 
         // Handle headers exported with surrounding CSV quotes.
         // Examples:
         // "outletname"  -> outletname
         // "Outlet Name" -> outletname
-        if (normalized.length() >= 2
-                && normalized.startsWith("\"")
-                && normalized.endsWith("\"")) {
+        if (normalized.length() >= 2 && normalized.startsWith("\"") && normalized.endsWith("\"")) {
 
-            normalized = normalized.substring(
-                    1,
-                    normalized.length() - 1
-            );
+            normalized = normalized.substring(1, normalized.length() - 1);
         }
 
         // Remove BOM again in case it occurs inside quotes.
-        normalized = normalized
-                .replace("\uFEFF", "")
-                .trim();
+        normalized = normalized.replace("\uFEFF", "").trim();
 
         // Normalize all supported header formats:
         // Outlet Name -> outletname
         // outlet_name -> outletname
         // outlet-name -> outletname
         // outletname  -> outletname
-        return normalized
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[\\s_-]+", "");
+        return normalized.toLowerCase(Locale.ROOT).replaceAll("[\\s_-]+", "");
     }
 
 
@@ -1354,13 +1353,13 @@ public class FmOutletController {
 
     @Operation(summary = "Public: Get Outlet Details", description = """
             Fetches public outlet configuration based on outlet ID without authentication.
-
+            
             The response includes:
             - Outlet details (ID, name, availability)
             - Categories with products
             - Product details (name, description, price, veg status, image)
             - Product variants (if available)
-
+            
             This is a simplified version of the admin endpoint with only essential fields.
             """)
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Public outlet details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid outlet ID"), @ApiResponse(responseCode = "404", description = "Outlet not found")})
@@ -1379,17 +1378,65 @@ public class FmOutletController {
     }
 
     @GetMapping("/area/{outletId}")
-    public ResponseEntity<Integer> getAreaIdByOutletId(
-            @PathVariable Integer outletId) {
+    public ResponseEntity<Integer> getAreaIdByOutletId(@PathVariable Integer outletId) {
 
-        log.info(
-                "GET /api/fm/outlets/{}/area",
-                outletId
-        );
+        log.info("GET /api/fm/outlets/{}/area", outletId);
 
-        Integer areaId =
-                outletService.getAreaIdByOutletId(outletId);
+        Integer areaId = outletService.getAreaIdByOutletId(outletId);
 
         return ResponseEntity.ok(areaId);
+    }
+
+
+    // ================================================================
+    // UPDATE OUTLET PROFILE PICTURE
+    // ================================================================
+
+    @PutMapping("/updateOutletProfilePic")
+    public ResponseEntity<FmResponseDto> updateOutletProfilePic(@RequestBody FmUpdateOutletProfilePicDto outletDto) {
+
+        FmResponseDto response = outletService.updateOutletProfilePic(outletDto);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ================================================================
+    // TOGGLE OUTLET
+    // ================================================================
+    //
+    // API used to enable or disable the outlet toggle.
+    //
+    // Request:
+    //
+    // {
+    //     "outletId": 132,
+    //     "isToggle": true
+    // }
+    //
+    // true  -> is_toggle = true
+    // false -> is_toggle = false
+    //
+    // ================================================================
+
+    @PutMapping("/toggleForOutlet")
+    @Operation(summary = "Toggle Outlet",
+            description = "Updates the is_toggle value of an outlet")
+    @ApiResponses({
+
+            @ApiResponse(responseCode = "200", description = "Outlet toggle updated successfully"),
+
+            @ApiResponse(responseCode = "400", description = "Invalid outlet toggle request"),
+
+            @ApiResponse(responseCode = "404", description = "Outlet not found"),
+
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<FmResponseDto> toggleForOutlet
+            (@RequestBody FmToggleOutletRequestDto requestDto) {
+
+        log.info("[OUTLET TOGGLE] toggleForOutlet API called. " + "outletId={}, isToggle={}", requestDto != null ? requestDto.getOutletId() : null, requestDto != null ? requestDto.getIsToggle() : null);
+
+        FmResponseDto response = outletService.toggleForOutlet(requestDto);
+
+        return ResponseEntity.ok(response);
     }
 }

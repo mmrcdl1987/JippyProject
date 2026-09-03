@@ -416,6 +416,183 @@ public class FmProductServiceImpl implements FmProductService {
 
     @Override
     @Transactional
+    public FmProductUpdateResponseDto merchantEditProduct(Integer productId, FmProductUpdateRequestDto request) {
+        log.info("[MERCHANT-EDIT] START | productId={}", productId);
+
+        validateProductUpdateRequest(request);
+
+        FmProduct product = productRepository.findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id : " + productId));
+
+        boolean hasVariants = Boolean.TRUE.equals(request.getHasProductVariants());
+
+        // ---- Basic fields ----
+        product.setProductName(request.getProductName().trim());
+        product.setDescription(request.getDescription() == null ? "" : request.getDescription());
+        product.setIsVeg(request.getIsVeg() == null ? Boolean.TRUE : request.getIsVeg());
+        product.setImageLink(request.getImageLink());
+
+        if (request.getProductType() != null && !request.getProductType().trim().isEmpty()) {
+            product.setProductType(request.getProductType().trim());
+        }
+
+        if (request.getOutletCategoryId() != null) {
+            outletCategoryRepository.findByOutletCategoryId(request.getOutletCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Outlet Category not found with id : " + request.getOutletCategoryId()));
+            product.setOutletCategoryId(request.getOutletCategoryId());
+        }
+
+        product.setHasProductVariants(hasVariants);
+
+        // ---- Merchant price ----
+        BigDecimal merchantPrice = request.getMerchantPrice() == null ? BigDecimal.ZERO : request.getMerchantPrice();
+        if (merchantPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Merchant Price cannot be negative.");
+        }
+        product.setMerchantPrice(merchantPrice);
+
+        product.setUpdatedBy(SYSTEM_USER);
+        productRepository.save(product);
+
+        // ---- Timings: edit/add only ----
+        if (request.getTimings() != null && !request.getTimings().isEmpty()) {
+            upsertTimingsNoDelete(productId, request.getTimings());
+        }
+
+        // ---- Variants: edit/add only ----
+        if (hasVariants) {
+            upsertVariantOptionsNoDelete(productId, request.getVariantGroups());
+        }
+
+        // ---- OPTIMIZED CACHE INVALIDATION (Uses helper method instead of an extra DB query) ----
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        if (outletId != null) {
+            cacheInvalidateService.invalidateCache(outletId);
+        }
+
+        log.info("[MERCHANT-EDIT] COMPLETED | productId={}", productId);
+
+        return getProductById(productId);
+    }
+
+    /**
+     * Edit/add variant options. Never deletes. Optimized to prevent queries inside loops.
+     */
+    private void upsertVariantOptionsNoDelete(Integer productId, List<FmProductVariantOptionGroupDto> variantGroups) {
+        List<FmProductVariantOption> existingOptions =
+                variantOptionRepository.findByProductIdOrderByProductVariantOptionsIdAsc(productId);
+
+        Map<Integer, FmProductVariantOption> byId = new HashMap<>();
+        // Preload existing active variant value IDs into a Set to check duplicates in memory instantly
+        Set<Integer> existingValueIds = new HashSet<>();
+
+        for (FmProductVariantOption o : existingOptions) {
+            byId.put(o.getProductVariantOptionsId(), o);
+            if (Boolean.TRUE.equals(o.getIsActive())) {
+                existingValueIds.add(o.getProductVariantGroupValuesId());
+            }
+        }
+
+        for (FmProductVariantOptionGroupDto group : variantGroups) {
+            for (FmProductVariantOptionRequestDto req : group.getOptions()) {
+                String priceType = req.getPriceType().trim().toUpperCase(Locale.ROOT);
+
+                // EDIT
+                if (req.getProductVariantOptionsId() != null) {
+                    FmProductVariantOption entity = byId.get(req.getProductVariantOptionsId());
+                    if (entity == null) {
+                        throw new ResourceNotFoundException(
+                                "Variant Option not found for this product : " + req.getProductVariantOptionsId());
+                    }
+                    if (!Objects.equals(entity.getProductVariantGroupValuesId(), req.getProductVariantGroupValuesId())) {
+                        validateVariantValue(group.getProductVariantGroupsId(), req);
+                        entity.setProductVariantGroupValuesId(req.getProductVariantGroupValuesId());
+                    }
+                    if (!Objects.equals(entity.getPriceType(), priceType)) {
+                        entity.setPriceType(priceType);
+                    }
+                    if (!Objects.equals(entity.getVariantPrice(), req.getVariantPrice())) {
+                        entity.setVariantPrice(req.getVariantPrice());
+                    }
+                    entity.setUpdatedBy(SYSTEM_USER);
+                    variantOptionRepository.save(entity);
+                }
+                // ADD (Optimized: Memory lookup instead of database query)
+                else {
+                    if (existingValueIds.contains(req.getProductVariantGroupValuesId())) {
+                        log.warn("[MERCHANT-EDIT] DUPLICATE_VARIANT_SKIPPED | productId={} | valueId={}",
+                                productId, req.getProductVariantGroupValuesId());
+                        continue;
+                    }
+
+                    FmProductVariantOption entity = FmProductVariantOptionMapper.toEntity(productId, req);
+                    entity.setPriceType(priceType);
+                    entity.setCreatedBy(SYSTEM_USER);
+                    entity.setUpdatedBy(SYSTEM_USER);
+                    variantOptionRepository.save(entity);
+
+                    // Add to set so subsequent iterations in the same request catch local duplicates too
+                    existingValueIds.add(req.getProductVariantGroupValuesId());
+                }
+            }
+        }
+    }
+
+    /**
+     * Edit/add timings. Never deletes. Optimized with pre-fetched valid day IDs.
+     */
+    private void upsertTimingsNoDelete(Integer productId, List<FmProductTimingRequestDto> timings) {
+        Set<Integer> validDayIds = daysOfWeekRepository.findAll().stream()
+                .map(FmDaysOfWeek::getDayId)
+                .collect(Collectors.toSet());
+
+        List<FmProductAvailableTiming> existing =
+                productAvailableTimingRepository.findByProductIdOrderByProductAvailableTimingIdAsc(productId);
+
+        Map<Integer, FmProductAvailableTiming> byId = new HashMap<>();
+        for (FmProductAvailableTiming t : existing) {
+            byId.put(t.getProductAvailableTimingId(), t);
+        }
+
+        for (FmProductTimingRequestDto req : timings) {
+            if (!validDayIds.contains(req.getDayOfWeekId())) {
+                throw new IllegalArgumentException("Invalid Day Id : " + req.getDayOfWeekId());
+            }
+
+            LocalTime start = parseTime(req.getStartTime());
+            LocalTime end = parseTime(req.getEndTime());
+            if (start == null || end == null) {
+                throw new IllegalArgumentException("Invalid Product Timing.");
+            }
+
+            // EDIT
+            if (req.getProductAvailableTimingId() != null) {
+                FmProductAvailableTiming entity = byId.get(req.getProductAvailableTimingId());
+                if (entity == null) {
+                    throw new ResourceNotFoundException("Timing not found : " + req.getProductAvailableTimingId());
+                }
+                entity.setDayOfWeekId(req.getDayOfWeekId());
+                entity.setStartTime(start);
+                entity.setEndTime(end);
+                entity.setUpdatedBy(SYSTEM_USER);
+                productAvailableTimingRepository.save(entity);
+            }
+            // ADD
+            else {
+                FmProductAvailableTiming entity = new FmProductAvailableTiming();
+                entity.setProductId(productId);
+                entity.setDayOfWeekId(req.getDayOfWeekId());
+                entity.setStartTime(start);
+                entity.setEndTime(end);
+                entity.setCreatedBy(SYSTEM_USER);
+                entity.setUpdatedBy(SYSTEM_USER);
+                productAvailableTimingRepository.save(entity);
+            }
+        }
+    }
+    @Override
+    @Transactional
     public FmVariantBulkUploadResponseDto bulkUploadVariants(Integer outletId, MultipartFile file) {
 
         log.info("[VARIANT-BULK] START | outletId={} | file={}", outletId, file != null ? file.getOriginalFilename() : null);
@@ -1915,19 +2092,34 @@ public class FmProductServiceImpl implements FmProductService {
         }
 
         try {
-
             String time = value.trim();
 
+            // Handle single-digit hours if passed like '9:00' -> '09:00'
             if (time.indexOf(':') == 1) {
                 time = "0" + time;
             }
 
-            return LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm"));
+            // Support both HH:mm:ss and HH:mm formats seamlessly
+            List<DateTimeFormatter> formatters = Arrays.asList(
+                    DateTimeFormatter.ofPattern("HH:mm:ss"),
+                    DateTimeFormatter.ofPattern("HH:mm"),
+                    DateTimeFormatter.ofPattern("H:mm:ss"),
+                    DateTimeFormatter.ofPattern("H:mm")
+            );
+
+            for (DateTimeFormatter formatter : formatters) {
+                try {
+                    return LocalTime.parse(time, formatter);
+                } catch (Exception ignored) {
+                    // Try next formatter format
+                }
+            }
+
+            log.warn("Unable to parse time with any known format: {}", value);
+            return null;
 
         } catch (Exception ex) {
-
-            log.warn("Unable to parse time : {}", value);
-
+            log.warn("Unable to parse time : {}", value, ex);
             return null;
         }
     }

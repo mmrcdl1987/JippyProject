@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @Repository
 public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
+
     Optional<FmOutlet> findByOutletPhone(String phone);
 
     boolean existsByOutletPhone(String phone);
@@ -1421,6 +1422,32 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             """, nativeQuery = true)
     List<FmPublicOutletDetailsProjection> getPublicOutletDetails(
             @Param("outletId") Integer outletId
+    );
+
+//    =================================================================================
+    // ================================================================
+// UPDATE OUTLET TOGGLE VALUE
+// ================================================================
+//
+// Updates only the is_toggle column for the specified outlet.
+//
+// outletId  -> Identifies the outlet
+// isToggle  -> New value (true / false)
+//
+// Returns:
+// 1 -> record updated successfully
+// 0 -> outlet not found
+// ================================================================
+
+    @Modifying
+    @Query("""
+        UPDATE FmOutlet o
+        SET o.isToggle = :isToggle
+        WHERE o.outletId = :outletId
+        """)
+    int updateOutletToggle(
+            @Param("outletId") Integer outletId,
+            @Param("isToggle") Boolean isToggle
     );
 
 }

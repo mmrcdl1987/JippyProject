@@ -1,5 +1,5 @@
 
- package com.jippy.foodandmart.serviceImpl;
+        package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
@@ -13,6 +13,7 @@ import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.EmailService;
 import com.jippy.foodandmart.service.IFmApprovalRequestService;
 import com.jippy.foodandmart.service.IFmMerchantService;
+import com.jippy.foodandmart.service.S3Service;
 import com.jippy.foodandmart.validation.FmFileParser;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -48,6 +49,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final IFmApprovalRequestService approvalRequestService;
+    private final S3Service s3Service;
 
     /*
      * ================================================================
@@ -131,91 +133,42 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public FmMerchant createMerchant(FmMerchantRequestDTO dto) {
+        return createMerchant(dto, null, null);
+    }
 
-        log.info(
-                "[MERCHANT] Creating merchant: email={}, phone={}",
-                dto.getEmail(),
-                dto.getPhone()
-        );
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public FmMerchant createMerchant(FmMerchantRequestDTO dto, MultipartFile aadharFile, MultipartFile panFile) {
 
-        validateUniqueness(
-                dto.getEmail(),
-                dto.getPhone(),
-                dto.getPan(),
-                dto.getAdhar(),
-                dto.getFssai(),
-                dto.getAccountNumber()
-        );
+        log.info("[MERCHANT] Creating merchant: email={}, phone={}", dto.getEmail(), dto.getPhone());
 
-        // ============================================================
-        // CREATE MERCHANT
-        // ============================================================
+        validateUniqueness(dto.getEmail(), dto.getPhone(), dto.getPan(), dto.getAdhar(), dto.getAccountNumber());
 
         FmMerchant merchant = FmMerchantMapper.toEntity(dto);
 
         merchant = merchantRepository.save(merchant);
 
-        log.info(
-                "[MERCHANT] Saved: merchantId={}, name={}",
-                merchant.getMerchantId(),
-                merchant.getMerchantName()
-        );
+        log.info("[MERCHANT] Saved: merchantId={}, name={}", merchant.getMerchantId(), merchant.getMerchantName());
 
-        // ============================================================
-        // APPROVAL
-        // ============================================================
+        /*
+         * Existing approval flow.
+         */
+        approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), merchant.getMerchantId());
 
-        approvalRequestService.createApprovalRequest(
-                FmAppConstants.TYPE_MERCHANT,
-                merchant.getMerchantId(),
-                merchant.getMerchantId()
-        );
-
-        // ============================================================
-        // KYC -- Details
-        // ============================================================
-
-        saveKyc(dto, merchant);
-
-        // ============================================================
-        // BANK DETAILS
-        // ============================================================
+        saveKyc(dto, merchant, aadharFile, panFile);
 
         saveBankDetails(dto, merchant.getMerchantId());
 
-        // ============================================================
-        // MERCHANT ADDRESS
-        // ============================================================
-
-        saveMerchantAddressForSingleCreate(
-                dto,
-                merchant.getMerchantId()
-        );
-        // ============================================================
-        // MERCHANT USER
-        // ============================================================
-
         createMerchantUser(dto, merchant.getMerchantId());
 
-        log.info(
-                "[MERCHANT] Onboarding complete: merchantId={}",
-                merchant.getMerchantId()
-        );
+        log.info("[MERCHANT] Onboarding complete: merchantId={}", merchant.getMerchantId());
 
-        // ============================================================
-        // EMAIL Sending to the User/Driver
-        // ============================================================
+        /*
+         * Existing single merchant email flow.
+         */
+        emailService.sendMerchantRegistrationEmail(merchant.getMerchantEmail(), merchant.getMerchantName());
 
-        emailService.sendMerchantRegistrationEmail(
-                merchant.getMerchantEmail(),
-                merchant.getMerchantName()
-        );
-
-        log.info(
-                "[MERCHANT] Registration email triggered: merchantId={}, email={}",
-                merchant.getMerchantId(),
-                merchant.getMerchantEmail()
-        );
+        log.info("[MERCHANT] Registration email triggered: merchantId={}, email={}", merchant.getMerchantId(), merchant.getMerchantEmail());
 
         return merchant;
     }
@@ -270,10 +223,10 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
             throw new MerchantAlreadyExistsException("Aadhaar already registered: " + dto.getAdhar());
         }
 
-        if (!isBlank(dto.getFssai()) && userKycRepository.existsByFssaiNumber(dto.getFssai())) {
-
-            throw new MerchantAlreadyExistsException("FSSAI already registered: " + dto.getFssai());
-        }
+//        if (!isBlank(dto.getFssai()) && userKycRepository.existsByFssaiNumber(dto.getFssai())) {
+//
+//            throw new MerchantAlreadyExistsException("FSSAI already registered: " + dto.getFssai());
+//        }
 
         if (!isBlank(dto.getAccountNumber()) && bankDetailsRepository.existsByAccountNumber(dto.getAccountNumber())) {
 
@@ -599,7 +552,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     // DO NOT CHANGE FOR BULK.
     // ================================================================
 
-    private void validateUniqueness(String email, String phone, String pan, String aadhaar, String fssai, String accountNumber) {
+    private void validateUniqueness(String email, String phone, String pan, String aadhaar, String accountNumber) {
 
         if (merchantRepository.existsByMerchantEmail(email)) {
 
@@ -621,10 +574,10 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
             throw new MerchantAlreadyExistsException("Aadhaar already registered: " + aadhaar);
         }
 
-        if (fssai != null && userKycRepository.existsByFssaiNumber(fssai)) {
-
-            throw new MerchantAlreadyExistsException("FSSAI already registered: " + fssai);
-        }
+//        if (fssai != null && userKycRepository.existsByFssaiNumber(fssai)) {
+//
+//            throw new MerchantAlreadyExistsException("FSSAI already registered: " + fssai);
+//        }
 
         if (accountNumber != null && !accountNumber.isBlank() && bankDetailsRepository.existsByAccountNumber(accountNumber)) {
 
@@ -638,9 +591,22 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     // ================================================================
 
     private void saveKyc(FmMerchantRequestDTO dto, FmMerchant merchant) {
+        saveKyc(dto, merchant, null, null);
+    }
+
+    private void saveKyc(FmMerchantRequestDTO dto, FmMerchant merchant,
+                         MultipartFile aadharFile, MultipartFile panFile) {
 
         FmUserKyc kyc = FmMerchantMapper.toKycEntity(dto, merchant);
 
+        if (aadharFile != null && !aadharFile.isEmpty()) {
+            kyc.setAadhaarNumberUrl(s3Service.uploadKycDocument(
+                    aadharFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "aadhar"));
+        }
+        if (panFile != null && !panFile.isEmpty()) {
+            kyc.setPanNumberUrl(s3Service.uploadKycDocument(
+                    panFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "pan"));
+        }
         userKycRepository.save(kyc);
 
         log.info("[KYC] Saved for merchantId={}", merchant.getMerchantId());
@@ -697,10 +663,7 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         // CHECK ADDRESS DATA
         // ============================================================
 
-        boolean hasAddressData = !isBlank(dto.getBuildingNumber()) ||
-                !isBlank(dto.getRoad()) || !isBlank(dto.getLandmark()) ||
-                !isBlank(dto.getStateName()) || !isBlank(dto.getCityName()) ||
-                !isBlank(dto.getAreaName());
+        boolean hasAddressData = !isBlank(dto.getBuildingNumber()) || !isBlank(dto.getRoad()) || !isBlank(dto.getLandmark()) || !isBlank(dto.getStateName()) || !isBlank(dto.getCityName()) || !isBlank(dto.getAreaName());
 
 
         /*
@@ -1154,102 +1117,65 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
 
     // ================================================================
-// NORMAL SINGLE MERCHANT USER
-//
-// IMPORTANT:
-// This is your existing single merchant user flow.
-// It is NOT used by bulk upload.
-// ================================================================
+    // NORMAL SINGLE MERCHANT USER
+    //
+    // IMPORTANT:
+    // This is your existing single merchant user flow.
+    // It is NOT used by bulk upload.
+    // ================================================================
 
-    private void createMerchantUser(
-            FmMerchantRequestDTO dto,
-            Integer merchantId) {
+    private void createMerchantUser(FmMerchantRequestDTO dto, Integer merchantId) {
 
         String username = dto.getUsername().trim();
 
-        Optional<FmUser> existingUser =
-                userRepository.findByUsernameAndUserType(
-                        username,
-                        FmAppConstants.TYPE_MERCHANT
-                );
+
+        Optional<FmUser> existingUser = userRepository.findByUsernameAndUserType(username, FmAppConstants.TYPE_MERCHANT);
+
 
         if (existingUser.isPresent()) {
 
-            throw new MerchantAlreadyExistsException(
-                    "Username already exists."
-            );
+            throw new MerchantAlreadyExistsException("Username already exists.");
         }
 
-        String encodedPassword =
-                passwordEncoder.encode(dto.getPassword());
 
-        FmUser user =
-                FmMerchantMapper.toUserEntity(
-                        username,
-                        encodedPassword,
-                        merchantId,
-                        FmAppConstants.TYPE_MERCHANT
-                );
+        String encodedPassword = passwordEncoder.encode(dto.getPassword());
+
+
+        FmUser user = FmMerchantMapper.toUserEntity(username, encodedPassword, merchantId, FmAppConstants.TYPE_MERCHANT);
+
 
         user = userRepository.save(user);
 
-        FmRoles role =
-                roleRepository.findByRoleName(
-                        FmAppConstants.ROLE_MERCHANT
-                );
+
+        FmRoles role = roleRepository.findByRoleName(FmAppConstants.ROLE_MERCHANT);
+
 
         if (role == null) {
 
-            throw new ResourceNotFoundException(
-                    "Merchant role not found."
-            );
+            throw new ResourceNotFoundException("Merchant role not found.");
         }
 
-        List<FmRolePermissions> rolePermissions =
-                rolePermissionsRepository.findByRole(role);
 
-        log.info(
-                "Merchant role found: roleId={}, roleName={}, permissionsCount={}",
-                role.getRoleId(),
-                role.getRoleName(),
-                rolePermissions.size()
-        );
+        List<FmRolePermissions> rolePermissions = rolePermissionsRepository.findByRole(role);
+
 
         if (rolePermissions.isEmpty()) {
 
-            throw new ResourceNotFoundException(
-                    "No permissions mapped to Merchant role."
-            );
+            throw new ResourceNotFoundException("No permissions mapped to Merchant role.");
         }
+
 
         for (FmRolePermissions permission : rolePermissions) {
 
-            log.info(
-                    "Creating user-role-permission: userId={}, rolePermissionId={}",
-                    user.getUsersId(),
-                    permission.getRolePermissionId()
-            );
+            FmUserRolePermissions userRole = FmMerchantMapper.toUserRolesEntity(user, permission);
 
-            FmUserRolePermissions userRole =
-                    FmMerchantMapper.toUserRolesEntity(
-                            user,
-                            permission
-                    );
-
-            FmUserRolePermissions savedUserRole =
-                    userRolesRepository.save(userRole);
-
-            log.info(
-                    "User-role-permission saved: id={}",
-                    savedUserRole.getUserRolePermissionId()
-            );
+            userRolesRepository.save(userRole);
         }
 
-        log.info(
-                "Merchant login created successfully. username={}",
-                username
-        );
+
+        log.info("Merchant login created successfully. username={}", username);
     }
+
 
     // ================================================================
     // BULK ERROR RESULT
@@ -1308,8 +1234,21 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
         log.info("Successfully fetched merchant + bank details " + "for merchantId: {}", merchantId);
 
+        FmMerchantWithBankDto response = FmMerchantMapper.mapToMerchantWithBankDto(data);
 
-        return FmMerchantMapper.mapToMerchantWithBankDto(data);
+        FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(
+                merchantId,
+                FmAppConstants.TYPE_MERCHANT
+        ).orElse(null);
+
+        if (kyc != null) {
+            response.setAadharNumber(kyc.getAadhaarNumber());
+            response.setPanNumber(kyc.getPanNumber());
+            response.setAadhaarNumberUrl(kyc.getAadhaarNumberUrl());
+            response.setPanNumberUrl(kyc.getPanNumberUrl());
+        }
+
+        return response;
     }
 
 
@@ -1320,6 +1259,13 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     @Override
     @Transactional
     public FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto) {
+        return updateMerchantProfile(dto, null, null);
+    }
+
+    @Override
+    @Transactional
+    public FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto,
+                                                        MultipartFile aadharFile, MultipartFile panFile) {
 
         log.info("Updating merchant profile for merchantId: {}", dto.getMerchantId());
 
@@ -1359,6 +1305,29 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
 
         log.info("Merchant updated successfully for merchantId: {}", dto.getMerchantId());
+
+        FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(
+                dto.getMerchantId(),
+                FmAppConstants.TYPE_MERCHANT
+        ).orElseGet(FmUserKyc::new);
+
+        kyc.setEntityId(dto.getMerchantId());
+        kyc.setEntityType(FmAppConstants.TYPE_MERCHANT);
+
+        FmMerchantMapper.updateMerchantKycEntity(kyc, dto);
+        if (aadharFile != null && !aadharFile.isEmpty()) {
+            kyc.setAadhaarNumberUrl(s3Service.replaceKycDocument(
+                    aadharFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "aadhar",
+                    kyc.getAadhaarNumberUrl()));
+        }
+        if (panFile != null && !panFile.isEmpty()) {
+            kyc.setPanNumberUrl(s3Service.replaceKycDocument(
+                    panFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "pan",
+                    kyc.getPanNumberUrl()));
+        }
+        userKycRepository.save(kyc);
+
+        log.info("Merchant KYC updated successfully for merchantId: {}", dto.getMerchantId());
 
 
         // ============================================================
@@ -1433,38 +1402,5 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
 
         return new FmResponseDto("200", "Profile picture url: " + merchantDto.getProfilePicUrl());
-    }
-//    ================================================================================
-//    ========================= saveMerchantAddressForSingleCreate =============
-//    ================================================================================
-// ================================================================================
-// ========================= saveMerchantAddressForSingleCreate =================
-// ================================================================================
-
-    private void saveMerchantAddressForSingleCreate(
-            FmMerchantRequestDTO dto,
-            Integer merchantId) {
-
-        if (dto.getStateId() == null) {
-            throw new IllegalArgumentException("State is required");
-        }
-
-        if (dto.getCityId() == null) {
-            throw new IllegalArgumentException("City is required");
-        }
-
-        if (dto.getAreaId() == null) {
-            throw new IllegalArgumentException("Area is required");
-        }
-
-        FmAddress address = FmMerchantMapper.toAddressEntity(dto, merchantId);
-
-        addressRepository.save(address);
-
-        log.info(
-                "[MERCHANT] Address saved successfully: merchantId={}, addressId={}",
-                merchantId,
-                address.getAddressId()
-        );
     }
 }

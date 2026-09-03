@@ -38,15 +38,26 @@ public class FmOutletResponseDto {
 
     private String outletPicUrl;
 
-
     // ---------------------------------------------------------
     // KYC Details
     // user_kyc
     // ---------------------------------------------------------
 
+    private String aadharNumber;
+
+    private String panNumber;
+
     private String fssaiNumber;
 
     private String gstNumber;
+
+    private String aadhaarNumberUrl;
+
+    private String panNumberUrl;
+
+    private String fssaiNumberUrl;
+
+    private String gstNumberUrl;
 
 
     // ---------------------------------------------------------

@@ -19,6 +19,7 @@
     import org.springframework.http.ResponseEntity;
     import org.springframework.validation.annotation.Validated;
     import org.springframework.web.bind.annotation.*;
+    import org.springframework.web.bind.annotation.ModelAttribute;
 
     import java.time.LocalDate;
     import java.util.List;
@@ -34,20 +35,21 @@
         private final DriverService driverService;
         private final DriverLocationService driverLocationService;
 
-        @PostMapping("/postDriverDetails")
+        @PostMapping(path = "/postDriverDetails", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         @Operation(
                 summary = "Create Driver",
                 description = "Creates a new Driver along with Driver KYC, Address, User Account, "
                         + "Wallet and Approval Request. "
                         + "The Driver is saved in the Driver Microservice, while the Address, "
                         + "User Account and Approval Request are created in the Food & Mart "
-                        + "Microservice through Feign Client integration.")
+                        + "Microservice through Feign Client integration."
+                        + "Supports document uploads for KYC verification.")
         @ApiResponse(responseCode = "200", description = "Driver created successfully.")
         @ApiResponse(responseCode = "400", description = "Invalid Driver request.")
         @ApiResponse(responseCode = "404", description = "Referenced resource not found.")
         @ApiResponse(responseCode = "500", description = "Internal Server Error.")
         public ResponseEntity<DriverDto> postDriverDetails(
-                @Valid @RequestBody DriverDto dto) {
+                @Valid @ModelAttribute DriverDto dto) {
 
             log.info("POST API called that created driver:");
 
@@ -87,12 +89,12 @@
 
         //    update driver details ,driver kyc from this this(Co Microservice)
     //    and address Details from (FM microservices)
-        @PutMapping("/updateDriverDetails")
-        @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields")
+        @PutMapping(path = "/updateDriverDetails", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields. Supports document uploads for KYC verification.")
         public ResponseEntity<DriverDto> updateDriverDetails(
 
                 @RequestParam Integer driverId,
-                @RequestBody DriverDto dto) {
+                @ModelAttribute DriverDto dto) {
 
             log.info("Updating driver with id: {}", driverId);
 

@@ -46,6 +46,22 @@ public class FmProductController {
         return ResponseEntity.ok(productMappingService.mapToProducts(req));
     }
 
+    /**
+     * PUT /api/fm/products/merchant-edit/{productId}
+     *
+     * Merchant edit — basic fields + merchant price, and edit/add
+     * timings & variants (incl. new groups). Never deletes existing records.
+     */
+    @PutMapping("/updateproduct/{productId}")
+    public ResponseEntity<FmProductUpdateResponseDto> merchantEditProduct(
+            @PathVariable Integer productId,
+            @Valid @RequestBody FmProductUpdateRequestDto request) {
+
+        log.info("[PRODUCT] MERCHANT_EDIT Product. ProductId={}", productId);
+
+        return ResponseEntity.ok(productMappingService.merchantEditProduct(productId, request));
+    }
+
 
 
 
