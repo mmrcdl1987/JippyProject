@@ -5,11 +5,14 @@ import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.exception.OrderException;
+import com.jippy.customerandorder.feignClients.DivisionFeignClient;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
+import com.jippy.customerandorder.iservice.CoWalletRefundService;
 import com.jippy.customerandorder.iservice.IOrderService;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.COEventMapper;
 import com.jippy.customerandorder.mapper.CoOrderMapper;
+import com.jippy.customerandorder.mapper.CoOrderRejectionMapper;
 import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +53,10 @@ public class COOrderService implements IOrderService {
     private final CoCustomerWalletTransactionsRepository transactionsRepository;
     private final CoCustomerRepository customerRepository;
     private final FMFeignClient fmFeignClient;
+    private final CoOrderRejectionRepository rejectionRepository;
+    private final CoWalletRefundService walletRefundService;
+    private final CoPaymentModeRepository paymentModeRepository;
+    private final DivisionFeignClient divisionFeignClient;
 
     /*
      * PLACE ORDER
@@ -1034,6 +1041,110 @@ public class COOrderService implements IOrderService {
 
         return dto;
     }
+
+    @Override
+    public String acceptOrRejectOrderByOutlet(AcceptOrRejectOrderByOutletDto acceptOrRejectOrderByOutletDto) {
+
+        log.info("SERVICE_START | ACCEPT_OR_REJECT_ORDER_BY_OUTLET | orderId={} | outletId={} | newStatus={}",
+                acceptOrRejectOrderByOutletDto.getOrderId(),
+                acceptOrRejectOrderByOutletDto.getOutletId(),
+                acceptOrRejectOrderByOutletDto.getOrderStatus()
+        );
+
+        CoOrder order = orderRepository
+                .findById(acceptOrRejectOrderByOutletDto.getOrderId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found")
+                );
+
+        if (!order.getOutletId().equals(acceptOrRejectOrderByOutletDto.getOutletId())) {
+            throw new OrderException("Outlet ID does not match the order's outlet");
+        }
+
+        if("REJECT".equalsIgnoreCase(acceptOrRejectOrderByOutletDto.getOrderStatus())) {
+
+            boolean isReasonMissing = acceptOrRejectOrderByOutletDto.getRejectionReason() == null
+                    || acceptOrRejectOrderByOutletDto.getRejectionReason().isBlank();
+
+            if(isReasonMissing){
+                return "Rejection reason is required when rejecting an order";
+            }
+            order.setOrderStatus(COConstants.ORDER_STATUS_REJECTED);
+
+            //Insert record in order rejection table if order is rejected by outlet
+
+            CoOrderRejectionRequestDto coOrderRejectionRequestDto = new CoOrderRejectionRequestDto();
+            coOrderRejectionRequestDto.setOrderId(acceptOrRejectOrderByOutletDto.getOrderId());
+            coOrderRejectionRequestDto.setType(COConstants.OUTLET);
+            coOrderRejectionRequestDto.setReason(acceptOrRejectOrderByOutletDto.getRejectionReason());
+            coOrderRejectionRequestDto.setRejectedById(acceptOrRejectOrderByOutletDto.getOutletId());
+
+            CoOrderRejection rejection = CoOrderRejectionMapper.toEntity(coOrderRejectionRequestDto);
+            rejectionRepository.save(rejection);
+
+            log.info(
+                    "Outlet rejection saved | orderId={}",
+                    order.getOrderId()
+            );
+
+            //Refund Customer
+            Optional<CoPaymentModes> optionalCoPaymentModes = paymentModeRepository.findByPaymentModeId(order.getPaymentModeId());
+            if(optionalCoPaymentModes.isPresent()){
+
+                CoPaymentModes coPaymentModes = optionalCoPaymentModes.get();
+                if(!coPaymentModes.getPaymentMode().equalsIgnoreCase(COConstants.PAYMENT_TYPE_COD)){
+                    ResponseEntity<String> refundResponseEntity = divisionFeignClient.orderRefund(order.getOrderId(),
+                            acceptOrRejectOrderByOutletDto.getRejectionReason());
+
+                    if(refundResponseEntity.getStatusCode().is2xxSuccessful()){
+                        log.info("Refund initiated successfully for orderId={} | refundResponse={}", order.getOrderId(), refundResponseEntity.getBody());
+                    }else{
+                        log.error("Refund initiation failed for orderId={} | refundResponse={}", order.getOrderId(), refundResponseEntity.getBody());
+                    }
+                }
+            }
+
+
+            // REFUND WALLET
+
+            BigDecimal refundAmount =
+                    walletRefundService.processWalletRefund(
+                            order.getOrderId(),
+                            order.getCustomerId(),
+                            COConstants.REJECTION_TYPE_OUTLET
+                    );
+
+            log.info(
+                    "Outlet wallet refund completed | " +
+                            "orderId={} | refundAmount={}",
+                    order.getOrderId(),
+                    refundAmount
+            );
+
+
+        }
+        if("ACCEPT".equalsIgnoreCase(acceptOrRejectOrderByOutletDto.getOrderStatus())) {
+            // Update order status
+            order.setOrderStatus(COConstants.ORDER_STATUS_ACCEPTED);
+            if(acceptOrRejectOrderByOutletDto.getPreparationTimeInMins() > 15){
+                return "Preparation time cannot exceed 15 minutes";
+            }
+            order.setPreparationTime(acceptOrRejectOrderByOutletDto.getPreparationTimeInMins());
+        }
+
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setUpdatedBy(acceptOrRejectOrderByOutletDto.getOutletId());
+        orderRepository.save(order);
+
+        log.info("SERVICE_END | ACCEPT_OR_REJECT_ORDER_BY_OUTLET_SUCCESS | orderId={} | outletId={} | newStatus={}",
+                acceptOrRejectOrderByOutletDto.getOrderId(),
+                acceptOrRejectOrderByOutletDto.getOutletId(),
+                acceptOrRejectOrderByOutletDto.getOrderStatus()
+        );
+        return "Order status updated successfully";
+    }
+
+
 
 
 

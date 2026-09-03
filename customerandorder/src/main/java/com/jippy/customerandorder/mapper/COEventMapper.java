@@ -89,6 +89,8 @@ public class COEventMapper {
         newOrderEvent.setCustomerMobileNum(customer.getPhoneNumber());
         newOrderEvent.setOrderStatus(order.getOrderStatus());
         newOrderEvent.setOrderItemsList(orderItemsEventList);
+        newOrderEvent.setCookingInstructions(order.getCookingInstructions());
+        newOrderEvent.setCutleryRequired(order.getIsCutleryRequired());
 
         return newOrderEvent;
     }

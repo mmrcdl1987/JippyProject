@@ -12,8 +12,6 @@ public class CoPaymentModes {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer paymentModeId;
     private String paymentMode;
-    private Integer createdBy;
-    private Integer updatedBy;
-    private String createdAt;
-    private String updatedAt;
+    private String isActive;
+
 }

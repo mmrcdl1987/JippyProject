@@ -734,7 +734,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                         ST_Distance(
                             o.outlet_location::geography,
                             ST_SetSRID(
-                                ST_MakePoint(78.447721, 17.415397),
+                                ST_MakePoint(:customerLng, :customerLat),
                                 4326
                             )::geography
                         ) / 1000.0 AS numeric
@@ -779,7 +779,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
               AND ST_DWithin(
                     o.outlet_location::geography,
                     ST_SetSRID(
-                        ST_MakePoint(78.447721, 17.415397),
+                        ST_MakePoint(:customerLng, :customerLat),
                         4326
                     )::geography,
                     COALESCE(sp.radius_in_kms * 1000, 3000)
@@ -799,8 +799,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                     ON p.product_id = pat.product_id 
                    AND pat.day_of_week_id = od.day_of_week_id
                   WHERE oc.outlet_id = o.outlet_id
-                    AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time BETWEEN pat.start_time AND pat.end_time
-                     AND (:categoryId IS NULL OR oc.category_id = :categoryId)
+                    AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time BETWEEN pat.start_time AND pat.end_time 
+                    AND o.is_approved = true AND o.is_toggle = true AND (:categoryId IS NULL OR oc.category_id = :categoryId)
               )
             
             ORDER BY distance_km ASC;

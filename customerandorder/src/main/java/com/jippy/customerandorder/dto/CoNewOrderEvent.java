@@ -14,5 +14,7 @@ public class CoNewOrderEvent {
     private String customerMobileNum;
     private String orderStatus;
     private List<CoOrderItemsEvent> orderItemsList;
+    private String cookingInstructions;
+    private Boolean cutleryRequired;
 
 }

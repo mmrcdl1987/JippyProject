@@ -44,6 +44,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
     private final TransactionRepository transactionRepository;
     private final CoFeignClient coFeignClient;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final DivUpdateOrderStatusService divUpdateOrderStatusService;
 
     @Value("${razorpay.key-secret}")
     private String keySecret;
@@ -163,8 +164,8 @@ public class DivPaymentServiceImpl implements DivPaymentService {
           DivPaymentInitiateResponse response = new DivPaymentInitiateResponse();
           response.setOrderId(orderDto.getOrderId());
           response.setToPayAmount(orderDto.getOrderTotalAmount());
-          response.setPayUHash(hashData.get("paymentHash"));
-          response.setPayUMerchantKey(hashData.get("merchantKey"));
+          //response.setPayUHash(hashData.get("paymentHash"));
+          //response.setPayUMerchantKey(hashData.get("merchantKey"));
 
           return  response;
 
@@ -274,7 +275,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
             transactionRepository.save(transaction);
 
             //After payment successful/failed update order record in db
-            updateOrderStatus(request,isSuccess);
+            divUpdateOrderStatusService.updateOrderStatus(request.getApplicationOrderId(),isSuccess);
 
             return isSuccess;
 
@@ -284,21 +285,7 @@ public class DivPaymentServiceImpl implements DivPaymentService {
        return false;
     }
 
-    void updateOrderStatus(PaymentVerifyRequestDto paymentVerifyRequestDto, boolean isSuccess){
 
-        DivOrderDto orderDto = new DivOrderDto();
-
-        if(isSuccess){
-            orderDto.setOrderStatus(DivAppConstants.ORDER_PLACED);
-        }else{
-            orderDto.setOrderStatus(DivAppConstants.PAYMENT_STATUS_FAILED);
-        }
-
-        orderDto.setOrderId(paymentVerifyRequestDto.getApplicationOrderId());
-        orderDto.setCustomerId(paymentVerifyRequestDto.getCustomerId());
-
-        coFeignClient.updateOrderStatus(orderDto);
-    }
 
 
     Map<String, String> convertResponseHashToMap(PaymentVerifyRequestDto paymentVerifyRequestDto) {
