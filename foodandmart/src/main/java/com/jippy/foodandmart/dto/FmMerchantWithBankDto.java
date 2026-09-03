@@ -61,4 +61,16 @@ public class FmMerchantWithBankDto {
 
         @NotBlank(message = "User type should not be empty")
         private String userType;
+
+        @NotBlank(message = "Aadhaar number should not be empty")
+        @Pattern(regexp = "^[2-9]{1}[0-9]{11}$", message = "Invalid Aadhaar number")
+        private String aadharNumber;
+
+        @NotBlank(message = "PAN number should not be empty")
+        @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "Invalid PAN number")
+        private String panNumber;
+
+        private String aadhaarNumberUrl;
+
+        private String panNumberUrl;
 }

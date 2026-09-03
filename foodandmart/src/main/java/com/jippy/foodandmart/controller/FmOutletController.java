@@ -75,13 +75,18 @@ public class FmOutletController {
     // CREATE OUTLET
     // ============================================================
 
-    @PostMapping(value = "/createOutlet", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/createOutlet", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses({@ApiResponse(responseCode = "201", description = "Outlet created successfully"), @ApiResponse(responseCode = "400", description = "Validation Failed"), @ApiResponse(responseCode = "404", description = "Merchant Not Found"), @ApiResponse(responseCode = "409", description = "Duplicate Resource")})
-    public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(@Valid @RequestBody FmOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(
+            @Valid @RequestPart("data") FmOutletRequestDTO dto,
+            @RequestPart(value = "aadhar", required = false) MultipartFile aadhar,
+            @RequestPart(value = "pan", required = false) MultipartFile pan,
+            @RequestPart(value = "fssai", required = false) MultipartFile fssai,
+            @RequestPart(value = "gst", required = false) MultipartFile gst) {
 
         log.info("Received request to create outlet: {}", dto.getOutletName());
 
-        FmOutletCreateResponseDTO response = outletService.createOutlet(dto);
+        FmOutletCreateResponseDTO response = outletService.createOutlet(dto, aadhar, pan, fssai, gst);
 
         log.info("Outlet created successfully. outletId={}", response.getOutletId());
 
@@ -128,9 +133,14 @@ public class FmOutletController {
     @PutMapping("/updateOutletDetailsByMerchant/{outletId}")
     @Operation(summary = "Update Outlet Details By Merchant", description = "Allows Merchant to update outlet details, address, " + "bank details and operating days. " + "[Username and Password cannot be updated].")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid request"), @ApiResponse(responseCode = "404", description = "Outlet or Merchant not found")})
-    public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(@PathVariable Integer outletId, @Valid @RequestBody FmUpdateOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(
+            @PathVariable Integer outletId, @Valid @RequestPart("data") FmUpdateOutletRequestDTO dto,
+            @RequestPart(value = "aadhar", required = false) MultipartFile aadhar,
+            @RequestPart(value = "pan", required = false) MultipartFile pan,
+            @RequestPart(value = "fssai", required = false) MultipartFile fssai,
+            @RequestPart(value = "gst", required = false) MultipartFile gst) {
 
-        FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto);
+        FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto, aadhar, pan, fssai, gst);
 
         return ResponseEntity.ok(FmApiResponse.success("Outlet details updated successfully", response));
     }

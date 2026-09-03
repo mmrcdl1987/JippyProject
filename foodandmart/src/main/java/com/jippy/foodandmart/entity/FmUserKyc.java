@@ -38,6 +38,18 @@ public class FmUserKyc {
 	@Column(name = "gst_number", length = 30)
 	private String gstNumber;
 
+	@Column(name = "pan_number_url", length = 500)
+	private String panNumberUrl;
+
+	@Column(name = "aadhaar_number_url", length = 500)
+	private String aadhaarNumberUrl;
+
+	@Column(name = "fssai_number_url", length = 500)
+	private String fssaiNumberUrl;
+
+	@Column(name = "gst_number_url", length = 500)
+	private String gstNumberUrl;
+
 	@Column(name = "verified", nullable = false)
 	@Builder.Default
 	private Boolean verified = false;

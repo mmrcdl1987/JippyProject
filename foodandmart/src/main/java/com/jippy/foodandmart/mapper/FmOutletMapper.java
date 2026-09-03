@@ -261,9 +261,15 @@ public final class FmOutletMapper {
             return;
         }
 
+        response.setAadharNumber(kyc.getAadhaarNumber());
+        response.setPanNumber(kyc.getPanNumber());
         response.setFssaiNumber(kyc.getFssaiNumber());
 
         response.setGstNumber(kyc.getGstNumber());
+        response.setAadhaarNumberUrl(kyc.getAadhaarNumberUrl());
+        response.setPanNumberUrl(kyc.getPanNumberUrl());
+        response.setFssaiNumberUrl(kyc.getFssaiNumberUrl());
+        response.setGstNumberUrl(kyc.getGstNumberUrl());
     }
 // OUTLET DAYS -> OUTLET RESPONSE DT
 
@@ -1266,6 +1272,8 @@ public final class FmOutletMapper {
         response.setOutletPhone(outlet.getOutletPhone());
         response.setOutletEmail(request.getOutletEmail());
         response.setAlternateOutletPhone(request.getAlternateOutletPhone());
+        response.setAadharNumber(request.getAadharNumber());
+        response.setPanNumber(request.getPanNumber());
         response.setFssaiNumber(request.getFssaiNumber());
         response.setGstNumber(request.getGstNumber());
         response.setIsGstApplied(
@@ -1332,6 +1340,10 @@ public final class FmOutletMapper {
         response.setCuisineType(outlet.getCuisineType());
         response.setOutletPhone(outlet.getOutletPhone());
         response.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
+        response.setAadharNumber(request.getAadharNumber());
+        response.setPanNumber(request.getPanNumber());
+        response.setFssaiNumber(request.getFssaiNumber());
+        response.setGstNumber(request.getGstNumber());
 
         // ---------------- Tracking ----------------
         response.setUpdatedBy(request.getUpdatedBy());
@@ -1668,4 +1680,3 @@ public final class FmOutletMapper {
         return outlet;
     }
 }
-

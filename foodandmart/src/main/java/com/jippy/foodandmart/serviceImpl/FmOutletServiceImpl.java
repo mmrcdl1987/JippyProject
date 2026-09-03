@@ -86,6 +86,14 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     @Transactional
     public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto) {
+        return createOutlet(dto, null, null, null, null);
+    }
+
+    @Override
+    @Transactional
+    public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto, MultipartFile aadharFile,
+                                                   MultipartFile panFile, MultipartFile fssaiFile,
+                                                   MultipartFile gstFile) {
 
         log.info("Creating new outlet : {}", dto.getOutletName());
 
@@ -154,7 +162,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Save Outlet KYC Details.
          */
-        saveOutletKyc(dto, outlet.getOutletId());
+        saveOutletKyc(dto, outlet.getOutletId(), aadharFile, panFile, fssaiFile, gstFile);
 
         /**
          * Create Approval Request for the newly created Outlet.
@@ -196,6 +204,14 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Create Response DTO.
          */
         FmOutletCreateResponseDTO createOutlet = FmOutletMapper.toCreateResponseDto(dto, outlet);
+        FmUserKyc savedKyc = userKycRepository.findByEntityIdAndEntityType(
+                outlet.getOutletId(), FmAppConstants.TYPE_OUTLET).orElse(null);
+        if (savedKyc != null) {
+            createOutlet.setAadhaarNumberUrl(savedKyc.getAadhaarNumberUrl());
+            createOutlet.setPanNumberUrl(savedKyc.getPanNumberUrl());
+            createOutlet.setFssaiNumberUrl(savedKyc.getFssaiNumberUrl());
+            createOutlet.setGstNumberUrl(savedKyc.getGstNumberUrl());
+        }
 
         return createOutlet;
     }
@@ -263,6 +279,14 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     @Transactional
     public FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto) {
+        return updateOutletDetailsByMerchant(outletId, dto, null, null, null, null);
+    }
+
+    @Override
+    @Transactional
+    public FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto,
+                                                                   MultipartFile aadharFile, MultipartFile panFile,
+                                                                   MultipartFile fssaiFile, MultipartFile gstFile) {
 
         log.info("Updating outlet details for outletId : {}", outletId);
 
@@ -341,6 +365,20 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("Outlet bank details updated successfully.");
 
         /*
+         * Update Outlet KYC.
+         */
+        upsertOutletKyc(
+                outletId,
+                dto.getAadharNumber(),
+                dto.getPanNumber(),
+                dto.getFssaiNumber(),
+                dto.getGstNumber(),
+                aadharFile, panFile, fssaiFile, gstFile
+        );
+
+        log.info("Outlet KYC details updated successfully.");
+
+        /*
          * Delete existing outlet operating days.
          */
         outletDayRepository.deleteByOutletId(outletId);
@@ -364,7 +402,16 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Return updated response.
          */
-        return FmOutletMapper.toUpdateResponseDto(dto, outlet);
+        FmUpdateOutletRequestDTO response = FmOutletMapper.toUpdateResponseDto(dto, outlet);
+        FmUserKyc savedKyc = userKycRepository.findByEntityIdAndEntityType(
+                outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
+        if (savedKyc != null) {
+            response.setAadhaarNumberUrl(savedKyc.getAadhaarNumberUrl());
+            response.setPanNumberUrl(savedKyc.getPanNumberUrl());
+            response.setFssaiNumberUrl(savedKyc.getFssaiNumberUrl());
+            response.setGstNumberUrl(savedKyc.getGstNumberUrl());
+        }
+        return response;
     }
 
 
@@ -377,15 +424,84 @@ public class FmOutletServiceImpl implements IFmOutletService {
      * @param dto      Outlet Request DTO.
      * @param outletId Newly created Outlet Id.
      */
-    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId) {
+    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId,
+                               MultipartFile aadharFile, MultipartFile panFile,
+                               MultipartFile fssaiFile, MultipartFile gstFile) {
 
         log.info("Saving Outlet KYC Details for Outlet Id: {}", outletId);
 
-        FmUserKyc kyc = FmMerchantMapper.toOutletKycEntity(dto, outletId);
-
-        userKycRepository.save(kyc);
+        upsertOutletKyc(
+                outletId,
+                dto.getAadharNumber(),
+                dto.getPanNumber(),
+                dto.getFssaiNumber(),
+                dto.getGstNumber(),
+                aadharFile, panFile, fssaiFile, gstFile
+        );
 
         log.info("Outlet KYC Details saved successfully for Outlet Id: {}", outletId);
+    }
+
+    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId) {
+        saveOutletKyc(dto, outletId, null, null, null, null);
+    }
+
+    private void upsertOutletKyc(
+            Integer outletId,
+            String aadharNumber,
+            String panNumber,
+            String fssaiNumber,
+            String gstNumber,
+            MultipartFile aadharFile, MultipartFile panFile,
+            MultipartFile fssaiFile, MultipartFile gstFile
+    ) {
+
+        FmUserKyc kyc = userKycRepository
+                .findByEntityIdAndEntityType(outletId, FmAppConstants.TYPE_OUTLET)
+                .orElseGet(FmUserKyc::new);
+
+        kyc.setEntityId(outletId);
+        kyc.setEntityType(FmAppConstants.TYPE_OUTLET);
+
+        if (aadharNumber != null && !aadharNumber.isBlank()) {
+            kyc.setAadhaarNumber(aadharNumber);
+        }
+        if (panNumber != null && !panNumber.isBlank()) {
+            kyc.setPanNumber(panNumber);
+        }
+        if (fssaiNumber != null && !fssaiNumber.isBlank()) {
+            kyc.setFssaiNumber(fssaiNumber);
+        }
+        if (gstNumber != null && !gstNumber.isBlank()) {
+            kyc.setGstNumber(gstNumber);
+        }
+        uploadKycFile(kyc, aadharFile, FmAppConstants.TYPE_OUTLET, outletId, "aadhar");
+        uploadKycFile(kyc, panFile, FmAppConstants.TYPE_OUTLET, outletId, "pan");
+        uploadKycFile(kyc, fssaiFile, FmAppConstants.TYPE_OUTLET, outletId, "fssai");
+        uploadKycFile(kyc, gstFile, FmAppConstants.TYPE_OUTLET, outletId, "gst");
+        if (kyc.getKycId() == null) {
+            kyc.setVerified(false);
+        }
+
+        userKycRepository.save(kyc);
+    }
+
+    private void uploadKycFile(FmUserKyc kyc, MultipartFile file, String userType,
+                               Integer userId, String documentType) {
+        if (file == null || file.isEmpty()) {
+            return;
+        }
+        switch (documentType) {
+            case "aadhar" -> kyc.setAadhaarNumberUrl(s3Service.replaceKycDocument(
+                    file, userType, userId, documentType, kyc.getAadhaarNumberUrl()));
+            case "pan" -> kyc.setPanNumberUrl(s3Service.replaceKycDocument(
+                    file, userType, userId, documentType, kyc.getPanNumberUrl()));
+            case "fssai" -> kyc.setFssaiNumberUrl(s3Service.replaceKycDocument(
+                    file, userType, userId, documentType, kyc.getFssaiNumberUrl()));
+            case "gst" -> kyc.setGstNumberUrl(s3Service.replaceKycDocument(
+                    file, userType, userId, documentType, kyc.getGstNumberUrl()));
+            default -> throw new BadRequestException("Unsupported KYC document type.");
+        }
     }
 
     /**
@@ -2281,85 +2397,35 @@ public class FmOutletServiceImpl implements IFmOutletService {
     //   for feign client to save address details of driver service implementation
     @Override
     @Transactional
-    public FmAddressRequestDto saveAddressDetails(
-            FmAddressRequestDto fmAddressRequestDto) {
+    public FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto) {
 
-        Optional<FmOutletAddress> existingAddress =
-                addressRepository.findByJippyAddressIdAndAddressType(
+        FmOutletAddress address = addressRepository
+                .findByJippyAddressIdAndAddressType(
                         fmAddressRequestDto.getJippyAddressId(),
-                        fmAddressRequestDto.getAddressType());
+                        fmAddressRequestDto.getAddressType()
+                )
+                .orElseGet(FmOutletAddress::new);
 
-        FmOutletAddress address;
+        address.setJippyAddressId(fmAddressRequestDto.getJippyAddressId());
+        address.setAddressType(fmAddressRequestDto.getAddressType());
+        address.setBuildingNumber(fmAddressRequestDto.getBuildingNumber());
+        address.setRoad(fmAddressRequestDto.getRoad());
+        address.setLandmark(fmAddressRequestDto.getLandmark());
+        address.setCityId(fmAddressRequestDto.getCityId());
+        address.setStateId(fmAddressRequestDto.getStateId());
+        address.setAreaId(fmAddressRequestDto.getAreaId());
 
-        if (existingAddress.isPresent()) {
-
-            // Existing address → UPDATE
-            address = existingAddress.get();
-
-            address.setBuildingNumber(
-                    fmAddressRequestDto.getBuildingNumber());
-
-            address.setRoad(
-                    fmAddressRequestDto.getRoad());
-
-            address.setLandmark(
-                    fmAddressRequestDto.getLandmark());
-
-            address.setCityId(
-                    fmAddressRequestDto.getCityId());
-
-            address.setStateId(
-                    fmAddressRequestDto.getStateId());
-
-            address.setAreaId(
-                    fmAddressRequestDto.getAreaId());
-
-            // Update location if latitude and longitude are provided
-            if (fmAddressRequestDto.getLatitude() != null
-                    && fmAddressRequestDto.getLongitude() != null) {
-
-                GeometryFactory geometryFactory =
-                        new GeometryFactory();
-
-                Point point = geometryFactory.createPoint(
-                        new Coordinate(
-                                fmAddressRequestDto.getLongitude(),
-                                fmAddressRequestDto.getLatitude()
-                        )
-                );
-
-                point.setSRID(4326);
-
-                address.setLocation(point);
-            }
-
-            log.info(
-                    "Updating existing {} address for Jippy Address Id {}, addressId={}",
-                    fmAddressRequestDto.getAddressType(),
-                    fmAddressRequestDto.getJippyAddressId(),
-                    address.getAddressId());
-
-        } else {
-
-            // Address does not exist → CREATE
-            address = FmOutletMapper.toAddressEntity(
-                    fmAddressRequestDto);
-
-            log.info(
-                    "Creating new {} address for Jippy Address Id {}",
-                    fmAddressRequestDto.getAddressType(),
-                    fmAddressRequestDto.getJippyAddressId());
-        }
-
-        FmOutletAddress savedAddress =
-                addressRepository.save(address);
+        FmOutletAddress savedAddress = addressRepository.save(address);
 
         log.info(
-                "Address saved successfully with addressId={}",
-                savedAddress.getAddressId());
+                "Address saved successfully for jippyAddressId={} with addressId={}",
+                savedAddress.getJippyAddressId(),
+                savedAddress.getAddressId()
+        );
 
         return FmOutletMapper.toAddressRequestDto(savedAddress);
     }
+
 
     //    for feign client to get address details of driver service implementation
     @Override
@@ -2828,6 +2894,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         if (kyc != null) {
 
+            response.setAadharNumber(kyc.getAadhaarNumber());
+
+            response.setPanNumber(kyc.getPanNumber());
+
             response.setFssaiNumber(kyc.getFssaiNumber());
 
             response.setGstNumber(kyc.getGstNumber());
@@ -3189,4 +3259,3 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return new FmResponseDto("200", message);
     }
 }
-

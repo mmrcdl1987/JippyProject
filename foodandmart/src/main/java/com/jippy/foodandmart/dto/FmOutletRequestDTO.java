@@ -128,6 +128,26 @@ public class FmOutletRequestDTO {
     // OUTLET KYC
     // ============================================================
 
+    @Schema(
+            description = "Aadhaar Number for the outlet owner",
+            example = "123456789012"
+    )
+    @Pattern(
+            regexp = "^$|^[2-9]{1}[0-9]{11}$",
+            message = "Aadhaar must be a valid 12-digit number"
+    )
+    private String aadharNumber;
+
+    @Schema(
+            description = "PAN Number for the outlet owner",
+            example = "ABCDE1234F"
+    )
+    @Pattern(
+            regexp = "^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$",
+            message = "PAN must be in format: AAAAA9999A"
+    )
+    private String panNumber;
+
     /**
      * FSSAI is optional for merchant bulk upload.
      */
