@@ -124,9 +124,7 @@ public class CoCustomerController {
 
     // Update Customer Profile Pic
     @PutMapping(value = "/updateCustomerProfile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CoResponseDto> updateCustomerProfile(
-            @RequestPart("customerData") String customerDataJson,
-            @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) throws Exception {
+    public ResponseEntity<CoResponseDto> updateCustomerProfile(@RequestPart("customerData") String customerDataJson, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) throws Exception {
 
         CoCustomerRequestDto requestDto = objectMapper.readValue(customerDataJson, CoCustomerRequestDto.class);
 
@@ -139,13 +137,11 @@ public class CoCustomerController {
         return ResponseEntity.ok(new CoResponseDto(COConstants.STATUS_200, result));
     }
 
-//    ----------------------------------------------------------------------------------------------
+    //    ----------------------------------------------------------------------------------------------
     //    to post customer delivery address with latitude and longitude
     @PostMapping("/saveCustomerDeliveryAddress")
-    @Operation(summary = "Create Customer Delivery Address",
-            description = "Creates and stores a customer delivery address using the provided customer details and geographic coordinates. " + "The latitude and longitude values are converted into a geographic Point location and persisted in the customer_delivery_addresses table. " + "Mandatory fields: customerId, latitude, longitude, doorNo, buildingName, laneNo, area, city and createdBy. " + "Returns the saved customer delivery address details including the generated customerAddressId.")
-    public ResponseEntity<CoCustomerDeliveryAddressResponseDto> createCustomerDeliveryAddress
-    (@Valid @RequestBody CoCustomerDeliveryAddressRequestDto requestDto) {
+    @Operation(summary = "Create Customer Delivery Address", description = "Creates and stores a customer delivery address using the provided customer details and geographic coordinates. " + "The latitude and longitude values are converted into a geographic Point location and persisted in the customer_delivery_addresses table. " + "Mandatory fields: customerId, latitude, longitude, doorNo, buildingName, laneNo, area, city and createdBy. " + "Returns the saved customer delivery address details including the generated customerAddressId.")
+    public ResponseEntity<CoCustomerDeliveryAddressResponseDto> createCustomerDeliveryAddress(@Valid @RequestBody CoCustomerDeliveryAddressRequestDto requestDto) {
 
         log.info("CREATE_CUSTOMER_ADDRESS_API_START | customerId={}", requestDto.getCustomerId());
 
@@ -159,30 +155,23 @@ public class CoCustomerController {
 
     //    get list of all the delivery addresses of a customer based on the customer id
     @GetMapping("/getCustomerDeliveryAddresses")
-    @Operation(summary = "Get Customer Delivery Addresses",
-            description = "Fetches all delivery addresses associated with the given customerId. " + "ex input is customerId=123. The API retrieves the list of delivery addresses for" + " the specified customer from the database and returns them as a list of CoCustomerDeliveryAddressResponseDto objects. " + "Each object in the response contains details about a delivery address, including customerAddressId, customerId," + " latitude, longitude, doorNo, buildingName, laneNo, area, and city. If no addresses are found for the provided customerId, an empty list is returned.")
-    public ResponseEntity<List<CoCustomerDeliveryAddressResponseDto>>
-    getCustomerDeliveryAddresses(
-            @Positive(message = "Customer Id must be greater than zero")
-            @RequestParam Integer customerId) {
+    @Operation(summary = "Get Customer Delivery Addresses", description = "Fetches all delivery addresses associated with the given customerId. " + "ex input is customerId=123. The API retrieves the list of delivery addresses for" + " the specified customer from the database and returns them as a list of CoCustomerDeliveryAddressResponseDto objects. " + "Each object in the response contains details about a delivery address, including customerAddressId, customerId," + " latitude, longitude, doorNo, buildingName, laneNo, area, and city. If no addresses are found for the provided customerId, an empty list is returned.")
+    public ResponseEntity<List<CoCustomerDeliveryAddressResponseDto>> getCustomerDeliveryAddresses(@Positive(message = "Customer Id must be greater than zero") @RequestParam Integer customerId) {
 
         log.info("GET_CUSTOMER_DELIVERY_ADDRESSES_API_START | customerId={}", customerId);
         log.info("Fetching delivery addresses for customerId={}", customerId);
 
-        List<CoCustomerDeliveryAddressResponseDto> responseDto =
-                customerDeliveryAddressService.getCustomerDeliveryAddresses(customerId);
+        List<CoCustomerDeliveryAddressResponseDto> responseDto = customerDeliveryAddressService.getCustomerDeliveryAddresses(customerId);
 
         log.info("GET_CUSTOMER_DELIVERY_ADDRESSES_API_SUCCESS | customerId={} | addressCount={}", customerId, responseDto.size());
 
         return ResponseEntity.ok(responseDto);
     }
 
-//    to delete a delivery address based on the customer_address_id
+    //    to delete a delivery address based on the customer_address_id
     @DeleteMapping("/deleteCustomerDeliveryAddress")
-    @Operation(summary = "Delete Customer Delivery Address",
-            description = "Deletes a customer delivery address using the provided customerAddressId.")
-    public ResponseEntity<CoResponseDto> deleteCustomerDeliveryAddress
-            (@RequestParam Integer customerAddressId) {
+    @Operation(summary = "Delete Customer Delivery Address", description = "Deletes a customer delivery address using the provided customerAddressId.")
+    public ResponseEntity<CoResponseDto> deleteCustomerDeliveryAddress(@RequestParam Integer customerAddressId) {
 
         log.info("DELETE_CUSTOMER_DELIVERY_ADDRESS_API_START | customerAddressId={}", customerAddressId);
         log.info("Attempting to delete customer delivery address with customerAddressId={}", customerAddressId);
@@ -191,32 +180,26 @@ public class CoCustomerController {
 
         log.info("DELETE_CUSTOMER_DELIVERY_ADDRESS_API_SUCCESS | customerAddressId={}", customerAddressId);
 
-        CoResponseDto customerDeliveryAddressDeletedSuccessfullyDto
-                = new CoResponseDto(COConstants.STATUS_200,
-                "Customer delivery address deleted successfully");
+        CoResponseDto customerDeliveryAddressDeletedSuccessfullyDto = new CoResponseDto(COConstants.STATUS_200, "Customer delivery address deleted successfully");
 
         return ResponseEntity.ok(customerDeliveryAddressDeletedSuccessfullyDto);
 
     }
+
     @GetMapping
-    public ResponseEntity<List<CoCustomerListDto>>
-    getAllCustomers() {
+    public ResponseEntity<List<CoCustomerListDto>> getAllCustomers() {
 
         log.info("GET_ALL_CUSTOMERS_API_START");
 
-        List<CoCustomerListDto> customers =
-                customerService.getAllCustomers();
+        List<CoCustomerListDto> customers = customerService.getAllCustomers();
 
-        log.info(
-                "GET_ALL_CUSTOMERS_API_SUCCESS | count={}",
-                customers.size()
-        );
+        log.info("GET_ALL_CUSTOMERS_API_SUCCESS | count={}", customers.size());
 
         return ResponseEntity.ok(customers);
     }
+
     @GetMapping("/wallet/{customerId}")
-    public ResponseEntity<CoCustomerWalletResponseDto> getCustomerWallet(
-            @PathVariable Integer customerId) {
+    public ResponseEntity<CoCustomerWalletResponseDto> getCustomerWallet(@PathVariable Integer customerId) {
 
         log.info("GET_CUSTOMER_WALLET_API_START | customerId={}", customerId);
 
@@ -226,14 +209,13 @@ public class CoCustomerController {
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/wallet/history/{customerId}")
-    public ResponseEntity<List<CoWalletTransactionHistoryDto>> getWalletTransactionHistory(
-            @PathVariable Integer customerId) {
+    public ResponseEntity<List<CoWalletTransactionHistoryDto>> getWalletTransactionHistory(@PathVariable Integer customerId) {
 
         log.info("GET_WALLET_TRANSACTION_HISTORY_API_START | customerId={}", customerId);
 
-        List<CoWalletTransactionHistoryDto> response =
-                customerService.getWalletTransactionHistory(customerId);
+        List<CoWalletTransactionHistoryDto> response = customerService.getWalletTransactionHistory(customerId);
 
         log.info("GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={}", customerId);
 
@@ -245,9 +227,24 @@ public class CoCustomerController {
 
         log.info("Received request to fetch customers with incomplete profiles.");
 
-        List<CoProfileIncompleteCustomer> customers =
-                customerService.getProfileIncompleteCustomers();
+        List<CoProfileIncompleteCustomer> customers = customerService.getProfileIncompleteCustomers();
 
         return ResponseEntity.ok(customers);
+    }
+
+    // ================================================================
+    // UPDATE CUSTOMER PROFILE PICTURE
+    // ================================================================
+
+    @PutMapping("/updateCustomerProfilePic")
+    public ResponseEntity<CoResponseDto> updateCustomerProfilePic
+            (@RequestBody CustomerProfilePicDto customerDto) {
+
+        log.info("[CUSTOMER] Updating profile picture. customerId={}",
+                customerDto.getCustomerId());
+
+        String message = customerService.updateCustomerProfilePic(customerDto);
+
+        return ResponseEntity.ok(new CoResponseDto("200", message));
     }
 }

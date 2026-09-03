@@ -178,7 +178,7 @@ public class DriverServiceImpl implements DriverService {
         /** CALLING HELPER METHOD
          * Create Approval Request in Food & Mart Microservice.
          */
-          createApprovalRequest(savedDriver.getDriverId());
+        createApprovalRequest(savedDriver.getDriverId());
 //          -------------------------------------------------------------------
 
 //        // Fetch role
@@ -221,7 +221,7 @@ public class DriverServiceImpl implements DriverService {
             coAddressRequestDtoFeign =
                     fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
 
-        }  catch (Exception e) {
+        } catch (Exception e) {
 
             log.error(
                     "ADDRESS FEIGN FAILED | driverId={} | errorType={} | message={}",
@@ -263,9 +263,10 @@ public class DriverServiceImpl implements DriverService {
     }
 //    ----------------------------------------------------------------------------------------------
 
-    /**------  HELPER METHOD - For Approval Request
+    /**
+     * ------  HELPER METHOD - For Approval Request
      * Creates an Approval Request in Food & Mart Microservice.
-     *
+     * <p>
      * Every newly created Driver enters the approval workflow
      * at Level 1 with PENDING status.
      *
@@ -819,7 +820,7 @@ public class DriverServiceImpl implements DriverService {
         // Match your database spatial SRID coordinate system reference alignment
         multiPolygon.setSRID(4326);
 
-        return  multiPolygon;
+        return multiPolygon;
     }
 
 //    @Override
@@ -914,61 +915,660 @@ public class DriverServiceImpl implements DriverService {
     }
 
     @Override
-    public String saveOrUpdateProfilePic(UploadProfilePicDto uploadProfilePicDto) {
+    public DriverResponseDto saveOrUpdateProfilePic(
+            UploadProfilePicDto uploadProfilePicDto) {
+
         try {
+
+            // ========================================================
+            // 1. VALIDATE IMAGE
+            // ========================================================
+
             validateImage(uploadProfilePicDto.getProfilePicFile());
-            String s3BucketFilePath = s3ImageService.uploadFile(uploadProfilePicDto.getProfilePicFile(), uploadProfilePicDto.getUserId(), uploadProfilePicDto.getUserType());
-            log.info("File uploaded to S3 successfully. Bucket path: {}", s3BucketFilePath);
 
-            if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_DRIVER)) {
+            Integer userId = uploadProfilePicDto.getUserId();
 
-                Driver driver = driverRepository.findById(uploadProfilePicDto.getUserId()).orElseThrow(() -> {
-                    log.error("Driver not found with id: {}", uploadProfilePicDto.getUserId());
-                    return new ResourceNotFoundException("Driver not found with id: " + uploadProfilePicDto.getUserId());
-                });
+            String userType = uploadProfilePicDto.getUserType();
 
-                driver.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
+            log.info(
+                    "[PROFILE PIC] Processing profile picture upload. " +
+                            "userId={}, userType={}",
+                    userId,
+                    userType
+            );
+
+//            // ========================================================
+//            // 2. UPLOAD IMAGE TO S3
+//            // ========================================================
+//
+//            String s3BucketFilePath =
+//                    s3ImageService.uploadFile(
+//                            uploadProfilePicDto.getProfilePicFile(),
+//                            userId,
+//                            userType
+//                    );
+//
+//            log.info(
+//                    "[PROFILE PIC] File uploaded to S3 successfully. " +
+//                            "userId={}, userType={}, bucketPath={}",
+//                    userId,
+//                    userType,
+//                    s3BucketFilePath
+//            );
+//
+//            // ========================================================
+//            // 3. CREATE COMPLETE PROFILE PICTURE URL
+//            // ========================================================
+//
+//            String profilePicUrl =
+//                    DConstants.AWS_PROFILE_PIC_STATIC_URL
+//                            + s3BucketFilePath;
+//
+//            log.info(
+//                    "[PROFILE PIC] Generated profile picture URL. " +
+//                            "userId={}, userType={}, profilePicUrl={}",
+//                    userId,
+//                    userType,
+//                    profilePicUrl
+//            );
+
+            // ========================================================
+            // 4. DRIVER
+            // ========================================================
+
+            if (userType.equalsIgnoreCase(
+                    DConstants.TYPE_DRIVER)) {
+
+                log.info(
+                        "[PROFILE PIC] Updating DRIVER profile picture. " +
+                                "driverId={}",
+                        userId
+                );
+
+                Driver driver =
+                        driverRepository.findById(userId)
+                                .orElseThrow(() -> {
+
+                                    log.error(
+                                            "Driver not found with id: {}",
+                                            userId
+                                    );
+
+                                    return new ResourceNotFoundException(
+                                            "Driver not found with id: "
+                                                    + userId
+                                    );
+                                });
+                // ============================================================
+                // Replace old profile picture with new profile picture
+                // ============================================================
+
+                String profilePicUrl =
+                        replaceProfilePicInS3(
+                                driver.getProfilePicUrl(),
+                                uploadProfilePicDto.getProfilePicFile(),
+                                userId,
+                                userType
+                        );
+                // ----------------------------------------------------
+                // Update profile picture URL
+                // ----------------------------------------------------
+
+                driver.setProfilePicUrl(profilePicUrl);
+
                 driverRepository.save(driver);
-                log.info("Driver profile picture URL updated in database for driver id: {}", uploadProfilePicDto.getUserId());
 
-                return "Driver profile pic Url: " + DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath;
-            } else if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_CUSTOMER)) {
-                DriverCustomerResponseDto driverCustomerResponseDto = coFeignClients.getCustomer(uploadProfilePicDto.getUserId()).getBody();
+                log.info(
+                        "[PROFILE PIC] Driver profile picture updated " +
+                                "successfully. driverId={}",
+                        userId
+                );
 
-                if (driverCustomerResponseDto.getCustomerId() != null) {
-
-                    driverCustomerResponseDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
-
-                    ResponseEntity<DriverResponseDto> dtoResponseEntity = coFeignClients.updateCustomerProfilePic(driverCustomerResponseDto);
-                    log.info("Customer profile picture URL updated in database for customer id: {}", uploadProfilePicDto.getUserId());
-
-                    return dtoResponseEntity.getBody().getStatusMsg();
-                } else {
-                    log.error("Customer not found with id: {}", uploadProfilePicDto.getUserId());
-                    throw new ResourceNotFoundException("Customer not found with id: " + uploadProfilePicDto.getUserId());
-                }
-            } else if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_MERCHANT)) {
-
-                DriverMerchantDto driverMerchantDto = fmFeignClient.getMerchantById(uploadProfilePicDto.getUserId()).getBody();
-
-                if (driverMerchantDto.getMerchantId() != null) {
-                    driverMerchantDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
-                    ResponseEntity<DriverResponseDto> driverResponseDto = fmFeignClient.updateMerchantProfilePic(driverMerchantDto);
-                    log.info("Merchant profile picture URL updated in database for merchant id: {}", uploadProfilePicDto.getUserId());
-
-                    return driverResponseDto.getBody().getStatusMsg();
-                } else {
-                    log.error("Customer not found with id: {}", uploadProfilePicDto.getUserId());
-                    throw new ResourceNotFoundException("Merchant not found with id: " + uploadProfilePicDto.getUserId());
-                }
+                return new DriverResponseDto(
+                        DConstants.STATUS_200,
+                        "Driver profile picture updated successfully. " +
+                                "Profile picture url: " + profilePicUrl
+                );
             }
-        } catch (IOException e) {
-            log.error("Error validating image file", e);
-            throw new ImageValidationException("Error validating image file: " + e.getMessage());
-        }
-        return "";
-    }
 
+            // ========================================================
+            // 5. CUSTOMER
+            //
+            // Customer table belongs to Customer & Order MS.
+            //
+            // We only need to update:
+            //     1. customerId
+            //     2. profilePicUrl
+            //
+            // We DO NOT fetch the complete customer details.
+            // This avoids errors related to customerStatus and
+            // other unrelated customer fields.
+            // ========================================================
+
+            // ========================================================
+            // 5. CUSTOMER
+            // ========================================================
+
+            else if (userType.equalsIgnoreCase(
+                    DConstants.TYPE_CUSTOMER)) {
+
+                log.info(
+                        "[PROFILE PIC] Updating CUSTOMER profile picture. " +
+                                "customerId={}",
+                        userId
+                );
+
+                // ====================================================
+                // 1. Fetch ONLY customer profile picture details
+                // ====================================================
+                //
+                // We do NOT fetch the complete customer object.
+                // This avoids the previous customerStatus null issue.
+                //
+                // ====================================================
+
+                ResponseEntity<DriverCustomerProfilePicDto>
+                        customerResponse =
+                        coFeignClients.getCustomerProfilePic(userId);
+
+                // ====================================================
+                // 2. Validate customer response
+                // ====================================================
+
+                if (customerResponse == null ||
+                        customerResponse.getBody() == null) {
+
+                    log.error(
+                            "[PROFILE PIC] Customer not found. customerId={}",
+                            userId
+                    );
+
+                    throw new ResourceNotFoundException(
+                            "Customer not found with id: " + userId
+                    );
+                }
+
+                // ====================================================
+                // 3. Get existing customer profile picture
+                // ====================================================
+
+                DriverCustomerProfilePicDto customer =
+                        customerResponse.getBody();
+
+                // ====================================================
+                // 4. Delete OLD image + Upload NEW image
+                // ====================================================
+                //
+                // replaceProfilePicInS3() does:
+                //
+                //     1. Delete old S3 image
+                //     2. Upload new S3 image
+                //     3. Return new S3 URL
+                //
+                // ====================================================
+
+                String profilePicUrl =
+                        replaceProfilePicInS3(
+                                customer.getProfilePicUrl(),
+                                uploadProfilePicDto.getProfilePicFile(),
+                                userId,
+                                userType
+                        );
+
+                // ====================================================
+                // 5. Set new profile picture URL
+                // ====================================================
+
+                customer.setCustomerId(userId);
+
+                customer.setProfilePicUrl(
+                        profilePicUrl
+                );
+
+                log.info(
+                        "[PROFILE PIC] Sending customer profile picture " +
+                                "update through Feign. customerId={}",
+                        userId
+                );
+
+                // ====================================================
+                // 6. Update Customer in Customer & Order MS
+                // ====================================================
+
+                ResponseEntity<DriverResponseDto> response =
+                        coFeignClients.updateCustomerProfilePic(
+                                customer
+                        );
+
+                // ====================================================
+                // 7. Validate update response
+                // ====================================================
+
+                if (response == null ||
+                        response.getBody() == null) {
+
+                    log.error(
+                            "[PROFILE PIC] Customer profile picture update " +
+                                    "failed. customerId={}",
+                            userId
+                    );
+
+                    throw new RuntimeException(
+                            "Failed to update customer profile picture"
+                    );
+                }
+
+                // ====================================================
+                // 8. Success log
+                // ====================================================
+
+                log.info(
+                        "[PROFILE PIC] Customer profile picture updated " +
+                                "successfully. customerId={}",
+                        userId
+                );
+
+                // ====================================================
+                // 9. Return Driver API response
+                // ====================================================
+
+                return new DriverResponseDto(
+                        DConstants.STATUS_200,
+                        "Customer profile picture updated successfully. " +
+                                "Profile picture url: " + profilePicUrl
+                );
+            }
+            // ========================================================
+            // 6. MERCHANT
+            // ========================================================
+
+            else if (userType.equalsIgnoreCase(
+                    DConstants.TYPE_MERCHANT)) {
+
+                log.info(
+                        "[PROFILE PIC] Fetching MERCHANT details. " +
+                                "merchantId={}",
+                        userId
+                );
+
+                DriverMerchantDto merchant =
+                        fmFeignClient
+                                .getMerchantById(userId)
+                                .getBody();
+
+                // ============================================================
+                // Replace old profile picture with new profile picture
+                // ============================================================
+                String profilePicUrl =
+                        replaceProfilePicInS3(
+                                merchant.getProfilePicUrl(),
+                                uploadProfilePicDto.getProfilePicFile(),
+                                userId,
+                                userType
+                        );
+                // ----------------------------------------------------
+                // Validate merchant
+                // ----------------------------------------------------
+
+                if (merchant == null ||
+                        merchant.getMerchantId() == null) {
+
+                    log.error(
+                            "Merchant not found with id: {}",
+                            userId
+                    );
+
+                    throw new ResourceNotFoundException(
+                            "Merchant not found with id: "
+                                    + userId
+                    );
+                }
+
+                merchant.setProfilePicUrl(profilePicUrl);
+
+                // ----------------------------------------------------
+                // Set S3 profile picture URL
+                // ----------------------------------------------------
+
+                merchant.setProfilePicUrl(profilePicUrl);
+
+                log.info(
+                        "[PROFILE PIC] Sending merchant profile picture " +
+                                "update through Feign. merchantId={}",
+                        userId
+                );
+
+                // ----------------------------------------------------
+                // Update Merchant in FM MS
+                // ----------------------------------------------------
+
+                ResponseEntity<DriverResponseDto> response =
+                        fmFeignClient.updateMerchantProfilePic(
+                                merchant
+                        );
+
+                log.info(
+                        "[PROFILE PIC] Merchant profile picture updated " +
+                                "successfully. merchantId={}",
+                        userId
+                );
+
+                // ----------------------------------------------------
+                // Return Driver response
+                // ----------------------------------------------------
+
+                return new DriverResponseDto(
+                        DConstants.STATUS_200,
+                        "Merchant profile picture updated successfully. " +
+                                "Profile picture url: " + profilePicUrl
+                );
+            }
+
+            // ========================================================
+            // 7. OUTLET
+            // ========================================================
+
+            else if (userType.equalsIgnoreCase(
+                    DConstants.TYPE_OUTLET)) {
+
+                log.info(
+                        "[OUTLET] Processing profile picture for outletId={}",
+                        userId
+                );
+
+                // ====================================================
+                // 1. Fetch outlet details from Food & Mart service
+                // ====================================================
+
+                ResponseEntity<DriverFmApiResponse<DriverOutletDto>>
+                        responseEntity =
+                        fmFeignClient.getOutletById(userId);
+
+                // ====================================================
+                // 2. Get FM API response
+                // ====================================================
+
+                DriverFmApiResponse<DriverOutletDto> apiResponse =
+                        responseEntity.getBody();
+
+                // ====================================================
+                // 3. Get outlet details from FM response
+                // ====================================================
+
+                if (apiResponse == null ||
+                        apiResponse.getData() == null) {
+
+                    throw new ResourceNotFoundException(
+                            "Outlet details not found for outletId: "
+                                    + userId
+                    );
+                }
+                // ====================================================
+                // 4. Extract actual outlet data
+                // ====================================================
+                DriverOutletDto outlet = apiResponse.getData();
+
+                // ============================================================
+                // 5. Replace old profile picture with new profile picture
+                //
+                // This helper:
+                //     1. Deletes old image from S3
+                //     2. Uploads new image to S3
+                //     3. Returns new profile picture URL
+                // ============================================================
+
+                String profilePicUrl =
+                        replaceProfilePicInS3(
+                                outlet.getOutletPicUrl(),
+                                uploadProfilePicDto.getProfilePicFile(),
+                                userId,
+                                userType
+                        );
+
+
+                // ====================================================
+                // 5. Log new profile picture URL
+                // ====================================================
+
+                log.info(
+                        "[OUTLET] New profile picture URL: {}",
+                        profilePicUrl
+                );
+
+                // ====================================================
+                // 6. Create profile picture DTO
+                // ====================================================
+
+                DriverOutletProfilePicDto outletProfilePic = new DriverOutletProfilePicDto();
+
+
+                outletProfilePic.setOutletId(userId);
+
+                outletProfilePic.setOutletPicUrl(
+                        profilePicUrl
+                );
+
+                // ====================================================
+                // 7. Call FM update outlet profile picture API
+                // ====================================================
+
+                ResponseEntity<DriverResponseDto> updateResponse =
+                        fmFeignClient.updateOutletProfilePic(
+                                outletProfilePic
+                        );
+
+                // ====================================================
+                // 8. Validate update response
+                // ====================================================
+
+                if (updateResponse != null &&
+                        updateResponse.getBody() != null) {
+
+                    log.info(
+                            "[OUTLET] Profile picture updated successfully. " +
+                                    "outletId={}",
+                            outlet.getOutletId()
+                    );
+
+                    return new DriverResponseDto(
+                            DConstants.STATUS_200,
+                            "Outlet profile picture updated successfully. " +
+                                    "Profile picture url: " + profilePicUrl
+                    );
+                }
+
+                // ====================================================
+                // 9. Fallback response
+                // ====================================================
+
+                log.error(
+                        "[OUTLET] Empty response received from FM while " +
+                                "updating profile picture. outletId={}",
+                        outlet.getOutletId()
+                );
+
+                return new DriverResponseDto(
+                        DConstants.STATUS_200,
+                        "Outlet profile picture updated successfully. " +
+                                "Profile picture url: " + profilePicUrl
+                );
+            }
+
+            // ========================================================
+            // 10. INVALID USER TYPE
+            // ========================================================
+
+            else {
+
+                log.error(
+                        "[PROFILE PIC] Invalid user type received: {}",
+                        userType
+                );
+
+                throw new IllegalArgumentException(
+                        "Invalid user type: " + userType
+                );
+            }
+
+        } catch (IOException e) {
+
+            log.error(
+                    "[PROFILE PIC] Error while processing image file",
+                    e
+            );
+
+            throw new ImageValidationException(
+                    "Error processing image file: "
+                            + e.getMessage()
+            );
+        }
+    }
+    // ================================================================
+    // DELETE OLD IMAGE + UPLOAD NEW PROFILE PICTURE
+    // ================================================================
+    //
+    // This helper performs the complete S3 profile picture operation:
+    //
+    // 1. Deletes the previous profile picture from S3
+    // 2. Uploads the new profile picture to S3
+    // 3. Generates and returns the new profile picture URL
+    //
+    // This avoids repeating the same S3 logic for:
+    // DRIVER
+    // CUSTOMER
+    // MERCHANT
+    // OUTLET
+    //
+// ================================================================
+
+    private String replaceProfilePicInS3(
+            String oldProfilePicUrl,
+            MultipartFile newProfilePic,
+            Integer userId,
+            String userType) throws IOException {
+
+        // ============================================================
+        // 1. Delete previous profile picture
+        // ============================================================
+
+        deleteOldProfilePicFromS3(
+                oldProfilePicUrl
+        );
+
+        // ============================================================
+        // 2. Upload new profile picture
+        // ============================================================
+
+        String s3BucketFilePath =
+                s3ImageService.uploadFile(
+                        newProfilePic,
+                        userId,
+                        userType
+                );
+
+        // ============================================================
+        // 3. Generate new profile picture URL
+        // ============================================================
+
+        String profilePicUrl =
+                DConstants.AWS_PROFILE_PIC_STATIC_URL
+                        + s3BucketFilePath;
+
+        log.info(
+                "[PROFILE PIC] New profile picture uploaded successfully. " +
+                        "userId={}, userType={}, url={}",
+                userId,
+                userType,
+                profilePicUrl
+        );
+
+        // ============================================================
+        // 4. Return new profile picture URL
+        // ============================================================
+
+        return profilePicUrl;
+    }
+//    ==================================================================================
+        // ================================================================
+        // DELETE OLD PROFILE PICTURE FROM S3
+        // ================================================================
+        //
+        // The database stores the complete S3 URL:
+        //
+        // https://jippys3bucket.s3.ap-south-2.amazonaws.com/DRIVER/63/driver_old.jpg
+        //
+        // S3 requires only the object key:
+        //
+        // DRIVER/63/driver_old.jpg
+        //
+        // This helper extracts the key and deletes the old image.
+        // ================================================================
+
+    private void deleteOldProfilePicFromS3(String oldProfilePicUrl) {
+
+        // ------------------------------------------------------------
+        // No previous profile picture
+        // ------------------------------------------------------------
+
+        if (oldProfilePicUrl == null ||
+                oldProfilePicUrl.trim().isEmpty()) {
+
+            log.info(
+                    "[PROFILE PIC] No previous profile picture found. " +
+                            "Skipping S3 deletion."
+            );
+
+            return;
+        }
+
+        try {
+
+            log.info(
+                    "[PROFILE PIC] Previous profile picture found. " +
+                            "url={}",
+                    oldProfilePicUrl
+            );
+
+            // --------------------------------------------------------
+            // Extract S3 object key from complete URL
+            // --------------------------------------------------------
+
+            String s3Key =
+                    oldProfilePicUrl.substring(
+                            oldProfilePicUrl.indexOf(".com/") + 5
+                    );
+
+            log.info(
+                    "[PROFILE PIC] Old S3 object key={}",
+                    s3Key
+            );
+
+            // --------------------------------------------------------
+            // Delete old image
+            // --------------------------------------------------------
+
+            s3ImageService.deleteFile(s3Key);
+
+            log.info(
+                    "[PROFILE PIC] Previous profile picture deleted " +
+                            "successfully from S3."
+            );
+
+        } catch (Exception e) {
+
+            log.error(
+                    "[PROFILE PIC] Failed to delete previous profile " +
+                            "picture from S3.",
+                    e
+            );
+
+            throw new RuntimeException(
+                    "Failed to delete previous profile picture",
+                    e
+            );
+        }
+    }
+//    ===================================================================================
     public void validateImage(MultipartFile file) throws IOException {
         // 1. Check if file is empty
         if (file.isEmpty()) {
@@ -1010,7 +1610,7 @@ public class DriverServiceImpl implements DriverService {
 
         Driver driver = driverRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException( "Driver not found for the provided email."));
+                        new ResourceNotFoundException("Driver not found for the provided email."));
 
         DriverDto dto = new DriverDto();
 
@@ -1021,15 +1621,16 @@ public class DriverServiceImpl implements DriverService {
 
         return dto;
     }
-//    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
+
+    //    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
     @Override
     public FmDriverApprovalResponseDTO getDriverById(Integer driverId) {
 
-    Driver driver = driverRepository.findByDriverId(driverId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException("Driver not found with Id : " + driverId));
+        Driver driver = driverRepository.findByDriverId(driverId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Driver not found with Id : " + driverId));
 
-    return DriverMapper.mapToDriverApprovalResponseDto(driver);
+        return DriverMapper.mapToDriverApprovalResponseDto(driver);
     }
 
     @Override
@@ -1093,4 +1694,135 @@ public class DriverServiceImpl implements DriverService {
 //        return 0;
 //    }
 
+    //    ================================================================================
+    // ================================================================
+// READY TO ACCEPT ORDERS TOGGLE
+// ================================================================
+//
+// This method updates the ready_to_accept_orders column
+// for the specified driver.
+//
+// Example:
+//
+// driverId = 63
+// readyToAcceptOrders = true
+//
+// Database:
+//
+// driver_id | ready_to_accept_orders
+// ----------+-----------------------
+// 63        | true
+//
+// ================================================================
+    @Override
+    @Transactional
+    public DriverResponseDto readyToAcceptIsToggle(
+            DriverReadyToAcceptRequestDto requestDto) {
+
+        log.info(
+                "[DRIVER TOGGLE] API started. driverId={}, readyToAcceptOrders={}",
+                requestDto != null ? requestDto.getDriverId() : null,
+                requestDto != null
+                        ? requestDto.getReadyToAcceptOrders()
+                        : null
+        );
+
+        // ============================================================
+        // 1. Validate request
+        // ============================================================
+
+        if (requestDto == null) {
+
+            throw new IllegalArgumentException(
+                    "Driver toggle details are required"
+            );
+        }
+
+        // ============================================================
+        // 2. Validate driver ID
+        // ============================================================
+
+        if (requestDto.getDriverId() == null) {
+
+            throw new IllegalArgumentException(
+                    "Driver ID is required"
+            );
+        }
+
+        // ============================================================
+        // 3. Validate toggle value
+        // ============================================================
+
+        if (requestDto.getReadyToAcceptOrders() == null) {
+
+            throw new IllegalArgumentException(
+                    "readyToAcceptOrders value is required"
+            );
+        }
+
+        // ============================================================
+        // 4. Check driver exists
+        // ============================================================
+
+        if (!driverRepository.existsById(
+                requestDto.getDriverId())) {
+
+            log.error(
+                    "[DRIVER TOGGLE] Driver not found. driverId={}",
+                    requestDto.getDriverId()
+            );
+
+            throw new ResourceNotFoundException(
+                    "Driver not found with ID: "
+                            + requestDto.getDriverId()
+            );
+        }
+
+        // ============================================================
+        // 5. Update ready_to_accept_orders
+        // ============================================================
+
+        int updatedRows =
+                driverRepository.updateReadyToAcceptOrders(
+                        requestDto.getDriverId(),
+                        requestDto.getReadyToAcceptOrders()
+                );
+
+        // ============================================================
+        // 6. Validate update
+        // ============================================================
+
+        if (updatedRows == 0) {
+
+            throw new RuntimeException(
+                    "Failed to update driver ready-to-accept-orders status"
+            );
+        }
+
+        log.info(
+                "[DRIVER TOGGLE] Updated successfully. driverId={}, " +
+                        "readyToAcceptOrders={}",
+                requestDto.getDriverId(),
+                requestDto.getReadyToAcceptOrders()
+        );
+
+        // ============================================================
+        // 7. Prepare success message
+        // ============================================================
+
+        String message =
+                Boolean.TRUE.equals(
+                        requestDto.getReadyToAcceptOrders())
+                        ? "Driver is ready to accept orders"
+                        : "Driver is not ready to accept orders";
+
+        // ============================================================
+        // 8. Return status code + message
+        // ============================================================
+
+        return new DriverResponseDto(
+                "200",
+                message
+        );
+    }
 }

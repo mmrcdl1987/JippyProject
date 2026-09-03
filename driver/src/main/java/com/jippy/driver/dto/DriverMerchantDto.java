@@ -36,6 +36,6 @@ public class DriverMerchantDto {
 
     private Boolean isApproved;
 
+    // Used to receive/send the S3 profile picture URL
     private String profilePicUrl;
-
 }

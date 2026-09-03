@@ -198,6 +198,7 @@ public class FmMerchantController {
         return ResponseEntity.ok(response);
     }
 
+//    ======================================================================================
     @GetMapping("/fetchByMerchantId")
     public ResponseEntity<FmMerchantDto> fetchByMerchantId(@RequestParam Integer merchantId) {
         log.info("Fetch by MerchantId API called for merchantId: {}", merchantId);
@@ -206,11 +207,24 @@ public class FmMerchantController {
     }
 
     @PutMapping("/updateMerchantProfilePic")
-    ResponseEntity<FmResponseDto> updateMerchantProfilePic(@RequestBody  FmMerchantDto merchantDto){
+    public ResponseEntity<FmResponseDto> updateMerchantProfilePic(
+            @RequestBody FmMerchantDto merchantDto) {
 
-        log.info("Updating merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
-        FmResponseDto response = merchantService.updateMerchantProfilePic(merchantDto);
-        log.info("Successfully updated merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
+        log.info(
+                "Updating merchant profile picture for merchantId: {}",
+                merchantDto.getMerchantId()
+        );
+
+        FmResponseDto response =
+                merchantService.updateMerchantProfilePic(merchantDto);
+
+        log.info(
+                "Successfully updated merchant profile picture for merchantId: {}",
+                merchantDto.getMerchantId()
+        );
+
         return ResponseEntity.ok(response);
     }
+
+
 }
