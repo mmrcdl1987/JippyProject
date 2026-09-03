@@ -2930,6 +2930,263 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         return address.getAreaId();
     }
+    @Override
+    public FmResponseDto updateOutletProfilePic(
+            FmUpdateOutletProfilePicDto outletDto) {
 
+        log.info(
+                "[OUTLET] Update profile picture API started. outletId={}",
+                outletDto != null ? outletDto.getOutletId() : null
+        );
+
+        // ================================================================
+        // 1. Validate request body
+        // ================================================================
+
+        if (outletDto == null) {
+
+            log.error("[OUTLET] Request body is null");
+
+            throw new IllegalArgumentException(
+                    "Outlet details are required"
+            );
+        }
+
+        // ================================================================
+        // 2. Validate outlet ID
+        // ================================================================
+
+        if (outletDto.getOutletId() == null) {
+
+            log.error("[OUTLET] Outlet ID is required");
+
+            throw new IllegalArgumentException(
+                    "Outlet ID is required"
+            );
+        }
+
+        log.info(
+                "[OUTLET] Outlet ID received: {}",
+                outletDto.getOutletId()
+        );
+
+        // ================================================================
+        // 3. Validate profile picture URL
+        // ================================================================
+
+        if (outletDto.getOutletPicUrl() == null ||
+                outletDto.getOutletPicUrl().trim().isEmpty()) {
+
+            log.error(
+                    "[OUTLET] Profile picture URL is required. outletId={}",
+                    outletDto.getOutletId()
+            );
+
+            throw new IllegalArgumentException(
+                    "Profile picture URL is required"
+            );
+        }
+
+        // ================================================================
+        // 4. Find outlet
+        // ================================================================
+
+        FmOutlet outlet = outletRepository
+                .findById(outletDto.getOutletId())
+                .orElseThrow(() -> {
+
+                    log.error(
+                            "[OUTLET] Outlet not found. outletId={}",
+                            outletDto.getOutletId()
+                    );
+
+                    return new ResourceNotFoundException(
+                            "Outlet not found with ID: "
+                                    + outletDto.getOutletId()
+                    );
+                });
+
+        // ================================================================
+        // 5. Update profile picture
+        // ================================================================
+
+        outlet.setOutletPicUrl(
+                outletDto.getOutletPicUrl()
+        );
+
+        // ================================================================
+        // 6. Save
+        // ================================================================
+
+        outletRepository.save(outlet);
+
+        log.info(
+                "[OUTLET] Profile picture updated successfully. outletId={}",
+                outlet.getOutletId()
+        );
+
+        // ================================================================
+        // 7. Return response
+        // ================================================================
+
+        return new FmResponseDto(
+                "200",
+                "Outlet profile picture updated successfully"
+        );
+    }
+//    ==============================================================================
+//    ==============================================================================
+    // ================================================================
+// TOGGLE OUTLET
+// ================================================================
+//
+// This method updates the is_toggle column of the outlet.
+//
+// Example:
+//
+// outletId = 132
+// isToggle = true
+//
+// Result:
+//
+// outlets
+// outlet_id | is_toggle
+// ----------+----------
+// 132       | true
+//
+// ================================================================
+
+    @Override
+    @Transactional
+    public FmResponseDto toggleForOutlet(
+            FmToggleOutletRequestDto requestDto) {
+
+        log.info(
+                "[OUTLET TOGGLE] Toggle API started. outletId={}, isToggle={}",
+                requestDto != null ? requestDto.getOutletId() : null,
+                requestDto != null ? requestDto.getIsToggle() : null
+        );
+
+        // ============================================================
+        // 1. Validate request body
+        // ============================================================
+
+        if (requestDto == null) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Request body is null"
+            );
+
+            throw new IllegalArgumentException(
+                    "Outlet toggle details are required"
+            );
+        }
+
+        // ============================================================
+        // 2. Validate outlet ID
+        // ============================================================
+
+        if (requestDto.getOutletId() == null) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Outlet ID is required"
+            );
+
+            throw new IllegalArgumentException(
+                    "Outlet ID is required"
+            );
+        }
+
+        // ============================================================
+        // 3. Validate isToggle
+        // ============================================================
+
+        if (requestDto.getIsToggle() == null) {
+
+            log.error(
+                    "[OUTLET TOGGLE] isToggle value is required. outletId={}",
+                    requestDto.getOutletId()
+            );
+
+            throw new IllegalArgumentException(
+                    "isToggle value is required"
+            );
+        }
+
+        log.info(
+                "[OUTLET TOGGLE] Updating outlet. outletId={}, isToggle={}",
+                requestDto.getOutletId(),
+                requestDto.getIsToggle()
+        );
+
+        // ============================================================
+        // 4. Check whether outlet exists
+        // ============================================================
+
+        boolean outletExists = outletRepository.existsById(
+                        requestDto.getOutletId()
+                );
+
+        if (!outletExists) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Outlet not found. outletId={}",
+                    requestDto.getOutletId()
+            );
+
+            throw new ResourceNotFoundException(
+                    "Outlet not found with ID: "
+                            + requestDto.getOutletId()
+            );
+        }
+
+        // ============================================================
+        // 5. Update is_toggle column
+        // ============================================================
+
+        int updatedRows =
+                outletRepository.updateOutletToggle(
+                        requestDto.getOutletId(),
+                        requestDto.getIsToggle()
+                );
+
+        // ============================================================
+        // 6. Validate update
+        // ============================================================
+
+        if (updatedRows == 0) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Failed to update outlet. outletId={}",
+                    requestDto.getOutletId()
+            );
+
+            throw new RuntimeException(
+                    "Failed to update outlet toggle"
+            );
+        }
+
+        // ============================================================
+        // 7. Log successful update
+        // ============================================================
+
+        log.info(
+                "[OUTLET TOGGLE] Outlet toggle updated successfully. " +
+                        "outletId={}, isToggle={}",
+                requestDto.getOutletId(),
+                requestDto.getIsToggle()
+        );
+
+        // ============================================================
+        // 8. Return success response
+        // ============================================================
+
+        String message =
+                Boolean.TRUE.equals(requestDto.getIsToggle())
+                        ? "Outlet toggle enabled successfully"
+                        : "Outlet toggle disabled successfully";
+
+        return new FmResponseDto("200", message);
+    }
 }
 

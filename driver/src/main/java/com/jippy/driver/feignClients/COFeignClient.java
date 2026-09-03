@@ -39,4 +39,30 @@ public interface COFeignClient {
     @PutMapping("/api/co/customers/updateCustomerProfilePic")
     ResponseEntity<DriverResponseDto> updateCustomerProfilePic(DriverCustomerResponseDto driverCustomerResponseDto);
 
+        // ================================================================
+        // UPDATE CUSTOMER PROFILE PICTURE
+        // ================================================================
+        //
+        // Driver MS uploads the image to S3.
+        // After getting the S3 URL, Driver MS sends only:
+        //
+        //     customerId
+        //     profilePicUrl
+        // ================================================================
+
+        @PutMapping("/api/co/customers/updateCustomerProfilePic")
+        ResponseEntity<DriverResponseDto> updateCustomerProfilePic(
+                @RequestBody DriverCustomerProfilePicDto customer
+        );
+
+    // ================================================================
+    // GET CUSTOMER PROFILE PICTURE
+    // Calls Customer & Order MS
+    // Fetches existing profile picture URL before replacing it
+    // ================================================================
+
+    @GetMapping("/api/co/customers/getCustomerProfilePic/{customerId}")
+    ResponseEntity<DriverCustomerProfilePicDto> getCustomerProfilePic(
+            @PathVariable("customerId") Integer customerId
+    );
 }

@@ -3,7 +3,9 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
+import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.exception.CoBusinessException;
+import com.jippy.customerandorder.exception.CoResourceNotFoundException;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.feignClients.NotificationFeignClient;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
@@ -11,20 +13,17 @@ import com.jippy.customerandorder.mapper.CoCustomerMapper;
 import com.jippy.customerandorder.mapper.CoWalletPointsMapper;
 import com.jippy.customerandorder.producer.CoWalletPointsKafkaProducer;
 import com.jippy.customerandorder.repository.*;
-import com.jippy.customerandorder.entity.CoCustomerReferral;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.jippy.customerandorder.exception.CoBadRequestException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1209,5 +1208,92 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                 .collect(Collectors.toList());
 
         return customers;
+    }
+
+    // ================================================================
+    // UPDATE CUSTOMER PROFILE PICTURE
+    // ================================================================
+    //
+    // Only customerId and profilePicUrl are required.
+    //
+    // We directly find the customer by ID and update
+    // profile_pic_url.
+    //
+    // We DO NOT access customerStatus here.
+    // ================================================================
+
+    @Override
+    public String updateCustomerProfilePic(
+            CustomerProfilePicDto customerDto) {
+
+        log.info(
+                "[CUSTOMER] Updating profile picture. customerId={}",
+                customerDto.getCustomerId()
+        );
+
+        // ============================================================
+        // 1. Validate customer ID
+        // ============================================================
+
+        if (customerDto.getCustomerId() == null) {
+
+            throw new IllegalArgumentException(
+                    "Customer ID is required"
+            );
+        }
+
+        // ============================================================
+        // 2. Validate profile picture URL
+        // ============================================================
+
+        if (customerDto.getProfilePicUrl() == null ||
+                customerDto.getProfilePicUrl().trim().isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "Profile picture URL is required"
+            );
+        }
+
+        // ============================================================
+        // 3. Find customer directly by ID
+        // ============================================================
+
+        CoCustomer customer =
+                customerRepository
+                        .findById(customerDto.getCustomerId())
+                        .orElseThrow(() ->
+                                new CoResourceNotFoundException(
+                                        "Customer not found with id: "
+                                                + customerDto.getCustomerId()
+                                )
+                        );
+
+        // ============================================================
+        // 4. Update ONLY profile picture URL
+        // ============================================================
+
+        customer.setProfilePicUrl(
+                customerDto.getProfilePicUrl()
+        );
+
+        // ============================================================
+        // 5. Save customer
+        // ============================================================
+
+        customerRepository.save(customer);
+
+        log.info(
+                "[CUSTOMER] Profile picture updated successfully. " +
+                        "customerId={}",
+                customerDto.getCustomerId()
+        );
+
+        // ============================================================
+        // 6. Return success message with profile picture URL
+        // ============================================================
+
+        return "Customer profile picture updated successfully. " +
+                "Profile picture url: " +
+                customerDto.getProfilePicUrl();
     }
 }

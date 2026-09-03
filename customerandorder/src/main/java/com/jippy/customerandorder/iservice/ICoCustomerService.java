@@ -36,4 +36,10 @@ public interface ICoCustomerService {
     List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId);
     List<CoProfileIncompleteCustomer> getProfileIncompleteCustomers();
 
+    // ================================================================
+    // UPDATE CUSTOMER PROFILE PICTURE
+    // ================================================================
+
+    String updateCustomerProfilePic(CustomerProfilePicDto customerDto);
+
 }

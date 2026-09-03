@@ -77,7 +77,7 @@ private String nomineeName;
     private Boolean isApproved;
 
     @Column(name = "ready_to_accept_orders")
-    private Boolean readyToAcceptOrders;
+    private Boolean readyToAcceptOrders=false;
 
     // One-to-One mapping with KYC
     @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL)

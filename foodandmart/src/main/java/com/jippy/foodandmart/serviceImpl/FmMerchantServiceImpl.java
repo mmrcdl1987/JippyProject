@@ -1412,31 +1412,44 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     @Override
     public FmResponseDto updateMerchantProfilePic(FmMerchantDto merchantDto) {
 
-        log.info("Updating merchant profile picture " + "for merchantId: {}", merchantDto.getMerchantId());
+        log.info(
+                "Updating merchant profile picture for merchantId: {}",
+                merchantDto.getMerchantId()
+        );
 
+        FmMerchant merchant = merchantRepository
+                .findById(merchantDto.getMerchantId())
+                .orElseThrow(() -> {
 
-        FmMerchant merchant = merchantRepository.findById(merchantDto.getMerchantId()).orElseThrow(() -> {
+                    log.error(
+                            "Merchant not found with ID: {}",
+                            merchantDto.getMerchantId()
+                    );
 
-            log.error("Merchant not found with ID: {}", merchantDto.getMerchantId());
+                    return new ResourceNotFoundException(
+                            "Merchant not found with ID: "
+                                    + merchantDto.getMerchantId()
+                    );
+                });
 
-            return new ResourceNotFoundException("Merchant not found with ID :" + merchantDto.getMerchantId());
-        });
-
-
-        merchant.setProfilePicUrl(merchantDto.getProfilePicUrl());
-
+        // Update only the S3 profile picture URL
+        merchant.setProfilePicUrl(
+                merchantDto.getProfilePicUrl()
+        );
 
         merchantRepository.save(merchant);
 
+        log.info(
+                "Merchant profile picture updated successfully for merchantId: {}",
+                merchantDto.getMerchantId()
+        );
 
-        log.info("Merchant profile picture updated successfully " + "for merchantId: {}", merchantDto.getMerchantId());
-
-
-        return new FmResponseDto("200", "Profile picture url: " + merchantDto.getProfilePicUrl());
+        return new FmResponseDto(
+                "200",
+                "Profile picture url: "
+                        + merchantDto.getProfilePicUrl()
+        );
     }
-//    ================================================================================
-//    ========================= saveMerchantAddressForSingleCreate =============
-//    ================================================================================
 // ================================================================================
 // ========================= saveMerchantAddressForSingleCreate =================
 // ================================================================================

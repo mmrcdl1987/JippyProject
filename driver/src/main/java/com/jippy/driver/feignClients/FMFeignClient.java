@@ -40,19 +40,19 @@ public interface FMFeignClient {
             @RequestParam("userType") String userType
     );
 
-    @GetMapping("/api/fm/merchants/fetchByMerchantId")
-    ResponseEntity<DriverMerchantDto> getMerchantById(@RequestParam Integer merchantId);
-
-    @PutMapping("/api/fm/merchants/updateMerchantProfilePic")
-    ResponseEntity<DriverResponseDto> updateMerchantProfilePic(DriverMerchantDto driverMerchantDto);
+//    @GetMapping("/api/fm/merchants/fetchByMerchantId")
+//    ResponseEntity<DriverMerchantDto> getMerchantById(@RequestParam Integer merchantId);
+//
+//    @PutMapping("/api/fm/merchants/updateMerchantProfilePic")
+//    ResponseEntity<DriverResponseDto> updateMerchantProfilePic(DriverMerchantDto driverMerchantDto);
 
     @PostMapping("/api/fm/approval-requests/createApprovalRequest")
     void createApprovalRequest(@RequestBody DriverApprovalRequestDTO requestDTO);
 
 
-// =====================================================
-// LOCATION APIs
-// =====================================================
+    // =====================================================
+    // LOCATION APIs
+    // =====================================================
 
     @GetMapping("/api/fm/location/fetchStates")
     ResponseEntity<List<FMStateDto>> fetchStates();
@@ -71,4 +71,49 @@ public interface FMFeignClient {
     ResponseEntity<FMAreaDto> findAreaById(
             @RequestParam("areaId") Integer areaId
     );
-}
+
+
+        // ================================================================
+        // GET MERCHANT
+        // ================================================================
+
+        @GetMapping("/api/fm/merchants/fetchByMerchantId")
+        ResponseEntity<DriverMerchantDto> getMerchantById(
+                @RequestParam("merchantId") Integer merchantId
+        );
+
+
+        // ================================================================
+        // UPDATE MERCHANT PROFILE PICTURE
+        // ================================================================
+
+        @PutMapping("/api/fm/merchants/updateMerchantProfilePic")
+        ResponseEntity<DriverResponseDto> updateMerchantProfilePic(
+                @RequestBody DriverMerchantDto merchant
+        );
+
+
+    // ================================================================
+    // GET OUTLET BY ID
+    // Calls FM service to fetch outlet details
+    // ================================================================
+
+        @GetMapping("/api/fm/outlets/getOutletById/{outletId}")
+        ResponseEntity<DriverFmApiResponse<DriverOutletDto>> getOutletById(
+                @PathVariable("outletId") Integer outletId
+        );
+
+
+        // ================================================================
+        // UPDATE OUTLET PROFILE PICTURE
+        // ================================================================
+
+        @PutMapping("/api/fm/outlets/updateOutletProfilePic")
+        ResponseEntity<DriverResponseDto> updateOutletProfilePic(
+                @RequestBody DriverOutletProfilePicDto outlet
+        );
+
+
+    }
+
+

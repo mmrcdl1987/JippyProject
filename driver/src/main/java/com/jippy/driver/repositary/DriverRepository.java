@@ -34,4 +34,29 @@ public interface DriverRepository extends JpaRepository<Driver, Integer> {
             WHERE d.driverId = :driverId
             """)
     void approveDriver(@Param("driverId") Integer driverId);
+
+    // ================================================================
+// UPDATE DRIVER READY TO ACCEPT ORDERS STATUS
+// ================================================================
+//
+// Updates only the ready_to_accept_orders column.
+//
+// driverId             -> Identifies the driver
+// readyToAcceptOrders  -> New value (true / false)
+//
+// Returns:
+// 1 -> Driver updated successfully
+// 0 -> No driver found
+// ================================================================
+
+    @Modifying
+    @Query("""
+        UPDATE Driver d
+        SET d.readyToAcceptOrders = :readyToAcceptOrders
+        WHERE d.driverId = :driverId
+        """)
+    int updateReadyToAcceptOrders(
+            @Param("driverId") Integer driverId,
+            @Param("readyToAcceptOrders") Boolean readyToAcceptOrders
+    );
 }
