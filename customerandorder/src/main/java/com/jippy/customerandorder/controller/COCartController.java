@@ -23,11 +23,11 @@ public class COCartController {
     @PostMapping("/update")
     public ResponseEntity<String> saveOrUpdateCart(@Valid @RequestBody CoCartUpdateRequestDto request) {
 
-        log.info("API_START | SAVE_OR_UPDATE_CART | customerId={} | outletId={} | productId={} | variantOptionId={} | quantity={}", request.getCustomerId(), request.getOutletId(), request.getProductId(), request.getVariantOptionId(), request.getQuantity());
+        log.info("API_START | SAVE_OR_UPDATE_CART | customerId={} | outletId={} | productId={} | variantCount={}", request.getCustomerId(), request.getOutletId(), request.getProductId(), request.getVariants() != null ? request.getVariants().size() : 0);
 
         String response = cartService.saveOrUpdateCart(request);
 
-        log.info("API_END | SAVE_OR_UPDATE_CART | customerId={} | productId={} | variantOptionId={} | response={}", request.getCustomerId(), request.getProductId(), request.getVariantOptionId(), response);
+        log.info("API_END | SAVE_OR_UPDATE_CART | customerId={} | outletId={} | productId={} | variantCount={} | response={}", request.getCustomerId(), request.getOutletId(), request.getProductId(), request.getVariants() != null ? request.getVariants().size() : 0, response);
 
         return ResponseEntity.ok(response);
     }

@@ -68,18 +68,14 @@ public class CheckoutServiceImpl implements ICheckoutService {
             // DELIVERY CHARGE
 
             DeliveryChargeCalculationResponseDto deliveryResponse = getDeliveryCharge(requestDto, itemTotal);
+            BigDecimal deliveryCharge =
+                    defaultValue(deliveryResponse.getDeliveryCharge());
 
-            BigDecimal deliveryCharge = defaultValue(deliveryResponse.getTotalDeliveryCharge());
+            BigDecimal deliveryTax =
+                    defaultValue(deliveryResponse.getTaxAmount());
 
-
-            // GST CALCULATION
-            //
-            // GST IS ALWAYS CALCULATED
-            // REGARDLESS OF FEE TOGGLE
-
-            BigDecimal foodTax = calculatePercentage(itemTotal, taxConfig.getFoodAmountTax());
-
-            BigDecimal deliveryTax = calculatePercentage(deliveryCharge, taxConfig.getDeliveryFeeTax());
+            BigDecimal foodTax =
+                    calculatePercentage(itemTotal, taxConfig.getFoodAmountTax());
 
             BigDecimal platformFee = defaultValue(feeConfig.getPlatformFee());
 
