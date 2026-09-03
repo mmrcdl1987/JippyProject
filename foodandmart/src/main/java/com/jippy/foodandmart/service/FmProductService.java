@@ -29,6 +29,13 @@ public interface FmProductService {
             FmMapToProduct request
     );
 
+
+    /**
+     * Merchant edit — updates basic fields + merchant price,
+     * and edits/adds timings & variant options. Never deletes.
+     */
+    FmProductUpdateResponseDto merchantEditProduct(Integer productId, FmProductUpdateRequestDto request);
+
     // ============================================================
     // BULK UPLOAD VARIANTS
     // ============================================================
