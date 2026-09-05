@@ -99,77 +99,143 @@ public class CoOrderMapper {
 
         return orderItem;
     }
-
     /*
      * MAP PRICE BREAKUP
      */
-    public CoOrderPriceBreakup mapToPrice(CoPlaceOrderRequestDto requestDto, CoOrder order) {
+    public CoOrderPriceBreakup mapToPrice(
+            CoPlaceOrderRequestDto requestDto,
+            CoOrder order) {
 
-        System.out.println("==========================="+requestDto.getPackagingFeeToggle()+requestDto.getPlatformFeeToggle()+requestDto.getSurgeFeeToggle());
-        log.info("MAPPER_START | MAP_PRICE_BREAKUP | orderId={}", order.getOrderId());
+        log.info(
+                "MAPPER_START | MAP_PRICE_BREAKUP | orderId={}",
+                order.getOrderId()
+        );
 
         CoOrderPriceBreakup breakup = new CoOrderPriceBreakup();
 
         breakup.setOrder(order);
-
         breakup.setCouponId(requestDto.getCouponId());
 
-        breakup.setOrderAmount(defaultValue(requestDto.getOrderAmount()));
+        // ================= ORDER =================
 
-        if(requestDto.getPackagingFeeToggle()){
-            breakup.setPackagingFee(defaultValue(requestDto.getPackagingFee()));
-        } else {
-            breakup.setPackagingFee(BigDecimal.ZERO);
-        }
-
-        if(requestDto.getPlatformFeeToggle()){
-            breakup.setPlatformFee(defaultValue(requestDto.getPlatformFee()));
-        } else {
-            breakup.setPlatformFee(BigDecimal.ZERO);
-        }
-
-        if(requestDto.getSurgeFeeToggle()){
-            breakup.setSurgeFee(defaultValue(requestDto.getSurgeFee()));
-        } else {
-            breakup.setSurgeFee(BigDecimal.ZERO);
-        }
-
-
-        breakup.setPlatformFeeTax(defaultValue(requestDto.getPlatformFeeTax()));
-
-        breakup.setPackagingFeeTax(defaultValue(requestDto.getPackagingFeeTax()));
-
-        breakup.setSurgeFeeTax(defaultValue(requestDto.getSurgeFeeTax()));
-
-        breakup.setFoodTax(defaultValue(requestDto.getFoodTax()));
-
-        breakup.setTotalTax(defaultValue(requestDto.getTotalTax()));
-
-        breakup.setOrderTotalAmount(defaultValue(requestDto.getOrderTotalAmount()));
-
-        breakup.setCouponDiscount(defaultValue(requestDto.getCouponDiscount()));
-
-        breakup.setOrderAmountDiscounted(requestDto.getOrderAmount().
-                subtract(requestDto.getCouponDiscount() != null ? requestDto.getCouponDiscount() : BigDecimal.ZERO));
+        breakup.setOrderAmount(
+                defaultValue(requestDto.getOrderAmount())
+        );
 
         breakup.setOrderAmountDiscounted(
                 defaultValue(requestDto.getOrderAmountDiscounted())
         );
-        breakup.setWalletAmount(defaultValue(requestDto.getWalletAmount()));
+
+        // ================= FEES =================
+
+        breakup.setPackagingFee(
+                Boolean.TRUE.equals(requestDto.getPackagingFeeToggle())
+                        ? defaultValue(requestDto.getPackagingFee())
+                        : BigDecimal.ZERO
+        );
+
+        breakup.setPlatformFee(
+                Boolean.TRUE.equals(requestDto.getPlatformFeeToggle())
+                        ? defaultValue(requestDto.getPlatformFee())
+                        : BigDecimal.ZERO
+        );
+
+        breakup.setSurgeFee(
+                Boolean.TRUE.equals(requestDto.getSurgeFeeToggle())
+                        ? defaultValue(requestDto.getSurgeFee())
+                        : BigDecimal.ZERO
+        );
+
+        // ================= TAXES =================
+
+        breakup.setPlatformFeeTax(
+                defaultValue(requestDto.getPlatformFeeTax())
+        );
+
+        breakup.setPackagingFeeTax(
+                defaultValue(requestDto.getPackagingFeeTax())
+        );
+
+        breakup.setSurgeFeeTax(
+                defaultValue(requestDto.getSurgeFeeTax())
+        );
+
+        breakup.setFoodTax(
+                defaultValue(requestDto.getFoodTax())
+        );
+
+        breakup.setTotalTax(
+                defaultValue(requestDto.getTotalTax())
+        );
+
+        // ================= DELIVERY =================
+
+        breakup.setPickUpDistanceKms(
+                defaultValue(requestDto.getPickUpDistanceKms())
+        );
+
+        breakup.setDeliveryDistanceKms(
+                defaultValue(requestDto.getDeliveryDistanceKms())
+        );
+
+        breakup.setPickUpCharges(
+                defaultValue(requestDto.getPickUpCharges())
+        );
+
+        // Driver delivery fee
+        breakup.setDriverDeliveryFee(
+                defaultValue(requestDto.getDriverDeliveryFee())
+        );
+
+        // Customer delivery fee after free-distance benefit
+        breakup.setCustomerDeliveryFee(
+                defaultValue(requestDto.getCustomerDeliveryFee())
+        );
+
+        // Total delivery fee
+        breakup.setTotalDeliveryFee(
+                defaultValue(requestDto.getTotalDeliveryFee())
+        );
+
+        // GST applicable only on customer delivery fee
+        breakup.setCustomerDeliveryFeeTax(
+                defaultValue(requestDto.getCustomerDeliveryFeeTax())
+        );
+
+        // ================= PAYMENT =================
+
+        breakup.setCouponDiscount(
+                defaultValue(requestDto.getCouponDiscount())
+        );
+
+        breakup.setWalletAmount(
+                defaultValue(requestDto.getWalletAmount())
+        );
+
+        breakup.setTip(
+                defaultValue(requestDto.getTip())
+        );
+
+        // ================= FINAL =================
+
+        breakup.setOrderTotalAmount(
+                defaultValue(requestDto.getOrderTotalAmount())
+        );
 
         breakup.setCreatedAt(LocalDateTime.now());
 
-        breakup.setPickUpDistanceKms(requestDto.getPickUpDistanceKms());
-
-        breakup.setDeliveryDistanceKms(requestDto.getDeliveryDistanceKms());
-
-        breakup.setPickUpCharges(requestDto.getPickUpCharges());
-
-        breakup.setDeliveryFee(requestDto.getDeliveryFee());
-
-        breakup.setDeliveryFeeTax(requestDto.getDeliveryFeeTax());
-
-        log.info("MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={}", order.getOrderId());
+        log.info(
+                "MAPPER_END | MAP_PRICE_BREAKUP_SUCCESS | orderId={} | orderAmount={} | discountedAmount={} | driverDeliveryFee={} | customerDeliveryFee={} | customerDeliveryFeeTax={} | totalDeliveryFee={} | totalTax={} | orderTotalAmount={}",
+                order.getOrderId(),
+                breakup.getOrderAmount(),
+                breakup.getOrderAmountDiscounted(),
+                breakup.getDriverDeliveryFee(),
+                breakup.getCustomerDeliveryFee(),
+                breakup.getCustomerDeliveryFeeTax(),
+                breakup.getTotalDeliveryFee(),
+                breakup.getTotalTax(),
+                breakup.getOrderTotalAmount()
+        );
 
         return breakup;
     }

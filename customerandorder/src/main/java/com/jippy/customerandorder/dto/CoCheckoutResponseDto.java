@@ -12,11 +12,43 @@ public class CoCheckoutResponseDto {
 
     private List<CoCartItemResponseDto> items;
 
+    // ================= ORDER =================
+
     private BigDecimal itemTotal;
 
     private BigDecimal orderAmountDiscounted;
 
-    private BigDecimal deliveryCharge;
+    // ================= DRIVER DELIVERY =================
+
+    /**
+     * Delivery charge calculated by Driver service.
+     * This is informational/internal and is NOT included
+     * in customer payable amount.
+     */
+    private BigDecimal driverDeliveryCharge;
+
+    // ================= CUSTOMER DELIVERY =================
+
+    private BigDecimal deliveryDistanceKm;
+    /**
+     * Customer delivery charge before free-distance benefit.
+     */
+    private BigDecimal customerGrossDeliveryCharge;
+
+    /**
+     * Amount saved because of free delivery distance.
+     */
+    private BigDecimal customerFreeDistanceBenefit;
+
+    /**
+     * Final customer delivery charge after free-distance benefit.
+     */
+    private BigDecimal customerDeliveryCharge;
+
+    /**
+     * GST calculated on customerGrossDeliveryCharge.
+     */
+    private BigDecimal customerDeliveryTax;
 
     // ================= PLATFORM FEE =================
 
@@ -46,8 +78,16 @@ public class CoCheckoutResponseDto {
 
     private BigDecimal foodTax;
 
-    private BigDecimal deliveryTax;
-
+    /**
+     * Total GST/taxes applicable to the customer checkout.
+     *
+     * Includes:
+     * - Food GST
+     * - Customer delivery GST
+     * - Platform fee GST
+     * - Surge fee GST
+     * - Packaging fee GST
+     */
     private BigDecimal taxesAndCharges;
 
     // ================= DISCOUNT / TIP =================

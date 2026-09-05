@@ -846,7 +846,7 @@ public class GroupOrderServiceImpl implements GroupOrderService {
             orderRequestDto.setPaymentModeId(placeGroupOrderRequestDto.getPaymentModeId());
             orderRequestDto.setSurgeFee(totalSurgeFee);
             orderRequestDto.setPackagingFee(totalPackagingFee);
-            orderRequestDto.setDeliveryFee(totalDeliveryCharges);
+            orderRequestDto.setDriverDeliveryFee(totalDeliveryCharges);
             orderRequestDto.setTotalTax(totalGst);
             orderRequestDto.setOrderAmount(totalOrderAmount);
             orderRequestDto.setCreatedAt(LocalDateTime.now());
