@@ -193,6 +193,15 @@ public final class FmAppConstants {
     public static final String TYPE_EMPLOYEE =
             "EMPLOYEE";
 
+    /*
+     * Application policy types.
+     */
+    public static final String POLICY_TYPE_TERMS_AND_CONDITIONS =
+            "TERMSANDCONDITIONS";
+
+    public static final String POLICY_TYPE_PRIVACY_POLICY =
+            "PRIVACYPOLICY";
+
 
     // ============================================================
     // PRODUCT TYPES
