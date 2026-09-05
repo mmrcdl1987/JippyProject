@@ -14,10 +14,7 @@ import java.util.Optional;
 @Repository
 public interface DriverDeliveryChargeSettingsRepository
         extends JpaRepository<DriverDeliveryChargeSettings, Integer> {
-
-    // =========================================================
     // PICKUP SLAB
-    // =========================================================
 
     @Query("""
             SELECT d
@@ -31,43 +28,21 @@ public interface DriverDeliveryChargeSettingsRepository
     );
 
 
-    // =========================================================
-    // DELIVERY SLAB
-    // =========================================================
-//
-//    @Query("""
-//            SELECT d
-//            FROM DriverDeliveryChargeSettings d
-//            WHERE :deliveryDistance >= d.kmsRangeFrom
-//              AND :deliveryDistance < d.kmsRangeTo
-//              AND UPPER(d.chargeType) = 'DELIVERY'
-//            """)
-//    Optional<DriverDeliveryChargeSettings> findDeliverySlab(
-//            @Param("deliveryDistance") BigDecimal deliveryDistance
-//    );
-
-
 // DELIVERY SLAB
-// =========================================================
-
-    @Query("""
-        SELECT d
-        FROM DriverDeliveryChargeSettings d
-        WHERE :deliveryDistance >= d.kmsRangeFrom
-          AND :deliveryDistance < d.kmsRangeTo
-          AND UPPER(d.chargeType) = 'DELIVERY'
-          AND UPPER(d.status) = 'ACTIVE'
-        ORDER BY d.kmsRangeFrom
-        """)
-    Optional<DriverDeliveryChargeSettings> findDeliverySlab(
-            @Param("deliveryDistance") BigDecimal deliveryDistance
-    );
-
-
-    // =========================================================
+@Query("""
+    SELECT d
+    FROM DriverDeliveryChargeSettings d
+    WHERE :deliveryDistance >= d.kmsRangeFrom
+      AND :deliveryDistance < d.kmsRangeTo
+      AND UPPER(d.chargeType) = 'DELIVERY'
+      AND UPPER(d.status) = 'ACTIVE'
+    ORDER BY d.kmsRangeFrom
+    """)
+Optional<DriverDeliveryChargeSettings> findDeliverySlab(
+        @Param("deliveryDistance") BigDecimal deliveryDistance
+);
     // GET DELIVERY CHARGE SETTINGS
     // SERVER-SIDE PAGINATION
-    // =========================================================
 
     @Override
     Page<DriverDeliveryChargeSettings> findAll(

@@ -2,32 +2,23 @@ package com.jippy.driver.serviceImpl;
 
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
+import com.jippy.driver.dto.routing.RouteResult;
 import com.jippy.driver.entity.DriverDeliveryChargeSettings;
 import com.jippy.driver.exception.DriverBadRequestException;
+import com.jippy.driver.exception.GoogleRouteException;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverDeliveryChargeSettingsMapper;
 import com.jippy.driver.repositary.DriverDeliveryChargeSettingsRepository;
 import com.jippy.driver.service.DriverChargeService;
-import com.jippy.driver.utils.DistanceUtils;
+import com.jippy.driver.service.RoutingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
-
-import com.jippy.driver.dto.FMAreaDto;
-import com.jippy.driver.dto.FMCityDto;
-import com.jippy.driver.dto.FMStateDto;
-import org.springframework.http.ResponseEntity;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +30,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
     private final COFeignClient coFeignClient;
     private final DriverDeliveryChargeSettingsRepository chargeSettingsRepository;
     private final DriverDeliveryChargeSettingsMapper driverChargeMapper;
-
+    private final RoutingService routingService;
 
     // DRIVER PAYOUT CALCULATION
     @Override
@@ -82,6 +73,12 @@ public class DriverChargeServiceImpl implements DriverChargeService {
             log.info("SERVICE_END | CALCULATE_DRIVER_CHARGE_SUCCESS | totalDriverCharge={}", totalDriverCharge);
 
             return response;
+
+        } catch (GoogleRouteException ex) {
+
+            log.error("GOOGLE_ROUTE_EXCEPTION | CALCULATE_DRIVER_CHARGE_FAILED | error={}", ex.getMessage(), ex);
+
+            throw ex;
 
         } catch (DriverBadRequestException ex) {
 
@@ -146,126 +143,59 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 //    }
 
     @Override
-    public DeliveryChargeCalculationResponseDto calculateDeliveryCharge(
-            DeliveryChargeCalculationRequestDto requestDto) {
+    public DeliveryChargeCalculationResponseDto calculateDeliveryCharge(DeliveryChargeCalculationRequestDto requestDto) {
 
-        log.info(
-                "SERVICE_START | CALCULATE_DELIVERY_CHARGE | outletId={} | customerAddressId={}",
-                requestDto != null ? requestDto.getOutletId() : null,
-                requestDto != null ? requestDto.getCustomerAddressId() : null
-        );
+        log.info("SERVICE_START | CALCULATE_DELIVERY_CHARGE | outletId={} | customerAddressId={}", requestDto != null ? requestDto.getOutletId() : null, requestDto != null ? requestDto.getCustomerAddressId() : null);
 
         validateDeliveryChargeRequest(requestDto);
 
         try {
 
-            // =========================================================
+
             // STEP 1: GET OUTLET LOCATION
-            // =========================================================
 
-            OutletLocationResponseDto outletLocation =
-                    getOutletLocation(requestDto.getOutletId());
+            OutletLocationResponseDto outletLocation = getOutletLocation(requestDto.getOutletId());
 
-            // =========================================================
             // STEP 2: GET CUSTOMER LOCATION
-            // =========================================================
 
-            DriveCustomerLocationDto customerLocation =
-                    getCustomerLocation(requestDto.getCustomerAddressId());
-
-            // =========================================================
+            DriveCustomerLocationDto customerLocation = getCustomerLocation(requestDto.getCustomerAddressId());
             // STEP 3: CALCULATE DELIVERY DISTANCE
-            // =========================================================
 
-            BigDecimal deliveryDistanceKm = calculateDistance(
-                    outletLocation.getLatitude().doubleValue(),
-                    outletLocation.getLongitude().doubleValue(),
-                    customerLocation.getLatitude(),
-                    customerLocation.getLongitude()
-            );
+            BigDecimal deliveryDistanceKm = calculateDistance(outletLocation.getLatitude().doubleValue(), outletLocation.getLongitude().doubleValue(), customerLocation.getLatitude(), customerLocation.getLongitude());
 
-            log.info(
-                    "DELIVERY_DISTANCE_KM = {} | outletId={} | customerAddressId={}",
-                    deliveryDistanceKm,
-                    requestDto.getOutletId(),
-                    requestDto.getCustomerAddressId()
-            );
+            log.info("DELIVERY_DISTANCE_KM = {} | outletId={} | customerAddressId={}", deliveryDistanceKm, requestDto.getOutletId(), requestDto.getCustomerAddressId());
 
-            // =========================================================
             // STEP 4: FIND DELIVERY SLAB
-            // =========================================================
 
-            DriverDeliveryChargeSettings deliverySlab =
-                    getDeliverySlab(deliveryDistanceKm);
+            DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(deliveryDistanceKm);
 
-            // =========================================================
             // STEP 5: CALCULATE DELIVERY CHARGE
-            // =========================================================
 
-            BigDecimal deliveryCharge = calculateCharge(
-                    deliveryDistanceKm,
-                    deliverySlab.getUnitPricePerKm()
-            );
-
-            // =========================================================
+            BigDecimal deliveryCharge = calculateCharge(deliveryDistanceKm, deliverySlab.getUnitPricePerKm());
             // STEP 6: CALCULATE TAX
-            // =========================================================
 
             BigDecimal taxAmount = calculateTax(deliveryCharge);
-
-            // =========================================================
             // STEP 7: TOTAL DELIVERY CHARGE
-            // =========================================================
+            BigDecimal totalDeliveryCharge = deliveryCharge.add(taxAmount).setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal totalDeliveryCharge = deliveryCharge
-                    .add(taxAmount)
-                    .setScale(2, RoundingMode.HALF_UP);
-
-            // =========================================================
             // STEP 8: BUILD RESPONSE
-            // =========================================================
+            DeliveryChargeCalculationResponseDto response = driverChargeMapper.mapToDeliveryChargeResponse(deliveryDistanceKm, deliveryCharge, taxAmount, totalDeliveryCharge, isCodAvailable(requestDto.getOrderAmount()));
 
-            DeliveryChargeCalculationResponseDto response =
-                    driverChargeMapper.mapToDeliveryChargeResponse(
-                            deliveryDistanceKm,
-                            deliveryCharge,
-                            taxAmount,
-                            totalDeliveryCharge,
-                            isCodAvailable(requestDto.getOrderAmount())
-                    );
-
-            log.info(
-                    "SERVICE_END | CALCULATE_DELIVERY_CHARGE_SUCCESS | " +
-                            "distanceKm={} | deliveryCharge={} | taxAmount={} | totalDeliveryCharge={}",
-                    deliveryDistanceKm,
-                    deliveryCharge,
-                    taxAmount,
-                    totalDeliveryCharge
-            );
+            log.info("SERVICE_END | CALCULATE_DELIVERY_CHARGE_SUCCESS | " + "distanceKm={} | deliveryCharge={} | taxAmount={} | totalDeliveryCharge={}", deliveryDistanceKm, deliveryCharge, taxAmount, totalDeliveryCharge);
 
             return response;
 
         } catch (DriverBadRequestException ex) {
 
-            log.error(
-                    "BUSINESS_EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}",
-                    ex.getMessage(),
-                    ex
-            );
+            log.error("BUSINESS_EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}", ex.getMessage(), ex);
 
             throw ex;
 
         } catch (Exception ex) {
 
-            log.error(
-                    "EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}",
-                    ex.getMessage(),
-                    ex
-            );
+            log.error("EXCEPTION | CALCULATE_DELIVERY_CHARGE_FAILED | error={}", ex.getMessage(), ex);
 
-            throw new DriverBadRequestException(
-                    DConstants.MSG_DISTANCE_CALCULATION_FAILED
-            );
+            throw new DriverBadRequestException(DConstants.MSG_DISTANCE_CALCULATION_FAILED);
         }
     }
 
@@ -363,12 +293,11 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         return customerLocation;
     }
 
-
     private BigDecimal calculateDistance(double sourceLatitude, double sourceLongitude, double destinationLatitude, double destinationLongitude) {
 
-        double distance = DistanceUtils.calculateDistance(sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude);
+        RouteResult routeResult = routingService.calculateRoute(sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude);
 
-        return BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP);
+        return routeResult.getDistanceKm();
     }
 
 

@@ -23,7 +23,6 @@ public class CoCartUpdateRequestDto {
     @Min(value = 1, message = "Product id must be greater than zero")
     private Integer productId;
 
-    @NotEmpty(message = "At least one variant is required")
     @Valid
     private List<CoCartVariantDto> variants;
 }
