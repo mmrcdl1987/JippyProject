@@ -4,14 +4,17 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.CoOrderSettingsRequestDto;
 import com.jippy.customerandorder.dto.CoOrderSettingsResponseDto;
-import com.jippy.customerandorder.dto.CoPaymentModesDto;
+import com.jippy.customerandorder.dto.CoPaymentModeResponse;
+import com.jippy.customerandorder.dto.CoPaymentRequest;
 import com.jippy.customerandorder.entity.CoOrderSettings;
 import com.jippy.customerandorder.entity.CoPaymentModes;
+import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.exception.CoOrderSettingsException;
 import com.jippy.customerandorder.iservice.IOrderSettingsService;
 import com.jippy.customerandorder.mapper.CoOrderSettingsMapper;
 import com.jippy.customerandorder.repository.CoOrderSettingsRepository;
 import com.jippy.customerandorder.repository.CoPaymentModeRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -219,7 +222,7 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
     }
 
     @Override
-    public CoPaymentModesDto getPaymentModeById(Integer paymentModeId) {
+    public CoPaymentModeResponse getPaymentModeById(Integer paymentModeId) {
 
         log.info("GET PAYMENT MODE BY ID SERVICE START | paymentModeId={}", paymentModeId);
 
@@ -229,7 +232,7 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
            // return new CoOrderSettingsException("Payment mode not found with id: " + paymentModeId);
         }
 
-        CoPaymentModesDto paymentModesDto = new CoPaymentModesDto();
+        CoPaymentModeResponse paymentModesDto = new CoPaymentModeResponse();
 
         if (coPaymentModes.isEmpty()) {
             return paymentModesDto;
@@ -241,7 +244,7 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
     }
 
     @Override
-    public List<CoPaymentModesDto> getActivePaymentModes() {
+    public List<CoPaymentModeResponse> getActivePaymentModes() {
 
         log.info("GET ACTIVE PAYMENT MODES SERVICE START");
 
@@ -254,11 +257,11 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
             throw new CoOrderSettingsException("No active payment mode found");
         }
 
-        List<CoPaymentModesDto> paymentModesDtoList = new ArrayList<>();
+        List<CoPaymentModeResponse> paymentModesDtoList = new ArrayList<>();
 
         for(CoPaymentModes paymentModes: activePaymentModes) {
 
-            CoPaymentModesDto paymentModesDto = new CoPaymentModesDto();
+            CoPaymentModeResponse paymentModesDto = new CoPaymentModeResponse();
             paymentModesDto.setPaymentMode(paymentModes.getPaymentMode());
             paymentModesDto.setPaymentModeId(paymentModes.getPaymentModeId());
             paymentModesDto.setIsActive(paymentModes.getIsActive());
@@ -271,5 +274,164 @@ public class CoOrderSettingsServiceImpl implements IOrderSettingsService {
         return paymentModesDtoList;
     }
 
+    /*
+     * CREATE
+     */
+    public CoPaymentModeResponse create(
+            CoPaymentRequest request,
+            Integer userId
+    ) {
+
+        String paymentMode = request.getPaymentMode().trim().toUpperCase();
+
+        /*
+         * Check duplicate active payment mode
+         */
+        if (coPaymentModeRepository
+                .existsByPaymentModeAndIsActive(paymentMode, "Y")) {
+
+            throw new RuntimeException(
+                    "Payment mode already exists"
+            );
+        }
+
+        CoPaymentModes paymentModeEntity = CoPaymentModes.builder()
+                .paymentMode(paymentMode)
+                .isActive("Y")
+                .createdAt(LocalDateTime.now())
+                .createdBy(userId)
+                .build();
+
+        CoPaymentModes saved =
+                coPaymentModeRepository.save(paymentModeEntity);
+
+        return mapToResponse(saved);
+    }
+
+
+    @Override
+    @Transactional
+    public CoPaymentModeResponse update(
+            Integer paymentModeId,
+            CoPaymentRequest request,
+            Integer userId
+    ) {
+
+        CoPaymentModes paymentMode = coPaymentModeRepository
+                .findById(paymentModeId)
+                .orElseThrow(() ->
+                        new CoBusinessException("Payment mode not found")
+                );
+
+        String newPaymentMode =
+                request.getPaymentMode()
+                        .trim()
+                        .toUpperCase();
+
+        String activeStatus =
+                request.getIsActive()
+                        .trim()
+                        .toUpperCase();
+
+        if (!activeStatus.equals("Y") && !activeStatus.equals("N")) {
+            throw new CoBusinessException(
+                    "isActive must be Y or N"
+            );
+        }
+
+        /*
+         * Check duplicate active payment mode
+         */
+        if ("Y".equals(activeStatus)) {
+
+            coPaymentModeRepository
+                    .findByPaymentModeAndIsActive(
+                            newPaymentMode,
+                            "Y"
+                    )
+                    .ifPresent(existing -> {
+
+                        if (!existing.getPaymentModeId()
+                                .equals(paymentModeId)) {
+
+                            throw new CoBusinessException(
+                                    "Payment mode already exists"
+                            );
+                        }
+                    });
+        }
+
+        /*
+         * UPDATE
+         */
+        paymentMode.setPaymentMode(newPaymentMode);
+        paymentMode.setIsActive(activeStatus);
+        paymentMode.setUpdatedAt(LocalDateTime.now());
+        paymentMode.setUpdatedBy(userId);
+
+        CoPaymentModes updated =
+                coPaymentModeRepository.save(paymentMode);
+
+        return mapToResponse(updated);
+    }
+
+    /*
+     * SOFT DELETE
+     */
+    public void softDelete(Integer paymentModeId, Integer userId) {
+
+        CoPaymentModes paymentMode =
+                coPaymentModeRepository.findById(paymentModeId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Payment mode not found"
+                                )
+                        );
+
+        /*
+         * Already inactive
+         */
+        if ("N".equals(paymentMode.getIsActive())) {
+
+            throw new RuntimeException(
+                    "Payment mode is already inactive"
+            );
+        }
+
+        /*
+         * SOFT DELETE
+         */
+        paymentMode.setIsActive("N");
+        paymentMode.setUpdatedAt(LocalDateTime.now());
+        paymentMode.setUpdatedBy(userId);
+
+        coPaymentModeRepository.save(paymentMode);
+    }
+
+    @Transactional
+    public List<CoPaymentModeResponse> getAllPaymentModes() {
+
+        return coPaymentModeRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+
+    /*
+     * MAPPER
+     */
+    private CoPaymentModeResponse mapToResponse(CoPaymentModes paymentMode) {
+
+        return new CoPaymentModeResponse(
+                paymentMode.getPaymentModeId(),
+                paymentMode.getPaymentMode(),
+                paymentMode.getIsActive(),
+                paymentMode.getCreatedAt(),
+                paymentMode.getCreatedBy(),
+                paymentMode.getUpdatedAt(),
+                paymentMode.getUpdatedBy()
+        );
+    }
 
 }

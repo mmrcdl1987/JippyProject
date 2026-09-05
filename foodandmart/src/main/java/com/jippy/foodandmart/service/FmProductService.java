@@ -36,6 +36,17 @@ public interface FmProductService {
      */
     FmProductUpdateResponseDto merchantEditProduct(Integer productId, FmProductUpdateRequestDto request);
 
+    /**
+     * Soft deletes a variant option belonging to a product.
+     */
+    void deleteProductVariantOption(Integer productId, Integer optionId);
+
+    /**
+     * Removes all variant options for a group from a product.
+     * The shared group and group values remain active for other products.
+     */
+    void deleteProductVariantGroup(Integer productId, Integer groupId);
+
     // ============================================================
     // BULK UPLOAD VARIANTS
     // ============================================================
