@@ -476,6 +476,85 @@ public class FmProductServiceImpl implements FmProductService {
         return getProductById(productId);
     }
 
+    @Override
+    public void deleteProductVariantOption(Integer productId, Integer optionId) {
+        log.info("[PRODUCT] DELETE_VARIANT_OPTION_START | productId={} | optionId={}",
+                productId, optionId);
+
+        productRepository.findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id : " + productId));
+
+        FmProductVariantOption option =
+                variantOptionRepository
+                        .findByProductVariantOptionsIdAndProductIdAndIsActiveTrue(
+                                optionId, productId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Variant Option not found for product : " + optionId));
+
+        option.setIsActive(Boolean.FALSE);
+        option.setUpdatedBy(SYSTEM_USER);
+        variantOptionRepository.save(option);
+
+        invalidateProductCache(productId);
+        log.info("[PRODUCT] DELETE_VARIANT_OPTION_SUCCESS | productId={} | optionId={}",
+                productId, optionId);
+    }
+
+    @Override
+    public void deleteProductVariantGroup(Integer productId, Integer groupId) {
+        log.info("[PRODUCT] DELETE_VARIANT_GROUP_START | productId={} | groupId={}",
+                productId, groupId);
+
+        productRepository.findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id : " + productId));
+
+        variantGroupRepository
+                .findByProductVariantGroupsIdAndIsActiveTrue(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Variant Group not found with id : " + groupId));
+
+        List<FmProductVariantOption> productOptions =
+                variantOptionRepository
+                        .findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(
+                                productId);
+
+        int deletedCount = 0;
+        for (FmProductVariantOption option : productOptions) {
+            FmProductVariantGroupValue value =
+                    variantGroupValueRepository
+                            .findByProductVariantGroupValuesIdAndIsActiveTrue(
+                                    option.getProductVariantGroupValuesId())
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Variant Value not found : "
+                                            + option.getProductVariantGroupValuesId()));
+
+            if (groupId.equals(value.getProductVariantGroupsId())) {
+                option.setIsActive(Boolean.FALSE);
+                option.setUpdatedBy(SYSTEM_USER);
+                variantOptionRepository.save(option);
+                deletedCount++;
+            }
+        }
+
+        if (deletedCount == 0) {
+            throw new ResourceNotFoundException(
+                    "Variant Group is not mapped to product : " + groupId);
+        }
+
+        invalidateProductCache(productId);
+        log.info("[PRODUCT] DELETE_VARIANT_GROUP_SUCCESS | productId={} | groupId={} | optionCount={}",
+                productId, groupId, deletedCount);
+    }
+
+    private void invalidateProductCache(Integer productId) {
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        if (outletId != null) {
+            cacheInvalidateService.invalidateCache(outletId);
+        }
+    }
+
     /**
      * Edit/add variant options. Never deletes. Optimized to prevent queries inside loops.
      */
@@ -2800,5 +2879,4 @@ public class FmProductServiceImpl implements FmProductService {
 
 
 }
-
 

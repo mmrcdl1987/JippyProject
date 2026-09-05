@@ -62,6 +62,46 @@ public class FmProductController {
         return ResponseEntity.ok(productMappingService.merchantEditProduct(productId, request));
     }
 
+    /**
+     * DELETE /api/fm/products/updateproduct/{productId}/variant-options/{optionId}
+     *
+     * Removes one variant option from this product without deleting shared
+     * variant group/value catalogue records.
+     */
+    @DeleteMapping("/updateproduct/{productId}/variant-options/{optionId}")
+    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantOption(
+            @PathVariable Integer productId,
+            @PathVariable Integer optionId) {
+
+        log.info("[PRODUCT] DELETE variant option. ProductId={}, OptionId={}",
+                productId, optionId);
+
+        productMappingService.deleteProductVariantOption(productId, optionId);
+
+        return ResponseEntity.ok(FmApiResponse.success(
+                "Product Variant Option deleted successfully.", null));
+    }
+
+    /**
+     * DELETE /api/fm/products/updateproduct/{productId}/variant-groups/{groupId}
+     *
+     * Removes every variant option in the group from this product. The shared
+     * variant group and group values are not deleted.
+     */
+    @DeleteMapping("/updateproduct/{productId}/variant-groups/{groupId}")
+    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantGroup(
+            @PathVariable Integer productId,
+            @PathVariable Integer groupId) {
+
+        log.info("[PRODUCT] DELETE variant group. ProductId={}, GroupId={}",
+                productId, groupId);
+
+        productMappingService.deleteProductVariantGroup(productId, groupId);
+
+        return ResponseEntity.ok(FmApiResponse.success(
+                "Product Variant Group deleted successfully.", null));
+    }
+
 
 
 

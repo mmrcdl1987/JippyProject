@@ -13,4 +13,14 @@ public interface CoPaymentModeRepository extends JpaRepository<CoPaymentModes, I
     Optional<CoPaymentModes> findByPaymentModeId(Integer paymentModeId);
 
     List<CoPaymentModes> findByIsActive(String isActive);
+
+    Optional<CoPaymentModes> findByPaymentModeAndIsActive(
+            String paymentMode,
+            String isActive
+    );
+
+    boolean existsByPaymentModeAndIsActive(
+            String paymentMode,
+            String isActive
+    );
 }

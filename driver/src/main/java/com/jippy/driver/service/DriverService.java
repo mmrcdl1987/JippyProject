@@ -3,13 +3,18 @@ package com.jippy.driver.service;
 
 import com.jippy.driver.dto.*;
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public interface DriverService {
 
-    DriverDto postDriverDetails(DriverDto dto);
+    DriverDto postDriverDetails(DriverDto dto,
+                                MultipartFile aadharDocument,
+                                MultipartFile panDocument,
+                                MultipartFile drivingLicenseDocument,
+                                MultipartFile rcCopyDocument);
 
     DriverDto getDriverDetails(Integer driverId);
 
@@ -24,7 +29,11 @@ public interface DriverService {
 
     String createZones(DriverZoneDto zoneDto);
 
-    DriverDto updateDriverDetails(Integer driverId, DriverDto dto);
+    DriverDto updateDriverDetails(Integer driverId, DriverDto dto,
+                                  MultipartFile aadharDocument,
+                                  MultipartFile panDocument,
+                                  MultipartFile drivingLicenseDocument,
+                                  MultipartFile rcCopyDocument);
 
     DriverEarningsDto fetchEarnings(Integer driverId, LocalDate date);
 

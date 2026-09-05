@@ -1,8 +1,10 @@
 package com.jippy.driver.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class DriverDto {
@@ -83,6 +85,11 @@ public class DriverDto {
     @Pattern(regexp = "^\\d{12}$", message = "Aadhaar number must contain exactly 12 digits")
     private String aadharNumber;
 
+    @Schema(description = "Driver PAN number.", example = "ABCDE1234F")
+    @NotBlank(message = "PAN number is required")
+    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "PAN number must be valid")
+    private String panNumber;
+
     @Schema(description = "Driver driving license number.", example = "TS0920200012345")
     @NotBlank(message = "Driving license number is required ,Ex: TS0920200012345 , Driving Licence format")
 //    @Pattern(regexp = "^[A-Z]{2}[0-9]{2}[0-9]{11}$", message = "Invalid driving license number format")
@@ -93,6 +100,38 @@ public class DriverDto {
 //    @NotBlank(message = "RC copy Number is required , Ex: TS09EF5678  --RC ")
 //    @Pattern(regexp = "^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$", message = "Invalid RC number format")
     private String rcCopy;
+
+@Schema(description = "Aadhar document URL.", accessMode = Schema.AccessMode.READ_ONLY)
+private String aadharDocUrl;
+
+@Schema(description = "PAN document URL.", accessMode = Schema.AccessMode.READ_ONLY)
+private String panDocUrl;
+
+@Schema(description = "Driving license document URL.", accessMode = Schema.AccessMode.READ_ONLY)
+private String drivingLicenseDocUrl;
+
+@Schema(description = "RC copy document URL.", accessMode = Schema.AccessMode.READ_ONLY)
+private String rcCopyDocUrl;
+
+@Schema(description = "Aadhar document file (PDF, JPG, PNG)",
+        accessMode = Schema.AccessMode.WRITE_ONLY)
+@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+private MultipartFile aadharDocument;
+
+@Schema(description = "PAN document file (PDF, JPG, PNG)",
+        accessMode = Schema.AccessMode.WRITE_ONLY)
+@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+private MultipartFile panDocument;
+
+@Schema(description = "Driving license document file (PDF, JPG, PNG)",
+        accessMode = Schema.AccessMode.WRITE_ONLY)
+@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+private MultipartFile drivingLicenseDocument;
+
+@Schema(description = "RC copy document file (PDF, JPG, PNG)",
+        accessMode = Schema.AccessMode.WRITE_ONLY)
+@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+private MultipartFile rcCopyDocument;
 
     // Address fields in FM
     @Schema(description = "Building or house number.", example = "10-2-15")

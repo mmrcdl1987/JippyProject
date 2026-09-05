@@ -20,6 +20,7 @@
     import org.springframework.validation.annotation.Validated;
     import org.springframework.web.bind.annotation.*;
     import org.springframework.web.bind.annotation.ModelAttribute;
+    import org.springframework.web.multipart.MultipartFile;
 
     import java.time.LocalDate;
     import java.util.List;
@@ -49,11 +50,16 @@
         @ApiResponse(responseCode = "404", description = "Referenced resource not found.")
         @ApiResponse(responseCode = "500", description = "Internal Server Error.")
         public ResponseEntity<DriverDto> postDriverDetails(
-                @Valid @ModelAttribute DriverDto dto) {
+                @Valid @ModelAttribute DriverDto dto,
+                @RequestPart(value = "aadharDocument", required = false) MultipartFile aadharDocument,
+                @RequestPart(value = "panDocument", required = false) MultipartFile panDocument,
+                @RequestPart(value = "drivingLicenseDocument", required = false) MultipartFile drivingLicenseDocument,
+                @RequestPart(value = "rcCopyDocument", required = false) MultipartFile rcCopyDocument) {
 
             log.info("POST API called that created driver:");
 
-            return ResponseEntity.ok(driverService.postDriverDetails(dto));
+            return ResponseEntity.ok(driverService.postDriverDetails(
+                    dto, aadharDocument, panDocument, drivingLicenseDocument, rcCopyDocument));
         }
 
         //    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
@@ -94,11 +100,16 @@
         public ResponseEntity<DriverDto> updateDriverDetails(
 
                 @RequestParam Integer driverId,
-                @ModelAttribute DriverDto dto) {
+                @ModelAttribute DriverDto dto,
+                @RequestPart(value = "aadharDocument", required = false) MultipartFile aadharDocument,
+                @RequestPart(value = "panDocument", required = false) MultipartFile panDocument,
+                @RequestPart(value = "drivingLicenseDocument", required = false) MultipartFile drivingLicenseDocument,
+                @RequestPart(value = "rcCopyDocument", required = false) MultipartFile rcCopyDocument) {
 
             log.info("Updating driver with id: {}", driverId);
 
-            return ResponseEntity.ok(driverService.updateDriverDetails(driverId, dto));
+            return ResponseEntity.ok(driverService.updateDriverDetails(
+                    driverId, dto, aadharDocument, panDocument, drivingLicenseDocument, rcCopyDocument));
         }
 
         @PostMapping("/createZones")
@@ -173,15 +184,21 @@
             return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
         }
 
-        @PostMapping(path = "/saveOrUpdateProfilePic", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-        @Operation(summary = "Upload Profile Pic", description = "Merchant, Driver, Customer and Outlet can upload their profile picture. " + "The file is stored in AWS S3 and the generated URL is stored in the database.")
+        @PostMapping(path = "/saveOrUpdateProfilePic",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @Operation(summary = "Upload Profile Pic", description = "Merchant,Driver,Customer can upload their profile pic using this API and the file will be stored in AWS S3 bucket and the URL of the file will be stored in database and also return the URL of the file in response")
         public ResponseEntity<DriverResponseDto> saveOrUpdateProfilePic(@ModelAttribute UploadProfilePicDto uploadProfilePicDto) {
 
             log.info("Upload Profile Pic API called for user id: {}", uploadProfilePicDto.getUserId());
-
             DriverResponseDto response = driverService.saveOrUpdateProfilePic(uploadProfilePicDto);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        }
+
+        @PutMapping("/readyToAcceptIsToggle")
+        @Operation(summary = "Toggle ready-to-accept orders", description = "Enables or disables a driver's availability to accept orders")
+        public ResponseEntity<DriverResponseDto> readyToAcceptIsToggle(@Valid @RequestBody DriverReadyToAcceptRequestDto requestDto) {
+            log.info("Ready to accept toggle API called for driver id: {}", requestDto.getDriverId());
+            return ResponseEntity.ok(driverService.readyToAcceptIsToggle(requestDto));
         }
 
 //        used for forget password api in Fm

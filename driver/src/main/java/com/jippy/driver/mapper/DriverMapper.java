@@ -67,13 +67,15 @@ public class DriverMapper {
         }
 
         // If all KYC fields are empty, skip creation
-        if (dto.getAadharNumber() == null && dto.getDrivingLicenseNumber() == null && dto.getRcCopy() == null) {
+        if (dto.getAadharNumber() == null && dto.getPanNumber() == null
+                && dto.getDrivingLicenseNumber() == null && dto.getRcCopy() == null) {
             return null;
         }
 
         // Create KYC object and set values
         DriverKyc kyc = new DriverKyc();
         kyc.setAadharNumber(dto.getAadharNumber());
+        kyc.setPanNumber(dto.getPanNumber());
         kyc.setDrivingLicenseNumber(dto.getDrivingLicenseNumber());
         kyc.setRcCopy(dto.getRcCopy());
         kyc.setCreatedAt(LocalDateTime.now());
@@ -118,8 +120,13 @@ public class DriverMapper {
         if (driver.getDriverKyc() != null) {
             dto.setDriverKycId(driver.getDriverKyc().getDriverKycId());
             dto.setAadharNumber(driver.getDriverKyc().getAadharNumber());
+            dto.setPanNumber(driver.getDriverKyc().getPanNumber());
             dto.setDrivingLicenseNumber(driver.getDriverKyc().getDrivingLicenseNumber());
             dto.setRcCopy(driver.getDriverKyc().getRcCopy());
+            dto.setAadharDocUrl(driver.getDriverKyc().getAadharDocUrl());
+            dto.setPanDocUrl(driver.getDriverKyc().getPanDocUrl());
+            dto.setDrivingLicenseDocUrl(driver.getDriverKyc().getDrivingLicenseDocUrl());
+            dto.setRcCopyDocUrl(driver.getDriverKyc().getRcCopyDocUrl());
         }
 
 //        set address through feign client response
@@ -487,12 +494,14 @@ public class DriverMapper {
         if (driver.getDriverKyc() != null) {
 
             dto.setDriverKycId(driver.getDriverKyc().getDriverKycId());
-
             dto.setAadharNumber(driver.getDriverKyc().getAadharNumber());
-
+            dto.setPanNumber(driver.getDriverKyc().getPanNumber());
             dto.setDrivingLicenseNumber(driver.getDriverKyc().getDrivingLicenseNumber());
-
             dto.setRcCopy(driver.getDriverKyc().getRcCopy());
+            dto.setAadharDocUrl(driver.getDriverKyc().getAadharDocUrl());
+            dto.setPanDocUrl(driver.getDriverKyc().getPanDocUrl());
+            dto.setDrivingLicenseDocUrl(driver.getDriverKyc().getDrivingLicenseDocUrl());
+            dto.setRcCopyDocUrl(driver.getDriverKyc().getRcCopyDocUrl());
         }
 
         // Driver Address details from FM
