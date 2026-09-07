@@ -36,7 +36,7 @@
         private final DriverService driverService;
         private final DriverLocationService driverLocationService;
 
-        @PostMapping(path = "/postDriverDetails", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PostMapping(path = "/postDriverDetails")
         @Operation(
                 summary = "Create Driver",
                 description = "Creates a new Driver along with Driver KYC, Address, User Account, "
@@ -50,16 +50,11 @@
         @ApiResponse(responseCode = "404", description = "Referenced resource not found.")
         @ApiResponse(responseCode = "500", description = "Internal Server Error.")
         public ResponseEntity<DriverDto> postDriverDetails(
-                @Valid @ModelAttribute DriverDto dto,
-                @RequestPart(value = "aadharDocument", required = false) MultipartFile aadharDocument,
-                @RequestPart(value = "panDocument", required = false) MultipartFile panDocument,
-                @RequestPart(value = "drivingLicenseDocument", required = false) MultipartFile drivingLicenseDocument,
-                @RequestPart(value = "rcCopyDocument", required = false) MultipartFile rcCopyDocument) {
+                @Valid @RequestBody DriverDto dto) {
 
             log.info("POST API called that created driver:");
 
-            return ResponseEntity.ok(driverService.postDriverDetails(
-                    dto, aadharDocument, panDocument, drivingLicenseDocument, rcCopyDocument));
+            return ResponseEntity.ok(driverService.postDriverDetails(dto));
         }
 
         //    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
@@ -95,21 +90,17 @@
 
         //    update driver details ,driver kyc from this this(Co Microservice)
     //    and address Details from (FM microservices)
-        @PutMapping(path = "/updateDriverDetails", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PutMapping(path = "/updateDriverDetails")
         @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields. Supports document uploads for KYC verification.")
         public ResponseEntity<DriverDto> updateDriverDetails(
 
                 @RequestParam Integer driverId,
-                @ModelAttribute DriverDto dto,
-                @RequestPart(value = "aadharDocument", required = false) MultipartFile aadharDocument,
-                @RequestPart(value = "panDocument", required = false) MultipartFile panDocument,
-                @RequestPart(value = "drivingLicenseDocument", required = false) MultipartFile drivingLicenseDocument,
-                @RequestPart(value = "rcCopyDocument", required = false) MultipartFile rcCopyDocument) {
+                @RequestBody DriverDto dto) {
 
             log.info("Updating driver with id: {}", driverId);
 
             return ResponseEntity.ok(driverService.updateDriverDetails(
-                    driverId, dto, aadharDocument, panDocument, drivingLicenseDocument, rcCopyDocument));
+                    driverId, dto));
         }
 
         @PostMapping("/createZones")
@@ -294,6 +285,14 @@
             log.info("Driver approved successfully. Driver Id : {}", driverId);
 
             return ResponseEntity.ok().build();
+        }
+
+        @PutMapping("/updateDriverDocuments")
+        public String updateDriverDocuments(@RequestBody DriverDocumentUpdateDTO driverDocumentUpdateDTO) {
+
+            log.info("Received request to update Driver documents Driver Id : {}", driverDocumentUpdateDTO.getDriverId());
+
+            return driverService.updateDriverDocuments(driverDocumentUpdateDTO);
         }
 
 

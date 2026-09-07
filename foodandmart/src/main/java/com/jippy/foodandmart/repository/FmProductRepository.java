@@ -749,6 +749,14 @@ public interface FmProductRepository
     List<FmOrderProductItemsForMerchantProjection> getOrderProductItemsForMerchant(
             @Param("productIds") List<Integer> productIds,
             @Param("productVariantIds") List<Integer> productVariantIds);
+
+    @Modifying
+    @Query(value = """
+            UPDATE jippy_fm.products
+            SET is_active = :isActive
+            WHERE product_id = :productId
+            """, nativeQuery = true)
+    int updateProductOrVariantStatus(@Param("productId") Integer productId, @Param("isActive") String isActive);
 }
 
 

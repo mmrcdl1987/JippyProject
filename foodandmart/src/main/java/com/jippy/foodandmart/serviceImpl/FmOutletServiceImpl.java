@@ -8,8 +8,10 @@ import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
+import com.jippy.foodandmart.exception.ImageValidationException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
+import com.jippy.foodandmart.feignClients.DriverFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.mapper.FmPublicOutletMapper;
@@ -82,18 +84,17 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final EmailService emailService;
     private final CacheInvalidateServiceImpl cacheInvalidateService;
     private final IFmApprovalRequestService approvalRequestService;
+    private final DriverFeignClient driverFeignClient;
+
+//    @Override
+//    @Transactional
+//    public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto) {
+//        return createOutlet(dto, null, null, null, null);
+//    }
 
     @Override
     @Transactional
     public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto) {
-        return createOutlet(dto, null, null, null, null);
-    }
-
-    @Override
-    @Transactional
-    public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto, MultipartFile aadharFile,
-                                                   MultipartFile panFile, MultipartFile fssaiFile,
-                                                   MultipartFile gstFile) {
 
         log.info("Creating new outlet : {}", dto.getOutletName());
 
@@ -162,7 +163,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Save Outlet KYC Details.
          */
-        saveOutletKyc(dto, outlet.getOutletId(), aadharFile, panFile, fssaiFile, gstFile);
+        saveOutletKyc(dto, outlet.getOutletId());
 
         /**
          * Create Approval Request for the newly created Outlet.
@@ -275,18 +276,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
     }
 
-    //---------------------------------------------------------------------------------------
-    @Override
-    @Transactional
-    public FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto) {
-        return updateOutletDetailsByMerchant(outletId, dto, null, null, null, null);
-    }
 
     @Override
     @Transactional
-    public FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto,
-                                                                   MultipartFile aadharFile, MultipartFile panFile,
-                                                                   MultipartFile fssaiFile, MultipartFile gstFile) {
+    public FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto) {
 
         log.info("Updating outlet details for outletId : {}", outletId);
 
@@ -367,14 +360,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Update Outlet KYC.
          */
-        upsertOutletKyc(
-                outletId,
-                dto.getAadharNumber(),
-                dto.getPanNumber(),
-                dto.getFssaiNumber(),
-                dto.getGstNumber(),
-                aadharFile, panFile, fssaiFile, gstFile
-        );
+        Optional<FmUserKyc> optionalFmUserKyc = userKycRepository.findByEntityIdAndEntityType(
+                outletId, FmAppConstants.TYPE_OUTLET);
+        FmUserKyc savUserKyc = optionalFmUserKyc.get();
+
+        log.info("=============================================" + savUserKyc.getKycId());
+        FmOutletMapper.updateOutletKycEntity(savUserKyc, dto);
+        userKycRepository.save(savUserKyc);
 
         log.info("Outlet KYC details updated successfully.");
 
@@ -403,58 +395,47 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Return updated response.
          */
         FmUpdateOutletRequestDTO response = FmOutletMapper.toUpdateResponseDto(dto, outlet);
-        FmUserKyc savedKyc = userKycRepository.findByEntityIdAndEntityType(
-                outletId, FmAppConstants.TYPE_OUTLET).orElse(null);
-        if (savedKyc != null) {
-            response.setAadhaarNumberUrl(savedKyc.getAadhaarNumberUrl());
-            response.setPanNumberUrl(savedKyc.getPanNumberUrl());
-            response.setFssaiNumberUrl(savedKyc.getFssaiNumberUrl());
-            response.setGstNumberUrl(savedKyc.getGstNumberUrl());
-        }
+
+//        if (savedKyc != null) {
+//            response.setAadhaarNumberUrl(savedKyc.getAadhaarNumberUrl());
+//            response.setPanNumberUrl(savedKyc.getPanNumberUrl());
+//            response.setFssaiNumberUrl(savedKyc.getFssaiNumberUrl());
+//            response.setGstNumberUrl(savedKyc.getGstNumberUrl());
+//        }
         return response;
     }
 
 
-    /**
-     * Saves Outlet KYC Details.
-     * <p>
-     * Every newly created outlet stores its
-     * FSSAI and GST details in user_kyc table.
-     *
-     * @param dto      Outlet Request DTO.
-     * @param outletId Newly created Outlet Id.
-     */
-    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId,
-                               MultipartFile aadharFile, MultipartFile panFile,
-                               MultipartFile fssaiFile, MultipartFile gstFile) {
+//    /**
+//     * Saves Outlet KYC Details.
+//     * <p>
+//     * Every newly created outlet stores its
+//     * FSSAI and GST details in user_kyc table.
+//     *
+//     * @param dto      Outlet Request DTO.
+//     * @param outletId Newly created Outlet Id.
+//     */
+//    private void saveOutletKyc(FmOutletRequestDTO dto) {
+//
+//        log.info("Saving Outlet KYC Details for Outlet Id: {}", outletId);
+//
+//        upsertOutletKyc(
+//                outletId,
+//                dto.getAadharNumber(),
+//                dto.getPanNumber(),
+//                dto.getFssaiNumber(),
+//                dto.getGstNumber(),
+//                aadharFile, panFile, fssaiFile, gstFile
+//        );
+//
+//        log.info("Outlet KYC Details saved successfully for Outlet Id: {}", outletId);
+//    }
 
-        log.info("Saving Outlet KYC Details for Outlet Id: {}", outletId);
+//    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId) {
+//        saveOutletKyc(dto, outletId, null, null, null, null);
+//    }
 
-        upsertOutletKyc(
-                outletId,
-                dto.getAadharNumber(),
-                dto.getPanNumber(),
-                dto.getFssaiNumber(),
-                dto.getGstNumber(),
-                aadharFile, panFile, fssaiFile, gstFile
-        );
-
-        log.info("Outlet KYC Details saved successfully for Outlet Id: {}", outletId);
-    }
-
-    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId) {
-        saveOutletKyc(dto, outletId, null, null, null, null);
-    }
-
-    private void upsertOutletKyc(
-            Integer outletId,
-            String aadharNumber,
-            String panNumber,
-            String fssaiNumber,
-            String gstNumber,
-            MultipartFile aadharFile, MultipartFile panFile,
-            MultipartFile fssaiFile, MultipartFile gstFile
-    ) {
+    private void saveOutletKyc(FmOutletRequestDTO fmOutletRequestDTO, Integer outletId) {
 
         FmUserKyc kyc = userKycRepository
                 .findByEntityIdAndEntityType(outletId, FmAppConstants.TYPE_OUTLET)
@@ -463,22 +444,22 @@ public class FmOutletServiceImpl implements IFmOutletService {
         kyc.setEntityId(outletId);
         kyc.setEntityType(FmAppConstants.TYPE_OUTLET);
 
-        if (aadharNumber != null && !aadharNumber.isBlank()) {
-            kyc.setAadhaarNumber(aadharNumber);
+        if (fmOutletRequestDTO.getAadharNumber() != null && !fmOutletRequestDTO.getAadharNumber().isBlank()) {
+            kyc.setAadhaarNumber(fmOutletRequestDTO.getAadharNumber());
         }
-        if (panNumber != null && !panNumber.isBlank()) {
-            kyc.setPanNumber(panNumber);
+        if (fmOutletRequestDTO.getPanNumber() != null && !fmOutletRequestDTO.getPanNumber().isBlank()) {
+            kyc.setPanNumber(fmOutletRequestDTO.getPanNumber());
         }
-        if (fssaiNumber != null && !fssaiNumber.isBlank()) {
-            kyc.setFssaiNumber(fssaiNumber);
+        if (fmOutletRequestDTO.getFssaiNumber() != null && !fmOutletRequestDTO.getFssaiNumber().isBlank()) {
+            kyc.setFssaiNumber(fmOutletRequestDTO.getFssaiNumber());
         }
-        if (gstNumber != null && !gstNumber.isBlank()) {
-            kyc.setGstNumber(gstNumber);
+        if (fmOutletRequestDTO.getGstNumber() != null && !fmOutletRequestDTO.getGstNumber().isBlank()) {
+            kyc.setGstNumber(fmOutletRequestDTO.getGstNumber());
         }
-        uploadKycFile(kyc, aadharFile, FmAppConstants.TYPE_OUTLET, outletId, "aadhar");
-        uploadKycFile(kyc, panFile, FmAppConstants.TYPE_OUTLET, outletId, "pan");
-        uploadKycFile(kyc, fssaiFile, FmAppConstants.TYPE_OUTLET, outletId, "fssai");
-        uploadKycFile(kyc, gstFile, FmAppConstants.TYPE_OUTLET, outletId, "gst");
+//        uploadKycFile(kyc, aadharFile, FmAppConstants.TYPE_OUTLET, outletId, "aadhar");
+//        uploadKycFile(kyc, panFile, FmAppConstants.TYPE_OUTLET, outletId, "pan");
+//        uploadKycFile(kyc, fssaiFile, FmAppConstants.TYPE_OUTLET, outletId, "fssai");
+//        uploadKycFile(kyc, gstFile, FmAppConstants.TYPE_OUTLET, outletId, "gst");
         if (kyc.getKycId() == null) {
             kyc.setVerified(false);
         }
@@ -486,23 +467,23 @@ public class FmOutletServiceImpl implements IFmOutletService {
         userKycRepository.save(kyc);
     }
 
-    private void uploadKycFile(FmUserKyc kyc, MultipartFile file, String userType,
-                               Integer userId, String documentType) {
-        if (file == null || file.isEmpty()) {
-            return;
-        }
-        switch (documentType) {
-            case "aadhar" -> kyc.setAadhaarNumberUrl(s3Service.replaceKycDocument(
-                    file, userType, userId, documentType, kyc.getAadhaarNumberUrl()));
-            case "pan" -> kyc.setPanNumberUrl(s3Service.replaceKycDocument(
-                    file, userType, userId, documentType, kyc.getPanNumberUrl()));
-            case "fssai" -> kyc.setFssaiNumberUrl(s3Service.replaceKycDocument(
-                    file, userType, userId, documentType, kyc.getFssaiNumberUrl()));
-            case "gst" -> kyc.setGstNumberUrl(s3Service.replaceKycDocument(
-                    file, userType, userId, documentType, kyc.getGstNumberUrl()));
-            default -> throw new BadRequestException("Unsupported KYC document type.");
-        }
-    }
+//    private void uploadKycFile(FmUserKyc kyc, MultipartFile file, String userType,
+//                               Integer userId, String documentType) {
+//        if (file == null || file.isEmpty()) {
+//            return;
+//        }
+//        switch (documentType) {
+//            case "aadhar" -> kyc.setAadhaarNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getAadhaarNumberUrl()));
+//            case "pan" -> kyc.setPanNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getPanNumberUrl()));
+//            case "fssai" -> kyc.setFssaiNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getFssaiNumberUrl()));
+//            case "gst" -> kyc.setGstNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getGstNumberUrl()));
+//            default -> throw new BadRequestException("Unsupported KYC document type.");
+//        }
+//    }
 
     /**
      * Saves outlet bank details into user_bank_details table.
@@ -1227,10 +1208,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
     /**
      * Resolves comma-separated cuisine names from CSV/Excel
      * into cuisine type IDs.
-     *
+     * <p>
      * Example:
      * Biryani,Chinese,North Indian
-     *
+     * <p>
      * becomes:
      * [1, 2, 5]
      */
@@ -1285,11 +1266,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     /**
      * Generates a unique outlet username from the outlet name.
-     *
+     * <p>
      * Example:
      * Mehfil Restaurant
      * -> mehfil_restaurant
-     *
+     * <p>
      * If already exists:
      * -> mehfil_restaurant_1
      * -> mehfil_restaurant_2
@@ -1332,7 +1313,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     /**
      * Generates a password satisfying the existing outlet
      * password policy:
-     *
+     * <p>
      * - uppercase
      * - lowercase
      * - number
@@ -1543,12 +1524,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     /**
      * Saves operating-day slots for BULK UPLOAD only.
-     *
+     * <p>
      * The bulk CSV/Excel parser can create multiple FmOutletDayDTO rows
      * for the same day (for example, Monday 09:00-14:00 and Monday
      * 18:00-22:00). Each DTO is intentionally stored as a separate
      * FmOutletDay row.
-     *
+     * <p>
      * This method is kept separate from saveOperatingDays() so the
      * existing single-outlet create/update flow is not changed.
      */
@@ -3000,9 +2981,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         return address.getAreaId();
     }
+
     @Override
     public FmResponseDto updateOutletProfilePic(
-            FmUpdateOutletProfilePicDto outletDto) {
+            FmUpdateOutletProfilePicDto outletDto
+    ) {
 
         log.info(
                 "[OUTLET] Update profile picture API started. outletId={}",
@@ -3129,7 +3112,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     @Transactional
     public FmResponseDto toggleForOutlet(
-            FmToggleOutletRequestDto requestDto) {
+            FmToggleOutletRequestDto requestDto
+    ) {
 
         log.info(
                 "[OUTLET TOGGLE] Toggle API started. outletId={}, isToggle={}",
@@ -3194,8 +3178,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         // ============================================================
 
         boolean outletExists = outletRepository.existsById(
-                        requestDto.getOutletId()
-                );
+                requestDto.getOutletId()
+        );
 
         if (!outletExists) {
 
@@ -3258,4 +3242,161 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         return new FmResponseDto("200", message);
     }
+
+    @Override
+    public UploadDocumentsResponseDto saveOrUpdateDocuments(UploadDocumentsRequestDto uploadDocumentsDto) {
+        try {
+
+            UploadDocumentsResponseDto uploadDocumentsResponseDto = new UploadDocumentsResponseDto();
+
+            String entityType = uploadDocumentsDto.getEntityType().toUpperCase();
+            Integer entityId = uploadDocumentsDto.getEntityId();
+
+            boolean isDriver = FmAppConstants.TYPE_DRIVER.equalsIgnoreCase(uploadDocumentsDto.getEntityType());
+            FmDriverApprovalResponseDTO driverApprovalDTO = null;
+            DriverDocumentUpdateDTO driverDocumentUpdateDTO = null;
+
+            if (isDriver) {
+                driverApprovalDTO = driverFeignClient.getDriverById(uploadDocumentsDto.getEntityId());
+                driverDocumentUpdateDTO = new DriverDocumentUpdateDTO();
+                driverDocumentUpdateDTO.setDriverId(uploadDocumentsDto.getEntityId());
+            }
+
+            //get existing KYC details if present
+            Optional<FmUserKyc> optionalFmUserKyc = userKycRepository.findByEntityIdAndEntityType(entityId, entityType);
+            FmUserKyc userKyc = null;
+            if (optionalFmUserKyc.isPresent()) {
+                userKyc = optionalFmUserKyc.get();
+            }
+
+            // Process all files using the shared DTO instance
+            uploadIfPresent(uploadDocumentsDto.getAadharFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "aadhaar", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getPanFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "pan", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getFssaiFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "fssai", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getGstFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "gst", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getRcCopyFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "rcCopy", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getDrivingLicenseFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "drivingLicense", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+
+            // Save Merchant/User KYC ONCE
+            if (userKyc != null) {
+                userKycRepository.save(userKyc);
+            }
+
+            // Call Feign Client ONCE with all populated URLs
+            if (isDriver && driverDocumentUpdateDTO != null) {
+                driverFeignClient.updateDriverDocuments(driverDocumentUpdateDTO);
+            }
+
+            return uploadDocumentsResponseDto;
+        } catch (Exception e) {
+            log.error("Error validating image file", e);
+            throw new ImageValidationException("Error validating image file: " + e.getMessage());
+        }
+
+    }
+
+    private UploadDocumentsResponseDto uploadIfPresent(
+            MultipartFile file, String entityType,
+            Integer entityId, String docType,
+            UploadDocumentsResponseDto uploadDocumentsResponseDto, FmUserKyc userKyc,
+            DriverDocumentUpdateDTO driverDocumentUpdateDTO,
+            FmDriverApprovalResponseDTO driverApprovalDTO
+    ) {
+
+        if (file != null && !file.isEmpty()) {
+
+//            FmDriverApprovalResponseDTO driverApprovalResponseDTO = null;
+//
+//            if (entityType.equalsIgnoreCase(FmAppConstants.TYPE_DRIVER)) {
+//                driverApprovalResponseDTO = driverFeignClient.getDriverById(entityId);
+//                driverDocumentUpdateDTO.setDriverId(entityId);
+//            }
+
+            uploadDocumentsResponseDto.setEntityId(entityId);
+            uploadDocumentsResponseDto.setEntityType(entityType);
+
+            if ("aadhar".equalsIgnoreCase(docType) || "aadhaar".equalsIgnoreCase(docType)) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldAadharUrl = userKyc.getAadhaarNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldAadharUrl);
+
+                    userKyc.setAadhaarNumberUrl(fileUrl);
+                }
+                if (entityType.equalsIgnoreCase(FmAppConstants.TYPE_DRIVER)) {
+
+                    String oldAadharUrl = driverApprovalDTO.getAadharDocUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldAadharUrl);
+
+                    driverDocumentUpdateDTO.setAadharDocUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setAadharFileUrl(fileUrl);
+
+            } else if (docType.equalsIgnoreCase("pan")) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldPanUrl = userKyc.getPanNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldPanUrl);
+
+                    userKyc.setPanNumberUrl(fileUrl);
+                }
+                if (entityType.equalsIgnoreCase(FmAppConstants.TYPE_DRIVER)) {
+
+                    String oldPanUrl = driverApprovalDTO.getPanDocUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldPanUrl);
+
+                    driverDocumentUpdateDTO.setPanDocUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setPanFileUrl(fileUrl);
+
+            } else if (docType.equalsIgnoreCase("fssai")) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldFssaiUrl = userKyc.getFssaiNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldFssaiUrl);
+
+                    userKyc.setFssaiNumberUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setFssaiFileUrl(fileUrl);
+
+            } else if (docType.equalsIgnoreCase("gst")) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldGstUrl = userKyc.getGstNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldGstUrl);
+
+                    userKyc.setGstNumberUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setGstFileUrl(fileUrl);
+            }else if ("rc-copy".equalsIgnoreCase(docType) || "rcCopy".equalsIgnoreCase(docType)) {
+                System.out.println("==================================rc copy");
+                String oldRcCopy = driverApprovalDTO.getRcCopyDocUrl();
+                String fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldRcCopy);
+
+                driverDocumentUpdateDTO.setRcCopyDocUrl(fileUrl);
+                uploadDocumentsResponseDto.setRcCopyFileUrl(fileUrl);
+
+            } else if ("driving-license".equalsIgnoreCase(docType) || "drivingLicense".equalsIgnoreCase(docType)) {
+
+                System.out.println("==================================dl");
+                String oldDrivingLicenseUrl = driverApprovalDTO.getDrivingLicenseDocUrl();
+                String fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldDrivingLicenseUrl);
+
+                driverDocumentUpdateDTO.setDrivingLicenseDocUrl(fileUrl);
+                uploadDocumentsResponseDto.setDrivingLicenseFileUrl(fileUrl);
+            }
+            return uploadDocumentsResponseDto;
+        }
+        return uploadDocumentsResponseDto;
+    }
 }
+
+
+
+
+
+

@@ -2876,6 +2876,37 @@ public class FmProductServiceImpl implements FmProductService {
         return Collections.emptyList();
     }
 
+    @Override
+    public FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive) {
+
+        log.info("SERVICE_START | INACTIVE_PRODUCT_OR_VARIANT | productId={} | isActive={}", productId, isActive);
+
+        if (productId == null || productId <= 0) {
+            return new FmResponseDto("500","Valid product ID is required.");
+        }
+
+        if (isActive == null || (!"Y".equalsIgnoreCase(isActive) && !"N".equalsIgnoreCase(isActive))) {
+            return new FmResponseDto("500","isActive must be 'Y' or 'N'.");
+        }
+
+        Optional<FmProduct> optionalFmProduct = productRepository.findById(productId);
+
+        FmProduct fmProduct = optionalFmProduct.orElseThrow(() -> {
+            log.warn("PRODUCT_NOT_FOUND | productId={}", productId);
+            return new ResourceNotFoundException("Product not found for ID: " + productId);
+        });
+
+        int updatedCount = productRepository.updateProductOrVariantStatus(productId, isActive);
+
+        if (updatedCount == 0) {
+            log.warn("NO_RECORDS_UPDATED | productId={} | isActive={}", productId, isActive);
+            return new FmResponseDto("404","No records found to update for product ID: " + productId);
+        }
+
+        log.info("SERVICE_SUCCESS | INACTIVE_PRODUCT_OR_VARIANT | productId={} | isActive={} | updatedCount={}", productId, isActive, updatedCount);
+
+        return new FmResponseDto("200","Successfully updated active status for product ID: " + productId + ". Records updated: " + updatedCount);
+    }
 
 
 }

@@ -57,11 +57,7 @@ public class DriverServiceImpl implements DriverService {
 
     @Override
     @Transactional
-    public DriverDto postDriverDetails(DriverDto dto,
-                                       MultipartFile aadharDocument,
-                                       MultipartFile panDocument,
-                                       MultipartFile drivingLicenseDocument,
-                                       MultipartFile rcCopyDocument) {
+    public DriverDto postDriverDetails(DriverDto dto) {
 
         log.info("Creating driver for phone: {}", dto.getPhoneNumber());
         // ----------------------------------------------------------------------
@@ -265,76 +261,6 @@ public class DriverServiceImpl implements DriverService {
         wallet.setCreatedBy(savedDriver.getDriverId());
 
         driverWalletRepository.save(wallet);
-
-        // Handle document uploads if provided
-        if (aadharDocument != null || panDocument != null ||
-            drivingLicenseDocument != null || rcCopyDocument != null) {
-            try {
-                // Get or create DriverKyc
-                DriverKyc driverKyc = driverKycRepository.findByDriverDriverId(savedDriver.getDriverId())
-                        .orElse(new DriverKyc());
-                driverKyc.setDriver(savedDriver);
-
-                // Upload Aadhar document
-                if (aadharDocument != null && !aadharDocument.isEmpty()) {
-                    validateDocument(aadharDocument);
-                    String aadharUrl = s3ImageService.uploadDriverDocument(
-                            aadharDocument,
-                            savedDriver.getDriverId(),
-                            "aadhar"
-                    );
-                    driverKyc.setAadharDocUrl(aadharUrl);
-                    log.info("Aadhar document uploaded successfully for driver id: {}", savedDriver.getDriverId());
-                }
-
-                // Upload PAN document
-                if (panDocument != null && !panDocument.isEmpty()) {
-                    validateDocument(panDocument);
-                    String panUrl = s3ImageService.uploadDriverDocument(
-                            panDocument,
-                            savedDriver.getDriverId(),
-                            "pan"
-                    );
-                    driverKyc.setPanDocUrl(panUrl);
-                    log.info("PAN document uploaded successfully for driver id: {}", savedDriver.getDriverId());
-                }
-
-                // Upload Driving License document
-                if (drivingLicenseDocument != null && !drivingLicenseDocument.isEmpty()) {
-                    validateDocument(drivingLicenseDocument);
-                    String dlUrl = s3ImageService.uploadDriverDocument(
-                            drivingLicenseDocument,
-                            savedDriver.getDriverId(),
-                            "drivingLicense"
-                    );
-                    driverKyc.setDrivingLicenseDocUrl(dlUrl);
-                    log.info("Driving License document uploaded successfully for driver id: {}", savedDriver.getDriverId());
-                }
-
-                // Upload RC Copy document
-                if (rcCopyDocument != null && !rcCopyDocument.isEmpty()) {
-                    validateDocument(rcCopyDocument);
-                    String rcUrl = s3ImageService.uploadDriverDocument(
-                            rcCopyDocument,
-                            savedDriver.getDriverId(),
-                            "rcCopy"
-                    );
-                    driverKyc.setRcCopyDocUrl(rcUrl);
-                    log.info("RC Copy document uploaded successfully for driver id: {}", savedDriver.getDriverId());
-                }
-
-                // Save DriverKyc with document URLs
-                driverKyc.setUpdatedAt(LocalDateTime.now());
-                driverKyc.setUpdatedBy(savedDriver.getDriverId());
-                driverKycRepository.save(driverKyc);
-
-                log.info("Driver KYC documents saved successfully for driver id: {}", savedDriver.getDriverId());
-
-            } catch (IOException e) {
-                log.error("Error uploading documents for driver id: {}", savedDriver.getDriverId(), e);
-                throw new DriverBusinessException("Error uploading documents: " + e.getMessage());
-            }
-        }
 
         // Convert Entity → DTO
         DriverDto mapToDriverDto =
@@ -542,11 +468,7 @@ public class DriverServiceImpl implements DriverService {
 //    and address details through feign client
     @Override
     @Transactional
-    public DriverDto updateDriverDetails(Integer driverId, DriverDto dto,
-                                         MultipartFile aadharDocument,
-                                         MultipartFile panDocument,
-                                         MultipartFile drivingLicenseDocument,
-                                         MultipartFile rcCopyDocument) {
+    public DriverDto updateDriverDetails(Integer driverId, DriverDto dto) {
 
         log.info("Updating driver with id: {}", driverId);
 
@@ -608,83 +530,6 @@ public class DriverServiceImpl implements DriverService {
         }
         // Convert updated entity → response DTO with updated address details
         DriverDto response = DriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
-
-        // Handle document uploads if provided
-        if (aadharDocument != null || panDocument != null ||
-            drivingLicenseDocument != null || rcCopyDocument != null) {
-            try {
-                // Get or create DriverKyc
-                DriverKyc driverKyc = driverKycRepository.findByDriverDriverId(driverId)
-                        .orElse(new DriverKyc());
-                driverKyc.setDriver(updatedDriver);
-
-                // Upload Aadhar document
-                if (aadharDocument != null && !aadharDocument.isEmpty()) {
-                    validateDocument(aadharDocument);
-                    String aadharUrl = s3ImageService.replaceDriverDocument(
-                            aadharDocument,
-                            driverId,
-                            "aadhar",
-                            driverKyc.getAadharDocUrl()
-                    );
-                    driverKyc.setAadharDocUrl(aadharUrl);
-                    log.info("Aadhar document uploaded successfully for driver id: {}", driverId);
-                }
-
-                // Upload PAN document
-                if (panDocument != null && !panDocument.isEmpty()) {
-                    validateDocument(panDocument);
-                    String panUrl = s3ImageService.replaceDriverDocument(
-                            panDocument,
-                            driverId,
-                            "pan",
-                            driverKyc.getPanDocUrl()
-                    );
-                    driverKyc.setPanDocUrl(panUrl);
-                    log.info("PAN document uploaded successfully for driver id: {}", driverId);
-                }
-
-                // Upload Driving License document
-                if (drivingLicenseDocument != null && !drivingLicenseDocument.isEmpty()) {
-                    validateDocument(drivingLicenseDocument);
-                    String dlUrl = s3ImageService.replaceDriverDocument(
-                            drivingLicenseDocument,
-                            driverId,
-                            "drivingLicense",
-                            driverKyc.getDrivingLicenseDocUrl()
-                    );
-                    driverKyc.setDrivingLicenseDocUrl(dlUrl);
-                    log.info("Driving License document uploaded successfully for driver id: {}", driverId);
-                }
-
-                // Upload RC Copy document
-                if (rcCopyDocument != null && !rcCopyDocument.isEmpty()) {
-                    validateDocument(rcCopyDocument);
-                    String rcUrl = s3ImageService.replaceDriverDocument(
-                            rcCopyDocument,
-                            driverId,
-                            "rcCopy",
-                            driverKyc.getRcCopyDocUrl()
-                    );
-                    driverKyc.setRcCopyDocUrl(rcUrl);
-                    log.info("RC Copy document uploaded successfully for driver id: {}", driverId);
-                }
-
-                // Save DriverKyc with document URLs
-                driverKyc.setUpdatedAt(LocalDateTime.now());
-                driverKyc.setUpdatedBy(driverId);
-                driverKycRepository.save(driverKyc);
-
-                log.info("Driver KYC documents updated successfully for driver id: {}", driverId);
-
-                // Refresh response with updated document URLs
-                response = DriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
-
-            } catch (IOException e) {
-                log.error("Error uploading documents for driver id: {}", driverId, e);
-                throw new DriverBusinessException("Error uploading documents: " + e.getMessage());
-            }
-        }
 
         return response;
     }
@@ -1210,6 +1055,7 @@ public class DriverServiceImpl implements DriverService {
         );
     }
 
+
     public void validateDocument(MultipartFile file) throws IOException {
 
         if (file == null || file.isEmpty()) {
@@ -1401,4 +1247,29 @@ public class DriverServiceImpl implements DriverService {
 //        return 0;
 //    }
 
+
+
+    @Override
+    public String updateDriverDocuments(DriverDocumentUpdateDTO driverDocumentUpdateDTO) {
+
+        log.info("Updating driver documents for entityId: {}", driverDocumentUpdateDTO.getDriverId());
+
+       Optional<DriverKyc> driverKycOptional = driverKycRepository.findByDriverDriverId(driverDocumentUpdateDTO.getDriverId());
+
+        if (driverKycOptional.isPresent()) {
+            DriverKyc driverKyc = driverKycOptional.get();
+
+            driverKyc.setAadharDocUrl(driverDocumentUpdateDTO.getAadharDocUrl());
+            driverKyc.setPanDocUrl(driverDocumentUpdateDTO.getPanDocUrl());
+            driverKyc.setRcCopyDocUrl(driverDocumentUpdateDTO.getRcCopyDocUrl());
+            driverKyc.setDrivingLicenseDocUrl(driverDocumentUpdateDTO.getDrivingLicenseDocUrl());
+
+            driverKycRepository.save(driverKyc);
+            log.info("Driver documents updated successfully for driverId: {}", driverDocumentUpdateDTO.getDriverId());
+            return "Driver documents updated successfully.";
+        } else {
+            log.error("Driver KYC not found for driverId: {}", driverDocumentUpdateDTO.getDriverId());
+           return "Driver KYC not found for driverId: " +  driverDocumentUpdateDTO.getDriverId();
+        }
+    }
 }

@@ -106,9 +106,9 @@ public class FmUpdateOutletRequestDTO {
             message = "Aadhaar must be a valid 12-digit number")
     private String aadharNumber;
 
-    @Schema(description = "Aadhaar Number URL")
-    @Size(max = 500)
-    private String aadhaarNumberUrl;
+//    @Schema(description = "Aadhaar Number URL")
+//    @Size(max = 500)
+//    private String aadhaarNumberUrl;
 
     @Schema(description = "PAN Number", example = "ABCDE1234F")
     @Pattern(
@@ -116,9 +116,9 @@ public class FmUpdateOutletRequestDTO {
             message = "PAN must be in format: AAAAA9999A")
     private String panNumber;
 
-    @Schema(description = "PAN Number URL")
-    @Size(max = 500)
-    private String panNumberUrl;
+//    @Schema(description = "PAN Number URL")
+//    @Size(max = 500)
+//    private String panNumberUrl;
 
     @Schema(description = "FSSAI Number", example = "12345678901234")
     @Pattern(
@@ -126,9 +126,9 @@ public class FmUpdateOutletRequestDTO {
             message = "FSSAI Number must contain exactly 14 digits when provided")
     private String fssaiNumber;
 
-    @Schema(description = "FSSAI Number URL")
-    @Size(max = 500)
-    private String fssaiNumberUrl;
+//    @Schema(description = "FSSAI Number URL")
+//    @Size(max = 500)
+//    private String fssaiNumberUrl;
 
     @Schema(description = "GST Number", example = "36ABCDE1234F1Z5")
     @Pattern(
@@ -136,9 +136,9 @@ public class FmUpdateOutletRequestDTO {
             message = "Invalid GST Number")
     private String gstNumber;
 
-    @Schema(description = "GST Number URL")
-    @Size(max = 500)
-    private String gstNumberUrl;
+//    @Schema(description = "GST Number URL")
+//    @Size(max = 500)
+//    private String gstNumberUrl;
 
     @Schema(description = "Building Number", example = "10-1-20")
     @NotBlank(message = "Building number is required")

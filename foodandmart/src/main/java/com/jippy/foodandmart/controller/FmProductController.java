@@ -441,4 +441,17 @@ public class FmProductController {
 
         return ResponseEntity.ok(products);
     }
+
+    @PutMapping("/inactiveProductOrProductVariant")
+    @Operation(summary = "Inactive Product or Product Variant",
+            description = "Variants also added as products, use this API to off such kind of products. If you want off the product send Y else N")
+    public ResponseEntity<FmResponseDto> inactiveProductOrProductVariant
+            (@RequestParam  Integer productId,@RequestParam String isActive) {
+
+        log.info("[Product in active] toggleForProduct API called. " + "outletId={}, isActive={}", productId , isActive);
+
+        FmResponseDto response = productMappingService.inactiveProductOrProductVariant(productId,isActive);
+
+        return ResponseEntity.ok(response);
+    }
 }

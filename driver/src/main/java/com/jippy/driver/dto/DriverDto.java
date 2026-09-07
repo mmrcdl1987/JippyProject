@@ -205,4 +205,5 @@ private MultipartFile rcCopyDocument;
             accessMode = Schema.AccessMode.READ_ONLY
     )
     private String isActive;
+
 }

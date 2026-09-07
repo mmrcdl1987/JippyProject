@@ -178,7 +178,10 @@
                 <version>3.5.1</version>
                 <configuration>
                     <to>
-                        <image>docker.io/mmrcdl1987/jippyproject/${project.artifactId}:s1</image>
+                        <image>docker.io/mmrcdl1987/jippydeploy25may2026-${project.artifactId}:s1</image>
+                        <auth>
+
+                        </auth>
                     </to>
                 </configuration>
             </plugin>

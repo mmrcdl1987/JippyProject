@@ -10,11 +10,7 @@ import java.util.List;
 
 public interface DriverService {
 
-    DriverDto postDriverDetails(DriverDto dto,
-                                MultipartFile aadharDocument,
-                                MultipartFile panDocument,
-                                MultipartFile drivingLicenseDocument,
-                                MultipartFile rcCopyDocument);
+    DriverDto postDriverDetails(DriverDto dto);
 
     DriverDto getDriverDetails(Integer driverId);
 
@@ -29,11 +25,7 @@ public interface DriverService {
 
     String createZones(DriverZoneDto zoneDto);
 
-    DriverDto updateDriverDetails(Integer driverId, DriverDto dto,
-                                  MultipartFile aadharDocument,
-                                  MultipartFile panDocument,
-                                  MultipartFile drivingLicenseDocument,
-                                  MultipartFile rcCopyDocument);
+    DriverDto updateDriverDetails(Integer driverId, DriverDto dto);
 
     DriverEarningsDto fetchEarnings(Integer driverId, LocalDate date);
 
@@ -79,4 +71,5 @@ public interface DriverService {
             DriverReadyToAcceptRequestDto requestDto
     );
 
+    String updateDriverDocuments(DriverDocumentUpdateDTO driverDocumentUpdateDTO);
 }

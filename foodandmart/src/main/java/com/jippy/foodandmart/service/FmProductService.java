@@ -265,4 +265,6 @@ public interface FmProductService {
     );
 
     List<FmOrderItemsEvent> getOrderProductItemsForMerchant(List<Integer> productIds, List<Integer> productVariantIds);
+
+    FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive);
 }

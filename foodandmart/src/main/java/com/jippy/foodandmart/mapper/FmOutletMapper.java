@@ -144,6 +144,7 @@ import com.jippy.foodandmart.projections.FmMerchantOutletMenuProjection;
 import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
 import com.jippy.foodandmart.projections.FmOutletMenuProjection;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.dialect.function.array.JsonArrayViaElementArgumentReturnTypeResolver;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -1678,5 +1679,11 @@ public final class FmOutletMapper {
         log.info("ADMIN_OUTLET_MAPPING_COMPLETED | outletId={} | categories={} | cuisines={}", outlet.getOutletId(), categoryMap.size(), cuisineMap.size());
 
         return outlet;
+    }
+
+    public static void updateOutletKycEntity(FmUserKyc savUserKyc, FmUpdateOutletRequestDTO dto) {
+
+        savUserKyc.setFssaiNumber(dto.getFssaiNumber());
+        savUserKyc.setGstNumber(dto.getGstNumber());
     }
 }

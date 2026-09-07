@@ -75,18 +75,15 @@ public class FmOutletController {
     // CREATE OUTLET
     // ============================================================
 
-    @PostMapping(value = "/createOutlet", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/createOutlet", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses({@ApiResponse(responseCode = "201", description = "Outlet created successfully"), @ApiResponse(responseCode = "400", description = "Validation Failed"), @ApiResponse(responseCode = "404", description = "Merchant Not Found"), @ApiResponse(responseCode = "409", description = "Duplicate Resource")})
     public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(
-            @Valid @RequestPart("data") FmOutletRequestDTO dto,
-            @RequestPart(value = "aadhar", required = false) MultipartFile aadhar,
-            @RequestPart(value = "pan", required = false) MultipartFile pan,
-            @RequestPart(value = "fssai", required = false) MultipartFile fssai,
-            @RequestPart(value = "gst", required = false) MultipartFile gst) {
+            @Valid @RequestBody FmOutletRequestDTO dto
+           ) {
 
         log.info("Received request to create outlet: {}", dto.getOutletName());
 
-        FmOutletCreateResponseDTO response = outletService.createOutlet(dto, aadhar, pan, fssai, gst);
+        FmOutletCreateResponseDTO response = outletService.createOutlet(dto);
 
         log.info("Outlet created successfully. outletId={}", response.getOutletId());
 
@@ -134,13 +131,9 @@ public class FmOutletController {
     @Operation(summary = "Update Outlet Details By Merchant", description = "Allows Merchant to update outlet details, address, " + "bank details and operating days. " + "[Username and Password cannot be updated].")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid request"), @ApiResponse(responseCode = "404", description = "Outlet or Merchant not found")})
     public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(
-            @PathVariable Integer outletId, @Valid @RequestPart("data") FmUpdateOutletRequestDTO dto,
-            @RequestPart(value = "aadhar", required = false) MultipartFile aadhar,
-            @RequestPart(value = "pan", required = false) MultipartFile pan,
-            @RequestPart(value = "fssai", required = false) MultipartFile fssai,
-            @RequestPart(value = "gst", required = false) MultipartFile gst) {
+            @PathVariable Integer outletId, @Valid @RequestBody FmUpdateOutletRequestDTO dto) {
 
-        FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto, aadhar, pan, fssai, gst);
+        FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto);
 
         return ResponseEntity.ok(FmApiResponse.success("Outlet details updated successfully", response));
     }
@@ -1439,4 +1432,41 @@ public class FmOutletController {
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "Public Customer Nearby Outlets", description = """
+            Public version of the nearby outlets API.
+
+            Returns only the minimal outlet fields:
+            outletId, outletName, merchantId, review, isActive, isApproved,
+            distanceKm, isVegOutlet, outletPicUrl.
+
+            This endpoint does not require authentication.
+            """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "lat or lng parameter is missing / invalid")
+    })
+    @GetMapping("/public/customer/nearby")
+    public ResponseEntity<FmPublicCustomerNearbyResponseDto> fetchPublicCustomerNearbyOutlets(
+            @Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true)
+            @RequestParam double lat,
+            @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true)
+            @RequestParam double lng) {
+
+        log.info("GET /api/fm/outlets/public/customer/nearby lat={}, lng={}", lat, lng);
+        FmPublicCustomerNearbyResponseDto response = outletService.fetchPublicCustomerNearbyOutlets(lat, lng);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping(path = "/saveOrUpdateDocuments",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Save or update  Documents", description = "Merchant,Outlet,Customer can upload their documents  using this API and the file will be stored in AWS S3 bucket and the URL of the file will be stored in database and also return the URL of the file in response")
+    public ResponseEntity<UploadDocumentsResponseDto> saveOrUpdateDocuments(@ModelAttribute UploadDocumentsRequestDto uploadDocumentsDto) {
+
+        log.info("Upload documents API called for user id: {}", uploadDocumentsDto.getEntityId());
+        UploadDocumentsResponseDto updateDocumentsResponseDto = outletService.saveOrUpdateDocuments(uploadDocumentsDto);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(updateDocumentsResponseDto);
+    }
+
 }
