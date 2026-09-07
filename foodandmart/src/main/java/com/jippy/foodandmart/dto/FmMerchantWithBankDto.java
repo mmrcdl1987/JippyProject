@@ -38,6 +38,14 @@ public class FmMerchantWithBankDto {
 
         private String status;
 
+        // merchant address details
+        private String buildingNumber;
+        private String road;
+        private String landmark;
+        private Integer stateId;
+        private Integer cityId;
+        private Integer areaId;
+
 
         // for merchant bank details
 
