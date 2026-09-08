@@ -1,10 +1,8 @@
 package com.jippy.division.controller;
 
 import com.jippy.division.constants.DivAppConstants;
-import com.jippy.division.dto.DivActiveDiscountsResponseDto;
-import com.jippy.division.dto.DivCampaignRequestDto;
-import com.jippy.division.dto.DivOutletDto;
-import com.jippy.division.dto.DivResponseDto;
+import com.jippy.division.dto.*;
+import com.jippy.division.service.ActivePromotionService;
 import com.jippy.division.service.IDivCampaignService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +21,8 @@ import java.util.List;
 public class DivCampaignController {
 
     private final IDivCampaignService divCampaignService;
+    private final ActivePromotionService activePromotionService;
+
 
     /**
      * Create Campaign
@@ -98,4 +98,27 @@ public class DivCampaignController {
 
         return ResponseEntity.ok(activeDiscounts);
     }
+
+    @PostMapping("/active-promotions")
+    public ResponseEntity<List<ActivePromotionDto>> getActivePromotions(
+            @Valid @RequestBody ActivePromotionRequestDto requestDto) {
+
+        log.info(
+                "[ACTIVE-PROMOTION] API request received | customerId={} | outletId={} | productIds={}",
+                requestDto.getCustomerId(),
+                requestDto.getOutletId(),
+                requestDto.getProductIds()
+        );
+
+        List<ActivePromotionDto> response =
+                activePromotionService.getActivePromotions(requestDto);
+
+        log.info(
+                "[ACTIVE-PROMOTION] API request completed | count={}",
+                response.size()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
 }

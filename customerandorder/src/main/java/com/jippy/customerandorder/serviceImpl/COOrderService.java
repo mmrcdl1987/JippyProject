@@ -3,7 +3,9 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
+import com.jippy.customerandorder.enums.PromotionSourceType;
 import com.jippy.customerandorder.exception.CoBusinessException;
+import com.jippy.customerandorder.exception.CoValidationException;
 import com.jippy.customerandorder.exception.OrderException;
 import com.jippy.customerandorder.feignClients.DivisionFeignClient;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
@@ -57,6 +59,7 @@ public class COOrderService implements IOrderService {
     private final CoWalletRefundService walletRefundService;
     private final CoPaymentModeRepository paymentModeRepository;
     private final DivisionFeignClient divisionFeignClient;
+    private final CustomerCouponRepository customerCouponRepository;
 
     /*
      * PLACE ORDER
@@ -113,7 +116,7 @@ public class COOrderService implements IOrderService {
         CoOrder order = orderMapper.mapToOrder(dto);
         order.setOrderId(orderId);
         CoOrder savedOrder = orderRepository.save(order);
-
+        handlePromotion(dto, savedOrder);
         // Save items directly from request
         saveOrderItems(dto.getItems(), savedOrder);
 
@@ -1067,6 +1070,65 @@ public class COOrderService implements IOrderService {
     }
 
 
+    private void saveGlobalCoupon(
+            Integer customerId,
+            Integer couponId,
+            String orderId) {
+
+        log.info(
+                "GLOBAL_COUPON_SAVE_STARTED | customerId={} | couponId={} | orderId={}",
+                customerId,
+                couponId,
+                orderId
+        );
+
+        CustomerCoupon customerCoupon = new CustomerCoupon();
+
+        customerCoupon.setCustomerId(customerId);
+        customerCoupon.setCouponId(couponId);
+        customerCoupon.setOrderId(orderId);
+        customerCoupon.setIsRedeemed(false);
+        customerCoupon.setRedeemedAt(LocalDateTime.now());
+        customerCoupon.setCreatedAt(LocalDateTime.now());
+        customerCoupon.setCreatedBy(customerId);
+        customerCoupon.setUpdatedAt(LocalDateTime.now());
+        customerCoupon.setUpdatedBy(customerId);
+
+        customerCouponRepository.save(customerCoupon);
+
+        log.info(
+                "GLOBAL_COUPON_SAVE_SUCCESS | customerId={} | couponId={} | orderId={}",
+                customerId,
+                couponId,
+                orderId
+        );
+    }
+
+    private void handlePromotion(
+            CoPlaceOrderRequestDto request,
+            CoOrder order) {
+
+        if (request.getPromotionSourceType() == null) {
+            return;
+        }
+
+        if (!PromotionSourceType.GLOBAL.equals(
+                request.getPromotionSourceType())) {
+            return;
+        }
+
+        if (request.getCouponId() == null) {
+            throw new CoValidationException(
+                    "Coupon id is required for GLOBAL promotion"
+            );
+        }
+
+        saveGlobalCoupon(
+                request.getCustomerId(),
+                request.getCouponId(),
+                order.getOrderId()
+        );
+    }
 
 
 }
