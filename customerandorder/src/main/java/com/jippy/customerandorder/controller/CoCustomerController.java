@@ -347,62 +347,168 @@ public class CoCustomerController {
 //    =====================================================================================
 
     /**
-     * Fetches order flow counts for either a merchant or an outlet.
+     * Fetches order flow counts for either a merchant, outlet, or driver.
+     *
      * <p>
-     * Exactly one of merchantId or outletId must be provided.
+     * Exactly one of merchantId, outletId or driverId must be provided.
+     *
      * <p>
      * If merchantId is provided:
      * CO fetches all outlets belonging to that merchant
-     * from FM and then calculates order counts.
+     * from Food & Mart and calculates order counts for those outlets.
+     *
      * <p>
      * If outletId is provided:
      * CO directly calculates order counts for that outlet.
+     *
+     * <p>
+     * If driverId is provided:
+     * CO directly calculates order counts for that driver
+     * from the orders table.
      */
-    @GetMapping("/getOrderFlowCountForMerchantOrOutlet")
-    @Operation(summary = "Get order flow counts for merchant or outlet", description = """
-            Fetches total, completed and rejected order counts.
-            
-            Exactly one of [ merchantId ex: merchantId=31] OR [ outletId ex: outletId=13 ] 
-            must be provided.
-            
-            If merchantId is provided, all outlets belonging to
-            that merchant are fetched from Food & Mart and the
-            order counts are calculated across those outlets From FM.
-            
-            If outletId is provided, the order counts are calculated
-            directly for that outlet from CO.
-            """)
+    @GetMapping("/getOrderFlowCountForMerchantOrOutletOrDriver")
+    @Operation(
+            summary = "Get order flow counts for merchant, outlet or driver",
+            description = """
+                Fetches total, completed and rejected order counts.
+
+                Exactly one of [ merchantId ], [ outletId ] OR [ driverId ]
+                must be provided.
+
+                If merchantId is provided, all outlets belonging to
+                that merchant are fetched from Food & Mart and the
+                order counts are calculated across those outlets.
+
+                If outletId is provided, the order counts are calculated
+                directly for that outlet from CO.
+
+                If driverId is provided, the order counts are calculated
+                directly for that driver from the CO orders table.
+                """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Order flow counts fetched successfully"),
-            @ApiResponse(responseCode = "400", description = "Either merchantId or outletId must be provided, but not both"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")})
-    public ResponseEntity<CoOrderFlowCountForMerchantOrOutletDto>
-                                            getOrderFlowCountForMerchantOrOutlet(
-@Parameter(description = "Merchant ID. Provide either merchantId or outletId, not both.", example = "50")
-    @RequestParam(value = "merchantId", required = false) Integer merchantId,
-     @Parameter(description = "Outlet ID. Provide either outletId or merchantId, not both.", example = "13")
-     @RequestParam(value = "outletId", required = false) Integer outletId) {
 
-        log.info("GET /getOrderFlowCountForMerchantOrOutlet called. " + "merchantId={}, outletId={}", merchantId, outletId);
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Order flow counts fetched successfully"
+            ),
 
-        if (merchantId == null && outletId == null) {
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Exactly one of merchantId, outletId or driverId must be provided"
+            ),
 
-            log.warn("Request rejected. Neither merchantId  nor outletId provided");
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error"
+            )
+    })
+    public ResponseEntity<CoOrderFlowCountForMerchantOutletOrDriverDto >
+    getOrderFlowCountForMerchantOrOutletOrDriver(
 
-            throw new IllegalArgumentException("Either merchantId or outletId must be provided");
+            @Parameter(
+                    description = "Merchant ID. Provide only one of merchantId, outletId or driverId.",
+                    example = "50"
+            )
+            @RequestParam(
+                    value = "merchantId",
+                    required = false
+            )
+            Integer merchantId,
+
+            @Parameter(
+                    description = "Outlet ID. Provide only one of merchantId, outletId or driverId.",
+                    example = "13"
+            )
+            @RequestParam(
+                    value = "outletId",
+                    required = false
+            )
+            Integer outletId,
+
+            @Parameter(
+                    description = "Driver ID. Provide only one of merchantId, outletId or driverId.",
+                    example = "15"
+            )
+            @RequestParam(
+                    value = "driverId",
+                    required = false
+            )
+            Integer driverId
+    ) {
+
+        log.info(
+                "GET /getOrderFlowCountForMerchantOrOutletOrDriver called. " +
+                        "merchantId={}, outletId={}, driverId={}",
+                merchantId,
+                outletId,
+                driverId
+        );
+
+        // ============================================================
+        // Validate that exactly ONE parameter is provided
+        // ============================================================
+
+        int providedParameters = 0;
+
+        if (merchantId != null) {
+            providedParameters++;
         }
 
-        if (merchantId != null && outletId != null) {
-
-            log.warn("Request rejected. Both merchantId and outletId provided. " + "merchantId={}, outletId={}", merchantId, outletId);
-
-            throw new IllegalArgumentException("Only one of merchantId or outletId can be provided");
+        if (outletId != null) {
+            providedParameters++;
         }
 
-        CoOrderFlowCountForMerchantOrOutletDto response =
-                customerService.getOrderFlowCountForMerchantOrOutlet(merchantId, outletId);
+        if (driverId != null) {
+            providedParameters++;
+        }
 
-        log.info("GET /getOrderFlowCountForMerchantOrOutlet completed successfully. " + "merchantId={}, outletId={}", merchantId, outletId);
+        // No parameter provided
+        if (providedParameters == 0) {
+
+            log.warn(
+                    "Request rejected. None of merchantId, outletId or driverId provided"
+            );
+
+            throw new IllegalArgumentException(
+                    "Either merchantId, outletId or driverId must be provided"
+            );
+        }
+
+        // More than one parameter provided
+        if (providedParameters > 1) {
+
+            log.warn(
+                    "Request rejected. Multiple identifiers provided. " +
+                            "merchantId={}, outletId={}, driverId={}",
+                    merchantId,
+                    outletId,
+                    driverId
+            );
+
+            throw new IllegalArgumentException(
+                    "Only one of merchantId, outletId or driverId can be provided"
+            );
+        }
+
+        // ============================================================
+        // Call service
+        // ============================================================
+
+        CoOrderFlowCountForMerchantOutletOrDriverDto  response =
+                customerService.getOrderFlowCountForMerchantOrOutletOrDriver(
+                        merchantId,
+                        outletId,
+                        driverId
+                );
+
+        log.info(
+                "GET /getOrderFlowCountForMerchantOrOutletOrDriver completed successfully. " +
+                        "merchantId={}, outletId={}, driverId={}",
+                merchantId,
+                outletId,
+                driverId
+        );
 
         return ResponseEntity.ok(response);
     }

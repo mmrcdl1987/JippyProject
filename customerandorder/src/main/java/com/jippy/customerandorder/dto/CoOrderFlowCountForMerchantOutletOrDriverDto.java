@@ -14,7 +14,7 @@ import lombok.Setter;
         name = "CoOrderFlowCountForMerchantOrOutletDto",
         description = "Contains total, completed and rejected order counts"
 )
-public class CoOrderFlowCountForMerchantOrOutletDto {
+public class CoOrderFlowCountForMerchantOutletOrDriverDto  {
 
     @Schema(
             description = "Total number of orders",

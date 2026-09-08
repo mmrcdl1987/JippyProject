@@ -1821,62 +1821,78 @@ public CoOrderCompleteDetailsResponseDto getOrderCompleteDetails(
 }
 //=======================================================================================
 @Override
-public CoOrderFlowCountForMerchantOrOutletDto
-                        getOrderFlowCountForMerchantOrOutlet(
-                                Integer merchantId,
-                                Integer outletId) {
+public CoOrderFlowCountForMerchantOutletOrDriverDto
+getOrderFlowCountForMerchantOrOutletOrDriver(
+        Integer merchantId,
+        Integer outletId,
+        Integer driverId) {
 
     log.info(
-            "Fetching order flow counts. merchantId={}, outletId={}",
+            "Fetching order flow counts. merchantId={}, outletId={}, driverId={}",
             merchantId,
-            outletId
+            outletId,
+            driverId
     );
 
     // ============================================================
     // STEP 1: Validate input
     // ============================================================
     //
-    // Exactly ONE of merchantId or outletId must be provided.
+    // Exactly ONE of the following must be provided:
     //
-    // Valid:
-    //
-    // merchantId=50
-    //
+    // merchantId
     // OR
-    //
-    // outletId=13
-    //
-    // Invalid:
-    //
-    // merchantId=50 & outletId=13
-    //
+    // outletId
     // OR
+    // driverId
     //
-    // merchantId=null & outletId=null
     // ============================================================
 
-    if (merchantId == null && outletId == null) {
+    int providedParameters = 0;
+
+    if (merchantId != null) {
+        providedParameters++;
+    }
+
+    if (outletId != null) {
+        providedParameters++;
+    }
+
+    if (driverId != null) {
+        providedParameters++;
+    }
+
+    // ============================================================
+    // No identifier provided
+    // ============================================================
+
+    if (providedParameters == 0) {
 
         log.warn(
-                "Neither merchantId nor outletId was provided"
+                "Neither merchantId, outletId nor driverId was provided"
         );
 
         throw new IllegalArgumentException(
-                "Either merchantId or outletId must be provided"
+                "Either merchantId, outletId or driverId must be provided"
         );
     }
 
-    if (merchantId != null && outletId != null) {
+    // ============================================================
+    // Multiple identifiers provided
+    // ============================================================
+
+    if (providedParameters > 1) {
 
         log.warn(
-                "Both merchantId and outletId were provided. " +
-                        "merchantId={}, outletId={}",
+                "Multiple identifiers provided. " +
+                        "merchantId={}, outletId={}, driverId={}",
                 merchantId,
-                outletId
+                outletId,
+                driverId
         );
 
         throw new IllegalArgumentException(
-                "Only one of merchantId or outletId can be provided"
+                "Only one of merchantId, outletId or driverId can be provided"
         );
     }
 
@@ -1892,17 +1908,11 @@ public CoOrderFlowCountForMerchantOrOutletDto
     // CASE 1: Merchant ID provided
     // ============================================================
     //
-    // Merchant can have multiple outlets.
-    //
-    // Therefore:
-    //
     // CO → Feign → FM
     //
-    // FM:
+    // FM returns all outlet IDs belonging to merchant.
     //
-    // SELECT outlet_id
-    // FROM jippy_fm.outlets
-    // WHERE merchant_id = ?
+    // CO then calculates order counts for those outlets.
     // ============================================================
 
     if (merchantId != null) {
@@ -1926,10 +1936,9 @@ public CoOrderFlowCountForMerchantOrOutletDto
                     merchantId
             );
 
-            return createEmptyOrderFlowCountResponse();
-        }
+            return createEmptyOrderFlowCountForMerchantOrOutletOrDriverResponse();        }
 
-        // Add all merchant outlet IDs.
+        // Add merchant outlet IDs
         for (Integer merchantOutletId : merchantOutletIds) {
 
             if (merchantOutletId != null) {
@@ -1943,6 +1952,20 @@ public CoOrderFlowCountForMerchantOrOutletDto
                 outletIds.size(),
                 merchantId
         );
+
+        // ========================================================
+        // Fetch order counts for merchant outlets
+        // ========================================================
+
+        CoOrderFlowCountProjection projection =
+                coOrderRepository.getOrderFlowCountsByOutletIds(
+                        outletIds
+                );
+
+        return CoCustomerMapper
+                .mapToOrderFlowCountForMerchantOrOutletOrDriver(
+                        projection
+                );
     }
 
 
@@ -1950,55 +1973,68 @@ public CoOrderFlowCountForMerchantOrOutletDto
     // CASE 2: Outlet ID provided
     // ============================================================
     //
-    // No FM call is required.
+    // No FM call.
     //
-    // Directly use the outlet ID to query CO orders table.
+    // Directly query CO orders table using outlet_id.
     // ============================================================
 
     if (outletId != null) {
 
         log.info(
-                "Outlet ID provided. Using outlet directly. " +
+                "Outlet ID provided. Fetching order counts. " +
                         "outletId={}",
                 outletId
         );
 
         outletIds.add(outletId);
+
+        CoOrderFlowCountProjection projection =
+                coOrderRepository.getOrderFlowCountsByOutletIds(
+                        outletIds
+                );
+
+        return CoCustomerMapper
+                .mapToOrderFlowCountForMerchantOrOutletOrDriver(
+                        projection
+                );
     }
 
 
     // ============================================================
-    // STEP 3: Fetch order counts from CO orders table
+    // CASE 3: Driver ID provided
+    // ============================================================
+    //
+    // No FM call.
+    //
+    // Directly query CO orders table using driver_id.
     // ============================================================
 
     log.info(
-            "Fetching order counts for {} outlet IDs",
-            outletIds.size()
+            "Driver ID provided. Fetching order counts. " +
+                    "driverId={}",
+            driverId
     );
 
     CoOrderFlowCountProjection projection =
-            coOrderRepository.getOrderFlowCountsByOutletIds(
-                    outletIds
+            coOrderRepository.getOrderFlowCountsByDriverId(
+                    driverId
             );
 
 
     // ============================================================
-    // STEP 4: Map projection to DTO
+    // STEP 3: Map projection to response DTO
     // ============================================================
 
-    CoOrderFlowCountForMerchantOrOutletDto response =
+    CoOrderFlowCountForMerchantOutletOrDriverDto  response =
             CoCustomerMapper
-                    .mapToOrderFlowCountForMerchantOrOutlet(
+                    .mapToOrderFlowCountForMerchantOrOutletOrDriver(
                             projection
                     );
 
-
     log.info(
-            "Order flow counts fetched successfully. " +
-                    "merchantId={}, outletId={}, " +
-                    "total={}, completed={}, rejected={}",
-            merchantId,
-            outletId,
+            "Driver order flow counts fetched successfully. " +
+                    "driverId={}, total={}, completed={}, rejected={}",
+            driverId,
             response.getTotalOrdersCount(),
             response.getCompletedOrdersCount(),
             response.getRejectedOrdersCount()
@@ -2006,25 +2042,26 @@ public CoOrderFlowCountForMerchantOrOutletDto
 
     return response;
 }
-//=====================================================================================
-//=================================HELPER METHODS======================================
-//=====================================================================================
+
+//===============================================================================
+//========================= HELPER METHODS ======================================
+//===============================================================================
     /**
      * Creates an empty order flow count response.
      *
-     * This is returned when a merchant does not have
-     * any associated outlets.
+     * This response is returned when:
+     * - Merchant has no outlets
+     * - No orders are found for the given driver
+     * - No orders are found for the given outlet
      */
-    private CoOrderFlowCountForMerchantOrOutletDto
-    createEmptyOrderFlowCountResponse() {
+    private CoOrderFlowCountForMerchantOutletOrDriverDto
+    createEmptyOrderFlowCountForMerchantOrOutletOrDriverResponse() {
 
-        CoOrderFlowCountForMerchantOrOutletDto dto =
-                new CoOrderFlowCountForMerchantOrOutletDto();
+        CoOrderFlowCountForMerchantOutletOrDriverDto dto =
+                new CoOrderFlowCountForMerchantOutletOrDriverDto();
 
         dto.setTotalOrdersCount(0L);
-
         dto.setCompletedOrdersCount(0L);
-
         dto.setRejectedOrdersCount(0L);
 
         return dto;

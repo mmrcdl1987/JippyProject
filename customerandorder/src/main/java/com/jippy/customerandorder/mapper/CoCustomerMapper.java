@@ -326,19 +326,33 @@ public class CoCustomerMapper {
 //    }
 
     /**
-     * Maps order flow count projection to response DTO.
+     * Maps order flow count projection into response DTO.
+     *
+     * <p>
+     * The same response is used for merchant, outlet and driver
+     * order flow count requests.
+     *
+     * @param projection order flow count projection
+     * @return order flow count response DTO
      */
-    public static CoOrderFlowCountForMerchantOrOutletDto
-             mapToOrderFlowCountForMerchantOrOutlet(CoOrderFlowCountProjection projection) {
+    public static CoOrderFlowCountForMerchantOutletOrDriverDto
+    mapToOrderFlowCountForMerchantOrOutletOrDriver(
+            CoOrderFlowCountProjection projection) {
 
-        CoOrderFlowCountForMerchantOrOutletDto dto
-                = new CoOrderFlowCountForMerchantOrOutletDto();
+        CoOrderFlowCountForMerchantOutletOrDriverDto  dto =
+                new CoOrderFlowCountForMerchantOutletOrDriverDto ();
 
-        dto.setTotalOrdersCount(projection.getTotalOrdersCount());
+        dto.setTotalOrdersCount(
+                projection.getTotalOrdersCount()
+        );
 
-        dto.setCompletedOrdersCount(projection.getCompletedOrdersCount());
+        dto.setCompletedOrdersCount(
+                projection.getCompletedOrdersCount()
+        );
 
-        dto.setRejectedOrdersCount(projection.getRejectedOrdersCount());
+        dto.setRejectedOrdersCount(
+                projection.getRejectedOrdersCount()
+        );
 
         return dto;
     }

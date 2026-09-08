@@ -442,4 +442,39 @@ Optional<CoOrder> findByOrderIdAndDriverId(
     CoOrderFlowCountProjection getOrderFlowCountsByOutletIds(
             @Param("outletIds") List<Integer> outletIds
     );
+
+    /**
+     * Fetches total, completed and rejected order counts
+     * for a specific driver.
+     *
+     * <p>
+     * Counts are calculated directly from the CO orders table
+     * using driver_id.
+     */
+    @Query(value = """
+        SELECT
+            COUNT(*) AS totalOrdersCount,
+
+            COUNT(
+                CASE
+                    WHEN o.order_status = 'ORDER_COMPLETED'
+                    THEN 1
+                END
+            ) AS completedOrdersCount,
+
+            COUNT(
+                CASE
+                    WHEN o.order_status = 'ORDER_REJECTED'
+                    THEN 1
+                END
+            ) AS rejectedOrdersCount
+
+        FROM "jippy_customer_and_order"."orders" o
+
+        WHERE o.driver_id = :driverId
+        """,
+            nativeQuery = true)
+    CoOrderFlowCountProjection getOrderFlowCountsByDriverId(
+            @Param("driverId") Integer driverId
+    );
 }
