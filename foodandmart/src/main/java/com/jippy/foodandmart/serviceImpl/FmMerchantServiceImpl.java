@@ -1424,36 +1424,18 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Merchant not found with id: " + merchantId));
 
-                Optional<FmAddress> addressOptional =
-                        addressRepository.findByJippyAddressIdAndAddressType(merchantId, "MERCHANT");
+                Optional<FmMerchantAddressDto> addressOptional =
+                        addressRepository.findMerchantAddressWithLocationNames(
+                                merchantId,
+                                FmAppConstants.TYPE_MERCHANT
+                        );
 
                 if (addressOptional.isEmpty()) {
                     log.warn("[ADDRESS] No address found for merchantId={}", merchantId);
                     return null;
                 }
 
-                FmAddress address = addressOptional.get();
-
-                return FmMerchantAddressDto.builder()
-                        .addressId(address.getAddressId())
-                        .merchantId(merchantId)
-                        .addressType(address.getAddressType())
-                        .buildingNumber(address.getBuildingNumber())
-                        .road(address.getRoad())
-                        .landmark(address.getLandmark())
-                        .stateId(address.getStateId())
-                        .cityId(address.getCityId())
-                        .areaId(address.getAreaId())
-                        .stateName(stateRepository.findById(address.getStateId())
-                                .map(FmState::getStateName)
-                                .orElse(null))
-                        .cityName(cityRepository.findById(address.getCityId())
-                                .map(FmCity::getCityName)
-                                .orElse(null))
-                        .areaName(areaRepository.findById(address.getAreaId())
-                                .map(FmArea::getAreaName)
-                                .orElse(null))
-                        .build();
+                return addressOptional.get();
             }
 
             private void saveMerchantAddressForSingleCreate(

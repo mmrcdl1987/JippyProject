@@ -237,6 +237,8 @@ public class FmMerchantController {
         return ResponseEntity.ok(merchantService.toggleMerchant(requestDto));
     }
 
+
+
     @GetMapping("/getMerchantAddress")
     @Operation(summary = "Get Merchant Address",
             description = "Fetch merchant address details with state, city, and area information"
