@@ -2875,7 +2875,6 @@ public class FmProductServiceImpl implements FmProductService {
 
         return Collections.emptyList();
     }
-
     @Override
     public FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive) {
 
@@ -2908,6 +2907,139 @@ public class FmProductServiceImpl implements FmProductService {
         return new FmResponseDto("200","Successfully updated active status for product ID: " + productId + ". Records updated: " + updatedCount);
     }
 
+//=====================================================================================
+//=====================================================================================
+    /**
+     * Updates the is_active status of either a PRODUCT
+     * or MASTERPRODUCT based on productType.
+     *
+     * PRODUCT       -> products table
+     * MASTERPRODUCT -> master_products table
+     *
+     * Y -> Enabled
+     * N -> Disabled
+     */
+    @Override
+    public String productIsActiveToggleByProductType(
+            FmProductIsActiveToggleRequestDto request) {
 
+        log.info(
+                "Received request to update product active status. " +
+                        "productId={}, productType={}, isActive={}",
+                request.getProductId(),
+                request.getProductType(),
+                request.getIsActive()
+        );
+
+        String productType = request.getProductType()
+                .trim()
+                .toUpperCase();
+
+        String isActive = request.getIsActive()
+                .trim()
+                .toUpperCase();
+
+        /*
+         * PRODUCT
+         *
+         * Updates the is_active column in the products table.
+         */
+        if (FmAppConstants.PRODUCT.equals(productType)) {
+
+
+            log.info(
+                    "Updating PRODUCT active status for productId={}",
+                    request.getProductId()
+            );
+
+            FmProduct product = productRepository
+                    .findById(request.getProductId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Product not found with ID: "
+                                    + request.getProductId()
+                    ));
+
+            product.setIsActive(isActive);
+
+            productRepository.save(product);
+
+            log.info(
+                    "PRODUCT active status updated successfully. " +
+                            "productId={}, isActive={}",
+                    request.getProductId(),
+                    isActive
+            );
+
+            if (FmAppConstants.IS_ACTIVE_YES.equals(isActive)) {
+
+                return productType
+                        + " with ID "
+                        + request.getProductId()
+                        + " is enabled to (isActive = Y) successfully";
+            }
+
+            return productType
+                    + " with ID "
+                    + request.getProductId()
+                    + " is disabled to (isActive = N) successfully";
+        }
+
+        /*
+         * MASTERPRODUCT
+         *
+         * Updates the is_active column in the master_products table.
+         */
+        if (FmAppConstants.PRODUCT_TYPE_MASTER_PRODUCT.equals(productType)) {
+
+            log.info(
+                    "Updating MASTERPRODUCT active status for masterProductId={}",
+                    request.getProductId()
+            );
+
+            FmMasterProduct masterProduct = masterProductRepository
+                    .findById(request.getProductId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Master product not found with ID: "
+                                    + request.getProductId()
+                    ));
+
+            masterProduct.setIsActive(isActive);
+
+            masterProductRepository.save(masterProduct);
+
+            log.info(
+                    "MASTERPRODUCT active status updated successfully. " +
+                            "masterProductId={}, isActive={}",
+                    request.getProductId(),
+                    isActive
+            );
+
+            if (FmAppConstants.IS_ACTIVE_YES.equals(isActive)) {
+
+                return productType
+                        + " with ID "
+                        + request.getProductId()
+                        + " is enabled to (isActive = Y) successfully";
+            }
+
+            return productType
+                    + " with ID "
+                    + request.getProductId()
+                    + " is disabled to (isActive = N) successfully";
+        }
+
+        /*
+         * If productType is neither PRODUCT nor MASTERPRODUCT,
+         * execution reaches here.
+         */
+        log.error(
+                "Unsupported product type received: {}",
+                productType
+        );
+
+        throw new IllegalArgumentException(
+                "Product type must be PRODUCT or MASTERPRODUCT"
+        );
+    }
 }
 

@@ -139,10 +139,7 @@ package com.jippy.foodandmart.mapper;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
-import com.jippy.foodandmart.projections.FmAdminOutletMenuProjection;
-import com.jippy.foodandmart.projections.FmMerchantOutletMenuProjection;
-import com.jippy.foodandmart.projections.FmOutletByMerchantProjection;
-import com.jippy.foodandmart.projections.FmOutletMenuProjection;
+import com.jippy.foodandmart.projections.*;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.dialect.function.array.JsonArrayViaElementArgumentReturnTypeResolver;
 import org.locationtech.jts.geom.Coordinate;
@@ -1679,6 +1676,24 @@ public final class FmOutletMapper {
         log.info("ADMIN_OUTLET_MAPPING_COMPLETED | outletId={} | categories={} | cuisines={}", outlet.getOutletId(), categoryMap.size(), cuisineMap.size());
 
         return outlet;
+    }
+//    =======================================================================================
+//    =======================================================================================
+    /**
+     * Converts outlet projection into response DTO.
+     */
+    public static FmOutletCompleteDetailsDto mapToCompleteDetailsDto(
+            FmOutletCompleteDetailsProjection projection) {
+
+        FmOutletCompleteDetailsDto dto = new FmOutletCompleteDetailsDto();
+
+        dto.setOutletId(projection.getOutletId());
+        dto.setOutletName(projection.getOutletName());
+        dto.setOutletPhone(projection.getOutletPhone());
+        dto.setOutletPicUrl(projection.getOutletPicUrl());
+        dto.setBuildingNumber(projection.getBuildingNumber());
+
+        return dto;
     }
 
     public static void updateOutletKycEntity(FmUserKyc savUserKyc, FmUpdateOutletRequestDTO dto) {

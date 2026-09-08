@@ -24,6 +24,12 @@ public final class FmAppConstants {
     public static final String MSG_SUCCESS =
             "Success";
 
+    //    ============================================================
+    //    =================== is Active Statuses ======================
+//    ================================================================
+    public static final String IS_ACTIVE_YES = "Y";
+
+    public static final String IS_ACTIVE_NO = "N";
 
     // ============================================================
     // APPROVAL REQUEST

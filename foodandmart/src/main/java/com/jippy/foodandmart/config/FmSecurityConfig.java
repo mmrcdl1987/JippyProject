@@ -64,7 +64,12 @@ public class FmSecurityConfig {
                                 // Forgot Password APIs
                                 "/api/fm/forgetPasswordForUserTypeBySendingOtpToMail",
                                 "/api/fm/validateForgotPasswordOTP",
-                                "/api/fm/updateForgotPassword"
+                                "/api/fm/updateForgotPassword",
+
+                                // Terms and Conditions / Privacy Policy
+                                "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType"
+
+
                         ).permitAll()
 
                         // 2. ADD THIS: Allow Health Checks

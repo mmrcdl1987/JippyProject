@@ -56,9 +56,10 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
             // Find By Email From Driver
             "/api/driver/findByEmail",
-//            From DIV
-            "/api/div/email/sendOtp"
-
+            // From DIV
+            "/api/div/email/sendOtp",
+            // Terms and Conditions / Privacy Policy
+            "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType"
 
     );
 

@@ -217,6 +217,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return createOutlet;
     }
 
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String uploadOrUpdateOutletImage(Integer outletId, MultipartFile image) {
@@ -404,7 +405,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
 //        }
         return response;
     }
-
 
 //    /**
 //     * Saves Outlet KYC Details.
@@ -3393,8 +3393,95 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
         return uploadDocumentsResponseDto;
     }
-}
+    //    =================================================================================
+//    =================================================================================
 
+    //    =================================================================================
+//    =================================================================================
+
+    /**
+     * Fetches outlet and area details for multiple outlet IDs.
+     * <p>
+     * The information is fetched in one database query.
+     */
+    @Override
+    public List<FmOutletDetailsResponseDto> getOutletDetailsByIds(List<Integer> outletIds) {
+
+        log.info("Fetching outlet details for {} outlet IDs", outletIds.size());
+
+        List<FmOutletDetailsProjection> projections
+                = outletRepository.getOutletDetailsByIds(outletIds);
+
+        List<FmOutletDetailsResponseDto> response = new ArrayList<>();
+
+        for (FmOutletDetailsProjection projection : projections) {
+
+            FmOutletDetailsResponseDto dto = new FmOutletDetailsResponseDto();
+
+            dto.setOutletId(projection.getOutletId());
+
+            dto.setOutletName(projection.getOutletName());
+
+            dto.setAreaName(projection.getAreaName());
+
+            response.add(dto);
+        }
+
+        log.info("Successfully fetched {} outlet details", response.size());
+
+        return response;
+
+    }
+    //    =================================================================================
+//    =================================================================================
+    @Override
+    public FmOutletCompleteDetailsDto getOutletCompleteDetails(Integer outletId) {
+
+        log.info(
+                "Fetching complete outlet details for outletId={}",
+                outletId
+        );
+
+        FmOutletCompleteDetailsProjection projection =
+                outletRepository.getOutletCompleteDetails(outletId)
+                        .orElseThrow(() -> new RuntimeException(
+                                "Outlet not found with ID: " + outletId
+                        ));
+
+        FmOutletCompleteDetailsDto response =
+                FmOutletMapper.mapToCompleteDetailsDto(projection);
+
+        log.info(
+                "Complete outlet details fetched successfully. outletId={}",
+                outletId
+        );
+
+        return response;
+    }
+    //==========================================================================================
+//==========================================================================================
+    @Override
+    public List<Integer> getOutletIdsByMerchantId(Integer merchantId) {
+
+        log.info(
+                "Fetching outlet IDs for merchant. merchantId={}",
+                merchantId
+        );
+
+        List<Integer> outletIds =
+                outletRepository.findOutletIdsByMerchantId(merchantId);
+
+        log.info(
+                "Found {} outlets for merchant. merchantId={}",
+                outletIds.size(),
+                merchantId
+        );
+
+        return outletIds;
+    }
+
+
+}
 
 
 

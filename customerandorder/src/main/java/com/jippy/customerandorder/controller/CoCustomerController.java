@@ -9,6 +9,11 @@ import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.projection.CustomerLocationProjection;
 import com.jippy.customerandorder.repository.CoCustomerDeliveryAddressRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -237,14 +242,168 @@ public class CoCustomerController {
     // ================================================================
 
     @PutMapping("/updateCustomerProfilePic")
-    public ResponseEntity<CoResponseDto> updateCustomerProfilePic
-            (@RequestBody CustomerProfilePicDto customerDto) {
+    public ResponseEntity<CoResponseDto> updateCustomerProfilePic(@RequestBody CustomerProfilePicDto customerDto) {
 
-        log.info("[CUSTOMER] Updating profile picture. customerId={}",
-                customerDto.getCustomerId());
+        log.info("[CUSTOMER] Updating profile picture. customerId={}", customerDto.getCustomerId());
 
         String message = customerService.updateCustomerProfilePic(customerDto);
 
         return ResponseEntity.ok(new CoResponseDto("200", message));
+    }
+//    ====================================================================================
+//    ====================================================================================
+
+    /**
+     * Fetch complete order flow counts based on order status.
+     */
+    @GetMapping("/getCompleteOrdersFlowCounts")
+    @Operation(summary = "Get complete orders flow counts", description = "Fetches the total number of orders and counts of orders " + "in ORDER_PLACED, ORDER_CONFIRMED, ORDER_SHIPPED and " + "ORDER_COMPLETED statuses.")
+    @ApiResponses(value = {
+
+            @ApiResponse(responseCode = "200", description = "Complete orders flow counts fetched successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CoCompleteOrdersFlowCountsDto.class))),
+
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)})
+    public ResponseEntity<CoCompleteOrdersFlowCountsDto> getCompleteOrdersFlowCounts() {
+
+        log.info("Received request to fetch complete orders flow counts");
+
+        CoCompleteOrdersFlowCountsDto response = customerService.getCompleteOrdersFlowCounts();
+
+        log.info("Returning complete orders flow counts successfully");
+
+        return ResponseEntity.ok(response);
+    }
+//    ========================================================================================
+//    ========================================================================================
+
+    /**
+     * Fetches complete order details based on the provided order status.
+     * <p>
+     * The API returns:
+     * - Order ID
+     * - Outlet ID
+     * - Driver ID
+     * - Order Status
+     * <p>
+     * The result is filtered using the order_status column
+     * from the orders table.
+     */
+    @GetMapping("/getCompleteOrdersDetailsByOrderStatus")
+    @Operation(summary = "Get complete order details by order status", description = "Fetches order ID, outlet ID, driver ID and order status " + "for all orders matching the supplied order status." +
+
+            "Order status filter. Supported values: " +
+
+            "ORDER_PLACED (Order Placed), " + "ORDER_CONFIRMED (Order Confirmed), " + "ORDER_SHIPPED (Order Shipped), " + "ORDER_COMPLETED (Order Completed).")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Order details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid or missing order status"), @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<List<CoOrderDetailsByOrderStatusDto>> getCompleteOrdersDetailsByOrderStatus(
+
+            @Parameter(name = "orderStatus", description = "Order status filter. Supported values: " + "ORDER_PLACED (Order_Placed), " + "ORDER_CONFIRMED (Order_Confirmed), " + "ORDER_SHIPPED (Order_Shipped), " + "ORDER_COMPLETED (Order_Completed).", example = "ORDER_SHIPPED", required = true) @RequestParam String orderStatus) {
+
+        log.info("Received request to fetch complete order details by order status: {}", orderStatus);
+
+        List<CoOrderDetailsByOrderStatusDto> response = customerService.getCompleteOrdersDetailsByOrderStatus(orderStatus);
+
+        log.info("Successfully fetched {} orders for order status: {}", response.size(), orderStatus);
+
+        return ResponseEntity.ok(response);
+    }
+
+    //    ========================================================================================
+//    ========================================================================================
+    @GetMapping("/getOrderCompleteDetails")
+    @Operation(summary = "Get complete order details", description = """
+            Fetches complete order information using [Input] ---> "order ID".
+            
+            The response includes:
+            - Order ID
+            - Created by
+            - Order type
+            - Order status
+            - Payment mode
+            - Customer details
+            - Customer building name
+            - Outlet details
+            - Outlet building number
+            - Order items
+            - Order price breakup
+            
+            If the order status is ORDER_REJECTED,
+            refund details are also fetched from the
+            Division microservice.
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Complete order details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid order ID"), @ApiResponse(responseCode = "404", description = "Order not found"), @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<CoOrderCompleteDetailsResponseDto> getOrderCompleteDetails(@RequestParam String orderId) {
+
+        log.info("GET /getOrderCompleteDetails request received. " + "orderId={}", orderId);
+
+        CoOrderCompleteDetailsResponseDto response = customerService.getOrderCompleteDetails(orderId);
+
+        log.info("GET /getOrderCompleteDetails completed successfully. " + "orderId={}", orderId);
+
+        return ResponseEntity.ok(response);
+    }
+
+//    =====================================================================================
+//    =====================================================================================
+
+    /**
+     * Fetches order flow counts for either a merchant or an outlet.
+     * <p>
+     * Exactly one of merchantId or outletId must be provided.
+     * <p>
+     * If merchantId is provided:
+     * CO fetches all outlets belonging to that merchant
+     * from FM and then calculates order counts.
+     * <p>
+     * If outletId is provided:
+     * CO directly calculates order counts for that outlet.
+     */
+    @GetMapping("/getOrderFlowCountForMerchantOrOutlet")
+    @Operation(summary = "Get order flow counts for merchant or outlet", description = """
+            Fetches total, completed and rejected order counts.
+            
+            Exactly one of [ merchantId ex: merchantId=31] OR [ outletId ex: outletId=13 ] 
+            must be provided.
+            
+            If merchantId is provided, all outlets belonging to
+            that merchant are fetched from Food & Mart and the
+            order counts are calculated across those outlets From FM.
+            
+            If outletId is provided, the order counts are calculated
+            directly for that outlet from CO.
+            """)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order flow counts fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Either merchantId or outletId must be provided, but not both"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<CoOrderFlowCountForMerchantOrOutletDto>
+                                            getOrderFlowCountForMerchantOrOutlet(
+@Parameter(description = "Merchant ID. Provide either merchantId or outletId, not both.", example = "50")
+    @RequestParam(value = "merchantId", required = false) Integer merchantId,
+     @Parameter(description = "Outlet ID. Provide either outletId or merchantId, not both.", example = "13")
+     @RequestParam(value = "outletId", required = false) Integer outletId) {
+
+        log.info("GET /getOrderFlowCountForMerchantOrOutlet called. " + "merchantId={}, outletId={}", merchantId, outletId);
+
+        if (merchantId == null && outletId == null) {
+
+            log.warn("Request rejected. Neither merchantId  nor outletId provided");
+
+            throw new IllegalArgumentException("Either merchantId or outletId must be provided");
+        }
+
+        if (merchantId != null && outletId != null) {
+
+            log.warn("Request rejected. Both merchantId and outletId provided. " + "merchantId={}, outletId={}", merchantId, outletId);
+
+            throw new IllegalArgumentException("Only one of merchantId or outletId can be provided");
+        }
+
+        CoOrderFlowCountForMerchantOrOutletDto response =
+                customerService.getOrderFlowCountForMerchantOrOutlet(merchantId, outletId);
+
+        log.info("GET /getOrderFlowCountForMerchantOrOutlet completed successfully. " + "merchantId={}, outletId={}", merchantId, outletId);
+
+        return ResponseEntity.ok(response);
     }
 }

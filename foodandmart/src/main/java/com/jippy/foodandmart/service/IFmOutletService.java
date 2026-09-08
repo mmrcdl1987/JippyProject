@@ -81,7 +81,7 @@ public interface IFmOutletService {
 
     Integer getAreaIdByOutletId(Integer outletId);
 
-     FmResponseDto updateOutletProfilePic(FmUpdateOutletProfilePicDto outletDto);
+    FmResponseDto updateOutletProfilePic(FmUpdateOutletProfilePicDto outletDto);
 
     // ================================================================
     // TOGGLE OUTLET
@@ -90,7 +90,28 @@ public interface IFmOutletService {
     // Updates the is_toggle value of an outlet.
     // ================================================================
 
-     FmResponseDto toggleForOutlet(FmToggleOutletRequestDto requestDto);
+    FmResponseDto toggleForOutlet(FmToggleOutletRequestDto requestDto);
 
     UploadDocumentsResponseDto saveOrUpdateDocuments(UploadDocumentsRequestDto uploadDocumentsDto);
+
+    /**
+     * Fetches outlet name and area name for multiple outlets.
+     *
+     * @param outletIds list of outlet IDs
+     * @return outlet and area details
+     */
+    List<FmOutletDetailsResponseDto> getOutletDetailsByIds(List<Integer> outletIds);
+
+    //    =====================================================================================
+    FmOutletCompleteDetailsDto getOutletCompleteDetails(Integer outletId);
+
+//    ==================================================================================
+    /**
+     * Fetches all outlet IDs belonging to a merchant.
+     *
+     * @param merchantId merchant ID
+     * @return list of outlet IDs
+     */
+    List<Integer> getOutletIdsByMerchantId(Integer merchantId);
+
 }

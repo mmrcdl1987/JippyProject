@@ -153,6 +153,17 @@ public class FmMasterProduct {
     @Column(name = "grams")
     @Builder.Default
     private Integer grams = 0;
+    /**
+     * Indicates whether the master product is active.
+     *
+     * Y = Active / Enabled
+     * N = Inactive / Disabled
+     */
+    @Column(
+            name = "is_active",
+            length = 1
+    )
+    private String isActive = "Y";
 
     /**
      * Product type/category classification.
