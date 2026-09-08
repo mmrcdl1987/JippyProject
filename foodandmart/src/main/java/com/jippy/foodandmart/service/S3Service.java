@@ -13,6 +13,11 @@ public interface S3Service {
             Integer merchantId
     );
 
+    String uploadMerchantProfileImage(
+            MultipartFile image,
+            Integer merchantId
+    );
+
     String uploadCategoryImage(
             MultipartFile image,
             Integer categoryId

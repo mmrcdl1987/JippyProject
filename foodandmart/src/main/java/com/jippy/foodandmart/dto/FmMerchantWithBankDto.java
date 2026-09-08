@@ -38,6 +38,14 @@ public class FmMerchantWithBankDto {
 
         private String status;
 
+        // merchant address details
+        private String buildingNumber;
+        private String road;
+        private String landmark;
+        private Integer stateId;
+        private Integer cityId;
+        private Integer areaId;
+
 
         // for merchant bank details
 
@@ -70,4 +78,7 @@ public class FmMerchantWithBankDto {
         @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "Invalid PAN number")
         private String panNumber;
 
+        private String aadhaarNumberUrl;
+
+        private String panNumberUrl;
 }

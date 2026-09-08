@@ -161,6 +161,7 @@ public final class FmMerchantMapper {
         entity.setUpdatedBy(merchantDto.getUpdatedBy());
         entity.setIsActive(merchantDto.getIsActive());
         entity.setIsApproved(merchantDto.getIsApproved());
+        entity.setProfilePicUrl(merchantDto.getProfilePicUrl());
         return entity;
     }
 
@@ -181,6 +182,7 @@ public final class FmMerchantMapper {
         dto.setUpdatedBy(entityFromDb.getUpdatedBy());
         dto.setIsActive(entityFromDb.getIsActive());
         dto.setIsApproved(entityFromDb.getIsApproved());
+        dto.setProfilePicUrl(entityFromDb.getProfilePicUrl());
         return dto;
     }
 
