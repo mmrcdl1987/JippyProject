@@ -46,4 +46,5 @@ public interface MealTypeTimingRepository extends JpaRepository<MealTypeTiming, 
             ")")
     boolean isMealActiveNow(@Param("mealIds") List<Integer> mealIds,
             @Param("currentTime") LocalTime currentTime);
+
 }

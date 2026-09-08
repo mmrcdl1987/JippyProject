@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.jippy.customerandorder.enums.PromotionSourceType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -32,6 +33,8 @@ public class CoPlaceOrderRequestDto {
     private BigDecimal orderAmount;
 
     private BigDecimal orderAmountDiscounted;
+
+    private PromotionSourceType promotionSourceType;
 
     private Integer couponId;
 

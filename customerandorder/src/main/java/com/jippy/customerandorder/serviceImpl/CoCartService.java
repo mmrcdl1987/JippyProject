@@ -1,4 +1,5 @@
 package com.jippy.customerandorder.serviceImpl;
+
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomerCart;
@@ -75,99 +76,79 @@ public class CoCartService implements ICartService {
             /*
              * 3. PROCESS ALL VARIANTS
              */
-            for (CoCartVariantDto variant : dto.getVariants()) {
+            if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
 
-                Integer variantOptionId = variant.getVariantOptionId();
+                for (CoCartVariantDto variant : dto.getVariants()) {
 
-                Integer quantity = variant.getQuantity();
+                    Integer variantOptionId = variant.getVariantOptionId();
 
-                BigDecimal unitPrice = variant.getUnitPrice();
+                    Integer quantity = variant.getQuantity();
 
-                log.info("PROCESS_CART_VARIANT | customerId={} | outletId={} | productId={} | variantOptionId={} | quantity={} | unitPrice={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), variantOptionId, quantity, unitPrice);
+                    BigDecimal unitPrice = variant.getUnitPrice();
 
-                //  * * 4. QUANTITY = 0 (REMOVE ITEM) * Remove ONLY this product + variant.
+                    log.info("PROCESS_CART_VARIANT | customerId={} | outletId={} | productId={} | variantOptionId={} | quantity={} | unitPrice={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), variantOptionId, quantity, unitPrice);
 
-                if (quantity == 0) {
+                    if (quantity == 0) {
 
-                    CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductIdAndVariantOptionId(dto.getCustomerId(), dto.getProductId(), variantOptionId).orElse(null);
+                        CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductIdAndVariantOptionId(dto.getCustomerId(), dto.getProductId(), variantOptionId).orElse(null);
 
-                    if (existingCart == null) {
+                        if (existingCart == null) {
 
-                        log.warn("CART_VARIANT_NOT_FOUND_FOR_REMOVE | customerId={} | productId={} | variantOptionId={}", dto.getCustomerId(), dto.getProductId(), variantOptionId);
+                            log.warn("CART_VARIANT_NOT_FOUND_FOR_REMOVE | customerId={} | productId={} | variantOptionId={}", dto.getCustomerId(), dto.getProductId(), variantOptionId);
+
+                            continue;
+                        }
+
+                        validateCartOutlet(existingCart, dto.getOutletId());
+
+                        cartRepository.delete(existingCart);
+
+                        log.info("CART_VARIANT_REMOVED | cartId={} | customerId={} | productId={} | variantOptionId={}", existingCart.getCartId(), dto.getCustomerId(), dto.getProductId(), variantOptionId);
 
                         continue;
                     }
 
-                    validateCartOutlet(existingCart, dto.getOutletId());
+                    CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductIdAndVariantOptionId(dto.getCustomerId(), dto.getProductId(), variantOptionId).orElse(null);
 
-                    cartRepository.delete(existingCart);
+                    BigDecimal totalPrice = calculateTotalPrice(unitPrice, quantity);
 
-                    log.info("CART_VARIANT_REMOVED | cartId={} | customerId={} | productId={} | variantOptionId={}", existingCart.getCartId(), dto.getCustomerId(), dto.getProductId(), variantOptionId);
+                    if (existingCart != null) {
 
-                    continue;
-                }
+                        existingCart.setQuantity(quantity);
+                        existingCart.setTotalPrice(totalPrice);
+                        existingCart.setUpdatedAt(LocalDateTime.now());
+                        existingCart.setUpdatedBy(1);
 
-                /*
-                 * 5. FIND EXACT PRODUCT + VARIANT
-                 */
-                CoCustomerCart existingCart = cartRepository.findByCustomerIdAndProductIdAndVariantOptionId(dto.getCustomerId(), dto.getProductId(), variantOptionId).orElse(null);
+                        cartRepository.save(existingCart);
 
-                /*
-                 * totalPrice = unitPrice × quantity
-                 */
-                BigDecimal totalPrice = calculateTotalPrice(unitPrice, quantity);
+                        log.info("CART_VARIANT_UPDATED | cartId={} | customerId={} | outletId={} | productId={} | variantOptionId={} | quantity={} | totalPrice={}", existingCart.getCartId(), dto.getCustomerId(), existingCart.getOutletId(), dto.getProductId(), variantOptionId, quantity, totalPrice);
 
-                /*
-                 * ========================================================
-                 * 7. UPDATE EXISTING VARIANT
-                 * ========================================================
-                 */
-                if (existingCart != null) {
+                    } else {
 
-                    existingCart.setQuantity(quantity);
+                        CoCustomerCart newCart = new CoCustomerCart();
 
-                    existingCart.setTotalPrice(totalPrice);
+                        newCart.setCustomerId(dto.getCustomerId());
+                        newCart.setOutletId(dto.getOutletId());
+                        newCart.setProductId(dto.getProductId());
+                        newCart.setVariantOptionId(variantOptionId);
+                        newCart.setQuantity(quantity);
+                        newCart.setTotalPrice(totalPrice);
+                        newCart.setCreatedAt(LocalDateTime.now());
+                        newCart.setCreatedBy(1);
 
-                    existingCart.setUpdatedAt(LocalDateTime.now());
+                        cartRepository.save(newCart);
 
-                    existingCart.setUpdatedBy(1);
-
-                    cartRepository.save(existingCart);
-
-                    log.info("CART_VARIANT_UPDATED | cartId={} | customerId={} | outletId={} | productId={} | variantOptionId={} | quantity={} | totalPrice={}", existingCart.getCartId(), dto.getCustomerId(), existingCart.getOutletId(), dto.getProductId(), variantOptionId, quantity, totalPrice);
-
-                } else {
-
-                    /*
-                     * ====================================================
-                     * 8. CREATE NEW VARIANT
-                     * ====================================================
-                     */
-                    CoCustomerCart newCart = new CoCustomerCart();
-
-                    newCart.setCustomerId(dto.getCustomerId());
-
-                    newCart.setOutletId(dto.getOutletId());
-
-                    newCart.setProductId(dto.getProductId());
-
-                    newCart.setVariantOptionId(variantOptionId);
-
-                    newCart.setQuantity(quantity);
-
-                    newCart.setTotalPrice(totalPrice);
-
-                    newCart.setCreatedAt(LocalDateTime.now());
-
-                    newCart.setCreatedBy(1);
-
-                    cartRepository.save(newCart);
-
-                    log.info("CART_VARIANT_CREATED | cartId={} | customerId={} | outletId={} | productId={} | variantOptionId={} | quantity={} | totalPrice={}", newCart.getCartId(), dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), variantOptionId, quantity, totalPrice);
+                        log.info("CART_VARIANT_CREATED | cartId={} | customerId={} | outletId={} | productId={} | variantOptionId={} | quantity={} | totalPrice={}", newCart.getCartId(), dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), variantOptionId, quantity, totalPrice);
+                    }
                 }
             }
 
-            log.info("SERVICE_END | SAVE_OR_UPDATE_CART_SUCCESS | customerId={} | outletId={} | productId={} | variantCount={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), dto.getVariants().size());
+            /*
+             * SERVICE END LOG
+             */
+            int variantCount = dto.getVariants() == null ? 0 : dto.getVariants().size();
+
+            log.info("SERVICE_END | SAVE_OR_UPDATE_CART_SUCCESS | customerId={} | outletId={} | productId={} | variantCount={}", dto.getCustomerId(), dto.getOutletId(), dto.getProductId(), variantCount);
 
             return COConstants.MSG_CART_UPDATED;
 
@@ -457,9 +438,13 @@ public class CoCartService implements ICartService {
             throw new CartException("Invalid product ID");
         }
 
+        /*
+         * Variants are optional.
+         * If null or empty, there is nothing further to validate.
+         */
         if (dto.getVariants() == null || dto.getVariants().isEmpty()) {
 
-            throw new CartException("At least one variant is required");
+            return;
         }
 
         /*
@@ -481,7 +466,7 @@ public class CoCartService implements ICartService {
 
             /*
              * Normal product:
-             * variantOptionId = NULL
+             * variantOptionId = null
              */
             if (variantOptionId == null) {
 
@@ -505,21 +490,25 @@ public class CoCartService implements ICartService {
                 }
             }
 
-            if (variant.getQuantity() == null || variant.getQuantity() < 0) {
+            Integer quantity = variant.getQuantity();
+
+            if (quantity == null || quantity < 0) {
 
                 throw new CartException(COConstants.MSG_INVALID_QUANTITY);
             }
 
             /*
-             * Unit price is required only when
-             * quantity > 0.
-             *
-             * For quantity = 0, it is used only
-             * for remove operation and can be ignored.
+             * Unit price is required only when quantity > 0.
+             * For quantity = 0, this is a remove operation.
              */
-            if (variant.getQuantity() > 0 && (variant.getUnitPrice() == null || variant.getUnitPrice().compareTo(BigDecimal.ZERO) < 0)) {
+            if (quantity > 0) {
 
-                throw new CartException("Unit price cannot be negative");
+                BigDecimal unitPrice = variant.getUnitPrice();
+
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+
+                    throw new CartException("Unit price must be zero or greater");
+                }
             }
         }
     }

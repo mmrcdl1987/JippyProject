@@ -4,9 +4,9 @@ import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoOrderCheckoutFee;
 import com.jippy.customerandorder.entity.CoOrderCheckoutTax;
+import com.jippy.customerandorder.enums.PromotionSourceType;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.feignClients.DriverFeignClient;
-
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.CustomerDeliveryChargeSettingsService;
 import com.jippy.customerandorder.iservice.ICartService;
@@ -52,25 +52,19 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
         try {
 
-            // ============================================================
+
             // CART
-            // ============================================================
 
             CoCartResponseDto cartResponse = cartService.getCart(requestDto.getCustomerId());
 
             validateCart(cartResponse, requestDto.getCustomerId(), requestDto.getOutletId());
 
-            // ============================================================
             // ITEM TOTAL
-            // ============================================================
-
             BigDecimal itemTotal = calculateItemTotal(cartResponse);
 
             log.info("ITEM_TOTAL_CALCULATED | customerId={} | itemTotal={}", requestDto.getCustomerId(), itemTotal);
 
-            // ============================================================
             // AREA / FEE CONFIGURATION
-            // ============================================================
 
             Integer areaId = getAreaId(requestDto.getOutletId());
 
@@ -78,38 +72,47 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             CoOrderCheckoutFee feeConfig = getFeeConfiguration(areaId);
 
-            // ============================================================
             // GST CONFIGURATION
-            // ============================================================
 
             CoOrderCheckoutTax taxConfig = getTaxConfiguration();
 
-            // ============================================================
             // FOOD GST
-            // ============================================================
 
             BigDecimal foodTax = calculatePercentage(itemTotal, taxConfig.getFoodAmountTax());
 
-            // ============================================================
-            // COUPON
-            // ============================================================
+            // ================= PROMOTION =================
 
-            BigDecimal couponDiscount = defaultValue(requestDto.getCouponDiscount());
+            PromotionSourceType promotionSourceType = requestDto.getPromotionSourceType();
 
+            Integer couponId = requestDto.getCouponId();
+
+            BigDecimal couponDiscount =
+                    defaultValue(requestDto.getCouponDiscount());
+
+            if (couponDiscount.compareTo(BigDecimal.ZERO) < 0) {
+
+                throw new CoBadRequestException(
+                        "Coupon discount cannot be negative");
+            }
+
+            if (couponDiscount.compareTo(itemTotal) > 0) {
+
+                throw new CoBadRequestException(
+                        "Coupon discount cannot exceed order amount");
+            }
+
+            if (promotionSourceType != null && couponId == null) {
+
+                throw new CoBadRequestException(
+                        "Coupon id is required when promotion is selected");
+            }
             BigDecimal orderAmountDiscounted = itemTotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
 
-            log.info("ORDER_AMOUNT_DISCOUNTED | itemTotal={} | couponDiscount={} | orderAmountDiscounted={}", itemTotal, couponDiscount, orderAmountDiscounted);
-
-            // ============================================================
+            log.info("PROMOTION_APPLIED | customerId={} | sourceType={} | couponId={} | discount={}", requestDto.getCustomerId(), promotionSourceType, couponId, couponDiscount);
             // CUSTOMER CITY
-            // ============================================================
-
             Integer customerCityId = getCustomerCityId(requestDto.getCustomerId(), requestDto.getCustomerAddressId());
-
-            // ============================================================
             // DRIVER DELIVERY CHARGE
             // KEEP EXISTING DRIVER CALCULATION
-            // ============================================================
 
             DeliveryChargeCalculationResponseDto deliveryResponse = getDeliveryCharge(requestDto, itemTotal);
 
@@ -118,10 +121,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
             BigDecimal deliveryDistanceKm = defaultValue(deliveryResponse.getDeliveryDistanceKm());
 
             log.info("DRIVER_DELIVERY_CHARGE | distance={} | driverDeliveryCharge={}", deliveryDistanceKm, driverDeliveryCharge);
-
-            // ============================================================
             // CUSTOMER DELIVERY CHARGE
-            // ============================================================
 
             CustomerDeliveryChargeCalculationResponseDto customerDeliveryResponse = customerDeliveryChargeSettingsService.calculateCustomerDeliveryCharge(customerCityId, orderAmountDiscounted, deliveryDistanceKm);
 
@@ -133,7 +133,6 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             log.info("CUSTOMER_DELIVERY_CHARGE | cityId={} | discountedAmount={} | distance={} | gross={} | freeBenefit={} | payable={}", customerCityId, orderAmountDiscounted, deliveryDistanceKm, customerGrossDeliveryCharge, customerFreeDistanceBenefit, customerDeliveryCharge);
 
-            // ============================================================
             // CUSTOMER DELIVERY GST
             //
             // GST is calculated on GROSS delivery charge.
@@ -141,74 +140,52 @@ public class CheckoutServiceImpl implements ICheckoutService {
             //
             // DO NOT USE:
             // deliveryResponse.getTaxAmount()
-            // ============================================================
 
             BigDecimal customerDeliveryTax = calculatePercentage(customerGrossDeliveryCharge, taxConfig.getDeliveryFeeTax());
 
             log.info("CUSTOMER_DELIVERY_GST | grossDeliveryCharge={} | taxPercentage={} | customerDeliveryTax={}", customerGrossDeliveryCharge, taxConfig.getDeliveryFeeTax(), customerDeliveryTax);
-
-            // ============================================================
             // PLATFORM FEE
-            // ============================================================
-
             BigDecimal platformFee = defaultValue(feeConfig.getPlatformFee());
 
             BigDecimal platformFeeTax = calculatePercentage(platformFee, taxConfig.getPlatformFeeTax());
 
-            // ============================================================
             // SURGE FEE
-            // ============================================================
 
             BigDecimal surgeFee = defaultValue(feeConfig.getSurgeFee());
 
             BigDecimal surgeFeeTax = calculatePercentage(surgeFee, taxConfig.getSurgeFeeTax());
 
-            // ============================================================
             // PACKAGING FEE
-            // ============================================================
 
             BigDecimal packagingFee = defaultValue(feeConfig.getPackagingFee());
 
             BigDecimal packagingFeeTax = calculatePercentage(packagingFee, taxConfig.getPackagingFeeTax());
 
-            // ============================================================
-            // TOGGLES
-            // ============================================================
+            // TOGGLEs
 
             Boolean platformFeeToggle = Boolean.TRUE.equals(feeConfig.getPlatformFeeToggle());
 
             Boolean surgeFeeToggle = Boolean.TRUE.equals(feeConfig.getSurgeFeeToggle());
 
             Boolean packagingFeeToggle = Boolean.TRUE.equals(feeConfig.getPackagingFeeToggle());
-
-            // ============================================================
             // TAXES AND CHARGES
             //
             // IMPORTANT:
             // customerDeliveryTax is used.
-            // Driver taxAmount is NOT used.
-            // ============================================================
+            // Driver taxAmount is NOT used
 
             BigDecimal taxesAndCharges = foodTax.add(customerDeliveryTax).add(platformFeeTax).add(surgeFeeTax).add(packagingFeeTax).setScale(2, RoundingMode.HALF_UP);
-
-            // ============================================================
             // TIP
-            // ============================================================
 
             BigDecimal deliveryTip = defaultValue(requestDto.getDeliveryTip());
 
-            // ============================================================
             // WALLET
-            // ============================================================
-
             BigDecimal walletAmount = defaultValue(requestDto.getWalletAmount());
 
-            // ============================================================
             // FINAL TO PAY
             //
             // CUSTOMER DELIVERY CHARGE is used here.
-            // DRIVER DELIVERY CHARGE is NOT added to customer payable.
-            // ============================================================
+            // DRIVER DELIVERY CHARGE is NOT added to customer payable
 
             BigDecimal toPay = calculateFinalAmount(itemTotal,
 
@@ -226,9 +203,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             log.info("FINAL_AMOUNT_CALCULATED | itemTotal={} | customerDeliveryCharge={} | customerDeliveryTax={} | toPay={}", itemTotal, customerDeliveryCharge, customerDeliveryTax, toPay);
 
-            // ============================================================
-            // RESPONSE
-            // ============================================================
+            // RESPONSe
 
             CoCheckoutResponseDto response = buildCheckoutResponse(cartResponse,
 
@@ -237,7 +212,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
                     orderAmountDiscounted,
 
                     // DRIVER
-                    driverDeliveryCharge,deliveryDistanceKm,
+                    driverDeliveryCharge, deliveryDistanceKm,
 
                     // CUSTOMER
                     customerGrossDeliveryCharge, customerFreeDistanceBenefit, customerDeliveryCharge,
@@ -252,7 +227,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
                     taxesAndCharges,
 
-                    couponDiscount, deliveryTip,
+                    promotionSourceType, couponId, couponDiscount, deliveryTip,
 
                     toPay,
 
@@ -496,178 +471,99 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
     // RESPONSE
 
-    private CoCheckoutResponseDto buildCheckoutResponse(
-            CoCartResponseDto cartResponse,
+    private CoCheckoutResponseDto buildCheckoutResponse(CoCartResponseDto cartResponse,
 
-            BigDecimal itemTotal,
+                                                        BigDecimal itemTotal,
 
-            BigDecimal orderAmountDiscounted,
+                                                        BigDecimal orderAmountDiscounted,
 
-            // DRIVER DELIVERY
-            BigDecimal driverDeliveryCharge,
-            BigDecimal deliveryDistanceKm,
+                                                        // DRIVER DELIVERY
+                                                        BigDecimal driverDeliveryCharge, BigDecimal deliveryDistanceKm,
 
 
-            // CUSTOMER DELIVERY
-            BigDecimal customerGrossDeliveryCharge,
-            BigDecimal customerFreeDistanceBenefit,
-            BigDecimal customerDeliveryCharge,
+                                                        // CUSTOMER DELIVERY
+                                                        BigDecimal customerGrossDeliveryCharge, BigDecimal customerFreeDistanceBenefit, BigDecimal customerDeliveryCharge,
 
-            BigDecimal platformFee,
-            BigDecimal platformFeeTax,
-            Boolean platformFeeToggle,
+                                                        BigDecimal platformFee, BigDecimal platformFeeTax, Boolean platformFeeToggle,
 
-            BigDecimal surgeFee,
-            BigDecimal surgeFeeTax,
-            Boolean surgeFeeToggle,
+                                                        BigDecimal surgeFee, BigDecimal surgeFeeTax, Boolean surgeFeeToggle,
 
-            BigDecimal packagingFee,
-            BigDecimal packagingFeeTax,
-            Boolean packagingFeeToggle,
+                                                        BigDecimal packagingFee, BigDecimal packagingFeeTax, Boolean packagingFeeToggle,
 
-            BigDecimal foodTax,
-            BigDecimal customerDeliveryTax,
+                                                        BigDecimal foodTax, BigDecimal customerDeliveryTax,
 
-            BigDecimal taxesAndCharges,
+                                                        BigDecimal taxesAndCharges,
 
-            BigDecimal couponDiscount,
-            BigDecimal deliveryTip,
+                                                        PromotionSourceType promotionSourceType, Integer couponId, BigDecimal couponDiscount, BigDecimal deliveryTip,
 
-            BigDecimal toPay,
+                                                        BigDecimal toPay,
 
-            Boolean codAvailable
-    ) {
+                                                        Boolean codAvailable) {
 
-        CoCheckoutResponseDto response =
-                new CoCheckoutResponseDto();
+        CoCheckoutResponseDto response = new CoCheckoutResponseDto();
 
-        response.setOutletId(
-                cartResponse.getOutletId()
-        );
+        response.setOutletId(cartResponse.getOutletId());
 
-        response.setItems(
-                cartResponse.getItems()
-        );
+        response.setItems(cartResponse.getItems());
 
-        response.setItemTotal(
-                itemTotal
-        );
+        response.setItemTotal(itemTotal);
 
-        response.setOrderAmountDiscounted(
-                orderAmountDiscounted
-        );
-
-        // ============================================================
+        response.setOrderAmountDiscounted(orderAmountDiscounted);
         // DRIVER DELIVERY
-        // ============================================================
 
-        response.setDriverDeliveryCharge(
-                driverDeliveryCharge
-        );
+        response.setDriverDeliveryCharge(driverDeliveryCharge);
 
         response.setDeliveryDistanceKm(deliveryDistanceKm);
-        // ============================================================
         // CUSTOMER DELIVERY
-        // ============================================================
 
-        response.setCustomerGrossDeliveryCharge(
-                customerGrossDeliveryCharge
-        );
+        response.setCustomerGrossDeliveryCharge(customerGrossDeliveryCharge);
 
-        response.setCustomerFreeDistanceBenefit(
-                customerFreeDistanceBenefit
-        );
+        response.setCustomerFreeDistanceBenefit(customerFreeDistanceBenefit);
 
-        response.setCustomerDeliveryCharge(
-                customerDeliveryCharge
-        );
-
-        // ============================================================
+        response.setCustomerDeliveryCharge(customerDeliveryCharge);
         // PLATFORM
-        // ============================================================
 
-        response.setPlatformFee(
-                platformFee
-        );
+        response.setPlatformFee(platformFee);
 
-        response.setPlatformFeeTax(
-                platformFeeTax
-        );
+        response.setPlatformFeeTax(platformFeeTax);
 
-        response.setPlatformFeeToggle(
-                platformFeeToggle
-        );
-
-        // ============================================================
+        response.setPlatformFeeToggle(platformFeeToggle);
         // SURGE
-        // ============================================================
 
-        response.setSurgeFee(
-                surgeFee
-        );
+        response.setSurgeFee(surgeFee);
 
-        response.setSurgeFeeTax(
-                surgeFeeTax
-        );
+        response.setSurgeFeeTax(surgeFeeTax);
 
-        response.setSurgeFeeToggle(
-                surgeFeeToggle
-        );
-
-        // ============================================================
+        response.setSurgeFeeToggle(surgeFeeToggle);
         // PACKAGING
-        // ============================================================
 
-        response.setPackagingFee(
-                packagingFee
-        );
+        response.setPackagingFee(packagingFee);
 
-        response.setPackagingFeeTax(
-                packagingFeeTax
-        );
+        response.setPackagingFeeTax(packagingFeeTax);
 
-        response.setPackagingFeeToggle(
-                packagingFeeToggle
-        );
-
-        // ============================================================
+        response.setPackagingFeeToggle(packagingFeeToggle);
         // GST
-        // ============================================================
 
-        response.setFoodTax(
-                foodTax
-        );
+        response.setFoodTax(foodTax);
 
-        response.setCustomerDeliveryTax(
-                customerDeliveryTax
-        );
+        response.setCustomerDeliveryTax(customerDeliveryTax);
 
-        response.setTaxesAndCharges(
-                taxesAndCharges
-        );
+        response.setTaxesAndCharges(taxesAndCharges);
 
-        // ============================================================
+        response.setCouponId(couponId);
+        response.setPromotionSourceType(promotionSourceType);
         // OTHER
-        // ============================================================
+        response.setCouponDiscount(couponDiscount);
 
-        response.setCouponDiscount(
-                couponDiscount
-        );
+        response.setDeliveryTip(deliveryTip);
 
-        response.setDeliveryTip(
-                deliveryTip
-        );
+        response.setToPay(toPay);
 
-        response.setToPay(
-                toPay
-        );
-
-        response.setCodAvailable(
-                codAvailable
-        );
+        response.setCodAvailable(codAvailable);
 
         return response;
     }
+
     private Integer getCustomerCityId(Integer customerId, Integer customerAddressId) {
 
         log.info("GET_CUSTOMER_CITY | customerId={} | customerAddressId={}", customerId, customerAddressId);

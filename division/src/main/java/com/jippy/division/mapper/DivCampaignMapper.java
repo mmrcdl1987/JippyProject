@@ -124,7 +124,7 @@ public final class DivCampaignMapper {
         responseDto.setSourceId(projection.getSourceId());
         responseDto.setSourceType(projection.getSourceType());
         responseDto.setStartDateTime(projection.getStartDateTime());
-        responseDto.setPriceType(projection.getpriceModelName());
+        responseDto.setPriceType(projection.getPriceModelName());
         responseDto.setMinOrderValue(projection.getMinOrderValue());
         responseDto.setProductId(projection.getProductId());
         responseDto.setOutletId(projection.getOutletId());
