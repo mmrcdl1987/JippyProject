@@ -42,22 +42,123 @@ public class FmCategoryServiceImpl implements IFmCategoryService {
     @Transactional
     public FmCreateCategoryResponseDto createCategory(FmCreateCategoryRequestDto request) {
 
-        log.info("CREATE_CATEGORY_STARTED | categoryName={}", request.getCategoryName());
+        log.info("CREATE_CATEGORY_STARTED | categoryName={}",
+                request.getCategoryName());
 
-        if (categoryRepository.existsByCategoryNameIgnoreCase(request.getCategoryName().trim())) {
+        /*
+         * ============================================================
+         * 1. DUPLICATE CATEGORY NAME VALIDATION
+         * ============================================================
+         */
 
-            throw new DuplicateResourceException("Category already exists : " + request.getCategoryName());
+        if (categoryRepository.existsByCategoryNameIgnoreCase(
+                request.getCategoryName().trim())) {
+
+            throw new DuplicateResourceException(
+                    "Category already exists : " + request.getCategoryName());
         }
+
+
+        /*
+         * ============================================================
+         * 2. CREATE CATEGORY ENTITY
+         * ============================================================
+         */
 
         FmCategory category = CategoryMapper.toEntity(request);
 
+
+        /*
+         * ============================================================
+         * 3. SAVE CATEGORY FIRST
+         * ============================================================
+         *
+         * We need the generated categoryId before uploading
+         * the image to S3.
+         */
+
         FmCategory savedCategory = categoryRepository.save(category);
 
-        log.info("CREATE_CATEGORY_COMPLETED | categoryId={}", savedCategory.getCategoryId());
+
+        /*
+         * ============================================================
+         * 4. CATEGORY IMAGE UPLOAD
+         * ============================================================
+         */
+
+        MultipartFile categoryImage = request.getCategoryImageUrl();
+
+        if (categoryImage != null && !categoryImage.isEmpty()) {
+
+            log.info(
+                    "CATEGORY_IMAGE_CREATE_STARTED | categoryId={}",
+                    savedCategory.getCategoryId()
+            );
+
+
+            /*
+             * Validate image
+             */
+            validateCategoryImage(categoryImage);
+
+
+            /*
+             * Upload image to S3
+             */
+            String categoryImageUrl =
+                    s3Service.uploadCategoryImage(
+                            categoryImage,
+                            savedCategory.getCategoryId()
+                    );
+
+
+            /*
+             * Make sure S3 returned a valid URL
+             */
+            if (categoryImageUrl == null ||
+                    categoryImageUrl.trim().isEmpty()) {
+
+                log.error(
+                        "CATEGORY_IMAGE_UPLOAD_FAILED | Empty S3 URL | categoryId={}",
+                        savedCategory.getCategoryId()
+                );
+
+                throw new ImageValidationException(
+                        "Category image upload failed"
+                );
+            }
+
+
+            /*
+             * Store S3 URL
+             */
+            savedCategory.setCategoryImageUrl(categoryImageUrl);
+
+            savedCategory =
+                    categoryRepository.save(savedCategory);
+
+
+            log.info(
+                    "CATEGORY_IMAGE_CREATED | categoryId={}",
+                    savedCategory.getCategoryId()
+            );
+        }
+
+
+        /*
+         * ============================================================
+         * 5. COMPLETED
+         * ============================================================
+         */
+
+        log.info(
+                "CREATE_CATEGORY_COMPLETED | categoryId={}",
+                savedCategory.getCategoryId()
+        );
+
 
         return CategoryMapper.toResponseDto(savedCategory);
     }
-
 
     //    ----------------------------------------------------------------------------
     @Override
@@ -530,7 +631,6 @@ public class FmCategoryServiceImpl implements IFmCategoryService {
         if (contentType == null) {
             return false;
         }
-
 
         return contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_JPEG) || contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_PNG) || contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_WEBP);
     }

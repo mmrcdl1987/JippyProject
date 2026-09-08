@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Service
@@ -151,6 +153,37 @@ public class S3ServiceImpl implements S3Service {
 
 
             throw new BadRequestException("Unable to upload outlet image.");
+        }
+    }
+
+    @Override
+    public String uploadMerchantProfileImage(MultipartFile image, Integer merchantId) {
+        validateMerchantProfileImage(image);
+        validateMerchantId(merchantId);
+
+        String contentType = image.getContentType().toLowerCase();
+        String extension = IMAGE_EXTENSIONS.get(contentType);
+        String timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"));
+        String objectKey = String.format(
+                "MERCHANT/%d/merchant_%s%s",
+                merchantId, timestamp, extension);
+
+        try (InputStream inputStream = image.getInputStream()) {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .contentType(contentType)
+                    .contentLength(image.getSize())
+                    .build();
+            s3Client.putObject(request, RequestBody.fromInputStream(inputStream, image.getSize()));
+            return buildS3Url(objectKey);
+        } catch (IOException ex) {
+            log.error("Unable to read merchant profile image. merchantId={}", merchantId, ex);
+            throw new BadRequestException("Unable to read merchant profile image.");
+        } catch (Exception ex) {
+            log.error("Failed to upload merchant profile image. merchantId={}", merchantId, ex);
+            throw new BadRequestException("Unable to upload merchant profile image.");
         }
     }
 
@@ -365,7 +398,6 @@ public class S3ServiceImpl implements S3Service {
             throw new BadRequestException("Outlet image is required.");
         }
 
-
         if (image.getSize() > MAX_IMAGE_SIZE) {
 
             throw new BadRequestException("Outlet image must not exceed 5 MB.");
@@ -386,6 +418,20 @@ public class S3ServiceImpl implements S3Service {
 
         if (!ALLOWED_IMAGE_TYPES.contains(contentType)) {
 
+            throw new BadRequestException("Only JPG, JPEG, PNG and WEBP images are allowed.");
+        }
+    }
+
+    private void validateMerchantProfileImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new BadRequestException("Merchant profile image is required.");
+        }
+        if (image.getSize() > MAX_IMAGE_SIZE) {
+            throw new BadRequestException("Merchant profile image must not exceed 5 MB.");
+        }
+        String contentType = image.getContentType();
+        if (!StringUtils.hasText(contentType)
+                || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
             throw new BadRequestException("Only JPG, JPEG, PNG and WEBP images are allowed.");
         }
     }

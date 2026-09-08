@@ -26,14 +26,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
-@Service
+        @Service
 @Slf4j
 @RequiredArgsConstructor
 public class FmMerchantServiceImpl implements IFmMerchantService {
@@ -86,8 +82,10 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     // ================================================================
 
     @Override
-    public List<FmMerchant> getAllMerchants() {
-        return merchantRepository.findAll();
+    public List<FmMerchantDto> getAllMerchants() {
+        return merchantRepository.findAll().stream()
+                .map(FmMerchantMapper::mapToMerchantDto)
+                .toList();
     }
 
 
@@ -150,6 +148,8 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
         log.info("[MERCHANT] Saved: merchantId={}, name={}", merchant.getMerchantId(), merchant.getMerchantName());
 
+        saveSingleMerchantAddress(dto, merchant.getMerchantId());
+
         /*
          * Existing approval flow.
          */
@@ -171,11 +171,47 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         /*
          * Existing single merchant email flow.
          */
-        emailService.sendMerchantRegistrationEmail(merchant.getMerchantEmail(), merchant.getMerchantName());
+//        emailService.sendMerchantRegistrationEmail(merchant.getMerchantEmail(), merchant.getMerchantName());
 
         log.info("[MERCHANT] Registration email triggered: merchantId={}, email={}", merchant.getMerchantId(), merchant.getMerchantEmail());
 
         return merchant;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public FmMerchant createMerchant(FmMerchantRequestDTO dto,
+                                     MultipartFile aadharFile,
+                                     MultipartFile panFile) {
+        FmMerchant merchant = createMerchant(dto);
+        FmUserKyc kyc = userKycRepository
+                .findByEntityIdAndEntityType(merchant.getMerchantId(), FmAppConstants.TYPE_MERCHANT)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "KYC details not found for merchantId: " + merchant.getMerchantId()));
+
+        if (aadharFile != null && !aadharFile.isEmpty()) {
+            kyc.setAadhaarNumberUrl(s3Service.uploadKycDocument(
+                    aadharFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "aadhar"));
+        }
+        if (panFile != null && !panFile.isEmpty()) {
+            kyc.setPanNumberUrl(s3Service.uploadKycDocument(
+                    panFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "pan"));
+        }
+        userKycRepository.save(kyc);
+        return merchant;
+    }
+
+    private void saveSingleMerchantAddress(FmMerchantRequestDTO dto, Integer merchantId) {
+        if (dto.getStateId() == null || dto.getCityId() == null || dto.getAreaId() == null) {
+            throw new IllegalArgumentException(
+                    "State ID, city ID, and area ID are required for merchant address");
+        }
+
+        FmAddress address = FmMerchantMapper.toAddressEntity(dto, merchantId);
+        addressRepository.save(address);
+
+        log.info("[ADDRESS] Merchant address saved: merchantId={}, addressId={}",
+                merchantId, address.getAddressId());
     }
 
 
@@ -1301,8 +1337,9 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
         merchantRepository.save(merchant);
 
-
         log.info("Merchant updated successfully for merchantId: {}", dto.getMerchantId());
+
+        updateMerchantAddress(dto);
 
         FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(
                 dto.getMerchantId(),
@@ -1362,35 +1399,187 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         return response;
     }
 
+    @Override
+    @Transactional
+    public FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto,
+                                                       MultipartFile aadharFile,
+                                                       MultipartFile panFile) {
+        FmMerchantWithBankDto response = updateMerchantProfile(dto);
+        FmUserKyc kyc = userKycRepository
+                .findByEntityIdAndEntityType(dto.getMerchantId(), FmAppConstants.TYPE_MERCHANT)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "KYC details not found for merchantId: " + dto.getMerchantId()));
+
+        if (aadharFile != null && !aadharFile.isEmpty()) {
+            kyc.setAadhaarNumberUrl(s3Service.uploadKycDocument(
+                    aadharFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "aadhar"));
+        }
+        if (panFile != null && !panFile.isEmpty()) {
+            kyc.setPanNumberUrl(s3Service.uploadKycDocument(
+                    panFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "pan"));
+        }
+        userKycRepository.save(kyc);
+        return response;
+    }
+
+    private void updateMerchantAddress(FmMerchantWithBankDto dto) {
+        boolean hasAddressData = dto.getBuildingNumber() != null
+                || dto.getRoad() != null
+                || dto.getLandmark() != null
+                || dto.getStateId() != null
+                || dto.getCityId() != null
+                || dto.getAreaId() != null;
+
+        if (!hasAddressData) {
+            return;
+        }
+
+        FmAddress address = addressRepository
+                .findByJippyAddressIdAndAddressType(dto.getMerchantId(), "MERCHANT")
+                .orElseGet(() -> FmAddress.builder()
+                        .jippyAddressId(dto.getMerchantId())
+                        .addressType("MERCHANT")
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build());
+
+        if (dto.getBuildingNumber() != null) {
+            address.setBuildingNumber(dto.getBuildingNumber());
+        }
+        if (dto.getRoad() != null) {
+            address.setRoad(dto.getRoad());
+        }
+        if (dto.getLandmark() != null) {
+            address.setLandmark(dto.getLandmark());
+        }
+        if (dto.getStateId() != null) {
+            address.setStateId(dto.getStateId());
+        }
+        if (dto.getCityId() != null) {
+            address.setCityId(dto.getCityId());
+        }
+        if (dto.getAreaId() != null) {
+            address.setAreaId(dto.getAreaId());
+        }
+
+        if (address.getBuildingNumber() == null
+                || address.getRoad() == null
+                || address.getLandmark() == null
+                || address.getStateId() == null
+                || address.getCityId() == null
+                || address.getAreaId() == null) {
+            throw new IllegalArgumentException(
+                    "Complete merchant address details are required");
+        }
+
+        address.setUpdatedAt(java.time.LocalDateTime.now());
+        addressRepository.save(address);
+        log.info("[ADDRESS] Merchant address updated: merchantId={}, addressId={}",
+                dto.getMerchantId(), address.getAddressId());
+    }
+
 
     // ================================================================
     // UPDATE MERCHANT PROFILE PICTURE
     // ================================================================
 
     @Override
-    public FmResponseDto updateMerchantProfilePic(FmMerchantDto merchantDto) {
+    public FmResponseDto updateMerchantProfilePic(Integer merchantId, MultipartFile file) {
 
-        log.info("Updating merchant profile picture " + "for merchantId: {}", merchantDto.getMerchantId());
+        log.info("Updating merchant profile picture for merchantId: {}", merchantId);
 
-
-        FmMerchant merchant = merchantRepository.findById(merchantDto.getMerchantId()).orElseThrow(() -> {
-
-            log.error("Merchant not found with ID: {}", merchantDto.getMerchantId());
-
-            return new ResourceNotFoundException("Merchant not found with ID :" + merchantDto.getMerchantId());
+        FmMerchant merchant = merchantRepository.findById(merchantId).orElseThrow(() -> {
+            log.error("Merchant not found with ID: {}", merchantId);
+            return new ResourceNotFoundException("Merchant not found with ID: " + merchantId);
         });
 
-
-        merchant.setProfilePicUrl(merchantDto.getProfilePicUrl());
-
-
+        String oldProfilePicUrl = merchant.getProfilePicUrl();
+        String profilePicUrl = s3Service.uploadMerchantProfileImage(file, merchantId);
+        merchant.setProfilePicUrl(profilePicUrl);
         merchantRepository.save(merchant);
 
+        if (oldProfilePicUrl != null && !oldProfilePicUrl.equals(profilePicUrl)) {
+            s3Service.deleteFile(oldProfilePicUrl);
+        }
 
-        log.info("Merchant profile picture updated successfully " + "for merchantId: {}", merchantDto.getMerchantId());
+        log.info("Merchant profile picture updated successfully for merchantId: {}", merchantId);
+        return new FmResponseDto("200", "Profile picture updated successfully");
+    }
+
+    @Override
+    @Transactional
+    public FmResponseDto toggleMerchant(FmToggleMerchantRequestDto requestDto) {
+        if (requestDto == null || requestDto.getMerchantId() == null) {
+            throw new IllegalArgumentException("Merchant ID is required");
+        }
+        if (requestDto.getIsActive() == null) {
+            throw new IllegalArgumentException("isActive value is required");
+        }
+
+        FmMerchant merchant = merchantRepository.findById(requestDto.getMerchantId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Merchant not found with id: " + requestDto.getMerchantId()));
+
+        String activeStatus = Boolean.TRUE.equals(requestDto.getIsActive()) ? "Y" : "N";
+        merchant.setIsActive(activeStatus);
+        merchantRepository.save(merchant);
+
+        String message = Boolean.TRUE.equals(requestDto.getIsActive())
+                ? "Merchant activated successfully"
+                : "Merchant deactivated successfully";
+        log.info("[MERCHANT TOGGLE] merchantId={}, isActive={}",
+                requestDto.getMerchantId(), requestDto.getIsActive());
+        return new FmResponseDto("200", message);
+    }
 
 
-        return new FmResponseDto("200", "Profile picture url: " + merchantDto.getProfilePicUrl());
+    // ================================================================
+    // GET MERCHANT ADDRESS
+    // ================================================================
+
+    @Override
+    public FmMerchantAddressDto getMerchantAddress(Integer merchantId) {
+
+        log.info("Fetching merchant address for merchantId: {}", merchantId);
+
+        FmMerchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found with id: " + merchantId));
+
+        Optional<FmAddress> addressOpt = addressRepository.findByJippyAddressIdAndAddressType(merchantId, "MERCHANT");
+
+        if (addressOpt.isEmpty()) {
+            log.warn("No address found for merchantId: {}", merchantId);
+            return null;
+        }
+
+        FmAddress address = addressOpt.get();
+
+        FmMerchantAddressDto dto = FmMerchantAddressDto.builder()
+                .addressId(address.getAddressId())
+                .merchantId(merchantId)
+                .addressType(address.getAddressType())
+                .buildingNumber(address.getBuildingNumber())
+                .road(address.getRoad())
+                .landmark(address.getLandmark())
+                .stateId(address.getStateId())
+                .cityId(address.getCityId())
+                .areaId(address.getAreaId())
+                .build();
+
+        if (address.getStateId() != null) {
+            stateRepository.findById(address.getStateId()).ifPresent(state -> dto.setStateName(state.getStateName()));
+        }
+
+        if (address.getCityId() != null) {
+            cityRepository.findById(address.getCityId()).ifPresent(city -> dto.setCityName(city.getCityName()));
+        }
+
+        if (address.getAreaId() != null) {
+            areaRepository.findById(address.getAreaId()).ifPresent(area -> dto.setAreaName(area.getAreaName()));
+        }
+
+        log.info("Successfully fetched merchant address for merchantId: {}", merchantId);
+
+        return dto;
     }
 
     private void saveMerchantAddressForSingleCreate(

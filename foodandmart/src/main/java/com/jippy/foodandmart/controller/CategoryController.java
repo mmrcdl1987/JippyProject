@@ -37,16 +37,16 @@ public class CategoryController {
      * Newly created categories will be visible through
      * GET /api/fm/categories after refresh.
      */
-    @PostMapping("/createCategory")
-    public ResponseEntity<FmApiResponse<FmCreateCategoryResponseDto>> createCategory(@Valid @RequestBody FmCreateCategoryRequestDto request) {
+    @PostMapping(
+            value = "/createCategory",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<FmCreateCategoryResponseDto> createCategory(
+            @ModelAttribute FmCreateCategoryRequestDto request) {
 
-        log.info("CREATE_CATEGORY_API_STARTED | categoryName={}", request.getCategoryName());
-
-        FmCreateCategoryResponseDto response = categoryService.createCategory(request);
-
-        log.info("CREATE_CATEGORY_API_COMPLETED | categoryId={}", response.getCategoryId());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Category created successfully", response));
+        return ResponseEntity.ok(
+                categoryService.createCategory(request)
+        );
     }
 
 //    @GetMapping("/Categories")
