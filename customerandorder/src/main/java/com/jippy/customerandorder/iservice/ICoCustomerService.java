@@ -66,12 +66,20 @@ public interface ICoCustomerService {
 //    ====================================================================================
     /**
      * Fetches total, completed and rejected order counts
-     * for a merchant or outlet.
+     * for a merchant, outlet or driver.
      *
-     * @param merchantId optional merchant ID
-     * @param outletId optional outlet ID
-     * @return order flow counts
+     * <p>
+     * Exactly one identifier must be provided.
+     *
+     * @param merchantId merchant ID
+     * @param outletId outlet ID
+     * @param driverId driver ID
+     * @return order flow count response
      */
-    CoOrderFlowCountForMerchantOrOutletDto getOrderFlowCountForMerchantOrOutlet(
-            Integer merchantId, Integer outletId);
+    CoOrderFlowCountForMerchantOutletOrDriverDto
+    getOrderFlowCountForMerchantOrOutletOrDriver(
+            Integer merchantId,
+            Integer outletId,
+            Integer driverId
+    );
 }
