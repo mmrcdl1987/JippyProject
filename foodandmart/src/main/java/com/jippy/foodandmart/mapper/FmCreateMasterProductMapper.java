@@ -94,9 +94,9 @@ public class FmCreateMasterProductMapper {
                 request.getDescription()
         );
 
-        entity.setShortDescription(
-                request.getShortDescription()
-        );
+//        entity.setShortDescription(
+//                request.getShortDescription()
+//        );
 
         // --------------------------------------------------------
         // PHOTO
@@ -111,13 +111,13 @@ public class FmCreateMasterProductMapper {
                 request.getPhoto()
         );
 
-        entity.setPhotos(
-                request.getPhotos()
-        );
-
-        entity.setThumbnail(
-                request.getThumbnail()
-        );
+//        entity.setPhotos(
+//                request.getPhotos()
+//        );
+//
+//        entity.setThumbnail(
+//                request.getThumbnail()
+//        );
 
         // --------------------------------------------------------
         // CATEGORY
@@ -245,9 +245,9 @@ public class FmCreateMasterProductMapper {
                 entity.getPhoto()
         );
 
-        response.setThumbnail(
-                entity.getThumbnail()
-        );
+//        response.setThumbnail(
+//                entity.getThumbnail()
+//        );
 
         response.setVeg(
                 entity.getVeg()

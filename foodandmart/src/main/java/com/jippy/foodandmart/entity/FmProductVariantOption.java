@@ -77,7 +77,7 @@ public class FmProductVariantOption {
     private LocalDateTime updatedAt;
 
     @Column(name = "is_active")
-    private Boolean isActive = true;
+    private String isActive = "Y";
 
     @PrePersist
     public void prePersist() {

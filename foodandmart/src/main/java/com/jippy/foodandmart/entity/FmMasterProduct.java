@@ -41,11 +41,11 @@ public class FmMasterProduct {
     )
     private String description;
 
-    @Column(
-            name = "short_description",
-            columnDefinition = "TEXT"
-    )
-    private String shortDescription;
+//    @Column(
+//            name = "short_description",
+//            columnDefinition = "TEXT"
+//    )
+//    private String shortDescription;
 
     @Column(
             name = "photo",
@@ -53,17 +53,17 @@ public class FmMasterProduct {
     )
     private String photo;
 
-    @Column(
-            name = "photos",
-            columnDefinition = "TEXT"
-    )
-    private String photos;
-
-    @Column(
-            name = "thumbnail",
-            columnDefinition = "TEXT"
-    )
-    private String thumbnail;
+//    @Column(
+//            name = "photos",
+//            columnDefinition = "TEXT"
+//    )
+//    private String photos;
+//
+//    @Column(
+//            name = "thumbnail",
+//            columnDefinition = "TEXT"
+//    )
+//    private String thumbnail;
 
     @Column(
             name = "category_id",
@@ -78,14 +78,14 @@ public class FmMasterProduct {
     )
     private String categoryName;
 
-    @Column(name = "sub_category_id")
-    private Integer subCategoryId;
-
-    @Column(
-            name = "sub_category_name",
-            length = 100
-    )
-    private String subCategoryName;
+//    @Column(name = "sub_category_id")
+//    private Integer subCategoryId;
+//
+//    @Column(
+//            name = "sub_category_name",
+//            length = 100
+//    )
+//    private String subCategoryName;
 
     @Column(
             name = "has_options",

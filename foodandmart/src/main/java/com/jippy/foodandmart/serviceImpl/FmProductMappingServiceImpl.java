@@ -136,8 +136,8 @@ public class FmProductMappingServiceImpl implements IFmProductMappingService {
                         .orElse(null);
                 if (mp != null) {
                     imageLink = mp.getPhoto();
-                    photos    = mp.getPhotos();
-                    thumbnail = mp.getThumbnail();
+//                    photos    = mp.getPhotos();
+//                    thumbnail = mp.getThumbnail();
                 }
             }
 

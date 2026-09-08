@@ -492,7 +492,8 @@ public class FmProductServiceImpl implements FmProductService {
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Variant Option not found for product : " + optionId));
 
-        option.setIsActive(Boolean.FALSE);
+
+        option.setIsActive(FmAppConstants.FLAG_NO);
         option.setUpdatedBy(SYSTEM_USER);
         variantOptionRepository.save(option);
 
@@ -531,7 +532,8 @@ public class FmProductServiceImpl implements FmProductService {
                                             + option.getProductVariantGroupValuesId()));
 
             if (groupId.equals(value.getProductVariantGroupsId())) {
-                option.setIsActive(Boolean.FALSE);
+
+                option.setIsActive(FmAppConstants.FLAG_NO);
                 option.setUpdatedBy(SYSTEM_USER);
                 variantOptionRepository.save(option);
                 deletedCount++;

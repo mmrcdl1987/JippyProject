@@ -197,21 +197,21 @@ public final class FmMasterProductMapper {
                 dto.getDescription()
         );
 
-        entity.setShortDescription(
-                dto.getShortDescription()
-        );
+//        entity.setShortDescription(
+//                dto.getShortDescription()
+//        );
 
         entity.setPhoto(
                 dto.getPhoto()
         );
 
-        entity.setPhotos(
-                dto.getPhotos()
-        );
-
-        entity.setThumbnail(
-                dto.getThumbnail()
-        );
+//        entity.setPhotos(
+//                dto.getPhotos()
+//        );
+//
+//        entity.setThumbnail(
+//                dto.getThumbnail()
+//        );
 
         // --------------------------------------------------------
         // CATEGORY
@@ -227,13 +227,13 @@ public final class FmMasterProductMapper {
                         : null
         );
 
-        entity.setSubCategoryId(
-                dto.getSubCategoryId()
-        );
-
-        entity.setSubCategoryName(
-                dto.getSubCategoryName()
-        );
+//        entity.setSubCategoryId(
+//                dto.getSubCategoryId()
+//        );
+//
+//        entity.setSubCategoryName(
+//                dto.getSubCategoryName()
+//        );
 
         // --------------------------------------------------------
         // VEG / NON-VEG
@@ -389,25 +389,25 @@ public final class FmMasterProductMapper {
                     dto.getDescription()
             );
 
-        if (dto.getShortDescription() != null)
-            entity.setShortDescription(
-                    dto.getShortDescription()
-            );
+//        if (dto.getShortDescription() != null)
+//            entity.setShortDescription(
+//                    dto.getShortDescription()
+//            );
 
         if (dto.getPhoto() != null)
             entity.setPhoto(
                     dto.getPhoto()
             );
 
-        if (dto.getPhotos() != null)
-            entity.setPhotos(
-                    dto.getPhotos()
-            );
-
-        if (dto.getThumbnail() != null)
-            entity.setThumbnail(
-                    dto.getThumbnail()
-            );
+//        if (dto.getPhotos() != null)
+//            entity.setPhotos(
+//                    dto.getPhotos()
+//            );
+//
+//        if (dto.getThumbnail() != null)
+//            entity.setThumbnail(
+//                    dto.getThumbnail()
+//            );
 
         // --------------------------------------------------------
         // CATEGORY
@@ -423,15 +423,15 @@ public final class FmMasterProductMapper {
                     dto.getCategoryName().trim()
             );
 
-        if (dto.getSubCategoryId() != null)
-            entity.setSubCategoryId(
-                    dto.getSubCategoryId()
-            );
-
-        if (dto.getSubCategoryName() != null)
-            entity.setSubCategoryName(
-                    dto.getSubCategoryName()
-            );
+//        if (dto.getSubCategoryId() != null)
+//            entity.setSubCategoryId(
+//                    dto.getSubCategoryId()
+//            );
+//
+//        if (dto.getSubCategoryName() != null)
+//            entity.setSubCategoryName(
+//                    dto.getSubCategoryName()
+//            );
 
         // --------------------------------------------------------
         // VEG / NON-VEG
@@ -570,9 +570,9 @@ public final class FmMasterProductMapper {
                 product.getPhoto()
         );
 
-        dto.setThumbnail(
-                product.getThumbnail()
-        );
+//        dto.setThumbnail(
+//                product.getThumbnail()
+//        );
 
         dto.setVeg(
                 product.getVeg()

@@ -43,19 +43,19 @@ public class FmCompareFileResponse {
 
         private String categoryName;
 
-        private Integer subCategoryId;
+        //private Integer subCategoryId;
 
-        private String subCategoryName;
+       //private String subCategoryName;
 
         private String description;
 
-        private String shortDescription;
+       // private String shortDescription;
 
         private String photo;
 
-        private String photos;
+        //private String photos;
 
-        private String thumbnail;
+       // private String thumbnail;
 
         private String foodType;
 
