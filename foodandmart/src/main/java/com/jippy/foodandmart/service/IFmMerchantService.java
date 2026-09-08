@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface IFmMerchantService {
 
-    List<FmMerchantDto> getAllMerchants();
+    List<FmMerchant> getAllMerchants();
 
     FmMerchantDto getMerchantById(Integer id);
 
@@ -16,7 +16,7 @@ public interface IFmMerchantService {
 
     FmMerchant createMerchant(FmMerchantRequestDTO dto);
 
-    FmMerchant createMerchant(FmMerchantRequestDTO dto, MultipartFile aadharFile, MultipartFile panFile);
+    // FmMerchant createMerchant(FmMerchantRequestDTO dto, MultipartFile aadharFile, MultipartFile panFile);
 
     FmBulkUploadResultDTO bulkUpload(MultipartFile file);
     // Get--> merchant + bank
@@ -25,13 +25,11 @@ public interface IFmMerchantService {
     // Update--> merchant + bank
     FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto);
 
-    FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto,
-                                                MultipartFile aadharFile, MultipartFile panFile);
+    FmResponseDto updateMerchantProfilePic(FmMerchantDto merchantDto);
 
-    FmResponseDto updateMerchantProfilePic(Integer merchantId, MultipartFile file);
     FmResponseDto toggleMerchant(FmToggleMerchantRequestDto requestDto);
 
-    FmMerchant createMerchantBulkUpload(FmMerchantRequestDTO dto);
-
     FmMerchantAddressDto getMerchantAddress(Integer merchantId);
+
+    FmMerchant createMerchantBulkUpload(FmMerchantRequestDTO dto);
 }

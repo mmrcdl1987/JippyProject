@@ -122,7 +122,7 @@ public class FmMerchantController {
     }
     /** GET /api/merchants — list all */
     @GetMapping
-    public ResponseEntity<FmApiResponse<List<FmMerchantDto>>> getAllMerchants() {
+    public ResponseEntity<FmApiResponse<List<FmMerchant>>> getAllMerchants() {
         log.info("[MERCHANT] GET /api/merchants");
         return ResponseEntity.ok(FmApiResponse.success("Merchants fetched", merchantService.getAllMerchants()));
     }
@@ -181,7 +181,7 @@ public class FmMerchantController {
         return ResponseEntity.ok(updated);
     }
 
-//    --------------------------------------------------------------------------
+    //    --------------------------------------------------------------------------
     //    get merchant details with bank details
     @Operation(summary = "Get Merchant Profile with Bank Details",
             description = "Fetch merchant details along with bank information using merchant ID"
@@ -198,7 +198,7 @@ public class FmMerchantController {
         return ResponseEntity.ok(response);
     }
 
-//    ======================================================================================
+    //    ======================================================================================
     @GetMapping("/fetchByMerchantId")
     public ResponseEntity<FmMerchantDto> fetchByMerchantId(@RequestParam Integer merchantId) {
         log.info("Fetch by MerchantId API called for merchantId: {}", merchantId);
@@ -206,26 +206,53 @@ public class FmMerchantController {
         return ResponseEntity.ok(fmMerchantDto);
     }
 
-    @PutMapping(value = "/updateMerchantProfilePic", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping("/updateMerchantProfilePic")
     public ResponseEntity<FmResponseDto> updateMerchantProfilePic(
-            @RequestParam("merchantId") Integer merchantId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestBody FmMerchantDto merchantDto) {
 
         log.info(
                 "Updating merchant profile picture for merchantId: {}",
-                merchantId
+                merchantDto.getMerchantId()
         );
 
         FmResponseDto response =
-                merchantService.updateMerchantProfilePic(merchantId, file);
+                merchantService.updateMerchantProfilePic(merchantDto);
 
         log.info(
                 "Successfully updated merchant profile picture for merchantId: {}",
-                merchantId
+                merchantDto.getMerchantId()
         );
 
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/toggleMerchant")
+    @Operation(summary = "Toggle Merchant Active Status",
+            description = "Activates or deactivates a merchant")
+    public ResponseEntity<FmResponseDto> toggleMerchant(
+            @RequestBody FmToggleMerchantRequestDto requestDto) {
+        log.info("[MERCHANT TOGGLE] merchantId={}, isActive={}",
+                requestDto != null ? requestDto.getMerchantId() : null,
+                requestDto != null ? requestDto.getIsActive() : null);
+        return ResponseEntity.ok(merchantService.toggleMerchant(requestDto));
+    }
+
+    @GetMapping("/getMerchantAddress")
+    @Operation(summary = "Get Merchant Address",
+            description = "Fetch merchant address details with state, city, and area information"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant address fetched successfully")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Merchant or address not found")
+    public ResponseEntity<FmApiResponse<FmMerchantAddressDto>> getMerchantAddress(
+            @RequestParam Integer merchantId) {
+        log.info("Fetching merchant address for merchantId: {}", merchantId);
+        FmMerchantAddressDto response = merchantService.getMerchantAddress(merchantId);
+        if (response == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(FmApiResponse.error("No address found for merchantId: " + merchantId));
+        }
+        log.info("Successfully fetched merchant address for merchantId: {}", merchantId);
+        return ResponseEntity.ok(FmApiResponse.success("Merchant address fetched successfully", response));
+    }
 
 }
