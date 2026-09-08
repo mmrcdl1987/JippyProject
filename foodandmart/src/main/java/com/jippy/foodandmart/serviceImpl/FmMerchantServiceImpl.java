@@ -128,15 +128,17 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     // This method is intentionally NOT changed for bulk requirements.
     // ================================================================
 
-//    @Override
-//    @Transactional(propagation = Propagation.REQUIRES_NEW)
-//    public FmMerchant createMerchant(FmMerchantRequestDTO dto) {
-//        return createMerchant(dto);
-//    }
-
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public FmMerchant createMerchant(FmMerchantRequestDTO dto) {
+        return createMerchant(dto, null, null);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public FmMerchant createMerchant(FmMerchantRequestDTO dto,
+                                     MultipartFile aadharFile,
+                                     MultipartFile panFile) {
 
         log.info("[MERCHANT] Creating merchant: email={}, phone={}", dto.getEmail(), dto.getPhone());
 
@@ -155,16 +157,13 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
          */
         approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), merchant.getMerchantId());
 
-        saveKyc(dto, merchant);
+        saveKyc(dto, merchant, aadharFile, panFile);
 
         saveBankDetails(dto, merchant.getMerchantId());
 
         createMerchantUser(dto, merchant.getMerchantId());
 
-        saveMerchantAddressForSingleCreate(
-                dto,
-                merchant.getMerchantId()
-        );
+        saveMerchantAddressForSingleCreate(dto, merchant.getMerchantId());
 
         log.info("[MERCHANT] Onboarding complete: merchantId={}", merchant.getMerchantId());
 
@@ -175,29 +174,6 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
         log.info("[MERCHANT] Registration email triggered: merchantId={}, email={}", merchant.getMerchantId(), merchant.getMerchantEmail());
 
-        return merchant;
-    }
-
-    @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public FmMerchant createMerchant(FmMerchantRequestDTO dto,
-                                     MultipartFile aadharFile,
-                                     MultipartFile panFile) {
-        FmMerchant merchant = createMerchant(dto);
-        FmUserKyc kyc = userKycRepository
-                .findByEntityIdAndEntityType(merchant.getMerchantId(), FmAppConstants.TYPE_MERCHANT)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "KYC details not found for merchantId: " + merchant.getMerchantId()));
-
-        if (aadharFile != null && !aadharFile.isEmpty()) {
-            kyc.setAadhaarNumberUrl(s3Service.uploadKycDocument(
-                    aadharFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "aadhar"));
-        }
-        if (panFile != null && !panFile.isEmpty()) {
-            kyc.setPanNumberUrl(s3Service.uploadKycDocument(
-                    panFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "pan"));
-        }
-        userKycRepository.save(kyc);
         return merchant;
     }
 
@@ -636,17 +612,23 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 //    }
 
     private void saveKyc(FmMerchantRequestDTO dto, FmMerchant merchant) {
+        saveKyc(dto, merchant, null, null);
+    }
 
+    private void saveKyc(FmMerchantRequestDTO dto,
+                         FmMerchant merchant,
+                         MultipartFile aadharFile,
+                         MultipartFile panFile) {
         FmUserKyc kyc = FmMerchantMapper.toKycEntity(dto, merchant);
 
-//        if (aadharFile != null && !aadharFile.isEmpty()) {
-//            kyc.setAadhaarNumberUrl(s3Service.uploadKycDocument(
-//                    aadharFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "aadhar"));
-//        }
-//        if (panFile != null && !panFile.isEmpty()) {
-//            kyc.setPanNumberUrl(s3Service.uploadKycDocument(
-//                    panFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "pan"));
-//        }
+        if (aadharFile != null && !aadharFile.isEmpty()) {
+            kyc.setAadhaarNumberUrl(s3Service.uploadKycDocument(
+                    aadharFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "aadhar"));
+        }
+        if (panFile != null && !panFile.isEmpty()) {
+            kyc.setPanNumberUrl(s3Service.uploadKycDocument(
+                    panFile, FmAppConstants.TYPE_MERCHANT, merchant.getMerchantId(), "pan"));
+        }
         userKycRepository.save(kyc);
 
         log.info("[KYC] Saved for merchantId={}", merchant.getMerchantId());
@@ -1300,6 +1282,14 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     @Override
     @Transactional
     public FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto) {
+        return updateMerchantProfile(dto, null, null);
+    }
+
+    @Override
+    @Transactional
+    public FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto,
+                                                        MultipartFile aadharFile,
+                                                        MultipartFile panFile) {
 
         log.info("Updating merchant profile for merchantId: {}", dto.getMerchantId());
 
@@ -1351,6 +1341,17 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
         FmMerchantMapper.updateMerchantKycEntity(kyc, dto);
 
+        if (aadharFile != null && !aadharFile.isEmpty()) {
+            kyc.setAadhaarNumberUrl(s3Service.replaceKycDocument(
+                    aadharFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "aadhar",
+                    kyc.getAadhaarNumberUrl()));
+        }
+        if (panFile != null && !panFile.isEmpty()) {
+            kyc.setPanNumberUrl(s3Service.replaceKycDocument(
+                    panFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "pan",
+                    kyc.getPanNumberUrl()));
+        }
+
         userKycRepository.save(kyc);
 
         log.info("Merchant KYC updated successfully for merchantId: {}", dto.getMerchantId());
@@ -1396,29 +1397,6 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
         log.info("Returning updated merchant + bank response " + "for merchantId: {}", dto.getMerchantId());
 
 
-        return response;
-    }
-
-    @Override
-    @Transactional
-    public FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto,
-                                                       MultipartFile aadharFile,
-                                                       MultipartFile panFile) {
-        FmMerchantWithBankDto response = updateMerchantProfile(dto);
-        FmUserKyc kyc = userKycRepository
-                .findByEntityIdAndEntityType(dto.getMerchantId(), FmAppConstants.TYPE_MERCHANT)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "KYC details not found for merchantId: " + dto.getMerchantId()));
-
-        if (aadharFile != null && !aadharFile.isEmpty()) {
-            kyc.setAadhaarNumberUrl(s3Service.uploadKycDocument(
-                    aadharFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "aadhar"));
-        }
-        if (panFile != null && !panFile.isEmpty()) {
-            kyc.setPanNumberUrl(s3Service.uploadKycDocument(
-                    panFile, FmAppConstants.TYPE_MERCHANT, dto.getMerchantId(), "pan"));
-        }
-        userKycRepository.save(kyc);
         return response;
     }
 
