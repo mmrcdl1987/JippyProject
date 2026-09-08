@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.division.constants.DivAppConstants;
 import com.jippy.division.dto.DivOrderDto;
 import com.jippy.division.dto.DivPaymentModesDto;
+import com.jippy.division.dto.DivRefundDetailsDto;
 import com.jippy.division.entity.OrderRefund;
 import com.jippy.division.entity.PaymentTransaction;
 import com.jippy.division.feignClient.CoFeignClient;
 import com.jippy.division.mapper.DivPaymentMapper;
+import com.jippy.division.mapper.DivRefundMapper;
+import com.jippy.division.projection.DivRefundDetailsProjection;
 import com.jippy.division.repositary.OrderRefundRepository;
 import com.jippy.division.repositary.TransactionRepository;
 import com.jippy.division.service.DivOrderRefundService;
@@ -30,7 +33,6 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -270,6 +272,34 @@ public class DivOrderRefundServiceImpl implements DivOrderRefundService {
         }
         return "Refund request failed for orderId: " + orderId + ". Please check Paytm dashboard for details.";
     }
+
+//    ==========================================================================================
+//    ==========================================================================================
+        @Override
+        public DivRefundDetailsDto getRefundDetails(String orderId) {
+
+            log.info(
+                    "Fetching refund details for orderId={}",
+                    orderId
+            );
+
+            DivRefundDetailsProjection projection =
+                    refundRepository
+                            .getRefundDetails(orderId)
+                            .orElseThrow(() -> new RuntimeException(
+                                    "Refund details not found for order ID: "
+                                            + orderId
+                            ));
+
+            DivRefundDetailsDto response = DivRefundMapper.mapToDto(projection);
+
+            log.info(
+                    "Refund details fetched successfully. orderId={}",
+                    orderId
+            );
+
+            return response;
+        }
 
 
 }

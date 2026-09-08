@@ -1454,5 +1454,74 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             @Param("outletId") Integer outletId,
             @Param("isToggle") Boolean isToggle
     );
+//=========================================================================================
+//=========================================================================================
+    /**
+     * Fetches outlet name and area name for multiple outlet IDs.
+     *
+     * The query joins:
+     * outlets → address → area
+     *
+     * Only OUTLET type addresses are considered.
+     */
+    @Query(value = """
+        SELECT
+            o.outlet_id AS outletId,
+            o.outlet_name AS outletName,
+            a.area_name AS areaName
 
+        FROM "jippy_fm"."outlets" o
+
+        LEFT JOIN "jippy_fm"."address" addr
+            ON addr.jippy_address_id = o.outlet_id
+            AND addr.address_type = 'OUTLET'
+
+        LEFT JOIN "jippy_fm"."area" a
+            ON a.area_id = addr.area_id
+
+        WHERE o.outlet_id IN (:outletIds)
+        """,
+            nativeQuery = true)
+    List<FmOutletDetailsProjection> getOutletDetailsByIds(
+            @Param("outletIds") List<Integer> outletIds);
+
+
+//    ======================================================================================
+//    ======================================================================================
+@Query(value = """
+        SELECT
+            o.outlet_id AS "outletId",
+            o.outlet_name AS "outletName",
+            o.outlet_phone AS "outletPhone",
+            o.outlet_pic_url AS "outletPicUrl",
+            a.building_number AS "buildingNumber"
+
+        FROM jippy_fm.outlets o
+
+        LEFT JOIN jippy_fm.address a
+            ON a.jippy_address_id = o.outlet_id
+            AND a.address_type = 'OUTLET'
+
+        WHERE o.outlet_id = :outletId
+        """,
+        nativeQuery = true)
+Optional<FmOutletCompleteDetailsProjection> getOutletCompleteDetails(
+        @Param("outletId") Integer outletId
+);
+//=======================================================================================
+//=======================================================================================
+    /**
+     * Fetches all outlet IDs belonging to the given merchant.
+     *
+     * The merchant ID is stored in the outlets table.
+     */
+    @Query(value = """
+            SELECT o.outlet_id
+            FROM "jippy_fm"."outlets" o
+            WHERE o.merchant_id = :merchantId
+            """,
+            nativeQuery = true)
+    List<Integer> findOutletIdsByMerchantId(
+            @Param("merchantId") Integer merchantId
+    );
 }

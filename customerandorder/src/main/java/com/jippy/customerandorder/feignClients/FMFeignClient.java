@@ -111,4 +111,28 @@ public interface FMFeignClient {
             @RequestBody CoCurrentOnlinePriceRequestDto request
     );
 
+
+    /**
+     * Fetches outlet name and area name for multiple outlets.
+     */
+    @PostMapping("/api/fm/outlets/getOutletDetailsByIds")
+    List<CoFmOutletDetailsDto> getOutletDetailsByIds(
+            @RequestBody CoOutletDetailsRequestDto request
+    );
+//    =================================================================================
+    @GetMapping("/api/fm/outlets/getOutletCompleteDetails")
+    CoOutletDetailsDto getOutletCompleteDetails(
+            @RequestParam("outletId") Integer outletId
+    );
+//    ==================================================================================
+//    ==================================================================================
+    /**
+     * Fetches all outlet IDs belonging to a merchant
+     * from the Food & Mart microservice.
+     */
+    @GetMapping("/api/fm/outlets/getOutletIdsByMerchantId")
+    List<Integer> getOutletIdsByMerchantId(
+            @RequestParam("merchantId") Integer merchantId
+    );
+
 }

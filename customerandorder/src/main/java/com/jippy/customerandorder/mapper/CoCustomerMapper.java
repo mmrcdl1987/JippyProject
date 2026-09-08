@@ -1,19 +1,20 @@
 package com.jippy.customerandorder.mapper;
 
-import com.jippy.customerandorder.dto.CoCustomerRequestDto;
-import com.jippy.customerandorder.dto.CoCustomerResponseDto;
-import com.jippy.customerandorder.dto.CoCustomerStreakResponseDto;
-import com.jippy.customerandorder.dto.CoWalletResponseDto;
-import com.jippy.customerandorder.dto.CoWalletTransferResponseDto;
+import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.entity.CoCustomerStreak;
 import com.jippy.customerandorder.entity.CoCustomerWallet;
 import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
+import com.jippy.customerandorder.projection.CoCompleteOrdersFlowCountsProjection;
+import com.jippy.customerandorder.projection.CoOrderDetailsByOrderStatusProjection;
+import com.jippy.customerandorder.projection.CoOrderFlowCountProjection;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class CoCustomerMapper {
@@ -81,26 +82,6 @@ public class CoCustomerMapper {
         return (firstPart + phoneLast3 + lastPart).toUpperCase();
     }
 
-
-
-    public CoCustomerResponseDto mapToResponse(CoCustomer customer) {
-
-        CoCustomerResponseDto dto = new CoCustomerResponseDto();
-
-        dto.setCustomerId(customer.getCustomerId());
-        dto.setFirstName(customer.getFirstName());
-        dto.setLastName(customer.getLastName());
-        dto.setEmail(customer.getEmail());
-        dto.setDOB(customer.getDateOfBirth());
-        dto.setProfilePicUrl(customer.getProfilePicUrl());
-        dto.setPhoneNumber(customer.getPhoneNumber());
-        dto.setReferralCode(customer.getReferralCode());
-        dto.setCustomerStatusId(customer.getCustomerStatus().getCustomerStatusId());
-
-        return dto;
-    }
-    // STREAK ENTITY
-
     public static CoCustomerStreak mapToCustomerStreak(Integer customerId, LocalDate checkInDate, Integer currentStreak, Integer points, Integer createdBy) {
 
         CoCustomerStreak streak = new CoCustomerStreak();
@@ -117,8 +98,7 @@ public class CoCustomerMapper {
 
         return streak;
     }
-
-    // WALLET TRANSACTION
+    // STREAK ENTITY
 
     public static CoCustomerWalletTransactions mapToWalletTransaction(Integer walletId, String transactionType, Integer points, Integer createdBy) {
 
@@ -136,6 +116,8 @@ public class CoCustomerMapper {
 
         return transaction;
     }
+
+    // WALLET TRANSACTION
 
     public static CoCustomerWalletTransactions mapToWalletTransaction(Integer walletId, String transactionType, Integer points, BigDecimal amount, Integer createdBy) {
 
@@ -156,8 +138,6 @@ public class CoCustomerMapper {
         return transaction;
     }
 
-    // STREAK RESPONSE
-
     public static CoCustomerStreakResponseDto mapToStreakResponse(Integer currentStreak, Integer points, String message) {
 
         CoCustomerStreakResponseDto response = new CoCustomerStreakResponseDto();
@@ -173,7 +153,7 @@ public class CoCustomerMapper {
         return response;
     }
 
-    // WALLET RESPONSE
+    // STREAK RESPONSE
 
     public static CoWalletResponseDto mapToWalletResponse(CoCustomerWallet wallet, String message) {
 
@@ -194,7 +174,7 @@ public class CoCustomerMapper {
         return response;
     }
 
-    // TRANSFER RESPONSE
+    // WALLET RESPONSE
 
     public static CoWalletTransferResponseDto mapToTransferResponse(Integer senderCustomerId, Integer receiverCustomerId, Integer transferredPoints, Integer senderRemainingPoints, String message) {
 
@@ -213,5 +193,173 @@ public class CoCustomerMapper {
         response.setSenderRemainingPoints(senderRemainingPoints);
 
         return response;
+    }
+
+    // TRANSFER RESPONSE
+
+    /**
+     * Converts order flow count projection into response DTO.
+     *
+     * @param projection order flow count projection
+     * @return complete order flow count DTO
+     */
+    public static CoCompleteOrdersFlowCountsDto mapToCompleteOrdersFlowCountsDto(CoCompleteOrdersFlowCountsProjection projection) {
+
+        CoCompleteOrdersFlowCountsDto dto = new CoCompleteOrdersFlowCountsDto();
+
+        dto.setTotalOrdersCount(projection.getTotalOrdersCount());
+        dto.setOrdersPlaced(projection.getOrdersPlaced());
+        dto.setOrdersConfirmed(projection.getOrdersConfirmed());
+        dto.setOrdersShipped(projection.getOrdersShipped());
+        dto.setOrdersCompleted(projection.getOrdersCompleted());
+        dto.setOrdersRejected(projection.getOrdersRejected());
+
+        return dto;
+    }
+
+//    ========================================================================================
+//    ========================================================================================
+
+    /**
+     * Combines CO order details with FM outlet details
+     * and Driver details.
+     * <p>
+     */
+    public static List<CoOrderDetailsByOrderStatusDto> mapToCompleteOrderDetails(List<CoOrderDetailsByOrderStatusProjection> projections, List<CoFmOutletDetailsDto> outletDetails, List<CoDriverDetailsDto> driverDetails) {
+
+        List<CoOrderDetailsByOrderStatusDto> response = new ArrayList<>();
+
+        for (CoOrderDetailsByOrderStatusProjection projection : projections) {
+
+            CoOrderDetailsByOrderStatusDto dto = new CoOrderDetailsByOrderStatusDto();
+
+            // ----------------------------------------------------
+            // CO information
+            // ----------------------------------------------------
+
+            dto.setOrderId(projection.getOrderId());
+
+            dto.setOutletId(projection.getOutletId());
+
+            dto.setDriverId(projection.getDriverId());
+
+            dto.setOrderStatus(projection.getOrderStatus());
+
+            dto.setCustomerName(projection.getCustomerName());
+
+            dto.setOrderAmount(projection.getOrderAmount());
+
+            // ----------------------------------------------------
+            // FM information
+            // ----------------------------------------------------
+
+            if (projection.getOutletId() != null) {
+
+                for (CoFmOutletDetailsDto outlet : outletDetails) {
+
+                    if (projection.getOutletId().equals(outlet.getOutletId())) {
+
+                        dto.setOutletName(outlet.getOutletName());
+
+                        dto.setAreaName(outlet.getAreaName());
+
+                        break;
+                    }
+                }
+            }
+
+            // ----------------------------------------------------
+            // Driver information
+            // ----------------------------------------------------
+
+            if (projection.getDriverId() != null) {
+
+                for (CoDriverDetailsDto driver : driverDetails) {
+
+                    if (projection.getDriverId().equals(driver.getDriverId())) {
+
+                        // Set driver name
+                        dto.setDriverName(driver.getDriverName());
+
+                        // Set driver mobile number
+                        dto.setDriverMobileNumber(driver.getDriverMobileNumber());
+
+                        break;
+                    }
+                }
+            }
+
+            response.add(dto);
+        }
+
+        return response;
+    }
+//    ======================================================================================
+//    ======================================================================================
+
+//    /**
+//     * Converts order details projection list into DTO list.
+//     *
+//     * @param projections order details projection list
+//     * @return order details DTO list
+//     */
+//    public static List<CoOrderDetailsByOrderStatusDto>
+//    mapToOrderDetailsByOrderStatusDto(
+//            List<CoOrderDetailsByOrderStatusProjection> projections) {
+//
+//        List<CoOrderDetailsByOrderStatusDto> dtoList =
+//                new ArrayList<>();
+//
+//        for (CoOrderDetailsByOrderStatusProjection projection : projections) {
+//
+//            CoOrderDetailsByOrderStatusDto dto = new CoOrderDetailsByOrderStatusDto();
+//
+//            dto.setOrderId(projection.getOrderId());
+//            dto.setOutletId(projection.getOutletId());
+//            dto.setDriverId(projection.getDriverId());
+//            dto.setOrderStatus(projection.getOrderStatus());
+//
+//            dtoList.add(dto);
+//        }
+//
+//        return dtoList;
+//    }
+
+    /**
+     * Maps order flow count projection to response DTO.
+     */
+    public static CoOrderFlowCountForMerchantOrOutletDto
+             mapToOrderFlowCountForMerchantOrOutlet(CoOrderFlowCountProjection projection) {
+
+        CoOrderFlowCountForMerchantOrOutletDto dto
+                = new CoOrderFlowCountForMerchantOrOutletDto();
+
+        dto.setTotalOrdersCount(projection.getTotalOrdersCount());
+
+        dto.setCompletedOrdersCount(projection.getCompletedOrdersCount());
+
+        dto.setRejectedOrdersCount(projection.getRejectedOrdersCount());
+
+        return dto;
+    }
+
+//    ====================================================================================
+//    ====================================================================================
+
+    public CoCustomerResponseDto mapToResponse(CoCustomer customer) {
+
+        CoCustomerResponseDto dto = new CoCustomerResponseDto();
+
+        dto.setCustomerId(customer.getCustomerId());
+        dto.setFirstName(customer.getFirstName());
+        dto.setLastName(customer.getLastName());
+        dto.setEmail(customer.getEmail());
+        dto.setDOB(customer.getDateOfBirth());
+        dto.setProfilePicUrl(customer.getProfilePicUrl());
+        dto.setPhoneNumber(customer.getPhoneNumber());
+        dto.setReferralCode(customer.getReferralCode());
+        dto.setCustomerStatusId(customer.getCustomerStatus().getCustomerStatusId());
+
+        return dto;
     }
 }

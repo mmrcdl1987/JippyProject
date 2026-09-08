@@ -266,5 +266,15 @@ public interface FmProductService {
 
     List<FmOrderItemsEvent> getOrderProductItemsForMerchant(List<Integer> productIds, List<Integer> productVariantIds);
 
+    /**
+     * Updates the active status of a PRODUCT or MASTERPRODUCT.
+     *
+     * @param request request containing product ID, product type and active status
+     * @return success message
+     */
+    String productIsActiveToggleByProductType(
+            FmProductIsActiveToggleRequestDto request
+    );
+
     FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive);
 }

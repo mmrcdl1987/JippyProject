@@ -1,106 +1,77 @@
-package com.jippy.customerandorder.controller;
-
-import com.jippy.customerandorder.dto.CoOrderSettingsRequestDto;
-import com.jippy.customerandorder.dto.CoOrderSettingsResponseDto;
-import com.jippy.customerandorder.dto.CoPaymentModeResponse;
-import com.jippy.customerandorder.dto.CoPaymentRequest;
-import com.jippy.customerandorder.entity.CoPaymentModes;
-import com.jippy.customerandorder.iservice.IOrderSettingsService;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/co/order-settings")
-@RequiredArgsConstructor
-@Slf4j
-public class CoOrderSettingsController {
-
-    private final IOrderSettingsService orderSettingsService;
-
-    @PostMapping
-    public ResponseEntity<CoOrderSettingsResponseDto> saveOrUpdate(@Valid @RequestBody CoOrderSettingsRequestDto requestDto) {
-
-        log.info("SAVE OR UPDATE ORDER SETTINGS API START");
-
-        CoOrderSettingsResponseDto response = orderSettingsService.saveOrUpdate(requestDto);
-
-        log.info("SAVE OR UPDATE ORDER SETTINGS API SUCCESS");
-
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/getPaymentModeById")
-    public ResponseEntity<CoPaymentModeResponse> getPaymentModeById(@RequestParam Integer paymentModeId) {
-
-       log.info("GET PAYMENT MODE BY ID API START");
-
-        CoPaymentModeResponse response = orderSettingsService.getPaymentModeById(paymentModeId);
-
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/getActivePaymentModes")
-    public ResponseEntity<List<CoPaymentModeResponse>> getActivePaymentModes() {
-
-        log.info("GET ACTIVE PAYMENT MODEs API START");
-        List<CoPaymentModeResponse> response = orderSettingsService.getActivePaymentModes();
-        return ResponseEntity.ok(response);
-    }
-
-    /*
-     * CREATE
-     *
-     * POST /api/payment-modes
-     */
-    @PostMapping("/payment-mode")
-    public ResponseEntity<CoPaymentModeResponse> create(@Valid @RequestBody CoPaymentRequest request) {
-
-        /*
-         * Replace this with your authenticated
-         * logged-in user ID.
-         */
-        Integer userId = 1;
-        CoPaymentModeResponse response = orderSettingsService.create(request, userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /*
-     * UPDATE
-     *
-     * PUT /api/payment-modes/{id}
-     */
-    @PutMapping("/payment-mode/{id}")
-    public ResponseEntity<CoPaymentModeResponse> update(
-            @PathVariable Integer id,
-            @Valid @RequestBody CoPaymentRequest request) {
-
-        Integer userId = 1;
-        return ResponseEntity.ok(orderSettingsService.update(id, request, userId));
-    }
-
-    /*
-     * SOFT DELETE
-     *
-     * DELETE /api/payment-modes/{id}
-     */
-    @DeleteMapping("/payment-mode/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-
-        Integer userId = 1;
-        orderSettingsService.softDelete(id, userId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/payment-mode")
-    public ResponseEntity<List<CoPaymentModeResponse>> getAllPaymentModes() {
-        return ResponseEntity.ok(orderSettingsService.getAllPaymentModes());
-    }
-
-}
+//package com.jippy.customerandorder.controller;
+//
+//import com.jippy.customerandorder.dto.CoWalletSettingsRequestDto;
+//import com.jippy.customerandorder.dto.CoWalletSettingsResponseDto;
+//import com.jippy.customerandorder.entity.CoWalletSettings;
+//import com.jippy.customerandorder.iservice.CoWalletSettingsService;
+//import lombok.extern.slf4j.Slf4j;
+//import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.data.domain.Page;
+//import org.springframework.http.ResponseEntity;
+//import org.springframework.web.bind.annotation.*;
+//
+//import java.util.List;
+//
+//@RestController
+//@RequestMapping("/api/co/wallet-settings")
+//@Slf4j
+//public class CoWalletSettingsController {
+//
+//    @Autowired
+//    private CoWalletSettingsService walletSettingsService;
+//
+//    /**
+//     * Create / Update Wallet Settings
+//     *
+//     * POST /api/co/wallet-settings/save
+//     */
+//    @PostMapping("/save")
+//    public ResponseEntity<CoWalletSettingsResponseDto> saveWalletSettings(
+//            @RequestBody CoWalletSettingsRequestDto requestDto) {
+//
+//        log.info("Received request to save wallet settings");
+//
+//        CoWalletSettingsResponseDto responseDto =
+//                walletSettingsService.saveWalletSettings(requestDto);
+//
+//        return ResponseEntity.ok(responseDto);
+//    }
+//
+//    /**
+//     * Get all Wallet Settings without pagination.
+//     *
+//     * GET /api/co/wallet-settings
+//     */
+//    @GetMapping
+//    public ResponseEntity<List<CoWalletSettings>> getWalletSettings() {
+//
+//        log.info("Received request to get all wallet settings");
+//
+//        return ResponseEntity.ok(
+//                walletSettingsService.getWalletSettings()
+//        );
+//    }
+//
+//    /**
+//     * Get Wallet Settings with Pagination.
+//     *
+//     * Example:
+//     * GET /api/co/wallet-settings/get?page=0&size=10
+//     */
+//    @GetMapping("/get")
+//    public ResponseEntity<Page<CoWalletSettingsResponseDto>> getWalletSettings(
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        log.info(
+//                "Received request to get wallet settings. page={}, size={}",
+//                page,
+//                size
+//        );
+//
+//        Page<CoWalletSettingsResponseDto> response =
+//                walletSettingsService.getWalletSettings(page, size);
+//
+//        return ResponseEntity.ok(response);
+//    }
+//}

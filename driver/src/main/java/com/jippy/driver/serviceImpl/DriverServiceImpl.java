@@ -11,6 +11,7 @@ import com.jippy.driver.exception.ResourceNotFoundException;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverMapper;
+import com.jippy.driver.projection.DriverDetailsProjection;
 import com.jippy.driver.projection.DriverOrderHistoryProjection;
 import com.jippy.driver.projection.DriverTotalEarningsProjection;
 import com.jippy.driver.repositary.*;
@@ -190,7 +191,7 @@ public class DriverServiceImpl implements DriverService {
         /** CALLING HELPER METHOD
          * Create Approval Request in Food & Mart Microservice.
          */
-          createApprovalRequest(savedDriver.getDriverId());
+        createApprovalRequest(savedDriver.getDriverId());
 //          -------------------------------------------------------------------
 
 //        // Fetch role
@@ -1175,15 +1176,15 @@ public class DriverServiceImpl implements DriverService {
 
         return dto;
     }
-//    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
+    //    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
     @Override
     public FmDriverApprovalResponseDTO getDriverById(Integer driverId) {
 
-    Driver driver = driverRepository.findByDriverId(driverId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException("Driver not found with Id : " + driverId));
+        Driver driver = driverRepository.findByDriverId(driverId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Driver not found with Id : " + driverId));
 
-    return DriverMapper.mapToDriverApprovalResponseDto(driver);
+        return DriverMapper.mapToDriverApprovalResponseDto(driver);
     }
 
     @Override
@@ -1254,7 +1255,7 @@ public class DriverServiceImpl implements DriverService {
 
         log.info("Updating driver documents for entityId: {}", driverDocumentUpdateDTO.getDriverId());
 
-       Optional<DriverKyc> driverKycOptional = driverKycRepository.findByDriverDriverId(driverDocumentUpdateDTO.getDriverId());
+        Optional<DriverKyc> driverKycOptional = driverKycRepository.findByDriverDriverId(driverDocumentUpdateDTO.getDriverId());
 
         if (driverKycOptional.isPresent()) {
             DriverKyc driverKyc = driverKycOptional.get();
@@ -1269,7 +1270,63 @@ public class DriverServiceImpl implements DriverService {
             return "Driver documents updated successfully.";
         } else {
             log.error("Driver KYC not found for driverId: {}", driverDocumentUpdateDTO.getDriverId());
-           return "Driver KYC not found for driverId: " +  driverDocumentUpdateDTO.getDriverId();
+            return "Driver KYC not found for driverId: " +  driverDocumentUpdateDTO.getDriverId();
         }
+    }
+
+    //    =================================================================================
+//    =================================================================================
+
+    /**
+     * Fetches driver details for multiple driver IDs.
+     * <p>
+     * The driver name is created using first name and last name.
+     */
+    @Override
+    public List<DriverDetailsResponseDto> getDriverDetailsByIds(List<Integer> driverIds) {
+
+        log.info("Fetching driver details for {} driver IDs", driverIds.size());
+
+        List<DriverDetailsProjection> projections = driverRepository.getDriverDetailsByIds(driverIds);
+
+        List<DriverDetailsResponseDto> response = new ArrayList<>();
+
+        for (DriverDetailsProjection projection : projections) {
+
+            DriverDetailsResponseDto dto = new DriverDetailsResponseDto();
+
+            dto.setDriverId(projection.getDriverId());
+
+            dto.setDriverName(projection.getDriverName());
+
+            // Driver mobile number
+            dto.setDriverMobileNumber(projection.getDriverMobileNumber());
+
+            response.add(dto);
+        }
+
+        log.info("Successfully fetched {} driver details", response.size());
+
+        return response;
+    }
+
+    //    ==================================================================================
+//    ==================================================================================
+    @Override
+    public DriverDetailsResponseDto getDriverDetailsForOrder(Integer driverId) {
+
+        log.info("Fetching driver details for order. driverId={}", driverId);
+
+        Driver driver = driverRepository.findById(driverId).orElseThrow(() -> new RuntimeException("Driver not found with ID: " + driverId));
+
+        DriverDetailsResponseDto response = new DriverDetailsResponseDto();
+
+        response.setDriverId(driver.getDriverId());
+
+        response.setDriverName(driver.getFirstName() + " " + driver.getLastName());
+
+        response.setDriverMobileNumber(driver.getPhoneNumber());
+
+        return response;
     }
 }

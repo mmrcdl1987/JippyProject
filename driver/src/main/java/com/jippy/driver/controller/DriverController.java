@@ -6,7 +6,9 @@
     import com.jippy.driver.service.DriverService;
     import com.jippy.driver.serviceImpl.DriverLocationService;
     import io.swagger.v3.oas.annotations.Operation;
+    import io.swagger.v3.oas.annotations.Parameter;
     import io.swagger.v3.oas.annotations.responses.ApiResponse;
+    import io.swagger.v3.oas.annotations.responses.ApiResponses;
     import io.swagger.v3.oas.annotations.tags.Tag;
     import jakarta.validation.Valid;
     import jakarta.validation.constraints.Email;
@@ -19,7 +21,6 @@
     import org.springframework.http.ResponseEntity;
     import org.springframework.validation.annotation.Validated;
     import org.springframework.web.bind.annotation.*;
-    import org.springframework.web.bind.annotation.ModelAttribute;
     import org.springframework.web.multipart.MultipartFile;
 
     import java.time.LocalDate;
@@ -295,5 +296,61 @@
             return driverService.updateDriverDocuments(driverDocumentUpdateDTO);
         }
 
+//        ===============================================================================
+//        ===============================================================================
+        /**
+         * Fetches driver details for multiple driver IDs. for feign.
+         */
+        @PostMapping("/getDriverDetailsByIds")
+        @Operation(
+                summary = "Get driver details by driver IDs",
+                description = "Fetches driver ID and driver full name for multiple driver IDs."
+        )
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Driver details fetched successfully"),
+                @ApiResponse(responseCode = "400", description = "Invalid driver IDs"),
+                @ApiResponse(responseCode = "500", description = "Internal server error")
+        })
+        public ResponseEntity<List<DriverDetailsResponseDto>> getDriverDetailsByIds(
+
+                @Parameter(
+                        description = "List of driver IDs",
+                        example = "[15, 16, 17]",
+                        required = true
+                )
+                @RequestBody DriverDetailsRequestDto request) {
+
+            log.info(
+                    "Received request to fetch driver details for {} driver IDs",
+                    request.getDriverIds().size()
+            );
+
+            List<DriverDetailsResponseDto> response = driverService.getDriverDetailsByIds(
+                            request.getDriverIds()
+                    );
+
+            log.info(
+                    "Returning {} driver details",
+                    response.size()
+            );
+
+            return ResponseEntity.ok(response);
+        }
+//        ==================================================================================
+//        ==================================================================================
+        @GetMapping("/getDriverDetailsForOrder")
+        public ResponseEntity<DriverDetailsResponseDto> getDriverDetailsForOrder(
+                @RequestParam Integer driverId) {
+
+            log.info(
+                    "Received request to fetch driver details for order. driverId={}",
+                    driverId
+            );
+
+            DriverDetailsResponseDto response =
+                    driverService.getDriverDetailsForOrder(driverId);
+
+            return ResponseEntity.ok(response);
+        }
 
     }

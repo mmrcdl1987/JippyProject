@@ -40,7 +40,7 @@ public class COConstants {
     public static final String TYPE_DRIVER = "DRIVER";
     public static final String CUSTOMER = "CUSTOMER";
     public static final String OUTLET = "OUTLET";
-    public static final String ORDER_STATUS_REJECTED = "ORDER REJECTED";
+    public static final String ORDER_STATUS_REJECTED = "ORDER_REJECTED";
     public static final String ORDER_STATUS_CANCELLED = "CANCELLED";
     public static final String ORDER_STATUS_ACCEPTED = "ORDER ACCEPTED";
     public static final String STATUS_201 = "201";
@@ -113,6 +113,8 @@ public class COConstants {
 
     // SCHEDULED ORDER NOTIFICATIONS
     public static final String NOTIFICATION_TYPE_CREATED = "ORDER_CREATED";
+
+    public static final String ORDER_REJECTED_STATUS = "ORDER_REJECTED";
 
     public static final String NOTIFICATION_TYPE_SCHEDULED_ORDER_CREATED = "SCHEDULED_ORDER_CREATED";
 

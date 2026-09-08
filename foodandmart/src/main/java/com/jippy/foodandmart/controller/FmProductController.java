@@ -441,6 +441,104 @@ public class FmProductController {
 
         return ResponseEntity.ok(products);
     }
+//    =====================================================================================
+//    =====================================================================================
+    /**
+     * Activates or deactivates a PRODUCT or MASTERPRODUCT.
+     *
+     * PRODUCT       -> updates products.is_active
+     * MASTERPRODUCT -> updates master_products.is_active
+     *
+     * Supported productType:
+     * PRODUCT, MASTERPRODUCT
+     *
+     * Supported isActive:
+     * Y, N
+     */
+    @PutMapping("/productIsActiveToggleByProductType")
+    @Operation(
+            summary = "Update product active status by product type",
+            description =
+                    "Updates the active status of a PRODUCT or MASTERPRODUCT. "
+                            + "Supported productType values are PRODUCT and MASTERPRODUCT. "
+                            + "Supported isActive values are Y and N. "
+                            + "Y enables the product and N disables the product. "
+                            + "For PRODUCT, the products table is updated. "
+                            + "For MASTERPRODUCT, the master_products table is updated."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product active status updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid product ID, product type or active status"),
+            @ApiResponse(responseCode = "404", description = "Product or master product not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<String> productIsActiveToggleByProductType(
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description =
+                            "Provide productId, productType and isActive. "
+                                    + "productType supports PRODUCT or MASTERPRODUCT. "
+                                    + "isActive supports Y or N.",
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation =
+                                            FmProductIsActiveToggleRequestDto.class
+                            ),
+                            examples = {
+
+                                    @ExampleObject(
+                                            name = "PRODUCT",
+                                            summary = "Enable or disable PRODUCT",
+                                            value =
+                                                    """
+                                                    {
+                                                      "productId": 39,
+                                                      "productType": "PRODUCT",
+                                                      "isActive": "N"
+                                                    }
+                                                    """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "MASTERPRODUCT",
+                                            summary = "Enable or disable MASTERPRODUCT",
+                                            value =
+                                                    """
+                                                    {
+                                                      "productId": 8,
+                                                      "productType": "MASTERPRODUCT",
+                                                      "isActive": "Y"
+                                                    }
+                                                    """
+                                    )
+                            }
+                    )
+            )
+            @Valid
+            @RequestBody FmProductIsActiveToggleRequestDto request) {
+
+        log.info(
+                "Received request to update product active status. " +
+                        "productId={}, productType={}, isActive={}",
+                request.getProductId(),
+                request.getProductType(),
+                request.getIsActive()
+        );
+
+        String response =
+                productMappingService.productIsActiveToggleByProductType(request);
+
+        log.info(
+                "Product active status update completed successfully. " +
+                        "productId={}, productType={}, isActive={}",
+                request.getProductId(),
+                request.getProductType(),
+                request.getIsActive()
+        );
+
+        return ResponseEntity.ok(response);
+    }
 
     @PutMapping("/inactiveProductOrProductVariant")
     @Operation(summary = "Inactive Product or Product Variant",

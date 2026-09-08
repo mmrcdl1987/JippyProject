@@ -3,7 +3,6 @@ package com.jippy.driver.service;
 
 import com.jippy.driver.dto.*;
 import jakarta.validation.Valid;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -72,4 +71,15 @@ public interface DriverService {
     );
 
     String updateDriverDocuments(DriverDocumentUpdateDTO driverDocumentUpdateDTO);
+    /**
+     * Fetches driver details for multiple driver IDs.
+     *
+     * @param driverIds list of driver IDs
+     * @return driver details
+     */
+    List<DriverDetailsResponseDto> getDriverDetailsByIds(
+            List<Integer> driverIds
+    );
+
+    DriverDetailsResponseDto getDriverDetailsForOrder(Integer driverId);
 }

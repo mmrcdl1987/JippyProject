@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.feignClients;
 
+import com.jippy.customerandorder.dto.CoRefundDetailsDto;
 import com.jippy.customerandorder.dto.WelcomeCouponDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -18,5 +19,16 @@ public interface DivisionFeignClient {
     @PostMapping("/api/div/payment/refund/orderRefund")
      ResponseEntity<String> orderRefund(@RequestParam String orderId,
             @RequestParam String reason);
+
+//    =================================================================================
+//    =================================================================================
+        // =========================================================
+        // Get refund details from Division service
+        // =========================================================
+
+        @GetMapping("/api/div/payment/refund/getRefundDetails")
+        CoRefundDetailsDto getRefundDetails(
+                @RequestParam("orderId") String orderId
+        );
 
 }

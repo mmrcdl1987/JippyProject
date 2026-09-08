@@ -6,12 +6,16 @@ import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.exception.CoBadRequestException;
 import com.jippy.customerandorder.exception.CoBusinessException;
 import com.jippy.customerandorder.exception.CoResourceNotFoundException;
+import com.jippy.customerandorder.feignClients.DivisionFeignClient;
+import com.jippy.customerandorder.feignClients.DriverFeignClient;
 import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.feignClients.NotificationFeignClient;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.CoCustomerMapper;
+import com.jippy.customerandorder.mapper.CoOrderCompleteDetailsMapper;
 import com.jippy.customerandorder.mapper.CoWalletPointsMapper;
 import com.jippy.customerandorder.producer.CoWalletPointsKafkaProducer;
+import com.jippy.customerandorder.projection.*;
 import com.jippy.customerandorder.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +28,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +38,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CoCustomerServiceImpl implements ICoCustomerService {
+    private final CoOrderRepository coOrderRepository;
+    private final CoOrderPriceBreakupRepository coOrderPriceBreakupRepository;
+    private final CoOrderItemRepository coOrderItemRepository;
 
     private final CoCustomerRepository customerRepository;
 
@@ -49,6 +57,10 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     private final CoCustomerReferralRepository customerReferralRepository;
 
     private final FMFeignClient fmFeignClient;
+
+    private final DriverFeignClient driverFeignClient;
+
+    private final DivisionFeignClient divisionFeignClient;
 
     private final NotificationFeignClient notificationFeignClient;
 
@@ -1296,4 +1308,726 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                 "Profile picture url: " +
                 customerDto.getProfilePicUrl();
     }
+//    ===============================================================================
+//    ===============================================================================
+    /**
+     * Fetches complete order flow counts based on order status.
+     *
+     * This method retrieves all five required counts:
+     *
+     * 1. Total orders
+     * 2. Orders placed
+     * 3. Orders confirmed
+     * 4. Orders shipped
+     * 5. Orders completed
+     * 6. Orders Rejected
+     *
+     * @return complete order flow count response
+     */
+    @Override
+    public CoCompleteOrdersFlowCountsDto getCompleteOrdersFlowCounts() {
+
+        log.info("Fetching complete orders flow counts");
+
+        CoCompleteOrdersFlowCountsProjection projection =
+                customerRepository.getCompleteOrdersFlowCounts();
+
+        if (projection == null) {
+
+            log.warn("No order flow count data found");
+
+            return new CoCompleteOrdersFlowCountsDto();
+        }
+
+        CoCompleteOrdersFlowCountsDto response =
+                CoCustomerMapper.mapToCompleteOrdersFlowCountsDto(projection);
+
+        log.info(
+                "Complete orders flow counts fetched successfully. " +
+                        "Total: {}, Placed: {}, Confirmed: {}, Shipped: {}, Completed: {}",
+                response.getTotalOrdersCount(),
+                response.getOrdersPlaced(),
+                response.getOrdersConfirmed(),
+                response.getOrdersShipped(),
+                response.getOrdersCompleted()
+        );
+
+        return response;
+    }
+//    =================================================================================
+//    =================================================================================
+    /**
+     * Fetches complete order details based on order status.
+     *
+     * The requested status is passed from the controller
+     * and used to filter records from the orders table.
+     *
+     * @param orderStatus order status filter
+     * @return list of orders matching the requested status
+     */
+    /**
+     * Fetches complete order details based on order status.
+     *
+     * CO database provides:
+     * - Order details
+     * - Customer name
+     * - Order amount
+     *
+     * FM microservice provides:
+     * - Outlet name
+     * - Area name
+     *
+     * Driver microservice provides:
+     * - Driver name
+     *
+     * Bulk APIs are used to avoid making one network request
+     * for every individual order.
+     */
+    @Override
+    public List<CoOrderDetailsByOrderStatusDto>
+    getCompleteOrdersDetailsByOrderStatus(String orderStatus) {
+
+        log.info(
+                "Fetching complete order details for order status: {}",
+                orderStatus
+        );
+
+        // --------------------------------------------------------
+        // Step 1: Fetch order information from CO database
+        // --------------------------------------------------------
+
+        List<CoOrderDetailsByOrderStatusProjection> projections =
+                customerRepository
+                        .getCompleteOrdersDetailsByOrderStatus(
+                                orderStatus
+                        );
+
+        log.info(
+                "Found {} orders for order status: {}",
+                projections.size(),
+                orderStatus
+        );
+
+        if (projections.isEmpty()) {
+
+            log.info(
+                    "No orders found for order status: {}",
+                    orderStatus
+            );
+
+            return new ArrayList<>();
+        }
+
+        // --------------------------------------------------------
+        // Step 2: Prepare outlet IDs and driver IDs
+        // --------------------------------------------------------
+
+        List<Integer> outletIds = new ArrayList<>();
+
+        List<Integer> driverIds = new ArrayList<>();
+
+        for (CoOrderDetailsByOrderStatusProjection projection : projections) {
+
+//            for outlet
+            addIfNotPresent(outletIds, projection.getOutletId());
+
+//            for driver
+            addIfNotPresent(driverIds, projection.getDriverId());
+        }
+
+        log.info(
+                "Preparing FM bulk request for {} outlet IDs",
+                outletIds.size()
+        );
+
+        log.info(
+                "Preparing Driver bulk request for {} driver IDs",
+                driverIds.size()
+        );
+
+        // --------------------------------------------------------
+        // Step 3: Fetch outlet information from FM
+        // --------------------------------------------------------
+
+        List<CoFmOutletDetailsDto> outletDetails = new ArrayList<>();
+
+        if (!outletIds.isEmpty()) {
+
+            CoOutletDetailsRequestDto outletRequest = new CoOutletDetailsRequestDto();
+
+            outletRequest.setOutletIds(outletIds);
+
+            outletDetails =
+                    fmFeignClient
+                            .getOutletDetailsByIds(outletRequest);
+
+
+            log.info(
+                    "Received {} outlet details from FM service",
+                    outletDetails.size()
+            );
+        }
+
+        // --------------------------------------------------------
+        // Step 4: Fetch driver information from Driver service
+        // --------------------------------------------------------
+
+        List<CoDriverDetailsDto> driverDetails = new ArrayList<>();
+
+        if (!driverIds.isEmpty()) {
+
+            CoDriverDetailsRequestDto driverRequest = new CoDriverDetailsRequestDto();
+
+            driverRequest.setDriverIds(driverIds);
+
+            driverDetails =
+                    driverFeignClient
+                            .getDriverDetailsByIds(
+                                    driverRequest
+                            );
+            log.info(
+                    "Driver service response: {}",
+                    driverDetails
+            );
+            log.info(
+                    "Received {} driver details from Driver service",
+                    driverDetails.size()
+            );
+        }
+
+        // --------------------------------------------------------
+        // Step 5: Map everything into final response
+        // --------------------------------------------------------
+
+        List<CoOrderDetailsByOrderStatusDto> response =
+                CoCustomerMapper
+                        .mapToCompleteOrderDetails(
+                                projections,
+                                outletDetails,
+                                driverDetails
+                        );
+
+        log.info(
+                "Successfully prepared {} complete order details",
+                response.size()
+        );
+
+        return response;
+    }
+
+//    ==============================================================================
+//    ==============================================================================
+    /**
+     * Adds an ID to the list only when it is not already present.
+     */
+    private void addIfNotPresent(
+            List<Integer> ids,
+            Integer id) {
+
+        if (id == null) {
+            return;
+        }
+
+        if (!ids.contains(id)) {
+            ids.add(id);
+        }
+    }
+//    =================================================================================
+//    =================================================================================
+@Override
+public CoOrderCompleteDetailsResponseDto getOrderCompleteDetails(
+        String orderId) {
+
+    log.info(
+            "Fetching complete order details. orderId={}",
+            orderId
+    );
+
+    /*
+     * STEP 1
+     * Fetch main order information from CO database.
+     *
+     * This also fetches:
+     * - customer
+     * - customer address
+     * - payment mode
+     * - outlet ID
+     */
+    CoOrderCompleteDetailsProjection orderProjection =
+            coOrderRepository
+                    .getOrderCompleteDetails(orderId)
+                    .orElseThrow(() -> new RuntimeException(
+                            "Order not found with ID: " + orderId
+                    ));
+
+    log.info(
+            "Main order details fetched successfully. " +
+                    "orderId={}, customerId={}, outletId={}, driverId={}, status={}",
+            orderId,
+            orderProjection.getCustomerId(),
+            orderProjection.getOutletId(),
+            orderProjection.getDriverId(),
+            orderProjection.getOrderStatus()
+    );
+
+    CoOrderCompleteDetailsResponseDto response =
+            CoOrderCompleteDetailsMapper
+                    .mapMainDetails(orderProjection);
+
+    log.info(
+            "Main order details fetched successfully. " +
+                    "orderId={}, customerId={}, outletId={}, status={}",
+            orderId,
+            orderProjection.getCustomerId(),
+            orderProjection.getOutletId(),
+            orderProjection.getOrderStatus()
+    );
+
+    /*
+     * STEP 2
+     * Fetch outlet information from Food & Mart microservice.
+     */
+    try {
+
+        if (orderProjection.getOutletId() != null) {
+
+            log.info(
+                    "Calling FM service for outlet details. " +
+                            "outletId={}",
+                    orderProjection.getOutletId()
+            );
+
+            CoOutletDetailsDto outletDetails =
+                    fmFeignClient.getOutletCompleteDetails(
+                            orderProjection.getOutletId()
+                    );
+
+            response.setOutlet(outletDetails);
+
+            log.info(
+                    "FM outlet details fetched successfully. " +
+                            "outletId={}",
+                    orderProjection.getOutletId()
+            );
+        }
+
+    } catch (Exception e) {
+
+        log.error(
+                "Failed to fetch outlet details from FM service. " +
+                        "outletId={}",
+                orderProjection.getOutletId(),
+                e
+        );
+
+        throw new RuntimeException(
+                "Unable to fetch outlet details"
+        );
+    }
+    /*
+     * STEP 3
+     * Fetch driver information from Driver microservice.
+     *
+     * One order can have only one assigned driver.
+     * The driver ID is stored in the orders table.
+     *
+     * Driver name and mobile number are fetched
+     * from Driver microservice using Feign.
+     */
+    try {
+
+        if (orderProjection.getDriverId() != null) {
+
+            log.info(
+                    "Calling Driver service for driver details. " +
+                            "driverId={}, orderId={}",
+                    orderProjection.getDriverId(),
+                    orderId
+            );
+
+            CoDriverDetailsDto driverDetails =
+                    driverFeignClient.getDriverDetailsForOrder(
+                            orderProjection.getDriverId()
+                    );
+
+            response.setDriver(driverDetails);
+
+            log.info(
+                    "Driver details fetched successfully. " +
+                            "driverId={}, orderId={}",
+                    orderProjection.getDriverId(),
+                    orderId
+            );
+
+        } else {
+
+            log.info(
+                    "No driver assigned to order. orderId={}",
+                    orderId
+            );
+
+            response.setDriver(null);
+        }
+
+    } catch (Exception e) {
+
+        log.error(
+                "Failed to fetch driver details from Driver service. " +
+                        "driverId={}, orderId={}",
+                orderProjection.getDriverId(),
+                orderId,
+                e
+        );
+
+        /*
+         * Driver details should not prevent
+         * the complete order response from being returned.
+         */
+        response.setDriver(null);
+    }
+
+    /*
+     * STEP 3.1
+     * Fetch order items from CO database.
+     */
+    log.info(
+            "Fetching order items. orderId={}",
+            orderId
+    );
+
+    List<CoOrderItemProjection> itemProjections =
+            coOrderItemRepository.getOrderItems(orderId);
+
+    response.setItems(
+            CoOrderCompleteDetailsMapper
+                    .mapOrderItems(itemProjections)
+    );
+
+    log.info(
+            "Order items fetched successfully. " +
+                    "orderId={}, itemCount={}",
+            orderId,
+            itemProjections.size()
+    );
+
+    /*
+     * STEP 4
+     * Fetch price breakup from CO database.
+     */
+    log.info(
+            "Fetching order price breakup. orderId={}",
+            orderId
+    );
+
+    CoOrderPriceBreakupProjection priceProjection =
+            coOrderPriceBreakupRepository
+                    .getPriceBreakup(orderId)
+                    .orElse(null);
+
+    if (priceProjection != null) {
+
+        response.setPriceBreakup(
+                CoOrderCompleteDetailsMapper
+                        .mapPriceBreakup(priceProjection)
+        );
+
+        log.info(
+                "Order price breakup fetched successfully. " +
+                        "orderId={}",
+                orderId
+        );
+
+    } else {
+
+        log.warn(
+                "Price breakup not found for orderId={}",
+                orderId
+        );
+    }
+
+    /*
+     * STEP 5
+     * Refund details are required ONLY when
+     * order status is ORDER_REJECTED.
+     */
+    if (COConstants.ORDER_STATUS_REJECTED.equalsIgnoreCase(
+            orderProjection.getOrderStatus())) {
+
+        log.info(
+                "Order is rejected. Fetching refund details " +
+                        "from Division service. orderId={}",
+                orderId
+        );
+
+        try {
+
+            CoRefundDetailsDto refundDetails =
+                    divisionFeignClient.getRefundDetails(orderId);
+
+            log.info(
+                    "Division refund API response received. orderId={}, refundDetails={}",
+                    orderId,
+                    refundDetails
+            );
+
+            log.info(
+                    "Refund response received from Division. orderId={}, refundDetails={}",
+                    orderId,
+                    refundDetails
+            );
+
+            response.setRefund(refundDetails);
+
+            log.info(
+                    "Refund details set in complete order response. orderId={}",
+                    orderId
+            );
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Failed to fetch refund details from " +
+                            "Division service. orderId={}",
+                    orderId,
+                    e
+            );
+
+            /*
+             * We can keep refund as null if refund record
+             * does not exist yet.
+             */
+            response.setRefund(null);
+        }
+
+    } else {
+
+        log.info(
+                "Order is not rejected. Refund details are not required. " +
+                        "orderId={}, status={}",
+                orderId,
+                orderProjection.getOrderStatus()
+        );
+
+        response.setRefund(null);
+    }
+
+    log.info(
+            "Complete order details fetched successfully. " +
+                    "orderId={}",
+            orderId
+    );
+
+    return response;
 }
+//=======================================================================================
+@Override
+public CoOrderFlowCountForMerchantOrOutletDto
+                        getOrderFlowCountForMerchantOrOutlet(
+                                Integer merchantId,
+                                Integer outletId) {
+
+    log.info(
+            "Fetching order flow counts. merchantId={}, outletId={}",
+            merchantId,
+            outletId
+    );
+
+    // ============================================================
+    // STEP 1: Validate input
+    // ============================================================
+    //
+    // Exactly ONE of merchantId or outletId must be provided.
+    //
+    // Valid:
+    //
+    // merchantId=50
+    //
+    // OR
+    //
+    // outletId=13
+    //
+    // Invalid:
+    //
+    // merchantId=50 & outletId=13
+    //
+    // OR
+    //
+    // merchantId=null & outletId=null
+    // ============================================================
+
+    if (merchantId == null && outletId == null) {
+
+        log.warn(
+                "Neither merchantId nor outletId was provided"
+        );
+
+        throw new IllegalArgumentException(
+                "Either merchantId or outletId must be provided"
+        );
+    }
+
+    if (merchantId != null && outletId != null) {
+
+        log.warn(
+                "Both merchantId and outletId were provided. " +
+                        "merchantId={}, outletId={}",
+                merchantId,
+                outletId
+        );
+
+        throw new IllegalArgumentException(
+                "Only one of merchantId or outletId can be provided"
+        );
+    }
+
+
+    // ============================================================
+    // STEP 2: Prepare outlet IDs
+    // ============================================================
+
+    List<Integer> outletIds = new ArrayList<>();
+
+
+    // ============================================================
+    // CASE 1: Merchant ID provided
+    // ============================================================
+    //
+    // Merchant can have multiple outlets.
+    //
+    // Therefore:
+    //
+    // CO → Feign → FM
+    //
+    // FM:
+    //
+    // SELECT outlet_id
+    // FROM jippy_fm.outlets
+    // WHERE merchant_id = ?
+    // ============================================================
+
+    if (merchantId != null) {
+
+        log.info(
+                "Merchant ID provided. Fetching outlets from FM. " +
+                        "merchantId={}",
+                merchantId
+        );
+
+        List<Integer> merchantOutletIds =
+                fmFeignClient.getOutletIdsByMerchantId(
+                        merchantId
+                );
+
+        if (merchantOutletIds == null ||
+                merchantOutletIds.isEmpty()) {
+
+            log.info(
+                    "No outlets found for merchant. merchantId={}",
+                    merchantId
+            );
+
+            return createEmptyOrderFlowCountResponse();
+        }
+
+        // Add all merchant outlet IDs.
+        for (Integer merchantOutletId : merchantOutletIds) {
+
+            if (merchantOutletId != null) {
+
+                outletIds.add(merchantOutletId);
+            }
+        }
+
+        log.info(
+                "Found {} outlets for merchant. merchantId={}",
+                outletIds.size(),
+                merchantId
+        );
+    }
+
+
+    // ============================================================
+    // CASE 2: Outlet ID provided
+    // ============================================================
+    //
+    // No FM call is required.
+    //
+    // Directly use the outlet ID to query CO orders table.
+    // ============================================================
+
+    if (outletId != null) {
+
+        log.info(
+                "Outlet ID provided. Using outlet directly. " +
+                        "outletId={}",
+                outletId
+        );
+
+        outletIds.add(outletId);
+    }
+
+
+    // ============================================================
+    // STEP 3: Fetch order counts from CO orders table
+    // ============================================================
+
+    log.info(
+            "Fetching order counts for {} outlet IDs",
+            outletIds.size()
+    );
+
+    CoOrderFlowCountProjection projection =
+            coOrderRepository.getOrderFlowCountsByOutletIds(
+                    outletIds
+            );
+
+
+    // ============================================================
+    // STEP 4: Map projection to DTO
+    // ============================================================
+
+    CoOrderFlowCountForMerchantOrOutletDto response =
+            CoCustomerMapper
+                    .mapToOrderFlowCountForMerchantOrOutlet(
+                            projection
+                    );
+
+
+    log.info(
+            "Order flow counts fetched successfully. " +
+                    "merchantId={}, outletId={}, " +
+                    "total={}, completed={}, rejected={}",
+            merchantId,
+            outletId,
+            response.getTotalOrdersCount(),
+            response.getCompletedOrdersCount(),
+            response.getRejectedOrdersCount()
+    );
+
+    return response;
+}
+//=====================================================================================
+//=================================HELPER METHODS======================================
+//=====================================================================================
+    /**
+     * Creates an empty order flow count response.
+     *
+     * This is returned when a merchant does not have
+     * any associated outlets.
+     */
+    private CoOrderFlowCountForMerchantOrOutletDto
+    createEmptyOrderFlowCountResponse() {
+
+        CoOrderFlowCountForMerchantOrOutletDto dto =
+                new CoOrderFlowCountForMerchantOrOutletDto();
+
+        dto.setTotalOrdersCount(0L);
+
+        dto.setCompletedOrdersCount(0L);
+
+        dto.setRejectedOrdersCount(0L);
+
+        return dto;
+    }
+}
+
