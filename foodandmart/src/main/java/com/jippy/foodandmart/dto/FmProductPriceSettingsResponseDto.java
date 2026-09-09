@@ -43,4 +43,6 @@ public class FmProductPriceSettingsResponseDto {
     private Integer updatedBy;
 
     private LocalDateTime updatedAt;
+
+    private String isActive;
 }

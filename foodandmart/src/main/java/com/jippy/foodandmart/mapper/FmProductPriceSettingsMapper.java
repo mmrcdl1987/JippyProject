@@ -80,7 +80,8 @@ public class FmProductPriceSettingsMapper {
                 entity.getCreatedBy(),
                 entity.getCreatedAt(),
                 entity.getUpdatedBy(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getIsActive()
         );
     }
 }

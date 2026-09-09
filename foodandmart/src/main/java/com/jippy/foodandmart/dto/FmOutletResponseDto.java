@@ -38,6 +38,7 @@ public class FmOutletResponseDto {
 
     private String outletPicUrl;
 
+
     // ---------------------------------------------------------
     // KYC Details
     // user_kyc
@@ -84,9 +85,11 @@ public class FmOutletResponseDto {
     private String road;
 
     private String landmark;
+
+
     // ---------------------------------------------------------
     // Outlet Location
-    // oulet_location GEOGRAPHY(POINT,4326)
+    // outlet_location GEOGRAPHY(POINT,4326)
     // ---------------------------------------------------------
 
     private Double latitude;

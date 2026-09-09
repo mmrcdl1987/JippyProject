@@ -76,4 +76,7 @@ public class FmProductPriceSettings {
 
     @Column(name = "updated_by")
     private Integer updatedBy;
+
+    @Column(name = "is_active")
+    private String isActive;
 }

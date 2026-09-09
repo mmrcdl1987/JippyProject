@@ -76,10 +76,7 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
             CoOrderRejection rejection = CoOrderRejectionMapper.toEntity(request);
             rejectionRepository.save(rejection);
 
-            log.info(
-                    "Customer cancellation saved | orderId={}",
-                    order.getOrderId()
-            );
+            log.info("Customer cancellation saved | orderId={}", order.getOrderId());
 
             // NO WALLET REFUND
 
@@ -89,8 +86,7 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
         /*
          * DRIVER REJECT FLOW
          */
-        if ("DRIVER".equalsIgnoreCase(request.getType())
-                || "DRIVER_REJECTION".equalsIgnoreCase(request.getType())) {
+        if ("DRIVER".equalsIgnoreCase(request.getType()) || "DRIVER_REJECTION".equalsIgnoreCase(request.getType())) {
 
             order.setOrderStatus(COConstants.ORDER_STATUS_REJECTED);
             orderRepository.save(order);
@@ -98,26 +94,13 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
             CoOrderRejection rejection = CoOrderRejectionMapper.toEntity(request);
             rejectionRepository.save(rejection);
 
-            log.info(
-                    "Driver rejection saved | orderId={}",
-                    order.getOrderId()
-            );
+            log.info("Driver rejection saved | orderId={}", order.getOrderId());
 
             // REFUND WALLET
 
-            BigDecimal refundAmount =
-                    walletRefundService.processWalletRefund(
-                            order.getOrderId(),
-                            order.getCustomerId(),
-                            COConstants.REJECTION_TYPE_DRIVER
-                    );
+            BigDecimal refundAmount = walletRefundService.processWalletRefund(order.getOrderId(), order.getCustomerId(), COConstants.REJECTION_TYPE_DRIVER);
 
-            log.info(
-                    "Driver wallet refund completed | " +
-                            "orderId={} | refundAmount={}",
-                    order.getOrderId(),
-                    refundAmount
-            );
+            log.info("Driver wallet refund completed | " + "orderId={} | refundAmount={}", order.getOrderId(), refundAmount);
             return rejection;
         }
 
@@ -130,26 +113,13 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
         CoOrderRejection rejection = CoOrderRejectionMapper.toEntity(request);
         rejectionRepository.save(rejection);
 
-        log.info(
-                "Outlet rejection saved | orderId={}",
-                order.getOrderId()
-        );
+        log.info("Outlet rejection saved | orderId={}", order.getOrderId());
 
 // REFUND WALLET
 
-        BigDecimal refundAmount =
-                walletRefundService.processWalletRefund(
-                        order.getOrderId(),
-                        order.getCustomerId(),
-                        COConstants.REJECTION_TYPE_OUTLET
-                );
+        BigDecimal refundAmount = walletRefundService.processWalletRefund(order.getOrderId(), order.getCustomerId(), COConstants.REJECTION_TYPE_OUTLET);
 
-        log.info(
-                "Outlet wallet refund completed | " +
-                        "orderId={} | refundAmount={}",
-                order.getOrderId(),
-                refundAmount
-        );
+        log.info("Outlet wallet refund completed | " + "orderId={} | refundAmount={}", order.getOrderId(), refundAmount);
         /*
          * FETCH CUSTOMER ADDRESS
          */
@@ -179,11 +149,7 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
 
         if (outlets == null || outlets.isEmpty()) {
 
-            log.warn(
-                    "NO_SPECIALIZED_OUTLETS_FOUND | orderId={} | areaId={}",
-                    order.getOrderId(),
-                    areaId
-            );
+            log.warn("NO_SPECIALIZED_OUTLETS_FOUND | orderId={} | areaId={}", order.getOrderId(), areaId);
             // Order is already rejected and wallet refund is completed.
             // No reassignment is possible.
             return rejection;
@@ -200,11 +166,7 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
 
             if (outlet.getOutletId().equals(request.getRejectedById())) {
 
-                log.info(
-                        "Skipping rejected outletId={} | orderId={}",
-                        outlet.getOutletId(),
-                        order.getOrderId()
-                );
+                log.info("Skipping rejected outletId={} | orderId={}", outlet.getOutletId(), order.getOrderId());
 
                 continue;
             }
@@ -222,23 +184,14 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
             kafkaTemplate.send("co-order-events", event);
 
             reassignmentSent = true;
-            log.info("Kafka event sent | orderId={} | outletId={}", order.getOrderId(),
-                    outlet.getOutletId());
+            log.info("Kafka event sent | orderId={} | outletId={}", order.getOrderId(), outlet.getOutletId());
         }
 
         if (!reassignmentSent) {
 
-            log.warn(
-                    "NO_ALTERNATIVE_OUTLET_FOR_REASSIGNMENT | " +
-                            "orderId={} | rejectedOutletId={}",
-                    order.getOrderId(),
-                    request.getRejectedById()
-            );
+            log.warn("NO_ALTERNATIVE_OUTLET_FOR_REASSIGNMENT | " + "orderId={} | rejectedOutletId={}", order.getOrderId(), request.getRejectedById());
         } else {
-            log.info(
-                    "REASSIGNMENT_EVENTS_SENT | orderId={}",
-                    order.getOrderId()
-            );
+            log.info("REASSIGNMENT_EVENTS_SENT | orderId={}", order.getOrderId());
         }
         return rejection;
     }

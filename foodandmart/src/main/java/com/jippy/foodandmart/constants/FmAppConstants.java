@@ -431,4 +431,9 @@ public final class FmAppConstants {
 
     public static final String CATEGORY_IMAGE_S3_FOLDER =
             "food-mart/categories/";
+
+    public static final String ACTIVE = "Y";
+    public static final String INACTIVE = "N";
+
+
 }

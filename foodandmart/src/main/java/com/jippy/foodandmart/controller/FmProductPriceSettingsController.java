@@ -75,15 +75,27 @@ public class FmProductPriceSettingsController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<FmResponseDto> delete(@PathVariable Integer id) {
+//    @DeleteMapping("/{id}")
+//    public ResponseEntity<FmResponseDto> delete(@PathVariable Integer id) {
+//
+//        log.info("API START | DELETE_PRODUCT_PRICE_SETTING | settingId={}", id);
+//
+//        priceSettingsService.delete(id);
+//
+//        log.info("API END | DELETE_PRODUCT_PRICE_SETTING | settingId={}", id);
+//
+//        return ResponseEntity.ok(new FmResponseDto(FmAppConstants.STATUS_200, "Product price setting deleted successfully"));
+//    }
 
-        log.info("API START | DELETE_PRODUCT_PRICE_SETTING | settingId={}", id);
+    @PutMapping("/{id}/status")
+    public ResponseEntity<FmResponseDto> updateStatus(@PathVariable Integer id, @RequestParam String status) {
 
-        priceSettingsService.delete(id);
+        log.info("API START | UPDATE_PRODUCT_PRICE_SETTING_STATUS | settingId={} | status={}", id, status);
 
-        log.info("API END | DELETE_PRODUCT_PRICE_SETTING | settingId={}", id);
+        priceSettingsService.updateStatus(id, status);
 
-        return ResponseEntity.ok(new FmResponseDto(FmAppConstants.STATUS_200, "Product price setting deleted successfully"));
+        log.info("API END | UPDATE_PRODUCT_PRICE_SETTING_STATUS | settingId={} | status={}", id, status);
+
+        return ResponseEntity.ok(new FmResponseDto(FmAppConstants.STATUS_200, "Product price setting status updated successfully"));
     }
 }
