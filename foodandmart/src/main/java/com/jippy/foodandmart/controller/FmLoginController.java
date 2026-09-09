@@ -1,14 +1,14 @@
 package com.jippy.foodandmart.controller;
 
-import com.jippy.foodandmart.dto.AuthResponseDto;
-import com.jippy.foodandmart.dto.LoginRequestDto;
-import com.jippy.foodandmart.dto.WebAuthResponseDto;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmPermission;
 import com.jippy.foodandmart.entity.FmRolePermissions;
 import com.jippy.foodandmart.entity.FmUser;
 import com.jippy.foodandmart.entity.FmUserRolePermissions;
 import com.jippy.foodandmart.security.JwtUtils;
+import com.jippy.foodandmart.service.OtpLoginService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -37,6 +37,10 @@ public class FmLoginController {
 
     @Autowired
     private JwtUtils jwtUtils;
+
+    @Autowired
+    private OtpLoginService otpLoginService;
+
 
     @PostMapping(path = "/login")
     @SecurityRequirements
@@ -139,4 +143,40 @@ public class FmLoginController {
         }
     }
 
+
+    @PostMapping("/send-login-otp")
+    @SecurityRequirements
+    public ResponseEntity<SendOtpResponseDto> sendLoginOtp(
+            @Valid @RequestBody SendLoginOtpRequestDto requestDto
+    ) {
+
+        SendOtpResponseDto response =
+                otpLoginService.sendLoginOtp(requestDto);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/resend-login-otp")
+    @SecurityRequirements
+    public ResponseEntity<SendOtpResponseDto> resendLoginOtp(
+            @Valid @RequestBody SendLoginOtpRequestDto requestDto
+    ) {
+
+        SendOtpResponseDto response =
+                otpLoginService.resendLoginOtp(requestDto);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-login-otp")
+    @SecurityRequirements
+    public ResponseEntity<AuthResponseDto> verifyLoginOtp(
+            @Valid @RequestBody VerifyLoginOtpRequestDto requestDto
+    ) {
+
+        AuthResponseDto response =
+                otpLoginService.verifyLoginOtp(requestDto);
+
+        return ResponseEntity.ok(response);
+    }
 }

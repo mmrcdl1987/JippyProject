@@ -1,9 +1,6 @@
 package com.jippy.foodandmart.feignClients;
 
-import com.jippy.foodandmart.dto.DriverDocumentUpdateDTO;
-import com.jippy.foodandmart.dto.DriverWalletUpdateResponseDto;
-import com.jippy.foodandmart.dto.FmDriverApprovalResponseDTO;
-import com.jippy.foodandmart.dto.FmDriverDto;
+import com.jippy.foodandmart.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,4 +26,9 @@ public interface DriverFeignClient {
 
     @PutMapping("/api/driver/updateDriverDocuments")
     public String updateDriverDocuments(@RequestBody DriverDocumentUpdateDTO driverDocumentUpdateDTO);
+
+    @GetMapping("/api/driver/phone/{phoneNumber}")
+    DriverDto findByPhoneNumber(
+            @PathVariable("phoneNumber") String phoneNumber
+    );
 }

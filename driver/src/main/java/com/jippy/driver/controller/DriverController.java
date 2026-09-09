@@ -352,5 +352,16 @@
 
             return ResponseEntity.ok(response);
         }
+        @GetMapping("/phone/{phoneNumber}")
+        public ResponseEntity<DriverDto> findByPhoneNumber(
+                @PathVariable String phoneNumber
+        ) {
+
+            DriverDto driverDto =
+                    driverService.findByPhoneNumber(phoneNumber);
+
+            return ResponseEntity.ok(driverDto);
+        }
+
 
     }

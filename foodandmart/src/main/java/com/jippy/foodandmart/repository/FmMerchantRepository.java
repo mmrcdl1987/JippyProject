@@ -34,13 +34,7 @@ public interface FmMerchantRepository
     );
 
 
-    // ============================================================
-    // PHONE
-    // ============================================================
-
-    Optional<FmMerchant> findByMerchantPhone(
-            String phone
-    );
+    Optional<FmMerchant> findByMerchantPhone(String merchantPhone);
 
     boolean existsByMerchantPhone(
             String phone
