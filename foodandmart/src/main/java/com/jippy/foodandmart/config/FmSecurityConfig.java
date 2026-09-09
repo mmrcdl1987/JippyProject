@@ -67,9 +67,11 @@ public class FmSecurityConfig {
                                 "/api/fm/updateForgotPassword",
 
                                 // Terms and Conditions / Privacy Policy
-                                "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType"
+                                "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType",
 
-
+                                //public api's for website
+                                "/api/fm/outlets/public/customer/nearby",
+                                "/api/fm/outlets/public/outlet-details"
                         ).permitAll()
 
                         // 2. ADD THIS: Allow Health Checks

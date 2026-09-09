@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS jippy_customer_and_order.customer(
     customer_status_id integer,
     referral_code character varying(20),
     profile_pic_url character varying(500) NULL,
-    area_id integer NOT NULL,
+    area_id integer,
     used_referral_code character varying(20),
     created_at timestamp without time zone,
     created_by integer,

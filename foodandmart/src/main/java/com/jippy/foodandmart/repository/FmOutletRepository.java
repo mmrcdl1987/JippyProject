@@ -181,7 +181,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                               LEFT JOIN jippy_fm.product_variant_options pvo
                                      ON pvo.product_id = p.product_id
                                     AND p.has_product_variants = true
-                                    AND pvo.is_active = true
+                                    AND pvo.is_active = 'Y
                                     
                                -- =========================================================
                                -- Variant Online Pricing
@@ -200,7 +200,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                                 LEFT JOIN jippy_fm.product_variant_group_values pvgv
                                        ON pvgv.product_variant_group_values_id =
                                           pvo.product_variant_group_values_id
-                                      AND pvgv.is_active = true
+                                      AND pvgv.is_active = 'Y'
         
                                 -- =========================================================
                                 -- Product Variant Groups
@@ -521,7 +521,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 LEFT JOIN jippy_fm.product_variant_options pvo
                        ON pvo.product_id = p.product_id
                       AND p.has_product_variants = true
-                      AND pvo.is_active = true
+                      AND pvo.is_active = 'Y'
         
         
                 -- =========================================================
@@ -534,7 +534,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 LEFT JOIN jippy_fm.product_variant_group_values pvgv
                        ON pvgv.product_variant_group_values_id =
                           pvo.product_variant_group_values_id
-                      AND pvgv.is_active = true
+                      AND pvgv.is_active = 'Y'
         
         
                 -- =========================================================
@@ -723,7 +723,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 ) AS cuisine_names,
                 o.outlet_phone,
                 o.radius,
-                o.review,
+                o.total_rating,
                 o.subscription_status,
                 o.promotion_status,
                 o.is_active,
@@ -818,7 +818,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 o.outlet_id AS outletId,
                 o.outlet_name AS outletName,
                 o.merchant_id AS merchantId,
-                o.review AS rating,
+                o.total_rating AS rating,
                 CASE WHEN o.is_active = 'Y' THEN true ELSE false END AS isActive,
                 o.is_approved AS isApproved,
                 ROUND(
@@ -856,7 +856,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                         ST_MakePoint(:customerLng, :customerLat),
                         4326
                     )::geography,
-                    COALESCE(sp.radius_in_kms * 1000, 10000)
+                    COALESCE(sp.radius_in_kms * 1000, 50000)
                   )
             ORDER BY distanceKm ASC
             """, nativeQuery = true)
@@ -1402,13 +1402,13 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             LEFT JOIN jippy_fm.product_variant_options pvo
                    ON pvo.product_id = p.product_id
                   AND p.has_product_variants = true
-                  AND pvo.is_active = true
+                  AND pvo.is_active = 'Y' 
 
             -- VARIANT GROUP VALUES
             LEFT JOIN jippy_fm.product_variant_group_values pvgv
                    ON pvgv.product_variant_group_values_id =
                       pvo.product_variant_group_values_id
-                  AND pvgv.is_active = true
+                  AND pvgv.is_active = 'Y'
 
             -- VARIANT GROUP
             LEFT JOIN jippy_fm.product_variant_groups pvg

@@ -54,7 +54,7 @@ public class FmOutlet {
     @Column(name = "promotion_status", length = 20)
     private String promotionStatus;
 
-    @Column(name = "review", precision = 2, scale = 1)
+    @Column(name = "total_rating", precision = 2, scale = 1)
     private BigDecimal review;
 
     @Column(name = "is_active", length = 1)

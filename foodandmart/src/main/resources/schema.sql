@@ -1046,35 +1046,40 @@ INSERT INTO jippy_fm.area(area_id, area_name, city_id, created_at, created_by)
 	VALUES (16, 'Ameerpet', 3, now(), 1);
 
 
-INSERT INTO jippy_fm.roles(role_id, role_name, created_at) VALUES (1, 'ROLE_SUPERADMIN', now());
-INSERT INTO jippy_fm.roles(role_id, role_name, created_at,created_by) VALUES (2, 'ROLE_ADMIN', now(),1);
-INSERT INTO jippy_fm.roles(role_id, role_name, created_at,created_by) VALUES (3, 'ROLE_MERCHANT', now(),1);
-INSERT INTO jippy_fm.roles(role_id, role_name, created_at,created_by) VALUES (4, 'ROLE_OUTLET', now(),1);
-INSERT INTO jippy_fm.roles(role_id, role_name, created_at,created_by) VALUES (5, 'ROLE_CATADMIN', now(),1);
+INSERT INTO jippy_fm.roles(role_name, created_at) VALUES (1, 'ROLE_SUPERADMIN', now());
+INSERT INTO jippy_fm.roles(role_name, created_at) VALUES (2, 'ROLE_ADMIN', now());
+INSERT INTO jippy_fm.roles(role_name, created_at) VALUES (3, 'ROLE_MERCHANT', now());
+INSERT INTO jippy_fm.roles(role_name, created_at) VALUES (4, 'ROLE_OUTLET', now());
+INSERT INTO jippy_fm.roles(role_name, created_at) VALUES (5, 'ROLE_CATADMIN', now());
+INSERT INTO jippy_fm.roles(role_name, created_at) VALUES (5, 'ROLE_CUSTOMER', now());
+INSERT INTO jippy_fm.roles (role_name, created_at) VALUES ('ROLE_DRIVER', now());
 
-INSERT INTO jippy_fm.permissions(permission_id, permission_name, created_by, created_at)
-	VALUES (1, 'READ', 1, now());
-INSERT INTO jippy_fm.permissions(permission_id, permission_name, created_by, created_at)
-	VALUES (2, 'WRITE', 1, now());
-INSERT INTO jippy_fm.permissions(permission_id, permission_name, created_by, created_at)
-	VALUES (3, 'CREATE', 1, now());
+INSERT INTO jippy_fm.permissions( permission_name, created_by, created_at)
+	VALUES ( 'READ', 1, now());
+INSERT INTO jippy_fm.permissions( permission_name, created_by, created_at)
+	VALUES ('WRITE', 1, now());
+INSERT INTO jippy_fm.permissions( permission_name, created_by, created_at)
+	VALUES ( 'CREATE', 1, now());
 
 INSERT INTO jippy_fm.users(
-	users_id, username, password, user_id, created_at, is_active, user_type)
-	VALUES (1, 'superadmin', '$2a$12$UkqllnNN3CB6nJMM3wGKhuXLB8KhSPWjPCFAaTnA86GCYxB0DVJ6S', 1, now(), 'Y', 'EMPLOYEE');
+	 username, password, user_id, created_at, is_active, user_type)
+	VALUES ('superadmin', '$2a$12$UkqllnNN3CB6nJMM3wGKhuXLB8KhSPWjPCFAaTnA86GCYxB0DVJ6S', 1, now(), 'Y', 'EMPLOYEE');
 
 INSERT INTO jippy_fm.role_permissions(
-	role_permission_id, role_id, permission_id, created_at, created_by)
-	VALUES (1, 3, 1, now(), 1);
+	 role_id, permission_id, created_at, created_by)
+	VALUES ( 3, 1, now(), 1);
 
 INSERT INTO jippy_fm.role_permissions(
-	role_permission_id, role_id, permission_id, created_at, created_by)
-	VALUES (2, 4, 1, now(), 1);
+	 role_id, permission_id, created_at, created_by)
+	VALUES ( 4, 1, now(), 1);
 
 
 INSERT INTO jippy_fm.role_permissions(
 	 role_id, permission_id, created_at)
 	VALUES (1, 1, now());
+
+INSERT INTO "jippy_fm"."user_role_permissions" ( "role_permission_id", "user_id", "created_at")
+ VALUES ( 3, 1, now());
 
 INSERT INTO jippy_fm.days_of_week(
 	day_id, day_name, created_at, created_by)

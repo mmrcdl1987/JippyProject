@@ -55,7 +55,11 @@ public class SecurityConfig {
                                 // From DIV
                                 "/api/div/email/sendOtp",
                                 // Terms and Conditions / Privacy Policy
-                                "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType"
+                                "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType",
+
+                                //public api's for website
+                                "/api/fm/outlets/public/customer/nearby",
+                                "/api/fm/outlets/public/outlet-details"
                         ).permitAll()
                         .anyExchange().permitAll() // Allow EVERYTHING temporarily
                 )
