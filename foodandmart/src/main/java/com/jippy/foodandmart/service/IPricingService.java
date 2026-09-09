@@ -25,5 +25,9 @@ public interface IPricingService {
             FmBulkPriceUpdateRequestDto dto,
             boolean isApproved
     );
+
+    List<FmCurrentOnlinePriceResponse> getCurrentOnlinePrices(
+            FmCurrentOnlinePriceRequest request
+    );
 }
 

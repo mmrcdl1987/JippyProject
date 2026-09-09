@@ -289,9 +289,9 @@ public class FmFileParser {
 
         dto.setAdhar(expandScientificNotation(firstNonEmpty(ec(row, map, "adhar"), ec(row, map, "aadhaar"))));
 
-        dto.setFssai(expandScientificNotation(ec(row, map, "fssai")));
-
-        dto.setGstNumber(ec(row, map, "gstnumber"));
+//        dto.setFssai(expandScientificNotation(ec(row, map, "fssai")));
+//
+//        dto.setGstNumber(ec(row, map, "gstnumber"));
 
         // ========================================================
         // BANK
@@ -629,9 +629,9 @@ public class FmFileParser {
 
         dto.setAdhar(expandScientificNotation(firstNonEmpty(cc(columns, map, "adhar"), cc(columns, map, "aadhaar"))));
 
-        dto.setFssai(expandScientificNotation(cc(columns, map, "fssai")));
-
-        dto.setGstNumber(cc(columns, map, "gstnumber"));
+//        dto.setFssai(expandScientificNotation(cc(columns, map, "fssai")));
+//
+//        dto.setGstNumber(cc(columns, map, "gstnumber"));
 
         // ========================================================
         // BANK

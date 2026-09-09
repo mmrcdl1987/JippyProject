@@ -476,6 +476,45 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
         return response;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public MerchantPromotionDetailsDto getMerchantPromotionDetails(
+            Integer promotionPlanId) {
+
+        PromotionPlan promotionPlan = promotionPlanRepository
+                .findById(promotionPlanId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Promotion Plan not found with id: " + promotionPlanId
+                        )
+                );
+
+        MerchantPromotionDetailsDto dto =
+                new MerchantPromotionDetailsDto();
+
+        dto.setPromotionPlanId(
+                promotionPlan.getPromotionPlanId()
+        );
+
+        dto.setOfferName(
+                promotionPlan.getOfferName()
+        );
+
+        dto.setOfferAmount(
+                promotionPlan.getOfferAmount()
+        );
+
+        dto.setOfferType(
+                promotionPlan.getOfferType()
+        );
+
+        dto.setMinimumOrderValue(
+                promotionPlan.getMinimumOrderValue()
+        );
+
+        return dto;
+    }
+
     /**
      * Save Promotion Products & Categories
      */

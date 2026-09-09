@@ -12,13 +12,17 @@ public interface CustomerCouponRepository extends JpaRepository<CustomerCoupon, 
 
     List<CustomerCoupon> findByCustomerId(Integer customerId);
 
-    Optional<CustomerCoupon> findByCustomerIdAndCouponId(Integer customerId, Integer couponId);
+    List<CustomerCoupon> findByCustomerIdAndCouponId(
+            Integer customerId,
+            Integer couponId);
 
     Optional<CustomerCoupon> findByOrderId(String orderId);
 
-    boolean existsByCustomerIdAndCouponId(Integer customerId, Integer couponId);
-
     boolean existsByCustomerIdAndCouponIdAndIsRedeemedTrue(
+            Integer customerId,
+            Integer couponId);
+
+    long countByCustomerIdAndCouponIdAndIsRedeemedTrue(
             Integer customerId,
             Integer couponId);
 }

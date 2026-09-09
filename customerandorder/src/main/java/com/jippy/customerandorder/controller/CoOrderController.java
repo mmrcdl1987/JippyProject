@@ -3,7 +3,6 @@ package com.jippy.customerandorder.controller;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoOrder;
-import com.jippy.customerandorder.entity.CoOrderPriceBreakup;
 import com.jippy.customerandorder.iservice.IOrderService;
 
 import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
@@ -121,31 +120,10 @@ public class CoOrderController {
     @GetMapping("/orders/price-breakup")
     public CoOrderPriceBreakupDto getOrderPriceBreakup(@RequestParam String orderId) {
 
-        CoOrderPriceBreakup breakup = coOrderPriceBreakupRepository.findByOrderId(orderId);
+        return orderService.getOrderPriceBreakup(orderId);
 
-        CoOrderPriceBreakupDto dto = new CoOrderPriceBreakupDto();
 
-        dto.setOrderId(breakup.getOrderId());
 
-        dto.setOrderAmount(breakup.getOrderAmount());
-
-        dto.setPlatformFee(breakup.getPlatformFee());
-
-        dto.setDeliveryFee(breakup.getDeliveryFee());
-
-        dto.setSurgeFee(breakup.getSurgeFee());
-
-        dto.setPackagingFee(breakup.getPackagingFee());
-
-        dto.setGst(breakup.getGst());
-
-        dto.setOrderTotalAmount(breakup.getOrderTotalAmount());
-
-        dto.setCouponDiscount(breakup.getCouponDiscount());
-
-        dto.setOrderAmountDiscounted(breakup.getOrderAmountDiscounted());
-
-        return dto;
     }
 
     @GetMapping("/orders")
@@ -187,6 +165,17 @@ public class CoOrderController {
         log.info("API_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={}", orderDto.getOrderId());
 
         return ResponseEntity.ok("Order status updated successfully");
+    }
+
+    @PostMapping("/acceptOrRejectOrderByOutlet")
+    public ResponseEntity<String> acceptOrRejectOrderByOutlet(@RequestBody  AcceptOrRejectOrderByOutletDto acceptOrRejectOrderByOutletDto) {
+
+        log.info("API_START | acceptOrRejectOrderByOutlet API | orderId={} | newStatus={}", acceptOrRejectOrderByOutletDto.getOrderId(),
+                acceptOrRejectOrderByOutletDto.getOrderStatus());
+
+        String response = orderService.acceptOrRejectOrderByOutlet(acceptOrRejectOrderByOutletDto);
+
+        return ResponseEntity.ok(response);
     }
 
 }

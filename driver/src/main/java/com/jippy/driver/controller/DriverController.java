@@ -6,7 +6,9 @@
     import com.jippy.driver.service.DriverService;
     import com.jippy.driver.serviceImpl.DriverLocationService;
     import io.swagger.v3.oas.annotations.Operation;
+    import io.swagger.v3.oas.annotations.Parameter;
     import io.swagger.v3.oas.annotations.responses.ApiResponse;
+    import io.swagger.v3.oas.annotations.responses.ApiResponses;
     import io.swagger.v3.oas.annotations.tags.Tag;
     import jakarta.validation.Valid;
     import jakarta.validation.constraints.Email;
@@ -19,6 +21,7 @@
     import org.springframework.http.ResponseEntity;
     import org.springframework.validation.annotation.Validated;
     import org.springframework.web.bind.annotation.*;
+    import org.springframework.web.multipart.MultipartFile;
 
     import java.time.LocalDate;
     import java.util.List;
@@ -34,14 +37,15 @@
         private final DriverService driverService;
         private final DriverLocationService driverLocationService;
 
-        @PostMapping("/postDriverDetails")
+        @PostMapping(path = "/postDriverDetails")
         @Operation(
                 summary = "Create Driver",
                 description = "Creates a new Driver along with Driver KYC, Address, User Account, "
                         + "Wallet and Approval Request. "
                         + "The Driver is saved in the Driver Microservice, while the Address, "
                         + "User Account and Approval Request are created in the Food & Mart "
-                        + "Microservice through Feign Client integration.")
+                        + "Microservice through Feign Client integration."
+                        + "Supports document uploads for KYC verification.")
         @ApiResponse(responseCode = "200", description = "Driver created successfully.")
         @ApiResponse(responseCode = "400", description = "Invalid Driver request.")
         @ApiResponse(responseCode = "404", description = "Referenced resource not found.")
@@ -87,8 +91,8 @@
 
         //    update driver details ,driver kyc from this this(Co Microservice)
     //    and address Details from (FM microservices)
-        @PutMapping("/updateDriverDetails")
-        @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields")
+        @PutMapping(path = "/updateDriverDetails")
+        @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields. Supports document uploads for KYC verification.")
         public ResponseEntity<DriverDto> updateDriverDetails(
 
                 @RequestParam Integer driverId,
@@ -96,7 +100,8 @@
 
             log.info("Updating driver with id: {}", driverId);
 
-            return ResponseEntity.ok(driverService.updateDriverDetails(driverId, dto));
+            return ResponseEntity.ok(driverService.updateDriverDetails(
+                    driverId, dto));
         }
 
         @PostMapping("/createZones")
@@ -176,9 +181,16 @@
         public ResponseEntity<DriverResponseDto> saveOrUpdateProfilePic(@ModelAttribute UploadProfilePicDto uploadProfilePicDto) {
 
             log.info("Upload Profile Pic API called for user id: {}", uploadProfilePicDto.getUserId());
-            String message = driverService.saveOrUpdateProfilePic(uploadProfilePicDto);
+            DriverResponseDto response = driverService.saveOrUpdateProfilePic(uploadProfilePicDto);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        }
+
+        @PutMapping("/readyToAcceptIsToggle")
+        @Operation(summary = "Toggle ready-to-accept orders", description = "Enables or disables a driver's availability to accept orders")
+        public ResponseEntity<DriverResponseDto> readyToAcceptIsToggle(@Valid @RequestBody DriverReadyToAcceptRequestDto requestDto) {
+            log.info("Ready to accept toggle API called for driver id: {}", requestDto.getDriverId());
+            return ResponseEntity.ok(driverService.readyToAcceptIsToggle(requestDto));
         }
 
 //        used for forget password api in Fm
@@ -274,6 +286,81 @@
             log.info("Driver approved successfully. Driver Id : {}", driverId);
 
             return ResponseEntity.ok().build();
+        }
+
+        @PutMapping("/updateDriverDocuments")
+        public String updateDriverDocuments(@RequestBody DriverDocumentUpdateDTO driverDocumentUpdateDTO) {
+
+            log.info("Received request to update Driver documents Driver Id : {}", driverDocumentUpdateDTO.getDriverId());
+
+            return driverService.updateDriverDocuments(driverDocumentUpdateDTO);
+        }
+
+//        ===============================================================================
+//        ===============================================================================
+        /**
+         * Fetches driver details for multiple driver IDs. for feign.
+         */
+        @PostMapping("/getDriverDetailsByIds")
+        @Operation(
+                summary = "Get driver details by driver IDs",
+                description = "Fetches driver ID and driver full name for multiple driver IDs."
+        )
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Driver details fetched successfully"),
+                @ApiResponse(responseCode = "400", description = "Invalid driver IDs"),
+                @ApiResponse(responseCode = "500", description = "Internal server error")
+        })
+        public ResponseEntity<List<DriverDetailsResponseDto>> getDriverDetailsByIds(
+
+                @Parameter(
+                        description = "List of driver IDs",
+                        example = "[15, 16, 17]",
+                        required = true
+                )
+                @RequestBody DriverDetailsRequestDto request) {
+
+            log.info(
+                    "Received request to fetch driver details for {} driver IDs",
+                    request.getDriverIds().size()
+            );
+
+            List<DriverDetailsResponseDto> response = driverService.getDriverDetailsByIds(
+                            request.getDriverIds()
+                    );
+
+            log.info(
+                    "Returning {} driver details",
+                    response.size()
+            );
+
+            return ResponseEntity.ok(response);
+        }
+//        ==================================================================================
+//        ==================================================================================
+        @GetMapping("/getDriverDetailsForOrder")
+        public ResponseEntity<DriverDetailsResponseDto> getDriverDetailsForOrder(
+                @RequestParam Integer driverId) {
+
+            log.info(
+                    "Received request to fetch driver details for order. driverId={}",
+                    driverId
+            );
+
+            DriverDetailsResponseDto response =
+                    driverService.getDriverDetailsForOrder(driverId);
+
+            return ResponseEntity.ok(response);
+        }
+        @GetMapping("/phone/{phoneNumber}")
+        public ResponseEntity<DriverDto> findByPhoneNumber(
+                @PathVariable String phoneNumber
+        ) {
+
+            DriverDto driverDto =
+                    driverService.findByPhoneNumber(phoneNumber);
+
+            return ResponseEntity.ok(driverDto);
         }
 
 

@@ -90,10 +90,7 @@
 package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
-import com.jippy.foodandmart.dto.FmMerchantDto;
-import com.jippy.foodandmart.dto.FmMerchantWithBankDto;
-import com.jippy.foodandmart.dto.FmMerchantRequestDTO;
-import com.jippy.foodandmart.dto.FmOutletRequestDTO;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 
@@ -106,6 +103,25 @@ public final class FmMerchantMapper {
 
     private FmMerchantMapper() {
         // Private constructor to prevent instantiation
+    }
+    public static FmAddress toAddressEntity(
+            FmMerchantRequestDTO dto,
+            Integer merchantId) {
+
+        FmAddress address = new FmAddress();
+
+        address.setJippyAddressId(merchantId);
+        address.setAddressType(FmAppConstants.TYPE_MERCHANT);
+
+        address.setBuildingNumber(dto.getBuildingNumber());
+        address.setRoad(dto.getRoad());
+        address.setLandmark(dto.getLandmark());
+
+        address.setStateId(dto.getStateId());
+        address.setCityId(dto.getCityId());
+        address.setAreaId(dto.getAreaId());
+
+        return address;
     }
 
     // --- Merchant Entity Mappings ---
@@ -145,6 +161,7 @@ public final class FmMerchantMapper {
         entity.setUpdatedBy(merchantDto.getUpdatedBy());
         entity.setIsActive(merchantDto.getIsActive());
         entity.setIsApproved(merchantDto.getIsApproved());
+        entity.setProfilePicUrl(merchantDto.getProfilePicUrl());
         return entity;
     }
 
@@ -165,6 +182,7 @@ public final class FmMerchantMapper {
         dto.setUpdatedBy(entityFromDb.getUpdatedBy());
         dto.setIsActive(entityFromDb.getIsActive());
         dto.setIsApproved(entityFromDb.getIsApproved());
+        dto.setProfilePicUrl(entityFromDb.getProfilePicUrl());
         return dto;
     }
 
@@ -175,7 +193,7 @@ public final class FmMerchantMapper {
      * Converts Outlet Request DTO into User KYC Entity.
      * <p>
      * Used while creating a new Outlet.
-     * Stores only FSSAI and GST details in user_kyc table.
+     * Stores Aadhaar, PAN, FSSAI and GST details in user_kyc table.
      */
     public static FmUserKyc toOutletKycEntity(FmOutletRequestDTO dto, Integer outletId) {
 
@@ -183,6 +201,8 @@ public final class FmMerchantMapper {
 
         kyc.setEntityId(outletId);
         kyc.setEntityType(FmAppConstants.TYPE_OUTLET);
+        kyc.setAadhaarNumber(dto.getAadharNumber());
+        kyc.setPanNumber(dto.getPanNumber());
         kyc.setFssaiNumber(dto.getFssaiNumber());
         kyc.setGstNumber(dto.getGstNumber());
         kyc.setVerified(false);
@@ -211,9 +231,9 @@ public final class FmMerchantMapper {
 
         kyc.setAadhaarNumber(dto.getAdhar() != null ? dto.getAdhar().trim() : null);
 
-        kyc.setFssaiNumber(dto.getFssai() != null ? dto.getFssai().trim() : null);
-
-        kyc.setGstNumber(dto.getGstNumber() != null ? dto.getGstNumber().toUpperCase().trim() : null);
+//        kyc.setFssaiNumber(dto.getFssai() != null ? dto.getFssai().trim() : null);
+//
+//        kyc.setGstNumber(dto.getGstNumber() != null ? dto.getGstNumber().toUpperCase().trim() : null);
 
         // Default Values
         kyc.setVerified(Boolean.valueOf(FmAppConstants.UN_APPROVED));
@@ -241,14 +261,14 @@ public final class FmMerchantMapper {
         employee.setIsActive(FmAppConstants.FLAG_YES);
         return employee;
     }
-
-    public static FmUser toUserEntity(String userName, String password, Integer merchantId, String userType) {
+//=============================================================================================
+    public static FmUser toUserEntity(String userName, String password, Integer entityId, String userType) {
         FmUser user = new FmUser();
         user.setUsername(userName);
         user.setPassword(password);
-        user.setUserId(merchantId);
+        user.setUserId(entityId);
         user.setUserType(userType);
-        user.setIsActive(FmAppConstants.FLAG_NO);
+        user.setIsActive(FmAppConstants.FLAG_YES);
         return user;
     }
 
@@ -301,6 +321,16 @@ public final class FmMerchantMapper {
         merchant.setMerchantPhone(dto.getMerchantPhone());
         merchant.setMerchantBusinessType(dto.getBusinessType());
         merchant.setStatus(dto.getStatus());
+    }
+
+    public static void updateMerchantKycEntity(FmUserKyc kyc, FmMerchantWithBankDto dto) {
+
+        if (kyc == null || dto == null) {
+            return;
+        }
+
+        kyc.setAadhaarNumber(dto.getAadharNumber());
+        kyc.setPanNumber(dto.getPanNumber());
     }
     /**
      * Updates existing Merchant Bank entity from MerchantWithBank DTO.

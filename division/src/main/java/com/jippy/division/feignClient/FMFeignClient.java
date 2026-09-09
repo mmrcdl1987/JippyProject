@@ -60,6 +60,9 @@ public interface FMFeignClient {
             @PathVariable("mealTypeTimingsId") Integer mealTypeTimingsId
     );
 
+    @GetMapping("/api/fm/meal-reminder")
+    List<DivMealTypeTimingResponseDto> getAllMealTypeTimingss();
+
 
     // ============================================================
     // PROMOTION APIs
@@ -69,6 +72,13 @@ public interface FMFeignClient {
             "/api/fm/internal/promotion-plans/{promotionPlanId}/schedule-details"
     )
     PromotionScheduleDetailsDto getPromotionScheduleDetails(
+            @PathVariable("promotionPlanId") Integer promotionPlanId
+    );
+
+    @GetMapping(
+            "/api/fm/internal/promotion-plans/{promotionPlanId}/active-promotion-details"
+    )
+    MerchantPromotionDetailsDto getMerchantPromotionDetails(
             @PathVariable("promotionPlanId") Integer promotionPlanId
     );
 

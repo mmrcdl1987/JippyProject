@@ -21,5 +21,5 @@ public class FmProductVariantOptionResponseDto {
 
     private BigDecimal variantPrice;
 
-    private Boolean isActive;
+    private String isActive;
 }

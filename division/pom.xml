@@ -147,6 +147,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- Optional: Jackson for JSON handling (included with web starter) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -173,7 +178,10 @@
                 <version>3.5.1</version>
                 <configuration>
                     <to>
-                        <image>docker.io/mmrcdl1987/jippyproject/${project.artifactId}:s1</image>
+                        <image>docker.io/mmrcdl1987/jippydeploy25may2026-${project.artifactId}:s1</image>
+                        <auth>
+
+                        </auth>
                     </to>
                 </configuration>
             </plugin>

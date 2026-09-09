@@ -1,5 +1,6 @@
 package com.jippy.customerandorder.dto;
 
+import com.jippy.customerandorder.enums.PromotionSourceType;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,6 +13,12 @@ public class CoCheckoutRequestDto {
     private Integer customerAddressId;
 
     private Integer outletId;
+
+    private Integer couponId;
+
+    private PromotionSourceType promotionSourceType;
+
+    private BigDecimal walletAmount;
 
     private BigDecimal couponDiscount;
 

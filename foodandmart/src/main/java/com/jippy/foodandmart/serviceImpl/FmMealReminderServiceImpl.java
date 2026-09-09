@@ -2,11 +2,14 @@ package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.FmCurrentMealTypeResponse;
 import com.jippy.foodandmart.entity.MealTypeTiming;
+import com.jippy.foodandmart.repository.MealTypeTimingRepository;
 import com.jippy.foodandmart.service.IFmMealReminderService;
 import com.jippy.foodandmart.service.MealTimeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -14,6 +17,9 @@ import org.springframework.stereotype.Service;
 public class FmMealReminderServiceImpl implements IFmMealReminderService {
 
     private final MealTimeService mealTimeService;
+
+    private final MealTypeTimingRepository mealTypeTimingRepository;
+
 
     @Override
     public FmCurrentMealTypeResponse getCurrentMealType() {
@@ -53,5 +59,20 @@ public class FmMealReminderServiceImpl implements IFmMealReminderService {
 
             throw ex;
         }
+    }
+    @Override
+    public List<MealTypeTiming> getAllMealTypeTimings() {
+
+        log.info("Fetching all meal type timings");
+
+        List<MealTypeTiming> mealTypeTimings =
+                mealTypeTimingRepository.findAll();
+
+        log.info(
+                "Fetched {} meal type timings",
+                mealTypeTimings.size()
+        );
+
+        return mealTypeTimings;
     }
 }

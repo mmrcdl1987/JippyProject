@@ -1,8 +1,6 @@
 package com.jippy.customerandorder.iservice;
 
-import com.jippy.customerandorder.dto.CoOrderDto;
-import com.jippy.customerandorder.dto.CoPlaceOrderRequestDto;
-import com.jippy.customerandorder.dto.CoPlaceOrderResponseDto;
+import com.jippy.customerandorder.dto.*;
 
 import java.util.List;
 
@@ -17,4 +15,8 @@ public interface IOrderService {
     CoOrderDto getOrder(String orderId);
 
     void updateOrderStatus(CoOrderDto orderDto);
+
+    CoOrderPriceBreakupDto getOrderPriceBreakup(String orderId);
+
+    String acceptOrRejectOrderByOutlet(AcceptOrRejectOrderByOutletDto acceptOrRejectOrderByOutletDto);
 }

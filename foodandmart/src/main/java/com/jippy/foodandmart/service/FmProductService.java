@@ -29,6 +29,24 @@ public interface FmProductService {
             FmMapToProduct request
     );
 
+
+    /**
+     * Merchant edit — updates basic fields + merchant price,
+     * and edits/adds timings & variant options. Never deletes.
+     */
+    FmProductUpdateResponseDto merchantEditProduct(Integer productId, FmProductUpdateRequestDto request);
+
+    /**
+     * Soft deletes a variant option belonging to a product.
+     */
+    void deleteProductVariantOption(Integer productId, Integer optionId);
+
+    /**
+     * Removes all variant options for a group from a product.
+     * The shared group and group values remain active for other products.
+     */
+    void deleteProductVariantGroup(Integer productId, Integer groupId);
+
     // ============================================================
     // BULK UPLOAD VARIANTS
     // ============================================================
@@ -245,4 +263,18 @@ public interface FmProductService {
             Integer productId,
             FmMerchantPriceUpdateRequest request
     );
+
+    List<FmOrderItemsEvent> getOrderProductItemsForMerchant(List<Integer> productIds, List<Integer> productVariantIds);
+
+    /**
+     * Updates the active status of a PRODUCT or MASTERPRODUCT.
+     *
+     * @param request request containing product ID, product type and active status
+     * @return success message
+     */
+    String productIsActiveToggleByProductType(
+            FmProductIsActiveToggleRequestDto request
+    );
+
+    FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive);
 }

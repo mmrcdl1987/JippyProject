@@ -127,4 +127,27 @@ public class FmPricingController {
 
         return ResponseEntity.ok(response);
     }
+
+
+    @PostMapping("/current-online-prices")
+    public ResponseEntity<List<FmCurrentOnlinePriceResponse>> getCurrentOnlinePrices(
+            @Valid @RequestBody FmCurrentOnlinePriceRequest request) {
+
+        log.info(
+                "[CURRENT-ONLINE-PRICE] REQUEST | outletId={} | itemCount={}",
+                request.getOutletId(),
+                request.getItems().size()
+        );
+
+        List<FmCurrentOnlinePriceResponse> response =
+                pricingService.getCurrentOnlinePrices(request);
+
+        log.info(
+                "[CURRENT-ONLINE-PRICE] SUCCESS | outletId={} | itemCount={}",
+                request.getOutletId(),
+                response.size()
+        );
+
+        return ResponseEntity.ok(response);
+    }
 }

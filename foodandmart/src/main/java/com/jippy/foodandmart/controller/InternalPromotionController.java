@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.controller;
 
+import com.jippy.foodandmart.dto.MerchantPromotionDetailsDto;
 import com.jippy.foodandmart.dto.PromotionScheduleDetailsDto;
 import com.jippy.foodandmart.service.IPromotionPlanService;
 import lombok.RequiredArgsConstructor;
@@ -26,5 +27,17 @@ public class InternalPromotionController {
         return ResponseEntity.ok(
                 promotionPlanService.getPromotionScheduleDetails(
                         promotionPlanId));
+    }
+
+    @GetMapping("/{promotionPlanId}/active-promotion-details")
+    public ResponseEntity<MerchantPromotionDetailsDto>
+    getMerchantPromotionDetails(
+            @PathVariable Integer promotionPlanId) {
+
+        return ResponseEntity.ok(
+                promotionPlanService.getMerchantPromotionDetails(
+                        promotionPlanId
+                )
+        );
     }
 }

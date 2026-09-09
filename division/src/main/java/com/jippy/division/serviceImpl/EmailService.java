@@ -25,7 +25,7 @@ public class EmailService {
 
         SimpleMailMessage message = new SimpleMailMessage();
 
-//         jippy default mail
+//         jippy default example mail
         message.setFrom("jippyfooddelivery2026@gmail.com");
         message.setTo("munjachandana@gmail.com");
         message.setCc("rohanvadluri8463@gmail.com");

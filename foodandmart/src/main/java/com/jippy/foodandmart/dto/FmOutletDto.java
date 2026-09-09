@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 
@@ -31,4 +30,14 @@ public class FmOutletDto {
         this.outletId = outletId;
         this.outletName = outletName;
     }
+
+    // ============================================================
+    // OUTLET PROFILE PICTURE
+    // ============================================================
+
+    @Schema(
+            description = "S3 URL of the outlet profile picture",
+            example = "https://jippys3bucket.s3.ap-south-2.amazonaws.com/OUTLET/132/outlet_20260902_223015123.jpg"
+    )
+    private String outletPicUrl;
 }

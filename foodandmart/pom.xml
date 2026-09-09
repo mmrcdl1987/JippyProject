@@ -243,6 +243,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>io</artifactId>
+            <version>9.2.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -266,7 +272,7 @@
                     <to>
                         <image>docker.io/mmrcdl1987/jippydeploy25may2026-${project.artifactId}:s1</image>
                         <auth>
-                            <username>mmrcdl1987</username>
+
                         </auth>
                     </to>
                 </configuration>

@@ -308,4 +308,29 @@ public interface FmPricingRepository
             @Param("productVariantId")
             Integer productVariantId
     );
+
+    // BULK CURRENT ONLINE PRICES
+    @Query(value = """
+        SELECT
+            pop.product_id,
+            pop.product_variant_id,
+            pop.online_price,
+            p.product_name,
+            p.image_link
+        FROM jippy_fm.product_online_pricing pop
+        JOIN jippy_fm.products p
+            ON p.product_id = pop.product_id
+        JOIN jippy_fm.outlet_categories oc
+            ON oc.outlet_category_id = pop.outlet_category_id
+        WHERE oc.outlet_id = :outletId
+          AND pop.product_id IN (:productIds)
+          AND pop.is_approved = true
+          AND oc.is_active = 'Y'
+        """,
+            nativeQuery = true)
+    List<Object[]> findCurrentOnlinePrices(
+            @Param("outletId") Integer outletId,
+            @Param("productIds") List<Integer> productIds
+    );
+
 }

@@ -3,17 +3,24 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.*;
+import com.jippy.customerandorder.enums.PromotionSourceType;
 import com.jippy.customerandorder.exception.CoBusinessException;
+import com.jippy.customerandorder.exception.CoValidationException;
 import com.jippy.customerandorder.exception.OrderException;
+import com.jippy.customerandorder.feignClients.DivisionFeignClient;
+import com.jippy.customerandorder.feignClients.FMFeignClient;
+import com.jippy.customerandorder.iservice.CoWalletRefundService;
 import com.jippy.customerandorder.iservice.IOrderService;
 import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.COEventMapper;
 import com.jippy.customerandorder.mapper.CoOrderMapper;
+import com.jippy.customerandorder.mapper.CoOrderRejectionMapper;
 import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static com.jippy.customerandorder.constants.COConstants.ORDER_TYPE_SCHEDULED_CUSTOM_PLAN;
 import static com.jippy.customerandorder.constants.COConstants.ORDER_TYPE_SCHEDULED_RECURRING;
@@ -45,6 +53,13 @@ public class COOrderService implements IOrderService {
     private final CoCustomerWalletRepository walletRepository;
     private final CoWalletSettingsRepository walletSettingsRepository;
     private final CoCustomerWalletTransactionsRepository transactionsRepository;
+    private final CoCustomerRepository customerRepository;
+    private final FMFeignClient fmFeignClient;
+    private final CoOrderRejectionRepository rejectionRepository;
+    private final CoWalletRefundService walletRefundService;
+    private final CoPaymentModeRepository paymentModeRepository;
+    private final DivisionFeignClient divisionFeignClient;
+    private final CustomerCouponRepository customerCouponRepository;
 
     /*
      * PLACE ORDER
@@ -63,9 +78,7 @@ public class COOrderService implements IOrderService {
                 return processNormalOrder(dto);
             }
 
-            if (COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType())
-                    || COConstants.COMMUNITY_ORDER_ORDER_TYPE.equals(dto.getOrderType())
-                    || COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE.equals(dto.getOrderType())) {
+            if (COConstants.GROUP_ORDER_ORDER_TYPE.equalsIgnoreCase(dto.getOrderType()) || COConstants.COMMUNITY_ORDER_ORDER_TYPE.equals(dto.getOrderType()) || COConstants.COMMUNITY_GROUP_ORDER_ORDER_TYPE.equals(dto.getOrderType())) {
 
                 validateCartOutlet(dto);
                 return processNormalOrder(dto);
@@ -103,11 +116,12 @@ public class COOrderService implements IOrderService {
         CoOrder order = orderMapper.mapToOrder(dto);
         order.setOrderId(orderId);
         CoOrder savedOrder = orderRepository.save(order);
-
+        handlePromotion(dto, savedOrder);
         // Save items directly from request
-        saveOrderItems(dto.getItems(), orderId);
+        saveOrderItems(dto.getItems(), savedOrder);
 
         BigDecimal currentTotal = dto.getOrderTotalAmount() != null ? dto.getOrderTotalAmount() : BigDecimal.ZERO;
+        log.info("ORDER_AMOUNT_DISCOUNTED | orderId={} | itemAmount={} | couponDiscount={} | orderAmountDiscounted={}", orderId, dto.getOrderAmount(), dto.getCouponDiscount(), dto.getOrderAmountDiscounted());
         BigDecimal walletDeduction = processWalletDeduction(dto, orderId, currentTotal);
 
         BigDecimal finalOrderTotal = currentTotal.subtract(walletDeduction).setScale(2, RoundingMode.HALF_UP);
@@ -119,24 +133,13 @@ public class COOrderService implements IOrderService {
         dto.setWalletAmount(walletDeduction);
         dto.setOrderTotalAmount(finalOrderTotal);
 
-        CoOrderPriceBreakup savedOrderPriceBreakUp =
-                priceRepository.save(
-                        orderMapper.mapToPrice(dto, orderId)
-                );
+        CoOrderPriceBreakup savedOrderPriceBreakUp = priceRepository.save(orderMapper.mapToPrice(dto, savedOrder));
         // DO NOT clear cart for direct NORMAL order
         // Qualify referral if this is the first order
         try {
-            customerService.qualifyReferralOnFirstOrder(
-                    dto.getCustomerId()
-            );
+            customerService.qualifyReferralOnFirstOrder(dto.getCustomerId());
         } catch (Exception ex) {
-            log.error(
-                    "REFERRAL_QUALIFICATION_FAILED | " +
-                            "orderId={} | customerId={} | error={}",
-                    orderId,
-                    dto.getCustomerId(),
-                    ex.getMessage()
-            );
+            log.error("REFERRAL_QUALIFICATION_FAILED | " + "orderId={} | customerId={} | error={}", orderId, dto.getCustomerId(), ex.getMessage());
         }
 
         CoPlaceOrderRequestDto updatedDto = new CoPlaceOrderRequestDto();
@@ -150,15 +153,11 @@ public class COOrderService implements IOrderService {
         updatedDto.setPaymentModeId(savedOrder.getPaymentModeId());
         updatedDto.setWalletAmount(walletDeduction);
         publishOrderEvent(order);
+        clearCustomerCart(dto.getCustomerId(), orderId);
 
         log.info("SERVICE_END | PROCESS_NORMAL_ORDER_SUCCESS | orderId={}", orderId);
 
-        CoPlaceOrderResponseDto response = buildResponse(
-                COConstants.MSG_ORDER_CREATED,
-                null,
-                List.of(orderId),
-                updatedDto
-        );
+        CoPlaceOrderResponseDto response = buildResponse(COConstants.MSG_ORDER_CREATED, null, List.of(orderId), updatedDto);
         response.setWalletDiscount(walletDeduction);
         return response;
     }
@@ -166,15 +165,13 @@ public class COOrderService implements IOrderService {
     /*
      * WALLET DEDUCTION (Up to 25% of wallet balance amount)
      */
-    private BigDecimal processWalletDeduction(
-            CoPlaceOrderRequestDto dto,
-            String orderId,
-            BigDecimal currentTotalAmount) {
+    /*
+     * WALLET DEDUCTION (Up to 25% of wallet balance amount)
+     */
+    private BigDecimal processWalletDeduction(CoPlaceOrderRequestDto dto, String orderId, BigDecimal currentTotalAmount) {
 
         // Customer did not request wallet usage
-        if ((dto.getUseWallet() == null || !dto.getUseWallet())
-                && (dto.getWalletAmount() == null
-                || dto.getWalletAmount().compareTo(BigDecimal.ZERO) <= 0)) {
+        if ((dto.getUseWallet() == null || !dto.getUseWallet()) && (dto.getWalletAmount() == null || dto.getWalletAmount().compareTo(BigDecimal.ZERO) <= 0)) {
 
             return BigDecimal.ZERO;
         }
@@ -183,62 +180,30 @@ public class COOrderService implements IOrderService {
         // GET CUSTOMER WALLET
         // ==========================================
 
-        CoCustomerWallet wallet =
-                walletRepository
-                        .findByCustomerCustomerId(dto.getCustomerId())
-                        .orElseThrow(() ->
-                                new OrderException(
-                                        COConstants.WALLET_NOT_FOUND
-                                    )
-                        );
+        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(dto.getCustomerId()).orElseThrow(() -> new OrderException(COConstants.WALLET_NOT_FOUND));
 
-        BigDecimal walletBalance =
-                wallet.getBalanceAmount() != null
-                        ? wallet.getBalanceAmount()
-                        : BigDecimal.ZERO;
+        BigDecimal walletBalance = wallet.getBalanceAmount() != null ? wallet.getBalanceAmount() : BigDecimal.ZERO;
 
         if (walletBalance.compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new OrderException(
-                    "Insufficient wallet balance"
-            );
+            throw new OrderException("Insufficient wallet balance");
         }
 
         // ==========================================
         // GET MAX WALLET USAGE SETTINGS
         // ==========================================
 
-        CoWalletSettings walletUsageSettings =
-                walletSettingsRepository
-                        .findBySettingType(COConstants.MAX_WALLET_USAGE_PER_ORDER)
-                        .orElseThrow(() ->
-                                new CoBusinessException(
-                                        "Maximum wallet usage percentage not configured"
-                                ));
+        CoWalletSettings walletUsageSettings = walletSettingsRepository.findBySettingType(COConstants.MAX_WALLET_USAGE_PER_ORDER).orElseThrow(() -> new CoBusinessException("Maximum wallet usage percentage not configured"));
 
-        Integer maxWalletUsagePercentage =
-                walletUsageSettings.getSettingValue();
+        Integer maxWalletUsagePercentage = walletUsageSettings.getSettingValue();
 
         // ==========================================
         // MAXIMUM WALLET USAGE
         // ==========================================
+        log.info("current total amount :{} max wallet usage percentage : {} ", currentTotalAmount, maxWalletUsagePercentage);
+        BigDecimal maxAllowedFromWallet = currentTotalAmount.multiply(BigDecimal.valueOf(maxWalletUsagePercentage).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal maxAllowedFromWallet = currentTotalAmount.multiply(
-                                BigDecimal.valueOf(maxWalletUsagePercentage).divide(
-                                                BigDecimal.valueOf(100), 4,
-                                                RoundingMode.HALF_UP)
-                        ).setScale(2, RoundingMode.HALF_UP);
-
-        log.info(
-                "WALLET_LIMIT_CALCULATED | customerId={} | " +
-                        "orderId={} | orderAmount={} | walletBalance={} | " +
-                        "maxWalletUsage={}",
-                dto.getCustomerId(),
-                orderId,
-                currentTotalAmount,
-                walletBalance,
-                maxAllowedFromWallet
-        );
+        log.info("WALLET_LIMIT_CALCULATED | customerId={} | " + "orderId={} | orderAmount={} | walletBalance={} | " + "maxWalletUsage={}", dto.getCustomerId(), orderId, currentTotalAmount, walletBalance, maxAllowedFromWallet);
 
         // ==========================================
         // DETERMINE DEDUCTION
@@ -246,34 +211,20 @@ public class COOrderService implements IOrderService {
 
         BigDecimal deductionAmount;
 
-        if (dto.getWalletAmount() != null
-                && dto.getWalletAmount()
-                .compareTo(BigDecimal.ZERO) > 0) {
+        if (dto.getWalletAmount() != null && dto.getWalletAmount().compareTo(BigDecimal.ZERO) > 0) {
 
-            BigDecimal requestedWalletAmount =
-                    dto.getWalletAmount()
-                            .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal requestedWalletAmount = dto.getWalletAmount().setScale(2, RoundingMode.HALF_UP);
 
             // Cannot exceed 25% of order value
-            if (requestedWalletAmount.compareTo(
-                    maxAllowedFromWallet) > 0) {
+            if (requestedWalletAmount.compareTo(maxAllowedFromWallet) > 0) {
 
-                throw new OrderException(
-                        "Wallet utilization cannot exceed 25% " +
-                                "of order value. Maximum allowed: ₹"
-                                + maxAllowedFromWallet
-                );
+                throw new OrderException("Wallet utilization cannot exceed 25% " + "of order value. Maximum allowed: ₹" + maxAllowedFromWallet);
             }
 
             // Cannot exceed wallet balance
-            if (requestedWalletAmount.compareTo(
-                    walletBalance) > 0) {
+            if (requestedWalletAmount.compareTo(walletBalance) > 0) {
 
-                throw new OrderException(
-                        "Insufficient wallet balance. " +
-                                "Available balance: ₹"
-                                + walletBalance
-                );
+                throw new OrderException("Insufficient wallet balance. " + "Available balance: ₹" + walletBalance);
             }
 
             // Cannot exceed order amount
@@ -282,37 +233,79 @@ public class COOrderService implements IOrderService {
         } else {
             // useWallet = true
             // Automatically use maximum allowed amount
-            deductionAmount = walletBalance
-                    .min(maxAllowedFromWallet)
-                    .min(currentTotalAmount);
+            deductionAmount = walletBalance.min(maxAllowedFromWallet).min(currentTotalAmount);
         }
 
         // ==========================================
         // DEDUCT WALLET
         // ==========================================
 
-        if (deductionAmount.compareTo(BigDecimal.ZERO) > 0) {
+//        if (deductionAmount.compareTo(BigDecimal.ZERO) > 0) {
+//
+//            BigDecimal newBalance =
+//                    walletBalance
+//                            .subtract(deductionAmount)
+//                            .setScale(2, RoundingMode.HALF_UP);
+//
+//            wallet.setBalanceAmount(newBalance);
+//            wallet.setUpdatedAt(LocalDateTime.now());
+//            wallet.setUpdatedBy(dto.getCustomerId());
+//
+//            walletRepository.save(wallet);
+//
+//            log.info(
+//                    "WALLET_DEDUCTED | customerId={} | " +
+//                            "orderId={} | deductedAmount={} | " +
+//                            "remainingBalance={}",
+//                    dto.getCustomerId(),
+//                    orderId,
+//                    deductionAmount,
+//                    newBalance
+//            );
+//
+//            // ==========================================
+//            // SAVE WALLET TRANSACTION
+//            // ==========================================
+//
+//            CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
+//
+//            transaction.setWalletId(wallet.getWalletId());
+//            transaction.setOrderId(orderId);
+//            transaction.setTransactionType(COConstants.WALLET_DEBIT);
+//            transaction.setAmount(deductionAmount.negate());
+//            transaction.setCreatedAt(LocalDateTime.now());
+//            transaction.setCreatedBy(dto.getCustomerId());
+//            transactionsRepository.save(transaction);
+//
+//            log.info(
+//                    "WALLET_TRANSACTION_SAVED | orderId={} | " +
+//                            "walletId={} | transactionPoints={}",
+//                    orderId,
+//                    wallet.getWalletId(),
+//                    transaction.getPoints()
+//            );
+//        }
+        return deductionAmount;
+    }
 
-            BigDecimal newBalance =
-                    walletBalance
-                            .subtract(deductionAmount)
-                            .setScale(2, RoundingMode.HALF_UP);
+
+    void customerPostOrderWalletTransactions(CoOrder order) {
+
+        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(order.getCustomerId()).orElseThrow(() -> new OrderException(COConstants.WALLET_NOT_FOUND));
+
+        CoOrderPriceBreakup orderPriceBreakUp = priceRepository.findByOrder_OrderId(order.getOrderId());
+        BigDecimal walletAmountUsed = orderPriceBreakUp.getWalletAmount();
+
+        if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
+
+            BigDecimal newBalance = wallet.getBalanceAmount().subtract(walletAmountUsed).setScale(2, RoundingMode.HALF_UP);
 
             wallet.setBalanceAmount(newBalance);
             wallet.setUpdatedAt(LocalDateTime.now());
-            wallet.setUpdatedBy(dto.getCustomerId());
 
             walletRepository.save(wallet);
 
-            log.info(
-                    "WALLET_DEDUCTED | customerId={} | " +
-                            "orderId={} | deductedAmount={} | " +
-                            "remainingBalance={}",
-                    dto.getCustomerId(),
-                    orderId,
-                    deductionAmount,
-                    newBalance
-            );
+            log.info("WALLET_DEDUCTED | customerId={} | " + "orderId={} | deductedAmount={} | " + "remainingBalance={}", order.getCustomerId(), order.getOrderId(), walletAmountUsed, newBalance);
 
             // ==========================================
             // SAVE WALLET TRANSACTION
@@ -321,22 +314,15 @@ public class COOrderService implements IOrderService {
             CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
 
             transaction.setWalletId(wallet.getWalletId());
-            transaction.setOrderId(orderId);
+            transaction.setOrderId(order.getOrderId());
             transaction.setTransactionType(COConstants.WALLET_DEBIT);
-            transaction.setAmount(deductionAmount.negate());
+            transaction.setAmount(walletAmountUsed.negate());
             transaction.setCreatedAt(LocalDateTime.now());
-            transaction.setCreatedBy(dto.getCustomerId());
             transactionsRepository.save(transaction);
 
-            log.info(
-                    "WALLET_TRANSACTION_SAVED | orderId={} | " +
-                            "walletId={} | transactionPoints={}",
-                    orderId,
-                    wallet.getWalletId(),
-                    transaction.getPoints()
-            );
+            log.info("WALLET_TRANSACTION_SAVED | orderId={} | " + "walletId={} | transactionPoints={}", order.getOrderId(), wallet.getWalletId(), transaction.getPoints());
         }
-        return deductionAmount;
+
     }
 
     private CoPlaceOrderResponseDto processRecurringOrders(CoPlaceOrderRequestDto dto) {
@@ -445,9 +431,9 @@ public class COOrderService implements IOrderService {
 
         orderRepository.save(order);
 
-        saveOrderItems(dto.getItems(), orderId);
+        saveOrderItems(dto.getItems(), order);
 
-        priceRepository.save(orderMapper.mapToPrice(dto, orderId));
+        priceRepository.save(orderMapper.mapToPrice(dto, order));
 
         publishOrderEvent(order);
 
@@ -472,9 +458,9 @@ public class COOrderService implements IOrderService {
 
         orderRepository.save(order);
 
-        saveOrderItems(scheduledOrder.getItems(), orderId);
+        saveOrderItems(scheduledOrder.getItems(), order);
 
-        priceRepository.save(orderMapper.mapToPrice(dto, orderId));
+        priceRepository.save(orderMapper.mapToPrice(dto, order));
 
         publishOrderEvent(order);
 
@@ -486,14 +472,16 @@ public class COOrderService implements IOrderService {
     /*
      * SAVE ORDER ITEMS
      */
-    private void saveOrderItems(List<CoOrderItemDto> items, String orderId) {
+    private void saveOrderItems(List<CoOrderItemDto> items, CoOrder order) {
 
         for (CoOrderItemDto item : items) {
 
-            orderItemRepository.save(orderMapper.mapToItem(item, orderId));
+            log.info("ORDER_ITEM_SAVE | orderId={} | productId={} | variantOptionId={} | quantity={}", order.getOrderId(), item.getProductId(), item.getVariantOptionId(), item.getQuantity());
+
+            orderItemRepository.save(orderMapper.mapToItem(item, order));
         }
 
-        log.info("ORDER_ITEMS_SAVED | orderId={} | itemCount={}", orderId, items.size());
+        log.info("ORDER_ITEMS_SAVED | orderId={} | itemCount={}", order.getOrderId(), items.size());
     }
 
     /*
@@ -750,17 +738,9 @@ public class COOrderService implements IOrderService {
     @Transactional
     public void updateOrderStatus(CoOrderDto orderDto) {
 
-        log.info(
-                "SERVICE_START | UPDATE_ORDER_STATUS | orderId={} | newStatus={}",
-                orderDto.getOrderId(),
-                orderDto.getOrderStatus()
-        );
+        log.info("SERVICE_START | UPDATE_ORDER_STATUS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
 
-        CoOrder order = orderRepository
-                .findById(orderDto.getOrderId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Order not found")
-                );
+        CoOrder order = orderRepository.findById(orderDto.getOrderId()).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         // Update order status
         order.setOrderStatus(orderDto.getOrderStatus());
@@ -768,44 +748,64 @@ public class COOrderService implements IOrderService {
 
         orderRepository.save(order);
 
+        if ("ORDER_PLACED".equalsIgnoreCase(orderDto.getOrderStatus())) {
+
+            Optional<CoCustomer> optionalCoCustomer = customerRepository.findByCustomerId(order.getCustomerId());
+            CoCustomer customer = new CoCustomer();
+
+            if (optionalCoCustomer.isPresent()) {
+                customer = optionalCoCustomer.get();
+            }
+
+            //After Payment successful publish order event
+            publishNewOrderEvent(order, customer);
+
+            //If customer uses wallet make those customer wallet changes and insert record in wallet transaction table
+            customerPostOrderWalletTransactions(order);
+
+
+        }
+
         // ==========================================
         // PROCESS REFERRAL REWARD AFTER DELIVERY
         // ==========================================
 
         if ("DELIVERED".equalsIgnoreCase(orderDto.getOrderStatus())) {
 
-            log.info(
-                    "REFERRAL_REWARD_TRIGGER | orderId={} | customerId={}",
-                    order.getOrderId(),
-                    order.getCustomerId()
-            );
+            log.info("REFERRAL_REWARD_TRIGGER | orderId={} | customerId={}", order.getOrderId(), order.getCustomerId());
             try {
-                customerService.processReferralReward(
-                        order.getCustomerId(),
-                        order.getOrderId()
-                );
-                log.info(
-                        "REFERRAL_REWARD_SUCCESS | orderId={} | customerId={}",
-                        order.getOrderId(),
-                        order.getCustomerId()
-                );
+                customerService.processReferralReward(order.getCustomerId(), order.getOrderId());
+                log.info("REFERRAL_REWARD_SUCCESS | orderId={} | customerId={}", order.getOrderId(), order.getCustomerId());
             } catch (Exception ex) {
-                log.error(
-                        "REFERRAL_REWARD_FAILED | orderId={} | customerId={} | error={}",
-                        order.getOrderId(),
-                        order.getCustomerId(),
-                        ex.getMessage(),
-                        ex
-                );
+                log.error("REFERRAL_REWARD_FAILED | orderId={} | customerId={} | error={}", order.getOrderId(), order.getCustomerId(), ex.getMessage(), ex);
                 throw ex;
             }
         }
-        log.info(
-                "SERVICE_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={} | newStatus={}",
-                orderDto.getOrderId(),
-                orderDto.getOrderStatus()
-        );
+        log.info("SERVICE_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
     }
+
+
+    private void publishNewOrderEvent(CoOrder order, CoCustomer customer) {
+
+        List<Integer> productIds = new ArrayList<>();
+        List<Integer> productVariantIds = new ArrayList<>();
+
+        List<CoOrderItem> orderItems = order.getOrderItems();
+        for (CoOrderItem item : orderItems) {
+            productIds.add(item.getProductId());
+            productVariantIds.add(item.getVariantOptionId());
+        }
+
+        ResponseEntity<List<CoOrderItemsEvent>> orderItemsEventListResponse = fmFeignClient.getOrderProductItemsForMerchant(productIds, productVariantIds);
+        List<CoOrderItemsEvent> orderItemsEventList = orderItemsEventListResponse.getBody();
+
+        CoNewOrderEvent event = COEventMapper.mapToOrderNewOrderEvent(order, customer, orderItemsEventList);
+
+        kafkaTemplate.send("new-orders-for-outlet", order.getOrderId(), event);
+
+        log.info("KAFKA_EVENT_PUBLISHED | orderId={} | orderType={}", order.getOrderId(), order.getOrderType());
+    }
+
 
     private void validateCartOutlet(CoPlaceOrderRequestDto dto) {
 
@@ -862,6 +862,272 @@ public class COOrderService implements IOrderService {
         }
 
         log.info("SERVICE_END | VALIDATE_CART_OUTLET_SUCCESS | customerId={} | outletId={}", dto.getCustomerId(), cartOutletId);
+    }
+
+    private void clearCustomerCart(Integer customerId, String orderId) {
+
+        log.info("CART_CLEAR_START | customerId={} | orderId={}", customerId, orderId);
+
+        List<CoCustomerCart> cartItems = cartRepository.findByCustomerId(customerId);
+
+        if (cartItems == null || cartItems.isEmpty()) {
+
+            log.info("CART_ALREADY_EMPTY | customerId={} | orderId={}", customerId, orderId);
+
+            return;
+        }
+
+        cartRepository.deleteAll(cartItems);
+
+        log.info("CART_CLEARED_SUCCESS | customerId={} | orderId={} | itemCount={}", customerId, orderId, cartItems.size());
+    }
+
+    @Override
+    public CoOrderPriceBreakupDto getOrderPriceBreakup(String orderId) {
+
+        log.info("SERVICE_START | GET_ORDER_PRICE_BREAKUP | orderId={}", orderId);
+
+        CoOrderPriceBreakup breakup = priceRepository.findByOrder_OrderId(orderId);
+
+        if (breakup == null) {
+
+            log.error("PRICE_BREAKUP_NOT_FOUND | orderId={}", orderId);
+
+            throw new OrderException("Order price breakup not found for orderId: " + orderId);
+        }
+
+        CoOrderPriceBreakupDto dto = new CoOrderPriceBreakupDto();
+
+        dto.setOrderId(orderId);
+
+        // ================= ORDER =================
+
+        dto.setOrderAmount(breakup.getOrderAmount());
+
+        dto.setOrderAmountDiscounted(breakup.getOrderAmountDiscounted());
+
+        dto.setCouponDiscount(breakup.getCouponDiscount());
+
+        // ================= DRIVER DELIVERY =================
+
+        dto.setPickUpDistanceKms(breakup.getPickUpDistanceKms());
+
+        dto.setDeliveryDistanceKms(breakup.getDeliveryDistanceKms());
+
+        dto.setPickUpCharges(breakup.getPickUpCharges());
+
+        dto.setDriverDeliveryFee(breakup.getDriverDeliveryFee());
+
+        // ================= CUSTOMER DELIVERY =================
+
+        dto.setCustomerDeliveryFee(breakup.getCustomerDeliveryFee());
+
+        dto.setCustomerDeliveryFeeTax(breakup.getCustomerDeliveryFeeTax());
+
+        // ================= TOTAL DELIVERY =================
+
+        dto.setTotalDeliveryFee(breakup.getTotalDeliveryFee());
+
+        // ================= PLATFORM =================
+
+        dto.setPlatformFee(breakup.getPlatformFee());
+
+        dto.setPlatformFeeTax(breakup.getPlatformFeeTax());
+
+        // ================= SURGE =================
+
+        dto.setSurgeFee(breakup.getSurgeFee());
+
+        dto.setSurgeFeeTax(breakup.getSurgeFeeTax());
+
+        // ================= PACKAGING =================
+
+        dto.setPackagingFee(breakup.getPackagingFee());
+
+        dto.setPackagingFeeTax(breakup.getPackagingFeeTax());
+
+        // ================= TAX =================
+
+        dto.setFoodTax(breakup.getFoodTax());
+
+        dto.setTotalTax(breakup.getTotalTax());
+
+        // ================= PAYMENT =================
+
+        dto.setTip(breakup.getTip());
+
+        dto.setWalletAmount(breakup.getWalletAmount());
+
+        // ================= FINAL =================
+
+        dto.setOrderTotalAmount(breakup.getOrderTotalAmount());
+
+        log.info("SERVICE_END | GET_ORDER_PRICE_BREAKUP_SUCCESS | orderId={} | driverDeliveryFee={} | customerDeliveryFee={} | customerDeliveryFeeTax={} | totalDeliveryFee={} | totalTax={} | orderTotalAmount={}", orderId, dto.getDriverDeliveryFee(), dto.getCustomerDeliveryFee(), dto.getCustomerDeliveryFeeTax(), dto.getTotalDeliveryFee(), dto.getTotalTax(), dto.getOrderTotalAmount());
+
+        return dto;
+    }
+
+    @Override
+    public String acceptOrRejectOrderByOutlet(AcceptOrRejectOrderByOutletDto acceptOrRejectOrderByOutletDto) {
+
+        log.info("SERVICE_START | ACCEPT_OR_REJECT_ORDER_BY_OUTLET | orderId={} | outletId={} | newStatus={}",
+                acceptOrRejectOrderByOutletDto.getOrderId(),
+                acceptOrRejectOrderByOutletDto.getOutletId(),
+                acceptOrRejectOrderByOutletDto.getOrderStatus()
+        );
+
+        CoOrder order = orderRepository
+                .findById(acceptOrRejectOrderByOutletDto.getOrderId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found")
+                );
+
+        if (!order.getOutletId().equals(acceptOrRejectOrderByOutletDto.getOutletId())) {
+            throw new OrderException("Outlet ID does not match the order's outlet");
+        }
+
+        if("REJECT".equalsIgnoreCase(acceptOrRejectOrderByOutletDto.getOrderStatus())) {
+
+            boolean isReasonMissing = acceptOrRejectOrderByOutletDto.getRejectionReason() == null
+                    || acceptOrRejectOrderByOutletDto.getRejectionReason().isBlank();
+
+            if(isReasonMissing){
+                return "Rejection reason is required when rejecting an order";
+            }
+            order.setOrderStatus(COConstants.ORDER_STATUS_REJECTED);
+
+            //Insert record in order rejection table if order is rejected by outlet
+
+            CoOrderRejectionRequestDto coOrderRejectionRequestDto = new CoOrderRejectionRequestDto();
+            coOrderRejectionRequestDto.setOrderId(acceptOrRejectOrderByOutletDto.getOrderId());
+            coOrderRejectionRequestDto.setType(COConstants.OUTLET);
+            coOrderRejectionRequestDto.setReason(acceptOrRejectOrderByOutletDto.getRejectionReason());
+            coOrderRejectionRequestDto.setRejectedById(acceptOrRejectOrderByOutletDto.getOutletId());
+
+            CoOrderRejection rejection = CoOrderRejectionMapper.toEntity(coOrderRejectionRequestDto);
+            rejectionRepository.save(rejection);
+
+            log.info(
+                    "Outlet rejection saved | orderId={}",
+                    order.getOrderId()
+            );
+
+            //Refund Customer
+            Optional<CoPaymentModes> optionalCoPaymentModes = paymentModeRepository.findByPaymentModeId(order.getPaymentModeId());
+            if(optionalCoPaymentModes.isPresent()){
+
+                CoPaymentModes coPaymentModes = optionalCoPaymentModes.get();
+                if(!coPaymentModes.getPaymentMode().equalsIgnoreCase(COConstants.PAYMENT_TYPE_COD)){
+                    ResponseEntity<String> refundResponseEntity = divisionFeignClient.orderRefund(order.getOrderId(),
+                            acceptOrRejectOrderByOutletDto.getRejectionReason());
+
+                    if(refundResponseEntity.getStatusCode().is2xxSuccessful()){
+                        log.info("Refund initiated successfully for orderId={} | refundResponse={}", order.getOrderId(), refundResponseEntity.getBody());
+                    }else{
+                        log.error("Refund initiation failed for orderId={} | refundResponse={}", order.getOrderId(), refundResponseEntity.getBody());
+                    }
+                }
+            }
+
+
+            // REFUND WALLET
+
+            BigDecimal refundAmount =
+                    walletRefundService.processWalletRefund(
+                            order.getOrderId(),
+                            order.getCustomerId(),
+                            COConstants.REJECTION_TYPE_OUTLET
+                    );
+
+            log.info(
+                    "Outlet wallet refund completed | " +
+                            "orderId={} | refundAmount={}",
+                    order.getOrderId(),
+                    refundAmount
+            );
+
+
+        }
+        if("ACCEPT".equalsIgnoreCase(acceptOrRejectOrderByOutletDto.getOrderStatus())) {
+            // Update order status
+            order.setOrderStatus(COConstants.ORDER_STATUS_ACCEPTED);
+            if(acceptOrRejectOrderByOutletDto.getPreparationTimeInMins() > 15){
+                return "Preparation time cannot exceed 15 minutes";
+            }
+            order.setPreparationTime(acceptOrRejectOrderByOutletDto.getPreparationTimeInMins());
+        }
+
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setUpdatedBy(acceptOrRejectOrderByOutletDto.getOutletId());
+        orderRepository.save(order);
+
+        log.info("SERVICE_END | ACCEPT_OR_REJECT_ORDER_BY_OUTLET_SUCCESS | orderId={} | outletId={} | newStatus={}",
+                acceptOrRejectOrderByOutletDto.getOrderId(),
+                acceptOrRejectOrderByOutletDto.getOutletId(),
+                acceptOrRejectOrderByOutletDto.getOrderStatus()
+        );
+        return "Order status updated successfully";
+    }
+
+
+    private void saveGlobalCoupon(
+            Integer customerId,
+            Integer couponId,
+            String orderId) {
+
+        log.info(
+                "GLOBAL_COUPON_SAVE_STARTED | customerId={} | couponId={} | orderId={}",
+                customerId,
+                couponId,
+                orderId
+        );
+
+        CustomerCoupon customerCoupon = new CustomerCoupon();
+
+        customerCoupon.setCustomerId(customerId);
+        customerCoupon.setCouponId(couponId);
+        customerCoupon.setOrderId(orderId);
+        customerCoupon.setIsRedeemed(false);
+        customerCoupon.setRedeemedAt(LocalDateTime.now());
+        customerCoupon.setCreatedAt(LocalDateTime.now());
+        customerCoupon.setCreatedBy(customerId);
+        customerCoupon.setUpdatedAt(LocalDateTime.now());
+        customerCoupon.setUpdatedBy(customerId);
+
+        customerCouponRepository.save(customerCoupon);
+
+        log.info(
+                "GLOBAL_COUPON_SAVE_SUCCESS | customerId={} | couponId={} | orderId={}",
+                customerId,
+                couponId,
+                orderId
+        );
+    }
+
+    private void handlePromotion(
+            CoPlaceOrderRequestDto request,
+            CoOrder order) {
+
+        if (request.getPromotionSourceType() == null) {
+            return;
+        }
+
+        if (!PromotionSourceType.GLOBAL.equals(
+                request.getPromotionSourceType())) {
+            return;
+        }
+
+        if (request.getCouponId() == null) {
+            throw new CoValidationException(
+                    "Coupon id is required for GLOBAL promotion"
+            );
+        }
+
+        saveGlobalCoupon(
+                request.getCustomerId(),
+                request.getCouponId(),
+                order.getOrderId()
+        );
     }
 
 

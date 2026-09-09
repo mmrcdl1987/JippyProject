@@ -85,7 +85,7 @@ public class RazorPayWebhookImpl implements RazorPayWebhookService {
 
             if ("processed".equals(status)) {
                 refundRepository.findByGatewayRefundId(rzpRefundId).ifPresent(refund -> {
-                    refund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
+                    refund.setRefundStatus(DivAppConstants.PAYMENT_STATUS_REFUND_PROCESSED);
                     // 2. Add the bank's tracking code (Add this field to your OrderRefund entity!)
                     refund.setBankArn(bankArn);
                     refundRepository.save(refund);

@@ -64,6 +64,7 @@ public class FmUsersController {
                                                              @RequestParam String userType) {
         return ResponseEntity.ok(usersService.findByUserIdAndUserType(userId,userType));
     }
+
     @PostMapping("/assignRole")
     public String assignRoleToUser(@RequestBody FmAssignRoleToUserDto dto) {
 

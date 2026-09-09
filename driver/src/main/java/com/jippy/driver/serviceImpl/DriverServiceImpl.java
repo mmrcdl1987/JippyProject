@@ -1,4 +1,7 @@
+
+
 package com.jippy.driver.serviceImpl;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
@@ -10,6 +13,7 @@ import com.jippy.driver.exception.ResourceNotFoundException;
 import com.jippy.driver.feignClients.COFeignClient;
 import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverMapper;
+import com.jippy.driver.projection.DriverDetailsProjection;
 import com.jippy.driver.projection.DriverOrderHistoryProjection;
 import com.jippy.driver.projection.DriverTotalEarningsProjection;
 import com.jippy.driver.repositary.*;
@@ -22,8 +26,7 @@ import org.locationtech.jts.geom.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -61,8 +64,8 @@ public class DriverServiceImpl implements DriverService {
 
         log.info("Creating driver for phone: {}", dto.getPhoneNumber());
         // ----------------------------------------------------------------------
-// Validate duplicate phone number
-// ----------------------------------------------------------------------
+        // Validate duplicate phone number
+        // ----------------------------------------------------------------------
         if (driverRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
 
             log.error("Phone number already exists : {}", dto.getPhoneNumber());
@@ -92,6 +95,18 @@ public class DriverServiceImpl implements DriverService {
 
             throw new DriverBusinessException(
                     "Aadhaar number already exists.");
+        }
+
+// ----------------------------------------------------------------------
+// Validate duplicate PAN number
+// ----------------------------------------------------------------------
+        if (driverKycRepository.existsByPanNumber(dto.getPanNumber())) {
+
+            log.error("PAN number already exists : {}",
+                    dto.getPanNumber());
+
+            throw new DriverBusinessException(
+                    "PAN number already exists.");
         }
 
 // ----------------------------------------------------------------------
@@ -130,10 +145,6 @@ public class DriverServiceImpl implements DriverService {
                 savedDriver.getDriverId()
         );
 
-        emailService.sendDriverRegistrationEmail(
-                savedDriver.getEmail(),
-                savedDriver.getFirstName() + " " + savedDriver.getLastName()
-        );
 
         log.info(
                 "Driver Registration Email Sent Successfully. Driver Id : {}, Email : {}",
@@ -145,26 +156,44 @@ public class DriverServiceImpl implements DriverService {
 // then we will save the user details in FM microservice users table
 //  --------------------------------------------------------------------------------
         try {
+
             DriverUserDto userDto = new DriverUserDto();
 
             userDto.setUsername(savedDriver.getEmail());
             userDto.setPassword(dto.getPassword());
             userDto.setUserId(savedDriver.getDriverId());
             userDto.setUserType(DConstants.TYPE_DRIVER);
-            log.info("Creating user in FM for driverId: {}, username: {}", savedDriver.getDriverId(), userDto.getUsername());
-            fmFeignClient.createUser(userDto);
 
-            log.info("User created in FM for driverId: {}", savedDriver.getDriverId());
+            log.info("Calling FM createUser: {}", userDto);
+
+            ResponseEntity<DriverUserDto> response =
+                    fmFeignClient.createUser(userDto);
+
+            log.info(
+                    "FM createUser response: status={}, body={}",
+                    response.getStatusCode(),
+                    response.getBody()
+            );
+
+        } catch (feign.FeignException e) {
+
+            log.error(
+                    "FM createUser FAILED: status={}, responseBody={}",
+                    e.status(),
+                    e.contentUTF8(),
+                    e
+            );
 
         } catch (Exception e) {
-            log.error("User creation failed in FM", e);
+
+            log.error("FM createUser FAILED", e);
         }
 
 //        ----------------------------------------------------------------------
         /** CALLING HELPER METHOD
          * Create Approval Request in Food & Mart Microservice.
          */
-          createApprovalRequest(savedDriver.getDriverId());
+        createApprovalRequest(savedDriver.getDriverId());
 //          -------------------------------------------------------------------
 
 //        // Fetch role
@@ -199,19 +228,27 @@ public class DriverServiceImpl implements DriverService {
         coAddressRequestDto.setStateId(dto.getStateId());
         coAddressRequestDto.setAreaId(dto.getAreaId());
         coAddressRequestDto.setAddressType(DConstants.TYPE_DRIVER);
+        coAddressRequestDto.setLatitude(dto.getLatitude());
+        coAddressRequestDto.setLongitude(dto.getLongitude());
         DriverAddressRequestDto coAddressRequestDtoFeign = null;
         try {
 
             coAddressRequestDtoFeign =
                     fmFeignClient.saveAddressDetails(coAddressRequestDto).getBody();
 
-        } catch (Exception e) {
+        }  catch (Exception e) {
 
-            log.error("Address creation failed for driver id : {}",
-                    savedDriver.getDriverId(), e);
+            log.error(
+                    "ADDRESS FEIGN FAILED | driverId={} | errorType={} | message={}",
+                    savedDriver.getDriverId(),
+                    e.getClass().getName(),
+                    e.getMessage(),
+                    e
+            );
 
             throw new DriverBusinessException(
-                    "Failed to create driver address.");
+                    "Failed to create driver address: " + e.getMessage()
+            );
         }
 //        create driver wallet details , create entity ,repo
         DriverWallet wallet = new DriverWallet();
@@ -229,7 +266,13 @@ public class DriverServiceImpl implements DriverService {
         driverWalletRepository.save(wallet);
 
         // Convert Entity → DTO
-        DriverDto mapToDriverDto = DriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
+        DriverDto mapToDriverDto =
+                DriverMapper.mapToDriverDto(savedDriver, coAddressRequestDtoFeign);
+
+        emailService.sendDriverRegistrationEmail(
+                savedDriver.getEmail(),
+                savedDriver.getFirstName() + " " + savedDriver.getLastName()
+        );
 
         return mapToDriverDto;
     }
@@ -263,8 +306,8 @@ public class DriverServiceImpl implements DriverService {
             log.error("Failed to create Approval Request for Driver Id: {}", driverId, ex);
         }
     }
-//    ---------------------------------------------------------------------------------------------
-//    ---------------------------------------------------------------------------------------------
+//=========================================================================================
+//=========================================================================================
 
     @Override
     @Transactional
@@ -272,19 +315,64 @@ public class DriverServiceImpl implements DriverService {
 
         log.info("Fetching driver with id: {}", driverId);
 
-        Driver driver = driverRepository.findById(driverId).orElseThrow(() -> {
-            log.error("Driver not found with id: {}", driverId);
-            return new ResourceNotFoundException("Driver not found with id: " + driverId);
-        });
+        // -----------------------------------------
+        // 1. Get Driver + KYC from Driver MS
+        // -----------------------------------------
+        Driver driver = driverRepository.findById(driverId)
+                .orElseThrow(() -> {
+                    log.error("Driver not found with id: {}", driverId);
+                    return new ResourceNotFoundException(
+                            "Driver not found with id: " + driverId
+                    );
+                });
 
+        // -----------------------------------------
+        // 2. Get Address from FM
+        // -----------------------------------------
         DriverAddressRequestDto address = null;
 
         try {
+
             address = fmFeignClient.getAddressDetails(driverId).getBody();
+
         } catch (Exception e) {
-            log.error("Failed to fetch address from FM", e);
+
+            log.error("Failed to fetch address from FM for driverId: {}",
+                    driverId,
+                    e
+            );
         }
 
+        // -----------------------------------------
+        // 3. Get User Status from FM
+        // -----------------------------------------
+        DriverUserDto user = null;
+
+        try {
+
+            user = fmFeignClient.findByUserIdAndUserType(
+                    driverId,
+                    DConstants.TYPE_DRIVER).getBody();
+
+            log.info("========== FM USER RESPONSE ==========");
+            log.info("User ID     : {}", user != null ? user.getUserId() : null);
+            log.info("Username    : {}", user != null ? user.getUsername() : null);
+            log.info("User Type   : {}", user != null ? user.getUserType() : null);
+            log.info("Is Active   : {}", user != null ? user.getIsActive() : null);
+            log.info("======================================");
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Failed to fetch user details from FM for driverId: {}",
+                    driverId,
+                    e
+            );
+        }
+
+        // -----------------------------------------
+        // 4. Combine everything
+        // -----------------------------------------
         return DriverMapper.mapToDriverDto(driver, address);
     }
 
@@ -403,16 +491,32 @@ public class DriverServiceImpl implements DriverService {
         log.info("Driver updated successfully with id: {}", driverId);
 
         // Update address through feign client
+        DriverAddressRequestDto existingAddress = null;
+        boolean incomingAddressComplete = isAddressComplete(dto);
+
+        if (!incomingAddressComplete) {
+            try {
+                existingAddress = fmFeignClient.getAddressDetails(driverId).getBody();
+            } catch (Exception e) {
+                log.warn("No existing address found for driver id : {}", driverId, e);
+            }
+        }
+
         DriverAddressRequestDto addressDto = new DriverAddressRequestDto();
 
         addressDto.setJippyAddressId(driverId);
-        addressDto.setBuildingNumber(dto.getBuildingNumber());
-        addressDto.setRoad(dto.getRoad());
-        addressDto.setLandmark(dto.getLandmark());
-        addressDto.setCityId(dto.getCityId());
-        addressDto.setStateId(dto.getStateId());
-        addressDto.setAreaId(dto.getAreaId());
+        addressDto.setBuildingNumber(resolveAddressValue(dto.getBuildingNumber(), existingAddress != null ? existingAddress.getBuildingNumber() : null));
+        addressDto.setRoad(resolveAddressValue(dto.getRoad(), existingAddress != null ? existingAddress.getRoad() : null));
+        addressDto.setLandmark(resolveAddressValue(dto.getLandmark(), existingAddress != null ? existingAddress.getLandmark() : null));
+        addressDto.setCityId(dto.getCityId() != null ? dto.getCityId() : existingAddress != null ? existingAddress.getCityId() : null);
+        addressDto.setStateId(dto.getStateId() != null ? dto.getStateId() : existingAddress != null ? existingAddress.getStateId() : null);
+        addressDto.setAreaId(dto.getAreaId() != null ? dto.getAreaId() : existingAddress != null ? existingAddress.getAreaId() : null);
         addressDto.setAddressType(DConstants.TYPE_DRIVER);
+
+        if (!isAddressComplete(addressDto)) {
+            throw new DriverBusinessException(
+                    "Driver address details are required when no existing address is available.");
+        }
 
         // Save/update address
         DriverAddressRequestDto updatedAddress = null;
@@ -431,6 +535,32 @@ public class DriverServiceImpl implements DriverService {
         DriverDto response = DriverMapper.mapToDriverDto(updatedDriver, updatedAddress);
 
         return response;
+    }
+
+    private static String resolveAddressValue(String incomingValue, String existingValue) {
+        return hasText(incomingValue) ? incomingValue : existingValue;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private static boolean isAddressComplete(DriverAddressRequestDto addressDto) {
+        return hasText(addressDto.getBuildingNumber())
+                && hasText(addressDto.getRoad())
+                && hasText(addressDto.getLandmark())
+                && addressDto.getCityId() != null
+                && addressDto.getStateId() != null
+                && addressDto.getAreaId() != null;
+    }
+
+    private static boolean isAddressComplete(DriverDto dto) {
+        return hasText(dto.getBuildingNumber())
+                && hasText(dto.getRoad())
+                && hasText(dto.getLandmark())
+                && dto.getCityId() != null
+                && dto.getStateId() != null
+                && dto.getAreaId() != null;
     }
 
 
@@ -841,13 +971,19 @@ public class DriverServiceImpl implements DriverService {
     }
 
     @Override
-    public String saveOrUpdateProfilePic(UploadProfilePicDto uploadProfilePicDto) {
+    public DriverResponseDto saveOrUpdateProfilePic(UploadProfilePicDto uploadProfilePicDto) {
         try {
+            if (uploadProfilePicDto == null
+                    || uploadProfilePicDto.getUserId() == null
+                    || uploadProfilePicDto.getUserType() == null) {
+                throw new DriverBusinessException("User ID and user type are required.");
+            }
+
             validateImage(uploadProfilePicDto.getProfilePicFile());
             String s3BucketFilePath = s3ImageService.uploadFile(uploadProfilePicDto.getProfilePicFile(), uploadProfilePicDto.getUserId(), uploadProfilePicDto.getUserType());
             log.info("File uploaded to S3 successfully. Bucket path: {}", s3BucketFilePath);
 
-            if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_DRIVER)) {
+            if (DConstants.TYPE_DRIVER.equalsIgnoreCase(uploadProfilePicDto.getUserType())) {
 
                 Driver driver = driverRepository.findById(uploadProfilePicDto.getUserId()).orElseThrow(() -> {
                     log.error("Driver not found with id: {}", uploadProfilePicDto.getUserId());
@@ -858,74 +994,168 @@ public class DriverServiceImpl implements DriverService {
                 driverRepository.save(driver);
                 log.info("Driver profile picture URL updated in database for driver id: {}", uploadProfilePicDto.getUserId());
 
-                return "Driver profile pic Url: " + DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath;
-            } else if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_CUSTOMER)) {
+                return new DriverResponseDto(DConstants.STATUS_200, "Driver profile pic Url: " + DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
+            } else if (DConstants.TYPE_CUSTOMER.equalsIgnoreCase(uploadProfilePicDto.getUserType())) {
                 DriverCustomerResponseDto driverCustomerResponseDto = coFeignClients.getCustomer(uploadProfilePicDto.getUserId()).getBody();
 
-                if (driverCustomerResponseDto.getCustomerId() != null) {
+                if (driverCustomerResponseDto != null && driverCustomerResponseDto.getCustomerId() != null) {
 
                     driverCustomerResponseDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
 
                     ResponseEntity<DriverResponseDto> dtoResponseEntity = coFeignClients.updateCustomerProfilePic(driverCustomerResponseDto);
                     log.info("Customer profile picture URL updated in database for customer id: {}", uploadProfilePicDto.getUserId());
 
-                    return dtoResponseEntity.getBody().getStatusMsg();
+                    return dtoResponseEntity != null && dtoResponseEntity.getBody() != null
+                            ? dtoResponseEntity.getBody()
+                            : new DriverResponseDto(DConstants.STATUS_200, "Customer profile pic updated successfully.");
                 } else {
                     log.error("Customer not found with id: {}", uploadProfilePicDto.getUserId());
                     throw new ResourceNotFoundException("Customer not found with id: " + uploadProfilePicDto.getUserId());
                 }
-            } else if (uploadProfilePicDto.getUserType().equalsIgnoreCase(DConstants.TYPE_MERCHANT)) {
+            } else if (DConstants.TYPE_MERCHANT.equalsIgnoreCase(uploadProfilePicDto.getUserType())) {
 
                 DriverMerchantDto driverMerchantDto = fmFeignClient.getMerchantById(uploadProfilePicDto.getUserId()).getBody();
 
-                if (driverMerchantDto.getMerchantId() != null) {
+                if (driverMerchantDto != null && driverMerchantDto.getMerchantId() != null) {
                     driverMerchantDto.setProfilePicUrl(DConstants.AWS_PROFILE_PIC_STATIC_URL + s3BucketFilePath);
                     ResponseEntity<DriverResponseDto> driverResponseDto = fmFeignClient.updateMerchantProfilePic(driverMerchantDto);
                     log.info("Merchant profile picture URL updated in database for merchant id: {}", uploadProfilePicDto.getUserId());
 
-                    return driverResponseDto.getBody().getStatusMsg();
+                    return driverResponseDto != null && driverResponseDto.getBody() != null
+                            ? driverResponseDto.getBody()
+                            : new DriverResponseDto(DConstants.STATUS_200, "Merchant profile pic updated successfully.");
                 } else {
-                    log.error("Customer not found with id: {}", uploadProfilePicDto.getUserId());
+                    log.error("Merchant not found with id: {}", uploadProfilePicDto.getUserId());
                     throw new ResourceNotFoundException("Merchant not found with id: " + uploadProfilePicDto.getUserId());
                 }
             }
+            throw new DriverBusinessException("Unsupported user type: " + uploadProfilePicDto.getUserType());
         } catch (IOException e) {
             log.error("Error validating image file", e);
             throw new ImageValidationException("Error validating image file: " + e.getMessage());
         }
-        return "";
+    }
+
+    @Override
+    @Transactional
+    public DriverResponseDto readyToAcceptIsToggle(DriverReadyToAcceptRequestDto requestDto) {
+        if (requestDto == null || requestDto.getDriverId() == null || requestDto.getReadyToAcceptOrders() == null) {
+            throw new DriverBusinessException("Driver ID and ready-to-accept status are required.");
+        }
+
+        Driver driver = driverRepository.findById(requestDto.getDriverId())
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + requestDto.getDriverId()));
+
+        driver.setReadyToAcceptOrders(requestDto.getReadyToAcceptOrders());
+        driverRepository.save(driver);
+
+        log.info("Driver ready-to-accept status updated for driver id: {} to {}",
+                requestDto.getDriverId(), requestDto.getReadyToAcceptOrders());
+
+        return new DriverResponseDto(
+                DConstants.STATUS_200,
+                "Driver ready to accept orders set to " + requestDto.getReadyToAcceptOrders()
+        );
+    }
+
+
+    public void validateDocument(MultipartFile file) throws IOException {
+
+        if (file == null || file.isEmpty()) {
+            throw new ImageValidationException("File cannot be empty");
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null || fileName.trim().isEmpty()) {
+            throw new ImageValidationException("File name is required");
+        }
+
+        String extension = "";
+
+        int dotIndex = fileName.lastIndexOf('.');
+
+        if (dotIndex >= 0 && dotIndex < fileName.length() - 1) {
+            extension = fileName
+                    .substring(dotIndex + 1)
+                    .toLowerCase();
+        }
+
+        String contentType = file.getContentType();
+
+        log.info(
+                "Document validation - filename={}, extension={}, contentType={}, size={}",
+                fileName,
+                extension,
+                contentType,
+                file.getSize()
+        );
+
+        boolean validExtension =
+                extension.equals("pdf") ||
+                        extension.equals("png") ||
+                        extension.equals("jpg") ||
+                        extension.equals("jpeg");
+
+        if (!validExtension) {
+            throw new ImageValidationException(
+                    "Only PDF, PNG, JPEG, and JPG files are allowed"
+            );
+        }
+
+        // If MIME type is available, validate it.
+        // Some clients may send application/octet-stream.
+        if (contentType != null &&
+                !contentType.equalsIgnoreCase("application/pdf") &&
+                !contentType.equalsIgnoreCase("image/png") &&
+                !contentType.equalsIgnoreCase("image/jpeg") &&
+                !contentType.equalsIgnoreCase("image/jpg") &&
+                !contentType.equalsIgnoreCase("application/octet-stream")) {
+
+            throw new ImageValidationException(
+                    "Invalid file content type: " + contentType
+            );
+        }
+
+        long maxSize = 10 * 1024 * 1024;
+
+        if (file.getSize() > maxSize) {
+            throw new ImageValidationException(
+                    "File size exceeds the 10MB limit"
+            );
+        }
     }
 
     public void validateImage(MultipartFile file) throws IOException {
         // 1. Check if file is empty
-        if (file.isEmpty()) {
+        if (file == null || file.isEmpty()) {
             throw new ImageValidationException("File cannot be empty");
         }
 
         // 2. Validate File Type (MIME Type)
-        String contentType = file.getContentType();
-        if (!isValidType(contentType)) {
-            throw new ImageValidationException("Only PNG, JPEG, and JPG are allowed");
-        }
+//        String contentType = file.getContentType();
+//        if (!isValidType(contentType)) {
+//            throw new ImageValidationException("Only PNG, JPEG, and JPG are allowed");
+//        }
 
         // 3. Validate File Size (e.g., Max 5MB)
-        long maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        long maxSize = 10 * 1024 * 1024; // 10MB in bytes
         if (file.getSize() > maxSize) {
-            throw new ImageValidationException("File size exceeds the 5MB limit");
+            throw new ImageValidationException("File size exceeds the 10MB limit");
         }
 
-        //4. Validate Image Dimensions (e.g., Min 200x200 pixels)
-        BufferedImage image = ImageIO.read(file.getInputStream());
-        if (image == null) {
-            throw new ImageValidationException("Invalid image file");
-        }
+//        //4. Validate Image Dimensions (e.g., Min 200x200 pixels)
+//        BufferedImage image = ImageIO.read(file.getInputStream());
+//        if (image == null) {
+//            throw new ImageValidationException("Invalid image file");
+//        }
 
-        int width = image.getWidth();
-        int height = image.getHeight();
-
-        if (width < 200 || height < 200) {
-            throw new ImageValidationException("Image must be at least 200x200 pixels");
-        }
+//        int width = image.getWidth();
+//        int height = image.getHeight();
+//
+//        if (width < 200 || height < 200) {
+//            throw new ImageValidationException("Image must be at least 200x200 pixels");
+//        }
     }
 
     private boolean isValidType(String contentType) {
@@ -948,15 +1178,15 @@ public class DriverServiceImpl implements DriverService {
 
         return dto;
     }
-//    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
+    //    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
     @Override
     public FmDriverApprovalResponseDTO getDriverById(Integer driverId) {
 
-    Driver driver = driverRepository.findByDriverId(driverId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException("Driver not found with Id : " + driverId));
+        Driver driver = driverRepository.findByDriverId(driverId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Driver not found with Id : " + driverId));
 
-    return DriverMapper.mapToDriverApprovalResponseDto(driver);
+        return DriverMapper.mapToDriverApprovalResponseDto(driver);
     }
 
     @Override
@@ -1020,4 +1250,114 @@ public class DriverServiceImpl implements DriverService {
 //        return 0;
 //    }
 
+
+
+    @Override
+    public String updateDriverDocuments(DriverDocumentUpdateDTO driverDocumentUpdateDTO) {
+
+        log.info("Updating driver documents for entityId: {}", driverDocumentUpdateDTO.getDriverId());
+
+        Optional<DriverKyc> driverKycOptional = driverKycRepository.findByDriverDriverId(driverDocumentUpdateDTO.getDriverId());
+
+        if (driverKycOptional.isPresent()) {
+            DriverKyc driverKyc = driverKycOptional.get();
+
+            driverKyc.setAadharDocUrl(driverDocumentUpdateDTO.getAadharDocUrl());
+            driverKyc.setPanDocUrl(driverDocumentUpdateDTO.getPanDocUrl());
+            driverKyc.setRcCopyDocUrl(driverDocumentUpdateDTO.getRcCopyDocUrl());
+            driverKyc.setDrivingLicenseDocUrl(driverDocumentUpdateDTO.getDrivingLicenseDocUrl());
+
+            driverKycRepository.save(driverKyc);
+            log.info("Driver documents updated successfully for driverId: {}", driverDocumentUpdateDTO.getDriverId());
+            return "Driver documents updated successfully.";
+        } else {
+            log.error("Driver KYC not found for driverId: {}", driverDocumentUpdateDTO.getDriverId());
+            return "Driver KYC not found for driverId: " +  driverDocumentUpdateDTO.getDriverId();
+        }
+    }
+
+    //    =================================================================================
+//    =================================================================================
+
+    /**
+     * Fetches driver details for multiple driver IDs.
+     * <p>
+     * The driver name is created using first name and last name.
+     */
+    @Override
+    public List<DriverDetailsResponseDto> getDriverDetailsByIds(List<Integer> driverIds) {
+
+        log.info("Fetching driver details for {} driver IDs", driverIds.size());
+
+        List<DriverDetailsProjection> projections = driverRepository.getDriverDetailsByIds(driverIds);
+
+        List<DriverDetailsResponseDto> response = new ArrayList<>();
+
+        for (DriverDetailsProjection projection : projections) {
+
+            DriverDetailsResponseDto dto = new DriverDetailsResponseDto();
+
+            dto.setDriverId(projection.getDriverId());
+
+            dto.setDriverName(projection.getDriverName());
+
+            // Driver mobile number
+            dto.setDriverMobileNumber(projection.getDriverMobileNumber());
+
+            response.add(dto);
+        }
+
+        log.info("Successfully fetched {} driver details", response.size());
+
+        return response;
+    }
+
+    //    ==================================================================================
+//    ==================================================================================
+    @Override
+    public DriverDetailsResponseDto getDriverDetailsForOrder(Integer driverId) {
+
+        log.info("Fetching driver details for order. driverId={}", driverId);
+
+        Driver driver = driverRepository.findById(driverId).orElseThrow(() -> new RuntimeException("Driver not found with ID: " + driverId));
+
+        DriverDetailsResponseDto response = new DriverDetailsResponseDto();
+
+        response.setDriverId(driver.getDriverId());
+
+        response.setDriverName(driver.getFirstName() + " " + driver.getLastName());
+
+        response.setDriverMobileNumber(driver.getPhoneNumber());
+
+        return response;
+    }
+
+        @Override
+        public DriverDto findByPhoneNumber(String phoneNumber) {
+
+            log.info(
+                    "DRIVER_SERVICE | FIND_BY_PHONE_NUMBER | phoneNumber={}",
+                    phoneNumber
+            );
+
+            Driver driver = driverRepository
+                    .findByPhoneNumber(phoneNumber)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Driver not found with phone number: " + phoneNumber
+                            )
+                    );
+
+            DriverDto driverDto = new DriverDto();
+
+            driverDto.setDriverId(driver.getDriverId());
+            driverDto.setFirstName(driver.getFirstName());
+            driverDto.setLastName(driver.getLastName());
+            driverDto.setPhoneNumber(driver.getPhoneNumber());
+            driverDto.setEmail(driver.getEmail());
+            driverDto.setIsApproved(driver.getIsApproved());
+            driverDto.setReadyToAcceptOrders(driver.getReadyToAcceptOrders());
+
+            return driverDto;
+        }
 }

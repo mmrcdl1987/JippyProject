@@ -502,11 +502,11 @@ public class FmMasterProductService {
 
                 mp.getCategoryId(), mp.getCategoryName(),
 
-                mp.getSubCategoryId(), mp.getSubCategoryName(),
+              // mp.getSubCategoryId(), mp.getSubCategoryName(),
 
-                mp.getDescription(), mp.getShortDescription(),
+                mp.getDescription(),// mp.getShortDescription(),
 
-                mp.getPhoto(), mp.getPhotos(), mp.getThumbnail(),
+                mp.getPhoto(),// mp.getPhotos(), mp.getThumbnail(),
 
                 mp.getFoodType(), mp.getCuisineType(),
 
@@ -856,7 +856,7 @@ public class FmMasterProductService {
 
                 mp.setDescription(safeGet(row, descIdx));
 
-                mp.setShortDescription(safeGet(row, shortDescIdx));
+                //mp.setShortDescription(safeGet(row, shortDescIdx));
 
                 /*
                  * Photo is read if available,
@@ -864,9 +864,9 @@ public class FmMasterProductService {
                  */
                 mp.setPhoto(safeGet(row, photoIdx));
 
-                mp.setPhotos(safeGetRaw(row, photosIdx));
-
-                mp.setThumbnail(safeGet(row, thumbnailIdx));
+//                mp.setPhotos(safeGetRaw(row, photosIdx));
+//
+//                mp.setThumbnail(safeGet(row, thumbnailIdx));
 
                 // -----------------------------------------------
                 // FOOD INFORMATION

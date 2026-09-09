@@ -33,8 +33,6 @@ public class FmMerchant {
     @Column(name = "status", length = 30)
     @Builder.Default
     private String status = "PENDING";
-    @Column(name = "state", length = 30)
-    private String state;
     @Column(name = "is_active", length = 1)
     private String isActive;
     @Column(name = "is_approved", nullable = false)

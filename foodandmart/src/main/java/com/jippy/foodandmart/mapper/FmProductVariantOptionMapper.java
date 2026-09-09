@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.mapper;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmProductVariantOptionRequestDto;
 import com.jippy.foodandmart.dto.FmProductVariantOptionResponseDto;
 import com.jippy.foodandmart.entity.FmProductVariantOption;
@@ -22,7 +23,7 @@ public final class FmProductVariantOptionMapper {
         entity.setProductVariantGroupValuesId(dto.getProductVariantGroupValuesId());
         entity.setPriceType(dto.getPriceType().trim().toUpperCase());
         entity.setVariantPrice(dto.getVariantPrice());
-        entity.setIsActive(Boolean.TRUE);
+        entity.setIsActive(FmAppConstants.FLAG_YES);
 
         return entity;
     }

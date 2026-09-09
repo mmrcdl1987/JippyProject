@@ -23,6 +23,9 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Service
@@ -153,6 +156,37 @@ public class S3ServiceImpl implements S3Service {
         }
     }
 
+    @Override
+    public String uploadMerchantProfileImage(MultipartFile image, Integer merchantId) {
+        validateMerchantProfileImage(image);
+        validateMerchantId(merchantId);
+
+        String contentType = image.getContentType().toLowerCase();
+        String extension = IMAGE_EXTENSIONS.get(contentType);
+        String timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"));
+        String objectKey = String.format(
+                "MERCHANT/%d/merchant_%s%s",
+                merchantId, timestamp, extension);
+
+        try (InputStream inputStream = image.getInputStream()) {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .contentType(contentType)
+                    .contentLength(image.getSize())
+                    .build();
+            s3Client.putObject(request, RequestBody.fromInputStream(inputStream, image.getSize()));
+            return buildS3Url(objectKey);
+        } catch (IOException ex) {
+            log.error("Unable to read merchant profile image. merchantId={}", merchantId, ex);
+            throw new BadRequestException("Unable to read merchant profile image.");
+        } catch (Exception ex) {
+            log.error("Failed to upload merchant profile image. merchantId={}", merchantId, ex);
+            throw new BadRequestException("Unable to upload merchant profile image.");
+        }
+    }
+
 
     // ============================================================
     // CATEGORY IMAGE UPLOAD
@@ -194,7 +228,6 @@ public class S3ServiceImpl implements S3Service {
 
             throw new BadRequestException("Unsupported category image type.");
         }
-
 
         /*
          * ========================================================
@@ -248,6 +281,66 @@ public class S3ServiceImpl implements S3Service {
 
 
             throw new BadRequestException("Unable to upload category image.");
+        }
+    }
+
+    @Override
+    public String uploadKycDocument(MultipartFile document, String userType, Integer userId, String documentType) {
+        return uploadKycDocumentInternal(document, userType, userId, documentType);
+    }
+
+    @Override
+    public String replaceKycDocument(MultipartFile document, String userType, Integer userId,
+                                     String documentType, String oldFileUrl) {
+        String newFileUrl = uploadKycDocumentInternal(document, userType, userId, documentType);
+        if (StringUtils.hasText(oldFileUrl) && !oldFileUrl.equals(newFileUrl)) {
+            deleteFile(oldFileUrl);
+        }
+        return newFileUrl;
+    }
+
+    private String uploadKycDocumentInternal(MultipartFile document, String userType,
+                                              Integer userId, String documentType) {
+        if (document == null || document.isEmpty()) {
+            throw new BadRequestException(documentType + " document is required.");
+        }
+        if (!StringUtils.hasText(userType) || userId == null || !StringUtils.hasText(documentType)) {
+            throw new BadRequestException("Invalid KYC document upload details.");
+        }
+        if (document.getSize() > 10L * 1024L * 1024L) {
+            throw new BadRequestException("KYC document must not exceed 10 MB.");
+        }
+
+        String originalName = StringUtils.hasText(document.getOriginalFilename())
+                ? document.getOriginalFilename() : "document";
+        String extension = "";
+        int dot = originalName.lastIndexOf('.');
+        if (dot >= 0 && dot < originalName.length() - 1) {
+            extension = originalName.substring(dot).replaceAll("[^A-Za-z0-9.]", "").toLowerCase();
+        }
+        String objectKey = String.format(
+                "Documents/%s-%d/%s-%d%s",
+                userType.toLowerCase(), userId, documentType.toLowerCase(),
+                Instant.now().toEpochMilli(), extension);
+
+        try (InputStream inputStream = document.getInputStream()) {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .contentType(StringUtils.hasText(document.getContentType())
+                            ? document.getContentType() : "application/octet-stream")
+                    .contentLength(document.getSize())
+                    .build();
+            s3Client.putObject(request, RequestBody.fromInputStream(inputStream, document.getSize()));
+            return buildS3Url(objectKey);
+        } catch (IOException ex) {
+            log.error("Unable to read KYC document. userType={}, userId={}, documentType={}",
+                    userType, userId, documentType, ex);
+            throw new BadRequestException("Unable to read KYC document.");
+        } catch (Exception ex) {
+            log.error("Failed to upload KYC document. userType={}, userId={}, documentType={}",
+                    userType, userId, documentType, ex);
+            throw new BadRequestException("Unable to upload KYC document.");
         }
     }
 
@@ -305,7 +398,6 @@ public class S3ServiceImpl implements S3Service {
             throw new BadRequestException("Outlet image is required.");
         }
 
-
         if (image.getSize() > MAX_IMAGE_SIZE) {
 
             throw new BadRequestException("Outlet image must not exceed 5 MB.");
@@ -326,6 +418,20 @@ public class S3ServiceImpl implements S3Service {
 
         if (!ALLOWED_IMAGE_TYPES.contains(contentType)) {
 
+            throw new BadRequestException("Only JPG, JPEG, PNG and WEBP images are allowed.");
+        }
+    }
+
+    private void validateMerchantProfileImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new BadRequestException("Merchant profile image is required.");
+        }
+        if (image.getSize() > MAX_IMAGE_SIZE) {
+            throw new BadRequestException("Merchant profile image must not exceed 5 MB.");
+        }
+        String contentType = image.getContentType();
+        if (!StringUtils.hasText(contentType)
+                || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
             throw new BadRequestException("Only JPG, JPEG, PNG and WEBP images are allowed.");
         }
     }

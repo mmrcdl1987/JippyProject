@@ -6,7 +6,6 @@ import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmProduct;
 import com.jippy.foodandmart.entity.FmProductOnlinePricing;
 import com.jippy.foodandmart.entity.FmProductPriceChangeHistory;
-import com.jippy.foodandmart.entity.FmProductVariantOption;
 import com.jippy.foodandmart.enums.FmPriceHistoryOperationType;
 import com.jippy.foodandmart.enums.FmPriceType;
 import com.jippy.foodandmart.exception.PricingException;
@@ -78,17 +77,9 @@ public class FmPricingServiceImpl implements IPricingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FmOutletDto> getOutlets(
-            Integer areaId,
-            boolean isApproved,
-            String search) {
+    public List<FmOutletDto> getOutlets(Integer areaId, boolean isApproved, String search) {
 
-        log.info(
-                "SERVICE START | GET_OUTLETS | areaId={} | isApproved={} | search={}",
-                areaId,
-                isApproved,
-                search
-        );
+        log.info("SERVICE START | GET_OUTLETS | areaId={} | isApproved={} | search={}", areaId, isApproved, search);
 
         if (areaId == null) {
             log.error("AreaId is null");
@@ -99,39 +90,17 @@ public class FmPricingServiceImpl implements IPricingService {
             search = null;
         }
 
-        List<FmOutlet> outlets = isApproved
-                ? outletRepo.findApprovedOutlets(
-                areaId,
-                FmAppConstants.TYPE_OUTLET,
-                search
-        )
-                : outletRepo.findUnapprovedOutlets(
-                areaId,
-                FmAppConstants.TYPE_OUTLET,
-                search
-        );
+        List<FmOutlet> outlets = isApproved ? outletRepo.findApprovedOutlets(areaId, FmAppConstants.TYPE_OUTLET, search) : outletRepo.findUnapprovedOutlets(areaId, FmAppConstants.TYPE_OUTLET, search);
 
         if (outlets == null || outlets.isEmpty()) {
-            log.warn(
-                    "No outlets found | areaId={} | isApproved={}",
-                    areaId,
-                    isApproved
-            );
+            log.warn("No outlets found | areaId={} | isApproved={}", areaId, isApproved);
 
             throw new PricingException("No outlets found");
         }
 
-        log.info(
-                "SERVICE END | GET_OUTLETS | count={}",
-                outlets.size()
-        );
+        log.info("SERVICE END | GET_OUTLETS | count={}", outlets.size());
 
-        return outlets.stream()
-                .map(o -> new FmOutletDto(
-                        o.getOutletId(),
-                        o.getOutletName()
-                ))
-                .toList();
+        return outlets.stream().map(o -> new FmOutletDto(o.getOutletId(), o.getOutletName())).toList();
     }
 
 
@@ -141,41 +110,25 @@ public class FmPricingServiceImpl implements IPricingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FmProductResponseDto> getProducts(
-            List<Integer> outletIds,
-            boolean isApproved) {
+    public List<FmProductResponseDto> getProducts(List<Integer> outletIds, boolean isApproved) {
 
-        log.info(
-                "SERVICE START | GET_PRODUCTS | outletIds={} | isApproved={}",
-                outletIds,
-                isApproved
-        );
+        log.info("SERVICE START | GET_PRODUCTS | outletIds={} | isApproved={}", outletIds, isApproved);
 
         if (outletIds == null || outletIds.isEmpty()) {
             throw new PricingException("OutletIds cannot be empty");
         }
 
-        List<Object[]> rows = isApproved
-                ? productRepo.findProducts(outletIds)
-                : productRepo.findProductsWithoutPricing(outletIds);
+        List<Object[]> rows = isApproved ? productRepo.findProducts(outletIds) : productRepo.findProductsWithoutPricing(outletIds);
 
         if (rows == null || rows.isEmpty()) {
-            log.warn(
-                    "No products found | outletIds={}",
-                    outletIds
-            );
+            log.warn("No products found | outletIds={}", outletIds);
 
             throw new PricingException("No products found");
         }
 
-        log.info(
-                "SERVICE END | GET_PRODUCTS | count={}",
-                rows.size()
-        );
+        log.info("SERVICE END | GET_PRODUCTS | count={}", rows.size());
 
-        return rows.stream()
-                .map(pricingMapper::map)
-                .toList();
+        return rows.stream().map(pricingMapper::map).toList();
     }
 
 
@@ -185,9 +138,7 @@ public class FmPricingServiceImpl implements IPricingService {
 
     @Override
     @Transactional
-    public void updatePrices(
-            FmPriceUpdateRequestDto dto,
-            boolean isApproved) {
+    public void updatePrices(FmPriceUpdateRequestDto dto, boolean isApproved) {
 
         /*
          * IMPORTANT:
@@ -195,50 +146,33 @@ public class FmPricingServiceImpl implements IPricingService {
          */
         if (dto == null) {
             log.error("SERVICE FAILED | PRICE_UPDATE | request is null");
-            throw new PricingException(
-                    "Price update request cannot be null"
-            );
+            throw new PricingException("Price update request cannot be null");
         }
 
-        if (dto.getOutletIds() == null ||
-                dto.getOutletIds().isEmpty()) {
+        if (dto.getOutletIds() == null || dto.getOutletIds().isEmpty()) {
 
-            throw new PricingException(
-                    "OutletIds cannot be empty"
-            );
+            throw new PricingException("OutletIds cannot be empty");
         }
 
-        if (dto.getItems() == null ||
-                dto.getItems().isEmpty()) {
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
 
-            throw new PricingException(
-                    "Price update items cannot be empty"
-            );
+            throw new PricingException("Price update items cannot be empty");
         }
 
-        log.info(
-                "SERVICE START | UPDATE_PRICES | outlets={} | items={} | isApproved={}",
-                dto.getOutletIds(),
-                dto.getItems().size(),
-                isApproved
-        );
+        log.info("SERVICE START | UPDATE_PRICES | outlets={} | items={} | isApproved={}", dto.getOutletIds(), dto.getItems().size(), isApproved);
 
         LocalDateTime now = LocalDateTime.now();
 
         for (Integer outletId : dto.getOutletIds()) {
 
             if (outletId == null || outletId <= 0) {
-                throw new PricingException(
-                        "Invalid outletId: " + outletId
-                );
+                throw new PricingException("Invalid outletId: " + outletId);
             }
 
             for (FmPriceUpdateRequestDto.Item item : dto.getItems()) {
 
                 if (item == null) {
-                    throw new PricingException(
-                            "Price update item cannot be null"
-                    );
+                    throw new PricingException("Price update item cannot be null");
                 }
 
                 Integer productId = item.getProductId();
@@ -246,81 +180,36 @@ public class FmPricingServiceImpl implements IPricingService {
                 BigDecimal newPrice = item.getNewPrice();
 
                 if (productId == null || productId <= 0) {
-                    throw new PricingException(
-                            "Invalid productId: " + productId
-                    );
+                    throw new PricingException("Invalid productId: " + productId);
                 }
 
                 if (newPrice == null) {
-                    throw new PricingException(
-                            "New price cannot be null"
-                    );
+                    throw new PricingException("New price cannot be null");
                 }
 
                 if (newPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new PricingException(
-                            "New price must be greater than zero"
-                    );
+                    throw new PricingException("New price must be greater than zero");
                 }
 
-                newPrice = newPrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                );
+                newPrice = newPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
 
-                log.info(
-                        "PROCESS PRICE | outletId={} | productId={} | variantId={} | newPrice={}",
-                        outletId,
-                        productId,
-                        productVariantId,
-                        newPrice
-                );
+                log.info("PROCESS PRICE | outletId={} | productId={} | variantId={} | newPrice={}", outletId, productId, productVariantId, newPrice);
 
                 // ----------------------------------------------------
                 // FIND OUTLET CATEGORY
                 // ----------------------------------------------------
 
-                Integer outletCategoryId =
-                        pricingRepo
-                                .findOutletCategoryIdByProductAndOutlet(
-                                        productId,
-                                        outletId
-                                )
-                                .orElseThrow(() ->
-                                        new PricingException(
-                                                "Product "
-                                                        + productId
-                                                        + " is not available for outlet "
-                                                        + outletId
-                                        )
-                                );
+                Integer outletCategoryId = pricingRepo.findOutletCategoryIdByProductAndOutlet(productId, outletId).orElseThrow(() -> new PricingException("Product " + productId + " is not available for outlet " + outletId));
 
                 // ----------------------------------------------------
                 // GET CURRENT PRICE
                 // ----------------------------------------------------
 
-                BigDecimal oldPrice =
-                        pricingRepo
-                                .findCurrentPriceForScheduledUpdate(
-                                        productId,
-                                        outletCategoryId,
-                                        productVariantId
-                                )
-                                .orElse(BigDecimal.ZERO);
+                BigDecimal oldPrice = pricingRepo.findCurrentPriceForScheduledUpdate(productId, outletCategoryId, productVariantId).orElse(BigDecimal.ZERO);
 
-                oldPrice = oldPrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                );
+                oldPrice = oldPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
 
-                log.info(
-                        "PRICE COMPARISON | outletId={} | productId={} | variantId={} | oldPrice={} | newPrice={}",
-                        outletId,
-                        productId,
-                        productVariantId,
-                        oldPrice,
-                        newPrice
-                );
+                log.info("PRICE COMPARISON | outletId={} | productId={} | variantId={} | oldPrice={} | newPrice={}", outletId, productId, productVariantId, oldPrice, newPrice);
 
                 // ----------------------------------------------------
                 // NO CHANGE
@@ -328,13 +217,7 @@ public class FmPricingServiceImpl implements IPricingService {
 
                 if (oldPrice.compareTo(newPrice) == 0) {
 
-                    log.info(
-                            "PRICE NOT CHANGED | outletId={} | productId={} | variantId={} | price={}",
-                            outletId,
-                            productId,
-                            productVariantId,
-                            newPrice
-                    );
+                    log.info("PRICE NOT CHANGED | outletId={} | productId={} | variantId={} | price={}", outletId, productId, productVariantId, newPrice);
 
                     continue;
                 }
@@ -343,42 +226,21 @@ public class FmPricingServiceImpl implements IPricingService {
                 // UPSERT ONLINE PRICE
                 // ----------------------------------------------------
 
-                upsertPrice(
-                        productId,
-                        outletCategoryId,
-                        productVariantId,
-                        newPrice
-                );
+                upsertPrice(productId, outletCategoryId, productVariantId, newPrice);
 
                 // ----------------------------------------------------
                 // SAVE HISTORY
                 // ----------------------------------------------------
 
-                savePriceChangeHistory(
-                        outletId,
-                        productId,
-                        productVariantId,
-                        oldPrice,
-                        newPrice,
-                        now
-                );
+                savePriceChangeHistory(outletId, productId, productVariantId, oldPrice, newPrice, now);
 
                 // ----------------------------------------------------
                 // INVALIDATE CACHE
                 // ----------------------------------------------------
 
-                cacheInvalidateService.invalidateCache(
-                        outletId
-                );
+                cacheInvalidateService.invalidateCache(outletId);
 
-                log.info(
-                        "PRICE UPDATED | HISTORY SAVED | CACHE INVALIDATED | outletId={} | productId={} | variantId={} | oldPrice={} | newPrice={}",
-                        outletId,
-                        productId,
-                        productVariantId,
-                        oldPrice,
-                        newPrice
-                );
+                log.info("PRICE UPDATED | HISTORY SAVED | CACHE INVALIDATED | outletId={} | productId={} | variantId={} | oldPrice={} | newPrice={}", outletId, productId, productVariantId, oldPrice, newPrice);
             }
         }
 
@@ -388,19 +250,12 @@ public class FmPricingServiceImpl implements IPricingService {
 
         if (!isApproved) {
 
-            outletRepo.approveOutlets(
-                    dto.getOutletIds()
-            );
+            outletRepo.approveOutlets(dto.getOutletIds());
 
-            log.info(
-                    "Outlets approved | outlets={}",
-                    dto.getOutletIds()
-            );
+            log.info("Outlets approved | outlets={}", dto.getOutletIds());
         }
 
-        log.info(
-                "SERVICE END | UPDATE_PRICES"
-        );
+        log.info("SERVICE END | UPDATE_PRICES");
     }
 
 
@@ -408,16 +263,9 @@ public class FmPricingServiceImpl implements IPricingService {
     // SAVE PRICE CHANGE HISTORY
     // ============================================================
 
-    private void savePriceChangeHistory(
-            Integer outletId,
-            Integer productId,
-            Integer productVariantId,
-            BigDecimal oldPrice,
-            BigDecimal newPrice,
-            LocalDateTime now) {
+    private void savePriceChangeHistory(Integer outletId, Integer productId, Integer productVariantId, BigDecimal oldPrice, BigDecimal newPrice, LocalDateTime now) {
 
-        FmProductPriceChangeHistory history =
-                new FmProductPriceChangeHistory();
+        FmProductPriceChangeHistory history = new FmProductPriceChangeHistory();
 
         history.setOutletId(outletId);
         history.setProductId(productId);
@@ -431,51 +279,26 @@ public class FmPricingServiceImpl implements IPricingService {
         history.setStartDateTime(null);
         history.setEndDateTime(null);
 
-        history.setOldPrice(
-                oldPrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                )
-        );
+        history.setOldPrice(oldPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP));
 
-        history.setNewPrice(
-                newPrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                )
-        );
+        history.setNewPrice(newPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP));
 
-        history.setOperationType(
-                FmPriceHistoryOperationType.UPDATE
-        );
+        history.setOperationType(FmPriceHistoryOperationType.UPDATE);
 
         history.setLocationId(outletId);
-        history.setLocationType(
-                FmAppConstants.ADDRESS_TYPE_OUTLET
-        );
+        history.setLocationType(FmAppConstants.ADDRESS_TYPE_OUTLET);
 
-        history.setCreatedBy(
-                FmAppConstants.DEFAULT_CREATED_BY
-        );
+        history.setCreatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
         history.setCreatedAt(now);
 
-        history.setUpdatedBy(
-                FmAppConstants.DEFAULT_CREATED_BY
-        );
+        history.setUpdatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
         history.setUpdatedAt(now);
 
         priceHistoryRepository.save(history);
 
-        log.info(
-                "PRICE HISTORY SAVED | outletId={} | productId={} | variantId={} | oldPrice={} | newPrice={}",
-                outletId,
-                productId,
-                productVariantId,
-                oldPrice,
-                newPrice
-        );
+        log.info("PRICE HISTORY SAVED | outletId={} | productId={} | variantId={} | oldPrice={} | newPrice={}", outletId, productId, productVariantId, oldPrice, newPrice);
     }
 
 
@@ -513,9 +336,7 @@ public class FmPricingServiceImpl implements IPricingService {
 
     @Override
     @Transactional
-    public void bulkUpdatePrices(
-            FmBulkPriceUpdateRequestDto dto,
-            boolean isApproved) {
+    public void bulkUpdatePrices(FmBulkPriceUpdateRequestDto dto, boolean isApproved) {
 
         /*
          * ----------------------------------------------------------
@@ -525,24 +346,13 @@ public class FmPricingServiceImpl implements IPricingService {
 
         validateRequest(dto);
 
-        validateBulkPriceModel(
-                dto.getPriceModel()
-        );
+        validateBulkPriceModel(dto.getPriceModel());
 
         validateBulkHistoryFields(dto);
 
-        LocalDateTime changeTime =
-                LocalDateTime.now();
+        LocalDateTime changeTime = LocalDateTime.now();
 
-        log.info(
-                "BULK PRICE START | outlets={} | priceModel={} | value={} | priceType={} | operationType={} | isApproved={}",
-                dto.getOutletIds(),
-                dto.getPriceModel(),
-                dto.getValue(),
-                dto.getPriceType(),
-                dto.getOperationType(),
-                isApproved
-        );
+        log.info("BULK PRICE START | outlets={} | priceModel={} | value={} | priceType={} | operationType={} | isApproved={}", dto.getOutletIds(), dto.getPriceModel(), dto.getValue(), dto.getPriceType(), dto.getOperationType(), isApproved);
 
         /*
          * ----------------------------------------------------------
@@ -559,34 +369,21 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        List<Object[]> productRows =
-                productRepo.findProductsForBulkPricing(
-                        dto.getOutletIds()
-                );
+        List<Object[]> productRows = productRepo.findProductsForBulkPricing(dto.getOutletIds());
 
-        if (productRows == null ||
-                productRows.isEmpty()) {
+        if (productRows == null || productRows.isEmpty()) {
 
-            log.warn(
-                    "BULK PRICE | No active products found | outlets={}",
-                    dto.getOutletIds()
-            );
+            log.warn("BULK PRICE | No active products found | outlets={}", dto.getOutletIds());
 
             if (!isApproved) {
 
-                outletRepo.approveOutlets(
-                        dto.getOutletIds()
-                );
+                outletRepo.approveOutlets(dto.getOutletIds());
             }
 
             return;
         }
 
-        log.info(
-                "BULK PRICE | Products fetched={} | outlets={}",
-                productRows.size(),
-                dto.getOutletIds()
-        );
+        log.info("BULK PRICE | Products fetched={} | outlets={}", productRows.size(), dto.getOutletIds());
 
         /*
          * ----------------------------------------------------------
@@ -595,13 +392,7 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        List<Integer> outletCategoryIds =
-                productRows.stream()
-                        .map(row ->
-                                ((Number) row[3]).intValue()
-                        )
-                        .distinct()
-                        .toList();
+        List<Integer> outletCategoryIds = productRows.stream().map(row -> ((Number) row[3]).intValue()).distinct().toList();
 
         /*
          * ----------------------------------------------------------
@@ -610,20 +401,13 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        List<Object[]> existingPricingRows =
-                pricingRepo.findExistingBulkPricing(
-                        outletCategoryIds
-                );
+        List<Object[]> existingPricingRows = pricingRepo.findExistingBulkPricing(outletCategoryIds);
 
         if (existingPricingRows == null) {
-            existingPricingRows =
-                    Collections.emptyList();
+            existingPricingRows = Collections.emptyList();
         }
 
-        log.info(
-                "BULK PRICE | Existing pricing rows={}",
-                existingPricingRows.size()
-        );
+        log.info("BULK PRICE | Existing pricing rows={}", existingPricingRows.size());
 
         /*
          * ----------------------------------------------------------
@@ -632,18 +416,7 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        List<Integer> existingPricingIds =
-                existingPricingRows.stream()
-                        .filter(row ->
-                                row != null &&
-                                        row.length > 0 &&
-                                        row[0] != null
-                        )
-                        .map(row ->
-                                ((Number) row[0]).intValue()
-                        )
-                        .distinct()
-                        .toList();
+        List<Integer> existingPricingIds = existingPricingRows.stream().filter(row -> row != null && row.length > 0 && row[0] != null).map(row -> ((Number) row[0]).intValue()).distinct().toList();
 
         /*
          * ----------------------------------------------------------
@@ -652,27 +425,15 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        Map<Integer, FmProductOnlinePricing>
-                existingPricingById;
+        Map<Integer, FmProductOnlinePricing> existingPricingById;
 
         if (existingPricingIds.isEmpty()) {
 
-            existingPricingById =
-                    new HashMap<>();
+            existingPricingById = new HashMap<>();
 
         } else {
 
-            existingPricingById =
-                    pricingRepo
-                            .findAllById(existingPricingIds)
-                            .stream()
-                            .collect(
-                                    Collectors.toMap(
-                                            FmProductOnlinePricing
-                                                    ::getProductOnlinePricingId,
-                                            Function.identity()
-                                    )
-                            );
+            existingPricingById = pricingRepo.findAllById(existingPricingIds).stream().collect(Collectors.toMap(FmProductOnlinePricing::getProductOnlinePricingId, Function.identity()));
         }
 
         /*
@@ -696,55 +457,32 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        Map<PricingKey, FmProductOnlinePricing>
-                existingPricingMap =
-                new HashMap<>();
+        Map<PricingKey, FmProductOnlinePricing> existingPricingMap = new HashMap<>();
 
-        for (Object[] row :
-                existingPricingRows) {
+        for (Object[] row : existingPricingRows) {
 
-            if (row == null ||
-                    row.length < 4 ||
-                    row[0] == null ||
-                    row[1] == null ||
-                    row[2] == null) {
+            if (row == null || row.length < 4 || row[0] == null || row[1] == null || row[2] == null) {
 
                 continue;
             }
 
-            Integer pricingId =
-                    ((Number) row[0]).intValue();
+            Integer pricingId = ((Number) row[0]).intValue();
 
-            Integer productId =
-                    ((Number) row[1]).intValue();
+            Integer productId = ((Number) row[1]).intValue();
 
-            Integer outletCategoryId =
-                    ((Number) row[2]).intValue();
+            Integer outletCategoryId = ((Number) row[2]).intValue();
 
             /*
              * If repository returns variant ID as fourth column,
              * use it. Otherwise product-level pricing is null.
              */
-            Integer variantId =
-                    row[3] == null
-                            ? null
-                            : ((Number) row[3]).intValue();
+            Integer variantId = row[3] == null ? null : ((Number) row[3]).intValue();
 
-            FmProductOnlinePricing entity =
-                    existingPricingById.get(pricingId);
+            FmProductOnlinePricing entity = existingPricingById.get(pricingId);
 
-            if (entity != null &&
-                    entity.getProductVariantId() == null &&
-                    variantId == null) {
+            if (entity != null && entity.getProductVariantId() == null && variantId == null) {
 
-                existingPricingMap.put(
-                        new PricingKey(
-                                productId,
-                                outletCategoryId,
-                                null
-                        ),
-                        entity
-                );
+                existingPricingMap.put(new PricingKey(productId, outletCategoryId, null), entity);
             }
         }
 
@@ -755,13 +493,9 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        List<FmProductOnlinePricing>
-                pricingEntitiesToSave =
-                new ArrayList<>();
+        List<FmProductOnlinePricing> pricingEntitiesToSave = new ArrayList<>();
 
-        List<FmProductPriceChangeHistory>
-                historyEntitiesToSave =
-                new ArrayList<>();
+        List<FmProductPriceChangeHistory> historyEntitiesToSave = new ArrayList<>();
 
         int productCount = 0;
         int insertCount = 0;
@@ -775,19 +509,14 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        for (Object[] row :
-                productRows) {
+        for (Object[] row : productRows) {
 
-            if (row == null ||
-                    row.length < 5) {
+            if (row == null || row.length < 5) {
 
-                throw new PricingException(
-                        "Invalid product data returned from database"
-                );
+                throw new PricingException("Invalid product data returned from database");
             }
 
-            Integer productId =
-                    ((Number) row[0]).intValue();
+            Integer productId = ((Number) row[0]).intValue();
 
             /*
              * IMPORTANT:
@@ -802,41 +531,22 @@ public class FmPricingServiceImpl implements IPricingService {
              *
              * Therefore outletId MUST be row[4].
              */
-            Integer outletId =
-                    ((Number) row[4]).intValue();
+            Integer outletId = ((Number) row[4]).intValue();
 
-            BigDecimal merchantPrice =
-                    toBigDecimal(row[2]);
+            BigDecimal merchantPrice = toBigDecimal(row[2]);
 
-            Integer outletCategoryId =
-                    ((Number) row[3]).intValue();
+            Integer outletCategoryId = ((Number) row[3]).intValue();
 
             if (merchantPrice == null) {
 
-                throw new PricingException(
-                        "Merchant price cannot be null"
-                                + " | productId="
-                                + productId
-                                + " | outletId="
-                                + outletId
-                );
+                throw new PricingException("Merchant price cannot be null" + " | productId=" + productId + " | outletId=" + outletId);
             }
 
-            merchantPrice =
-                    merchantPrice.setScale(
-                            PRICE_SCALE,
-                            RoundingMode.HALF_UP
-                    );
+            merchantPrice = merchantPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
 
-            PricingKey productKey =
-                    new PricingKey(
-                            productId,
-                            outletCategoryId,
-                            null
-                    );
+            PricingKey productKey = new PricingKey(productId, outletCategoryId, null);
 
-            FmProductOnlinePricing existingProductPricing =
-                    existingPricingMap.get(productKey);
+            FmProductOnlinePricing existingProductPricing = existingPricingMap.get(productKey);
 
             /*
              * ------------------------------------------------------
@@ -852,19 +562,14 @@ public class FmPricingServiceImpl implements IPricingService {
 
             } else {
 
-                oldPrice =
-                        existingProductPricing.getOnlinePrice();
+                oldPrice = existingProductPricing.getOnlinePrice();
 
                 if (oldPrice == null) {
                     oldPrice = BigDecimal.ZERO;
                 }
             }
 
-            oldPrice =
-                    oldPrice.setScale(
-                            PRICE_SCALE,
-                            RoundingMode.HALF_UP
-                    );
+            oldPrice = oldPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
 
             /*
              * ------------------------------------------------------
@@ -880,11 +585,7 @@ public class FmPricingServiceImpl implements IPricingService {
              * ------------------------------------------------------
              */
 
-            BigDecimal basePrice =
-                    resolveBasePrice(
-                            merchantPrice,
-                            oldPrice
-                    );
+            BigDecimal basePrice = resolveBasePrice(merchantPrice, oldPrice);
 
             /*
              * ------------------------------------------------------
@@ -892,26 +593,9 @@ public class FmPricingServiceImpl implements IPricingService {
              * ------------------------------------------------------
              */
 
-            BigDecimal newPrice =
-                    calculateFinalPrice(
-                            basePrice,
-                            dto.getPriceModel(),
-                            dto.getValue(),
-                            dto.getOperationType()
-                    );
+            BigDecimal newPrice = calculateFinalPrice(basePrice, dto.getPriceModel(), dto.getValue(), dto.getOperationType());
 
-            log.info(
-                    "PRODUCT PRICE | outletId={} | productId={} | merchantPrice={} | oldOnlinePrice={} | basePrice={} | priceModel={} | value={} | operationType={} | newOnlinePrice={}",
-                    outletId,
-                    productId,
-                    merchantPrice,
-                    oldPrice,
-                    basePrice,
-                    dto.getPriceModel(),
-                    dto.getValue(),
-                    dto.getOperationType(),
-                    newPrice
-            );
+            log.info("PRODUCT PRICE | outletId={} | productId={} | merchantPrice={} | oldOnlinePrice={} | basePrice={} | priceModel={} | value={} | operationType={} | newOnlinePrice={}", outletId, productId, merchantPrice, oldPrice, basePrice, dto.getPriceModel(), dto.getValue(), dto.getOperationType(), newPrice);
 
             /*
              * ------------------------------------------------------
@@ -919,15 +603,9 @@ public class FmPricingServiceImpl implements IPricingService {
              * ------------------------------------------------------
              */
 
-            if (existingProductPricing != null &&
-                    oldPrice.compareTo(newPrice) == 0) {
+            if (existingProductPricing != null && oldPrice.compareTo(newPrice) == 0) {
 
-                log.info(
-                        "BULK PRICE | Price unchanged | outletId={} | productId={} | price={}",
-                        outletId,
-                        productId,
-                        oldPrice
-                );
+                log.info("BULK PRICE | Price unchanged | outletId={} | productId={} | price={}", outletId, productId, oldPrice);
 
                 skippedCount++;
                 continue;
@@ -941,16 +619,9 @@ public class FmPricingServiceImpl implements IPricingService {
 
             if (existingProductPricing != null) {
 
-                updateEntity(
-                        existingProductPricing,
-                        newPrice,
-                        changeTime,
-                        isApproved
-                );
+                updateEntity(existingProductPricing, newPrice, changeTime, isApproved);
 
-                pricingEntitiesToSave.add(
-                        existingProductPricing
-                );
+                pricingEntitiesToSave.add(existingProductPricing);
 
                 updateCount++;
 
@@ -962,42 +633,24 @@ public class FmPricingServiceImpl implements IPricingService {
                  * --------------------------------------------------
                  */
 
-                FmProductOnlinePricing newPricing =
-                        pricingMapper.toEntity(
-                                productId,
-                                outletCategoryId,
-                                null,
-                                newPrice
-                        );
+                FmProductOnlinePricing newPricing = pricingMapper.toEntity(productId, outletCategoryId, null, newPrice);
 
                 newPricing.setProductVariantId(null);
 
-                newPricing.setOnlinePrice(
-                        newPrice
-                );
+                newPricing.setOnlinePrice(newPrice);
 
-                newPricing.setIsApproved(
-                        isApproved
-                );
+                newPricing.setIsApproved(isApproved);
 
-                newPricing.setCreatedAt(
-                        changeTime
-                );
+                newPricing.setCreatedAt(changeTime);
 
-                newPricing.setCreatedBy(
-                        FmAppConstants.DEFAULT_CREATED_BY
-                );
+                newPricing.setCreatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
                 if (isApproved) {
 
-                    newPricing.setApprovedBy(
-                            FmAppConstants.DEFAULT_CREATED_BY
-                    );
+                    newPricing.setApprovedBy(FmAppConstants.DEFAULT_CREATED_BY);
                 }
 
-                pricingEntitiesToSave.add(
-                        newPricing
-                );
+                pricingEntitiesToSave.add(newPricing);
 
                 insertCount++;
             }
@@ -1008,17 +661,7 @@ public class FmPricingServiceImpl implements IPricingService {
              * ------------------------------------------------------
              */
 
-            historyEntitiesToSave.add(
-                    buildPriceHistory(
-                            dto,
-                            outletId,
-                            productId,
-                            null,
-                            oldPrice,
-                            newPrice,
-                            changeTime
-                    )
-            );
+            historyEntitiesToSave.add(buildPriceHistory(dto, outletId, productId, null, oldPrice, newPrice, changeTime));
 
             productCount++;
         }
@@ -1032,16 +675,9 @@ public class FmPricingServiceImpl implements IPricingService {
 
         if (!pricingEntitiesToSave.isEmpty()) {
 
-            pricingRepo.saveAll(
-                    pricingEntitiesToSave
-            );
+            pricingRepo.saveAll(pricingEntitiesToSave);
 
-            log.info(
-                    "BULK PRICE | Pricing persisted | total={} | inserts={} | updates={}",
-                    pricingEntitiesToSave.size(),
-                    insertCount,
-                    updateCount
-            );
+            log.info("BULK PRICE | Pricing persisted | total={} | inserts={} | updates={}", pricingEntitiesToSave.size(), insertCount, updateCount);
         }
 
         /*
@@ -1053,14 +689,9 @@ public class FmPricingServiceImpl implements IPricingService {
 
         if (!historyEntitiesToSave.isEmpty()) {
 
-            priceHistoryRepository.saveAll(
-                    historyEntitiesToSave
-            );
+            priceHistoryRepository.saveAll(historyEntitiesToSave);
 
-            log.info(
-                    "BULK PRICE | History persisted | total={}",
-                    historyEntitiesToSave.size()
-            );
+            log.info("BULK PRICE | History persisted | total={}", historyEntitiesToSave.size());
         }
 
         /*
@@ -1072,18 +703,12 @@ public class FmPricingServiceImpl implements IPricingService {
 
         if (!pricingEntitiesToSave.isEmpty()) {
 
-            for (Integer outletId :
-                    dto.getOutletIds()) {
+            for (Integer outletId : dto.getOutletIds()) {
 
-                cacheInvalidateService.invalidateCache(
-                        outletId
-                );
+                cacheInvalidateService.invalidateCache(outletId);
             }
 
-            log.info(
-                    "BULK PRICE | Cache invalidated | outlets={}",
-                    dto.getOutletIds()
-            );
+            log.info("BULK PRICE | Cache invalidated | outlets={}", dto.getOutletIds());
         }
 
         /*
@@ -1095,24 +720,123 @@ public class FmPricingServiceImpl implements IPricingService {
 
         if (!isApproved) {
 
-            outletRepo.approveOutlets(
-                    dto.getOutletIds()
-            );
+            outletRepo.approveOutlets(dto.getOutletIds());
 
-            log.info(
-                    "BULK PRICE | Outlets approved | outlets={}",
-                    dto.getOutletIds()
-            );
+            log.info("BULK PRICE | Outlets approved | outlets={}", dto.getOutletIds());
         }
 
-        log.info(
-                "BULK PRICE END | processed={} | inserts={} | updates={} | skipped={} | history={}",
-                productCount,
-                insertCount,
-                updateCount,
-                skippedCount,
-                historyEntitiesToSave.size()
-        );
+        log.info("BULK PRICE END | processed={} | inserts={} | updates={} | skipped={} | history={}", productCount, insertCount, updateCount, skippedCount, historyEntitiesToSave.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FmCurrentOnlinePriceResponse> getCurrentOnlinePrices(FmCurrentOnlinePriceRequest request) {
+
+        log.info("[CURRENT-ONLINE-PRICE] START | outletId={} | itemCount={}", request.getOutletId(), request.getItems().size());
+
+        /*
+         * ============================================================
+         * 1. COLLECT UNIQUE PRODUCT IDS
+         * ============================================================
+         */
+        List<Integer> productIds = request.getItems().stream().map(FmCurrentOnlinePriceItemRequest::getProductId).distinct().toList();
+
+        /*
+         * ============================================================
+         * 2. ONE DB QUERY
+         *
+         * Returns:
+         * [0] product_id
+         * [1] product_variant_id
+         * [2] online_price
+         * [3] product_name
+         * [4] image_link
+         * ============================================================
+         */
+        List<Object[]> pricingRows = pricingRepo.findCurrentOnlinePrices(request.getOutletId(), productIds);
+
+        /*
+         * ============================================================
+         * 3. BUILD MAP
+         * ============================================================
+         */
+        Map<String, FmCurrentOnlinePriceResponse> priceMap = new HashMap<>();
+
+        for (Object[] row : pricingRows) {
+
+            Integer productId = ((Number) row[0]).intValue();
+
+            Integer variantOptionId = row[1] != null ? ((Number) row[1]).intValue() : null;
+
+            BigDecimal onlinePrice = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+
+            String productName = row[3] != null ? row[3].toString() : null;
+
+            String productImage = row[4] != null ? row[4].toString() : null;
+
+            String key = buildPriceKey(productId, variantOptionId);
+
+            FmCurrentOnlinePriceResponse response = new FmCurrentOnlinePriceResponse();
+
+            response.setProductId(productId);
+            response.setVariantOptionId(variantOptionId);
+            response.setProductName(productName);
+            response.setProductImage(productImage);
+            response.setOnlinePrice(onlinePrice);
+            response.setAvailable(true);
+
+            priceMap.put(key, response);
+        }
+
+        /*
+         * ============================================================
+         * 4. BUILD RESPONSE IN REQUEST ORDER
+         * ============================================================
+         */
+        List<FmCurrentOnlinePriceResponse> response = new ArrayList<>();
+
+        for (FmCurrentOnlinePriceItemRequest item : request.getItems()) {
+
+            Integer productId = item.getProductId();
+
+            Integer variantOptionId = item.getVariantOptionId();
+
+            String key = buildPriceKey(productId, variantOptionId);
+
+            FmCurrentOnlinePriceResponse currentPrice = priceMap.get(key);
+
+            /*
+             * ========================================================
+             * PRICE NOT FOUND
+             * ========================================================
+             */
+            if (currentPrice == null) {
+
+                FmCurrentOnlinePriceResponse unavailable = new FmCurrentOnlinePriceResponse();
+
+                unavailable.setProductId(productId);
+                unavailable.setVariantOptionId(variantOptionId);
+                unavailable.setProductName(null);
+                unavailable.setProductImage(null);
+                unavailable.setOnlinePrice(BigDecimal.ZERO);
+                unavailable.setAvailable(false);
+
+                response.add(unavailable);
+
+                continue;
+            }
+
+            response.add(currentPrice);
+        }
+
+        log.info("[CURRENT-ONLINE-PRICE] SUCCESS | outletId={} | requested={} | returned={}", request.getOutletId(), request.getItems().size(), response.size());
+
+        return response;
+    }
+
+    private String buildPriceKey(Integer productId, Integer variantOptionId) {
+
+        return productId + "_" + (variantOptionId == null ? "NULL" : variantOptionId);
     }
 
 
@@ -1120,36 +844,19 @@ public class FmPricingServiceImpl implements IPricingService {
     // UPDATE EXISTING ONLINE PRICING ENTITY
     // ============================================================
 
-    private void updateEntity(
-            FmProductOnlinePricing entity,
-            BigDecimal price,
-            LocalDateTime changeTime,
-            boolean isApproved) {
+    private void updateEntity(FmProductOnlinePricing entity, BigDecimal price, LocalDateTime changeTime, boolean isApproved) {
 
-        entity.setOnlinePrice(
-                price.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                )
-        );
+        entity.setOnlinePrice(price.setScale(PRICE_SCALE, RoundingMode.HALF_UP));
 
-        entity.setUpdatedAt(
-                changeTime
-        );
+        entity.setUpdatedAt(changeTime);
 
-        entity.setUpdatedBy(
-                FmAppConstants.DEFAULT_CREATED_BY
-        );
+        entity.setUpdatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-        entity.setIsApproved(
-                isApproved
-        );
+        entity.setIsApproved(isApproved);
 
         if (isApproved) {
 
-            entity.setApprovedBy(
-                    FmAppConstants.DEFAULT_CREATED_BY
-            );
+            entity.setApprovedBy(FmAppConstants.DEFAULT_CREATED_BY);
         }
     }
 
@@ -1158,22 +865,14 @@ public class FmPricingServiceImpl implements IPricingService {
     // RESOLVE BASE PRICE
     // ============================================================
 
-    private BigDecimal resolveBasePrice(
-            BigDecimal merchantPrice,
-            BigDecimal existingOnlinePrice) {
+    private BigDecimal resolveBasePrice(BigDecimal merchantPrice, BigDecimal existingOnlinePrice) {
 
         if (merchantPrice == null) {
 
-            throw new PricingException(
-                    "Merchant price cannot be null"
-            );
+            throw new PricingException("Merchant price cannot be null");
         }
 
-        merchantPrice =
-                merchantPrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                );
+        merchantPrice = merchantPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
 
         /*
          * FIRST TIME:
@@ -1182,10 +881,7 @@ public class FmPricingServiceImpl implements IPricingService {
          *
          * Use merchant price.
          */
-        if (existingOnlinePrice == null ||
-                existingOnlinePrice.compareTo(
-                        BigDecimal.ZERO
-                ) <= 0) {
+        if (existingOnlinePrice == null || existingOnlinePrice.compareTo(BigDecimal.ZERO) <= 0) {
 
             return merchantPrice;
         }
@@ -1195,10 +891,7 @@ public class FmPricingServiceImpl implements IPricingService {
          *
          * Use current online price.
          */
-        return existingOnlinePrice.setScale(
-                PRICE_SCALE,
-                RoundingMode.HALF_UP
-        );
+        return existingOnlinePrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
     }
 
 
@@ -1206,77 +899,49 @@ public class FmPricingServiceImpl implements IPricingService {
     // BULK REQUEST VALIDATION
     // ============================================================
 
-    private void validateRequest(
-            FmBulkPriceUpdateRequestDto dto) {
+    private void validateRequest(FmBulkPriceUpdateRequestDto dto) {
 
         if (dto == null) {
 
-            throw new PricingException(
-                    "Bulk pricing request cannot be null"
-            );
+            throw new PricingException("Bulk pricing request cannot be null");
         }
 
-        if (dto.getOutletIds() == null ||
-                dto.getOutletIds().isEmpty()) {
+        if (dto.getOutletIds() == null || dto.getOutletIds().isEmpty()) {
 
-            throw new PricingException(
-                    "OutletIds cannot be empty"
-            );
+            throw new PricingException("OutletIds cannot be empty");
         }
 
-        for (Integer outletId :
-                dto.getOutletIds()) {
+        for (Integer outletId : dto.getOutletIds()) {
 
-            if (outletId == null ||
-                    outletId <= 0) {
+            if (outletId == null || outletId <= 0) {
 
-                throw new PricingException(
-                        "Invalid outlet id: "
-                                + outletId
-                );
+                throw new PricingException("Invalid outlet id: " + outletId);
             }
         }
 
-        if (dto.getPriceModel() == null ||
-                dto.getPriceModel().isBlank()) {
+        if (dto.getPriceModel() == null || dto.getPriceModel().isBlank()) {
 
-            throw new PricingException(
-                    "Price model cannot be empty"
-            );
+            throw new PricingException("Price model cannot be empty");
         }
 
-        if (dto.getValue() == null ||
-                dto.getValue().compareTo(
-                        BigDecimal.ZERO
-                ) <= 0) {
+        if (dto.getValue() == null || dto.getValue().compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new PricingException(
-                    "Price value must be greater than zero"
-            );
+            throw new PricingException("Price value must be greater than zero");
         }
 
-        if (dto.getOperationType() == null ||
-                dto.getOperationType().isBlank()) {
+        if (dto.getOperationType() == null || dto.getOperationType().isBlank()) {
 
-            throw new PricingException(
-                    "Operation type cannot be empty"
-            );
+            throw new PricingException("Operation type cannot be empty");
         }
 
-        if (dto.getPriceType() == null ||
-                dto.getPriceType().isBlank()) {
+        if (dto.getPriceType() == null || dto.getPriceType().isBlank()) {
 
-            throw new PricingException(
-                    "Price type cannot be empty"
-            );
+            throw new PricingException("Price type cannot be empty");
         }
 
-        if (dto.getLocationType() == null ||
-                dto.getLocationType().isBlank()) {
+        if (dto.getLocationType() == null || dto.getLocationType().isBlank()) {
 
-            throw new PricingException(
-                    "Location type cannot be empty"
-            );
+            throw new PricingException("Location type cannot be empty");
         }
     }
 
@@ -1292,28 +957,18 @@ public class FmPricingServiceImpl implements IPricingService {
     // PERCENTAGE
     // ============================================================
 
-    private void validateBulkPriceModel(
-            String priceModel) {
+    private void validateBulkPriceModel(String priceModel) {
 
-        if (priceModel == null ||
-                priceModel.isBlank()) {
+        if (priceModel == null || priceModel.isBlank()) {
 
-            throw new PricingException(
-                    "Price model cannot be empty"
-            );
+            throw new PricingException("Price model cannot be empty");
         }
 
-        if (!"FLAT".equalsIgnoreCase(priceModel) &&
-                !"PERCENTAGE".equalsIgnoreCase(priceModel)) {
+        if (!"FLAT".equalsIgnoreCase(priceModel) && !"PERCENTAGE".equalsIgnoreCase(priceModel)) {
 
-            log.error(
-                    "Invalid bulk priceModel | priceModel={}",
-                    priceModel
-            );
+            log.error("Invalid bulk priceModel | priceModel={}", priceModel);
 
-            throw new PricingException(
-                    "Invalid price model. Allowed values are FLAT or PERCENTAGE"
-            );
+            throw new PricingException("Invalid price model. Allowed values are FLAT or PERCENTAGE");
         }
     }
 
@@ -1330,8 +985,7 @@ public class FmPricingServiceImpl implements IPricingService {
     // DECREASE
     // ============================================================
 
-    private void validateBulkHistoryFields(
-            FmBulkPriceUpdateRequestDto dto) {
+    private void validateBulkHistoryFields(FmBulkPriceUpdateRequestDto dto) {
 
         /*
          * ----------------------------------------------------------
@@ -1343,22 +997,11 @@ public class FmPricingServiceImpl implements IPricingService {
 
         try {
 
-            priceType =
-                    FmPriceType.valueOf(
-                            dto.getPriceType()
-                                    .trim()
-                                    .toUpperCase()
-                    );
+            priceType = FmPriceType.valueOf(dto.getPriceType().trim().toUpperCase());
 
-        } catch (
-                NullPointerException |
-                IllegalArgumentException ex) {
+        } catch (NullPointerException | IllegalArgumentException ex) {
 
-            throw new PricingException(
-                    "Invalid price type: "
-                            + dto.getPriceType()
-                            + ". Allowed values are FLAT or PERCENTAGE"
-            );
+            throw new PricingException("Invalid price type: " + dto.getPriceType() + ". Allowed values are FLAT or PERCENTAGE");
         }
 
         /*
@@ -1367,15 +1010,9 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        if (!dto.getPriceModel()
-                .trim()
-                .equalsIgnoreCase(
-                        priceType.name()
-                )) {
+        if (!dto.getPriceModel().trim().equalsIgnoreCase(priceType.name())) {
 
-            throw new PricingException(
-                    "Price model and price type must be the same"
-            );
+            throw new PricingException("Price model and price type must be the same");
         }
 
         /*
@@ -1384,12 +1021,9 @@ public class FmPricingServiceImpl implements IPricingService {
          * ----------------------------------------------------------
          */
 
-        if (dto.getLocationType() == null ||
-                dto.getLocationType().isBlank()) {
+        if (dto.getLocationType() == null || dto.getLocationType().isBlank()) {
 
-            throw new PricingException(
-                    "Location type cannot be empty"
-            );
+            throw new PricingException("Location type cannot be empty");
         }
 
         /*
@@ -1402,34 +1036,16 @@ public class FmPricingServiceImpl implements IPricingService {
 
         try {
 
-            operationType =
-                    FmPriceHistoryOperationType.valueOf(
-                            dto.getOperationType()
-                                    .trim()
-                                    .toUpperCase()
-                    );
+            operationType = FmPriceHistoryOperationType.valueOf(dto.getOperationType().trim().toUpperCase());
 
-        } catch (
-                NullPointerException |
-                IllegalArgumentException ex) {
+        } catch (NullPointerException | IllegalArgumentException ex) {
 
-            throw new PricingException(
-                    "Invalid operation type: "
-                            + dto.getOperationType()
-                            + ". Allowed values are INCREASE or DECREASE"
-            );
+            throw new PricingException("Invalid operation type: " + dto.getOperationType() + ". Allowed values are INCREASE or DECREASE");
         }
 
-        if (operationType !=
-                FmPriceHistoryOperationType.INCREASE &&
-                operationType !=
-                        FmPriceHistoryOperationType.DECREASE) {
+        if (operationType != FmPriceHistoryOperationType.INCREASE && operationType != FmPriceHistoryOperationType.DECREASE) {
 
-            throw new PricingException(
-                    "Invalid bulk operation type: "
-                            + dto.getOperationType()
-                            + ". Allowed values are INCREASE or DECREASE"
-            );
+            throw new PricingException("Invalid bulk operation type: " + dto.getOperationType() + ". Allowed values are INCREASE or DECREASE");
         }
     }
 
@@ -1450,150 +1066,83 @@ public class FmPricingServiceImpl implements IPricingService {
     // Final price can NEVER be negative.
     // ============================================================
 
-    private BigDecimal calculateFinalPrice(
-            BigDecimal sourcePrice,
-            String priceModel,
-            BigDecimal value,
-            String operationType) {
+    private BigDecimal calculateFinalPrice(BigDecimal sourcePrice, String priceModel, BigDecimal value, String operationType) {
 
         if (sourcePrice == null) {
 
-            throw new PricingException(
-                    "Source price cannot be null"
-            );
+            throw new PricingException("Source price cannot be null");
         }
 
-        if (sourcePrice.compareTo(
-                BigDecimal.ZERO
-        ) < 0) {
+        if (sourcePrice.compareTo(BigDecimal.ZERO) < 0) {
 
-            throw new PricingException(
-                    "Source price cannot be negative"
-            );
+            throw new PricingException("Source price cannot be negative");
         }
 
-        if (value == null ||
-                value.compareTo(
-                        BigDecimal.ZERO
-                ) <= 0) {
+        if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new PricingException(
-                    "Price value must be greater than zero"
-            );
+            throw new PricingException("Price value must be greater than zero");
         }
 
-        if (priceModel == null ||
-                priceModel.isBlank()) {
+        if (priceModel == null || priceModel.isBlank()) {
 
-            throw new PricingException(
-                    "Price model cannot be empty"
-            );
+            throw new PricingException("Price model cannot be empty");
         }
 
-        if (operationType == null ||
-                operationType.isBlank()) {
+        if (operationType == null || operationType.isBlank()) {
 
-            throw new PricingException(
-                    "Operation type cannot be empty"
-            );
+            throw new PricingException("Operation type cannot be empty");
         }
 
-        BigDecimal source =
-                sourcePrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                );
+        BigDecimal source = sourcePrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
 
         BigDecimal finalPrice;
 
-        if ("FLAT".equalsIgnoreCase(
-                priceModel
-        )) {
+        if ("FLAT".equalsIgnoreCase(priceModel)) {
 
-            if ("INCREASE".equalsIgnoreCase(
-                    operationType
-            )) {
+            if ("INCREASE".equalsIgnoreCase(operationType)) {
 
-                finalPrice =
-                        source.add(value);
+                finalPrice = source.add(value);
 
-            } else if ("DECREASE".equalsIgnoreCase(
-                    operationType
-            )) {
+            } else if ("DECREASE".equalsIgnoreCase(operationType)) {
 
-                finalPrice =
-                        source.subtract(value);
+                finalPrice = source.subtract(value);
 
             } else {
 
-                throw new PricingException(
-                        "Unsupported operation type: "
-                                + operationType
-                );
+                throw new PricingException("Unsupported operation type: " + operationType);
             }
 
-        } else if ("PERCENTAGE".equalsIgnoreCase(
-                priceModel
-        )) {
+        } else if ("PERCENTAGE".equalsIgnoreCase(priceModel)) {
 
-            BigDecimal percentageAmount =
-                    source
-                            .multiply(value)
-                            .divide(
-                                    BigDecimal.valueOf(100),
-                                    PRICE_SCALE,
-                                    RoundingMode.HALF_UP
-                            );
+            BigDecimal percentageAmount = source.multiply(value).divide(BigDecimal.valueOf(100), PRICE_SCALE, RoundingMode.HALF_UP);
 
-            if ("INCREASE".equalsIgnoreCase(
-                    operationType
-            )) {
+            if ("INCREASE".equalsIgnoreCase(operationType)) {
 
-                finalPrice =
-                        source.add(
-                                percentageAmount
-                        );
+                finalPrice = source.add(percentageAmount);
 
-            } else if ("DECREASE".equalsIgnoreCase(
-                    operationType
-            )) {
+            } else if ("DECREASE".equalsIgnoreCase(operationType)) {
 
-                finalPrice =
-                        source.subtract(
-                                percentageAmount
-                        );
+                finalPrice = source.subtract(percentageAmount);
 
             } else {
 
-                throw new PricingException(
-                        "Unsupported operation type: "
-                                + operationType
-                );
+                throw new PricingException("Unsupported operation type: " + operationType);
             }
 
         } else {
 
-            throw new PricingException(
-                    "Unsupported price model: "
-                            + priceModel
-            );
+            throw new PricingException("Unsupported price model: " + priceModel);
         }
 
         /*
          * Never allow negative online price.
          */
-        if (finalPrice.compareTo(
-                BigDecimal.ZERO
-        ) < 0) {
+        if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
 
-            finalPrice =
-                    BigDecimal.ZERO;
+            finalPrice = BigDecimal.ZERO;
         }
 
-        return finalPrice.setScale(
-                PRICE_SCALE,
-                RoundingMode.HALF_UP
-        );
+        return finalPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
     }
 
 
@@ -1601,106 +1150,54 @@ public class FmPricingServiceImpl implements IPricingService {
     // BUILD BULK PRICE HISTORY
     // ============================================================
 
-    private FmProductPriceChangeHistory buildPriceHistory(
-            FmBulkPriceUpdateRequestDto dto,
-            Integer outletId,
-            Integer productId,
-            Integer productVariantId,
-            BigDecimal oldPrice,
-            BigDecimal newPrice,
-            LocalDateTime changeTime) {
+    private FmProductPriceChangeHistory buildPriceHistory(FmBulkPriceUpdateRequestDto dto, Integer outletId, Integer productId, Integer productVariantId, BigDecimal oldPrice, BigDecimal newPrice, LocalDateTime changeTime) {
 
-        FmProductPriceChangeHistory history =
-                new FmProductPriceChangeHistory();
+        FmProductPriceChangeHistory history = new FmProductPriceChangeHistory();
 
-        history.setOutletId(
-                outletId
-        );
+        history.setOutletId(outletId);
 
-        history.setProductId(
-                productId
-        );
+        history.setProductId(productId);
 
         /*
          * Bulk flow is product-level only.
          */
-        history.setProductVariantId(
-                productVariantId
-        );
+        history.setProductVariantId(productVariantId);
 
         /*
          * Convert request price type to enum.
          */
-        history.setPriceType(
-                FmPriceType.valueOf(
-                        dto.getPriceType()
-                                .trim()
-                                .toUpperCase()
-                )
-        );
+        history.setPriceType(FmPriceType.valueOf(dto.getPriceType().trim().toUpperCase()));
 
         /*
          * Bulk update is immediate.
          */
-        history.setStartDateTime(
-                null
-        );
+        history.setStartDateTime(null);
 
-        history.setEndDateTime(
-                null
-        );
+        history.setEndDateTime(null);
 
-        history.setOldPrice(
-                oldPrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                )
-        );
+        history.setOldPrice(oldPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP));
 
-        history.setNewPrice(
-                newPrice.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                )
-        );
+        history.setNewPrice(newPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP));
 
-        history.setOperationType(
-                FmPriceHistoryOperationType.valueOf(
-                        dto.getOperationType()
-                                .trim()
-                                .toUpperCase()
-                )
-        );
+        history.setOperationType(FmPriceHistoryOperationType.valueOf(dto.getOperationType().trim().toUpperCase()));
 
         /*
          * Location.
          */
-        history.setLocationId(
-                outletId
-        );
+        history.setLocationId(outletId);
 
-        history.setLocationType(
-                dto.getLocationType()
-        );
+        history.setLocationType(dto.getLocationType());
 
         /*
          * Audit.
          */
-        history.setCreatedBy(
-                FmAppConstants.DEFAULT_CREATED_BY
-        );
+        history.setCreatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-        history.setCreatedAt(
-                changeTime
-        );
+        history.setCreatedAt(changeTime);
 
-        history.setUpdatedBy(
-                FmAppConstants.DEFAULT_CREATED_BY
-        );
+        history.setUpdatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-        history.setUpdatedAt(
-                changeTime
-        );
+        history.setUpdatedAt(changeTime);
 
         return history;
     }
@@ -1710,103 +1207,47 @@ public class FmPricingServiceImpl implements IPricingService {
     // UPSERT PRICE
     // ============================================================
 
-    private void upsertPrice(
-            Integer productId,
-            Integer outletCategoryId,
-            Integer productVariantId,
-            BigDecimal price) {
+    private void upsertPrice(Integer productId, Integer outletCategoryId, Integer productVariantId, BigDecimal price) {
 
         if (productId == null) {
-            throw new PricingException(
-                    "ProductId cannot be null"
-            );
+            throw new PricingException("ProductId cannot be null");
         }
 
         if (outletCategoryId == null) {
-            throw new PricingException(
-                    "OutletCategoryId cannot be null"
-            );
+            throw new PricingException("OutletCategoryId cannot be null");
         }
 
         if (price == null) {
-            throw new PricingException(
-                    "Price cannot be null"
-            );
+            throw new PricingException("Price cannot be null");
         }
 
-        price =
-                price.setScale(
-                        PRICE_SCALE,
-                        RoundingMode.HALF_UP
-                );
+        price = price.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
 
-        int exists =
-                pricingRepo.existsRow(
-                        productId,
-                        outletCategoryId,
-                        productVariantId
-                );
+        int exists = pricingRepo.existsRow(productId, outletCategoryId, productVariantId);
 
         if (exists > 0) {
 
-            pricingRepo.updatePrice(
-                    productId,
-                    outletCategoryId,
-                    productVariantId,
-                    price,
-                    FmAppConstants.DEFAULT_CREATED_BY,
-                    FmAppConstants.DEFAULT_CREATED_BY
-            );
+            pricingRepo.updatePrice(productId, outletCategoryId, productVariantId, price, FmAppConstants.DEFAULT_CREATED_BY, FmAppConstants.DEFAULT_CREATED_BY);
 
-            log.info(
-                    "Updated online price | productId={} | outletCategoryId={} | variantId={} | price={}",
-                    productId,
-                    outletCategoryId,
-                    productVariantId,
-                    price
-            );
+            log.info("Updated online price | productId={} | outletCategoryId={} | variantId={} | price={}", productId, outletCategoryId, productVariantId, price);
 
         } else {
 
-            FmProductOnlinePricing entity =
-                    pricingMapper.toEntity(
-                            productId,
-                            outletCategoryId,
-                            productVariantId,
-                            price
-                    );
+            FmProductOnlinePricing entity = pricingMapper.toEntity(productId, outletCategoryId, productVariantId, price);
 
-            entity.setOnlinePrice(
-                    price
-            );
+            entity.setOnlinePrice(price);
 
-            entity.setCreatedAt(
-                    LocalDateTime.now()
-            );
+            entity.setCreatedAt(LocalDateTime.now());
 
-            entity.setCreatedBy(
-                    FmAppConstants.DEFAULT_CREATED_BY
-            );
+            entity.setCreatedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-            entity.setIsApproved(
-                    true
-            );
+            entity.setIsApproved(true);
 
-            entity.setApprovedBy(
-                    FmAppConstants.DEFAULT_CREATED_BY
-            );
+            entity.setApprovedBy(FmAppConstants.DEFAULT_CREATED_BY);
 
-            pricingRepo.save(
-                    entity
-            );
+            pricingRepo.save(entity);
 
-            log.info(
-                    "Inserted online price | productId={} | outletCategoryId={} | variantId={} | price={}",
-                    productId,
-                    outletCategoryId,
-                    productVariantId,
-                    price
-            );
+            log.info("Inserted online price | productId={} | outletCategoryId={} | variantId={} | price={}", productId, outletCategoryId, productVariantId, price);
         }
     }
 
@@ -1817,68 +1258,39 @@ public class FmPricingServiceImpl implements IPricingService {
 
     @Override
     @Transactional(readOnly = true)
-    public FmProductDetailResponseDto getProductById(
-            Integer productId) {
+    public FmProductDetailResponseDto getProductById(Integer productId) {
 
-        log.info(
-                "SERVICE START | GET_PRODUCT | productId={}",
-                productId
-        );
+        log.info("SERVICE START | GET_PRODUCT | productId={}", productId);
 
-        if (productId == null ||
-                productId <= 0) {
+        if (productId == null || productId <= 0) {
 
-            throw new PricingException(
-                    "Invalid product ID"
-            );
+            throw new PricingException("Invalid product ID");
         }
 
-        FmProduct product =
-                productRepo.findById(productId)
-                        .orElseThrow(() -> {
+        FmProduct product = productRepo.findById(productId).orElseThrow(() -> {
 
-                            log.error(
-                                    "PRODUCT_NOT_FOUND | productId={}",
-                                    productId
-                            );
+            log.error("PRODUCT_NOT_FOUND | productId={}", productId);
 
-                            return new ResourceNotFoundException(
-                                    "Product not found with id: "
-                                            + productId
-                            );
-                        });
+            return new ResourceNotFoundException("Product not found with id: " + productId);
+        });
 
-        FmProductDetailResponseDto response =
-                productMapper.toDto(product);
+        FmProductDetailResponseDto response = productMapper.toDto(product);
 
         /*
          * Fetch latest approved product-level online price.
          */
-        FmProductOnlinePricing pricing =
-                pricingRepo
-                        .findTopByProductIdAndIsApprovedOrderByCreatedAtDesc(
-                                productId,
-                                true
-                        )
-                        .orElse(null);
+        FmProductOnlinePricing pricing = pricingRepo.findTopByProductIdAndIsApprovedOrderByCreatedAtDesc(productId, true).orElse(null);
 
         if (pricing != null) {
 
-            response.setOnlinePrice(
-                    pricing.getOnlinePrice()
-            );
+            response.setOnlinePrice(pricing.getOnlinePrice());
 
         } else {
 
-            response.setOnlinePrice(
-                    product.getMerchantPrice()
-            );
+            response.setOnlinePrice(product.getMerchantPrice());
         }
 
-        log.info(
-                "SERVICE END | GET_PRODUCT_SUCCESS | productId={}",
-                productId
-        );
+        log.info("SERVICE END | GET_PRODUCT_SUCCESS | productId={}", productId);
 
         return response;
     }
@@ -1890,117 +1302,57 @@ public class FmPricingServiceImpl implements IPricingService {
 
     @Override
     @Transactional(readOnly = true)
-    public FmProductDetailResponseDto getProductByIdAndOutletId(
-            Integer productId,
-            Integer outletId) {
+    public FmProductDetailResponseDto getProductByIdAndOutletId(Integer productId, Integer outletId) {
 
-        log.info(
-                "SERVICE START | GET_PRODUCT_BY_OUTLET | productId={} | outletId={}",
-                productId,
-                outletId
-        );
+        log.info("SERVICE START | GET_PRODUCT_BY_OUTLET | productId={} | outletId={}", productId, outletId);
 
-        if (productId == null ||
-                productId <= 0) {
+        if (productId == null || productId <= 0) {
 
-            throw new PricingException(
-                    "Invalid product ID"
-            );
+            throw new PricingException("Invalid product ID");
         }
 
-        if (outletId == null ||
-                outletId <= 0) {
+        if (outletId == null || outletId <= 0) {
 
-            throw new PricingException(
-                    "Invalid outlet ID"
-            );
+            throw new PricingException("Invalid outlet ID");
         }
 
-        FmProductOnlinePricing pricing =
-                pricingRepo
-                        .findByProductIdAndOutletId(
-                                productId,
-                                outletId
-                        )
-                        .orElseThrow(() -> {
+        FmProductOnlinePricing pricing = pricingRepo.findByProductIdAndOutletId(productId, outletId).orElseThrow(() -> {
 
-                            log.warn(
-                                    "PRODUCT_NOT_AVAILABLE_FOR_OUTLET | productId={} | outletId={}",
-                                    productId,
-                                    outletId
-                            );
+            log.warn("PRODUCT_NOT_AVAILABLE_FOR_OUTLET | productId={} | outletId={}", productId, outletId);
 
-                            return new PricingException(
-                                    "Product not available for outlet"
-                            );
-                        });
+            return new PricingException("Product not available for outlet");
+        });
 
-        FmProduct product =
-                productRepo.findById(productId)
-                        .orElseThrow(() ->
-                                new PricingException(
-                                        "Product not found"
-                                )
-                        );
+        FmProduct product = productRepo.findById(productId).orElseThrow(() -> new PricingException("Product not found"));
 
-        if (!"Y".equalsIgnoreCase(
-                product.getIsActive()
-        )) {
+        if (!"Y".equalsIgnoreCase(product.getIsActive())) {
 
-            throw new PricingException(
-                    "Product is inactive"
-            );
+            throw new PricingException("Product is inactive");
         }
 
-        FmProductDetailResponseDto dto =
-                new FmProductDetailResponseDto();
+        FmProductDetailResponseDto dto = new FmProductDetailResponseDto();
 
-        dto.setProductId(
-                product.getProductId()
-        );
+        dto.setProductId(product.getProductId());
 
-        dto.setOutletCategoryId(
-                pricing.getOutletCategoryId()
-        );
+        dto.setOutletCategoryId(pricing.getOutletCategoryId());
 
-        dto.setProductName(
-                product.getProductName()
-        );
+        dto.setProductName(product.getProductName());
 
-        dto.setDescription(
-                product.getDescription()
-        );
+        dto.setDescription(product.getDescription());
 
-        dto.setMerchantPrice(
-                product.getMerchantPrice()
-        );
+        dto.setMerchantPrice(product.getMerchantPrice());
 
-        dto.setOnlinePrice(
-                pricing.getOnlinePrice()
-        );
+        dto.setOnlinePrice(pricing.getOnlinePrice());
 
-        dto.setAvailable(
-                true
-        );
+        dto.setAvailable(true);
 
-        dto.setIsVeg(
-                product.getIsVeg()
-        );
+        dto.setIsVeg(product.getIsVeg());
 
-        dto.setHasProductVariants(
-                product.getHasProductVariants()
-        );
+        dto.setHasProductVariants(product.getHasProductVariants());
 
-        dto.setImageLink(
-                product.getImageLink()
-        );
+        dto.setImageLink(product.getImageLink());
 
-        log.info(
-                "SERVICE SUCCESS | GET_PRODUCT_BY_OUTLET | productId={} | outletId={} | onlinePrice={}",
-                productId,
-                outletId,
-                pricing.getOnlinePrice()
-        );
+        log.info("SERVICE SUCCESS | GET_PRODUCT_BY_OUTLET | productId={} | outletId={} | onlinePrice={}", productId, outletId, pricing.getOnlinePrice());
 
         return dto;
     }
@@ -2010,19 +1362,7 @@ public class FmPricingServiceImpl implements IPricingService {
     // COMPOSITE KEY
     // ============================================================
 
-    private record PricingKey(
-            Integer productId,
-            Integer outletCategoryId,
-            Integer variantId) {
-    }
-
-
-    // ============================================================
-    // CONVERT DATABASE VALUE TO BIG DECIMAL
-    // ============================================================
-
-    private BigDecimal toBigDecimal(
-            Object value) {
+    private BigDecimal toBigDecimal(Object value) {
 
         if (value == null) {
             return null;
@@ -2033,23 +1373,24 @@ public class FmPricingServiceImpl implements IPricingService {
         }
 
         if (value instanceof Number) {
-            return new BigDecimal(
-                    value.toString()
-            );
+            return new BigDecimal(value.toString());
         }
 
         try {
 
-            return new BigDecimal(
-                    value.toString()
-            );
+            return new BigDecimal(value.toString());
 
         } catch (NumberFormatException ex) {
 
-            throw new PricingException(
-                    "Invalid numeric price value: "
-                            + value
-            );
+            throw new PricingException("Invalid numeric price value: " + value);
         }
+    }
+
+
+    // ============================================================
+    // CONVERT DATABASE VALUE TO BIG DECIMAL
+    // ============================================================
+
+    private record PricingKey(Integer productId, Integer outletCategoryId, Integer variantId) {
     }
 }

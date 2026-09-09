@@ -56,4 +56,8 @@ public interface IPromotionPlanService {
 
     PromotionScheduleDetailsDto getPromotionScheduleDetails(
             Integer promotionPlanId);
+
+    MerchantPromotionDetailsDto getMerchantPromotionDetails(
+            Integer promotionPlanId
+    );
 }

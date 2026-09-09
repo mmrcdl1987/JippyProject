@@ -11,9 +11,7 @@ public interface DivPaymentService {
     DivPaymentInitiateResponse initiatePayment(DivPlaceOrderRequestDto placeOrderRequestDto)
             throws RazorpayException;
 
-    boolean verifyPaymentSignature(PaymentVerifyRequestDto request);
-
-    String orderRefund(String orderId, String reason);
+    boolean verifyAndCompletePayment(PaymentVerifyRequestDto request);
 
     ResponseEntity<String> paytmPaymentCallback(String orderId, HttpServletRequest request);
 }

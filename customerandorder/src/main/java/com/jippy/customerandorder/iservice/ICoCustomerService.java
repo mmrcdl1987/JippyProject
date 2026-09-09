@@ -34,6 +34,52 @@ public interface ICoCustomerService {
     CoCustomerWalletResponseDto getCustomerWallet(Integer customerId);
 
     List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId);
+
     List<CoProfileIncompleteCustomer> getProfileIncompleteCustomers();
 
+    // ================================================================
+    // UPDATE CUSTOMER PROFILE PICTURE
+    // ================================================================
+
+    String updateCustomerProfilePic(CustomerProfilePicDto customerDto);
+
+    /**
+     * Fetches complete order flow counts based on order status.
+     *
+     * @return complete order flow counts
+     */
+    CoCompleteOrdersFlowCountsDto getCompleteOrdersFlowCounts();
+
+    /**
+     * Fetches order details based on order status.
+     *
+     * @param orderStatus order status used for filtering
+     * @return list of matching order details
+     */
+    List<CoOrderDetailsByOrderStatusDto> getCompleteOrdersDetailsByOrderStatus
+        (String orderStatus);
+
+    //    =================================================================================
+//    =================================================================================
+    CoOrderCompleteDetailsResponseDto getOrderCompleteDetails(String orderId);
+
+//    ====================================================================================
+    /**
+     * Fetches total, completed and rejected order counts
+     * for a merchant, outlet or driver.
+     *
+     * <p>
+     * Exactly one identifier must be provided.
+     *
+     * @param merchantId merchant ID
+     * @param outletId outlet ID
+     * @param driverId driver ID
+     * @return order flow count response
+     */
+    CoOrderFlowCountForMerchantOutletOrDriverDto
+    getOrderFlowCountForMerchantOrOutletOrDriver(
+            Integer merchantId,
+            Integer outletId,
+            Integer driverId
+    );
 }

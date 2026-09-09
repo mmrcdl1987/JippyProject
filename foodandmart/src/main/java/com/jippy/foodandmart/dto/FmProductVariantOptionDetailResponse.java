@@ -22,4 +22,5 @@ public class FmProductVariantOptionDetailResponse {
     private String priceType;
 
     private BigDecimal variantPrice;
+
 }

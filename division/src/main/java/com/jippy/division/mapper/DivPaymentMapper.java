@@ -5,9 +5,12 @@ import com.jippy.division.dto.DivOrderDto;
 import com.jippy.division.dto.DivPlaceOrderRequestDto;
 import com.jippy.division.entity.OrderRefund;
 import com.jippy.division.entity.PaymentTransaction;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+@Component
 public class DivPaymentMapper {
 
     public static PaymentTransaction mapToTransactions(DivOrderDto orderDto,
@@ -24,16 +27,16 @@ public class DivPaymentMapper {
         return transaction;
     }
 
-    public static OrderRefund mapToRefundOrder(DivOrderDto orderDto,
-            PaymentTransaction tx, String rzpRefundId, String reason) {
+    public static OrderRefund mapToRefundOrder(String orderId,
+            PaymentTransaction tx, String gatewayRefundId, String reason,UUID refundTxnId) {
 
         OrderRefund orderRefund = new OrderRefund();
-        orderRefund.setApplicationOrderId(orderDto.getOrderId());
+        orderRefund.setApplicationOrderId(orderId);
         orderRefund.setPaymentTransaction(tx);
-        orderRefund.setGatewayRefundId(rzpRefundId);
+        orderRefund.setRefundTransactionsId(refundTxnId);
         orderRefund.setAmountInPaise(tx.getAmount());
-        orderRefund.setStatus(DivAppConstants.PAYMENT_STATUS_REFUND_INITIATED);
         orderRefund.setReason(reason);
+        orderRefund.setGatewayRefundId(gatewayRefundId);
 
         return orderRefund;
     }

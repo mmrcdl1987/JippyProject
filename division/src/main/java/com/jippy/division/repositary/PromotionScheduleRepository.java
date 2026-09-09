@@ -111,4 +111,151 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
             ORDER BY "startDateTime" DESC
             """, nativeQuery = true)
     List<DivActiveDiscountsProjection> getActiveDiscounts(@Param("now") LocalDateTime now);
+    @Query(value = """
+    SELECT
+        ps.promotion_schedule_id AS "promotionScheduleId",
+        ps.outlet_id AS "outletId",
+        ps.product_id AS "productId",
+        ps.source_type AS "sourceType",
+        ps.source_id AS "sourceId",
+
+        MIN(ps.start_date_time) AS "startDateTime",
+        MAX(ps.end_date_time) AS "endDateTime",
+
+        STRING_AGG(
+            DISTINCT CAST(pd.meal_type_slot_id AS text),
+            ','
+        ) AS "mealTypeSlotIdsStr",
+
+        c.coupon_code AS "couponCode",
+        c.usage_limit_per_user AS "usageLimitPerUser",
+
+        COALESCE(
+            c.min_order_value,
+            0.00
+        ) AS "minOrderValue",
+
+        COALESCE(
+            pdm.price_drop_value,
+            c.discount_value,
+            0.00
+        ) AS "discountAmount",
+
+        pml.price_model_name AS "priceModelName",
+
+        COALESCE(
+            cm.max_selection,
+            pdm.max_selection,
+            -1
+        ) AS "maxSelection",
+
+        cm.promotion_message AS "promotionMessage"
+
+    FROM jippy_division.promotion_schedules ps
+
+    LEFT JOIN jippy_division.coupon_mapping_outlets_products cm
+        ON ps.source_type = 'COUPON'
+        AND cm.coupon_mapping_id = ps.source_id
+
+    LEFT JOIN jippy_division.coupons c
+        ON c.coupon_id = cm.coupon_id
+
+    LEFT JOIN jippy_division.price_drop_mapping_outlets_products pdm
+        ON ps.source_type = 'PRICE_DROP'
+        AND pdm.price_drop_mapping_outlets_products_id = ps.source_id
+
+    LEFT JOIN jippy_division.price_model pml
+        ON pml.price_model_id = COALESCE(
+            c.price_model_id,
+            pdm.price_model_id
+        )
+
+    LEFT JOIN jippy_division.promotion_date pd
+        ON pd.promotion_date_id = COALESCE(
+            cm.promotion_date_id,
+            pdm.promotion_date_id
+        )
+
+    WHERE ps.source_type IN ('COUPON', 'PRICE_DROP')
+
+      AND ps.outlet_id = :outletId
+
+      AND ps.status = 'ACTIVE'
+
+      AND :now BETWEEN ps.start_date_time
+                   AND ps.end_date_time
+
+      AND (
+            pd.promotion_date_id IS NULL
+            OR :now BETWEEN pd.promotion_from_date
+                        AND pd.promotion_to_date
+      )
+
+      AND (
+            (
+                ps.source_type = 'PRICE_DROP'
+                AND :productIdsProvided = TRUE
+                AND ps.product_id IN (:productIds)
+            )
+
+            OR
+
+            (
+                ps.source_type = 'COUPON'
+                AND (
+                    ps.product_id IS NULL
+                    OR (
+                        :productIdsProvided = TRUE
+                        AND ps.product_id IN (:productIds)
+                    )
+                )
+            )
+      )
+
+    GROUP BY
+        ps.promotion_schedule_id,
+        ps.outlet_id,
+        ps.product_id,
+        ps.source_type,
+        ps.source_id,
+
+        c.coupon_code,
+        c.usage_limit_per_user,
+        c.min_order_value,
+        c.discount_value,
+
+        pdm.price_drop_value,
+
+        pml.price_model_name,
+
+        cm.max_selection,
+        pdm.max_selection,
+
+        cm.promotion_message
+
+    ORDER BY
+        MIN(ps.start_date_time) DESC
+    """, nativeQuery = true)
+    List<DivActiveDiscountsProjection> getActiveDiscountsByOutletAndProducts(
+            @Param("outletId") Integer outletId,
+            @Param("productIds") List<Integer> productIds,
+            @Param("productIdsProvided") boolean productIdsProvided,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("""
+        SELECT ps
+        FROM PromotionSchedule ps
+        WHERE ps.sourceType = :sourceType
+          AND ps.outletId = :outletId
+          AND ps.productId IN :productIds
+          AND ps.startDateTime <= :now
+          AND ps.endDateTime >= :now
+        """)
+    List<PromotionSchedule> findActiveMerchantPromotions(
+            @Param("sourceType") PromotionSourceType sourceType,
+            @Param("outletId") Integer outletId,
+            @Param("productIds") List<Integer> productIds,
+            @Param("now") LocalDateTime now
+    );
 }

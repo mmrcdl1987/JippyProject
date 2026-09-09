@@ -57,7 +57,7 @@ public interface FmProductVariantOptionRepository
     SELECT v
     FROM FmProductVariantOption v
     WHERE v.productId IN :productIds
-      AND v.isActive = true
+      AND v.isActive = 'Y'
     ORDER BY v.productId, v.productVariantOptionsId
     """)
     List<FmProductVariantOption> findActiveVariantsForProducts(

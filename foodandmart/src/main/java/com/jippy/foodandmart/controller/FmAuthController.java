@@ -31,6 +31,20 @@ public class FmAuthController {
         );
     }
 
+    @PostMapping("/resend-signup-otp")
+    public ResponseEntity<FmResponseDto> resendSignupOtp(
+            @Valid @RequestBody FmSendOtpRequestDto request) {
+
+        otpService.resendSignupOtp(request);
+
+        return ResponseEntity.ok(
+                new FmResponseDto(
+                        "SUCCESS",
+                        "OTP resent successfully."
+                )
+        );
+    }
+
     /**
      * Verify Signup OTP
      */
@@ -66,20 +80,6 @@ public class FmAuthController {
 
         return ResponseEntity.ok(
                 otpService.verifyCreateOutletOtp(request)
-        );
-    }
-
-    @PostMapping("/resend-signup-otp")
-    public ResponseEntity<FmResponseDto> resendSignupOtp(
-            @Valid @RequestBody FmSendOtpRequestDto request) {
-
-        otpService.resendSignupOtp(request);
-
-        return ResponseEntity.ok(
-                new FmResponseDto(
-                        "SUCCESS",
-                        "OTP resent successfully."
-                )
         );
     }
 

@@ -1,11 +1,17 @@
 package com.jippy.customerandorder.feignClients;
 
 import com.jippy.customerandorder.config.FeignClientConfig;
+import com.jippy.customerandorder.dto.CoDriverDetailsDto;
+import com.jippy.customerandorder.dto.CoDriverDetailsRequestDto;
 import com.jippy.customerandorder.dto.DeliveryChargeCalculationRequestDto;
 import com.jippy.customerandorder.dto.DeliveryChargeCalculationResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @FeignClient(name = "driver",configuration = FeignClientConfig.class)
 public interface DriverFeignClient {
@@ -26,4 +32,18 @@ public interface DriverFeignClient {
 //    @GetMapping("/api/driver/checkCustomerAddressWithCommunity")
 //    public ResponseEntity<Integer> checkCustomerAddressWithCommunity(@RequestParam Double latitude,
 //            @RequestParam Double longitude,@RequestParam Integer communityId);
+
+    /**
+     * Fetches driver names for multiple driver IDs.
+     */
+    @PostMapping("/api/driver/getDriverDetailsByIds")
+    List<CoDriverDetailsDto> getDriverDetailsByIds(
+            @RequestBody CoDriverDetailsRequestDto request
+    );
+
+//    ======================================================================
+    @GetMapping("/api/driver/getDriverDetailsForOrder")
+    CoDriverDetailsDto getDriverDetailsForOrder(
+            @RequestParam("driverId") Integer driverId
+    );
 }

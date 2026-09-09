@@ -52,4 +52,14 @@ public interface CoCustomerDeliveryAddressRepository extends JpaRepository<CoCus
             """, nativeQuery = true)
     CustomerDeliveryAddressProjection findByDeliveryAddressId(@Param("deliveryAddressId") Integer deliveryAddressId);
 
+    @Query("""
+        SELECT a.city
+        FROM CoCustomerDeliveryAddress a
+        WHERE a.customerAddressId = :customerAddressId
+        AND a.customerId = :customerId
+        """)
+    Integer findCityByCustomerAddressId(
+            @Param("customerAddressId") Integer customerAddressId,
+            @Param("customerId") Integer customerId
+    );
 }

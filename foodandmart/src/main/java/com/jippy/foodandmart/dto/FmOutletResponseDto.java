@@ -34,9 +34,6 @@ public class FmOutletResponseDto {
 
     private String isActive;
 
-
-
-
     private Boolean isApproved;
 
     private String outletPicUrl;
@@ -47,9 +44,21 @@ public class FmOutletResponseDto {
     // user_kyc
     // ---------------------------------------------------------
 
+    private String aadharNumber;
+
+    private String panNumber;
+
     private String fssaiNumber;
 
     private String gstNumber;
+
+    private String aadhaarNumberUrl;
+
+    private String panNumberUrl;
+
+    private String fssaiNumberUrl;
+
+    private String gstNumberUrl;
 
 
     // ---------------------------------------------------------
@@ -76,9 +85,11 @@ public class FmOutletResponseDto {
     private String road;
 
     private String landmark;
+
+
     // ---------------------------------------------------------
     // Outlet Location
-    // oulet_location GEOGRAPHY(POINT,4326)
+    // outlet_location GEOGRAPHY(POINT,4326)
     // ---------------------------------------------------------
 
     private Double latitude;

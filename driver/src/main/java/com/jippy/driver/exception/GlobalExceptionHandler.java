@@ -207,4 +207,24 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(GoogleRouteException.class)
+    public ResponseEntity<DriverErrorResponseDto> handleGoogleRouteException(
+            GoogleRouteException ex,
+            HttpServletRequest request) {
+
+        log.error(
+                "GOOGLE_ROUTE_FAILED | path={} | message={}",
+                request.getRequestURI(),
+                ex.getMessage(),
+                ex
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new DriverErrorResponseDto(
+                        request.getRequestURI(),
+                        HttpStatus.BAD_REQUEST,
+                        ex.getMessage(),
+                        LocalDateTime.now()
+                ));
+    }
 }

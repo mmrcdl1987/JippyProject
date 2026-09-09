@@ -26,7 +26,12 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/v3/api-docs/**",  "/api/driver/v3/api-docs").permitAll()
+                        .requestMatchers("/v3/api-docs/**",
+                                "/api/driver/v3/api-docs",
+                                "/api/driver/postDriverDetails",
+                                "/api/driver/findByEmail",
+                                "/api/driver/phone/{phoneNumber}"
+                        ).permitAll()
 
                         // 2. ADD THIS: Allow Health Checks
                         .requestMatchers("/actuator/**").permitAll()

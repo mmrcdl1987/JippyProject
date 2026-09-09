@@ -1,9 +1,7 @@
 package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoOrder;
-import com.jippy.customerandorder.projection.CoDriverEarningsProjection;
-import com.jippy.customerandorder.projection.CoOrderSettlementProjection;
-import com.jippy.customerandorder.projection.CoSalesReportProjection;
+import com.jippy.customerandorder.projection.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -308,4 +306,175 @@ Optional<CoOrder> findByOrderIdAndDriverId(
     boolean existsByCustomerIdAndOrderStatus(
             Integer customerId,
             String orderStatus);
+
+//    ===============================================================================
+//    ===============================================================================
+    /**
+     * Fetches the main order details along with:
+     *
+     * - Customer details
+     * - Customer delivery building name
+     * - Payment mode
+     * - Outlet ID
+     */
+    @Query(value = """
+        SELECT
+
+            -- ================= ORDER =================
+
+            o.order_id AS "orderId",
+
+            o.created_at AS "createdAt",
+
+            o.order_type AS "orderType",
+
+            o.order_status AS "orderStatus",
+
+            o.driver_id AS "driverId",
+
+
+            -- ================= CUSTOMER =================
+
+            c.customer_id AS "customerId",
+
+            CONCAT(
+                COALESCE(c.first_name, ''),
+                CASE
+                    WHEN c.last_name IS NOT NULL
+                         AND c.last_name <> ''
+                    THEN CONCAT(' ', c.last_name)
+                    ELSE ''
+                END
+            ) AS "customerName",
+
+            c.email AS "email",
+
+            c.phone_number AS "phoneNumber",
+
+            cda.building_name AS "buildingName",
+
+
+            -- ================= OUTLET =================
+
+            o.outlet_id AS "outletId",
+
+
+            -- ================= PAYMENT =================
+
+            o.payment_mode_id AS "paymentModeId",
+
+            pm.payment_mode AS "paymentMode"
+
+
+        FROM jippy_customer_and_order.orders o
+
+
+        -- ================= CUSTOMER =================
+
+        LEFT JOIN jippy_customer_and_order.customer c
+            ON c.customer_id = o.customer_id
+
+
+        -- ================= CUSTOMER ADDRESS =================
+
+        LEFT JOIN jippy_customer_and_order.customer_delivery_addresses cda
+            ON cda.customer_address_id =
+               o.customer_delivery_address_id
+
+
+        -- ================= PAYMENT MODE =================
+
+        LEFT JOIN jippy_customer_and_order.payment_modes pm
+            ON pm.payment_mode_id = o.payment_mode_id
+
+
+        -- ================= ORDER =================
+
+        WHERE o.order_id = :orderId
+
+        """,
+            nativeQuery = true)
+    Optional<CoOrderCompleteDetailsProjection> getOrderCompleteDetails(
+            @Param("orderId") String orderId
+    );
+//    ======================================================================================
+//    ======================================================================================
+
+    /**
+     * Fetches order flow counts for multiple outlet IDs.
+     *
+     * This is used for:
+     *
+     * 1. Merchant-wise order count
+     * 2. Outlet-wise order count
+     *
+     * The query counts:
+     *
+     * - Total orders
+     * - ORDER_COMPLETED orders
+     * - ORDER_REJECTED orders
+     */
+    @Query(value = """
+            SELECT
+
+                COUNT(*) AS "totalOrdersCount",
+
+                COUNT(
+                    CASE
+                        WHEN o.order_status = 'ORDER_COMPLETED'
+                        THEN 1
+                    END
+                ) AS "completedOrdersCount",
+
+                COUNT(
+                    CASE
+                        WHEN o.order_status = 'ORDER_REJECTED'
+                        THEN 1
+                    END
+                ) AS "rejectedOrdersCount"
+
+            FROM "jippy_customer_and_order"."orders" o
+
+            WHERE o.outlet_id IN (:outletIds)
+
+            """,
+            nativeQuery = true)
+    CoOrderFlowCountProjection getOrderFlowCountsByOutletIds(
+            @Param("outletIds") List<Integer> outletIds
+    );
+
+    /**
+     * Fetches total, completed and rejected order counts
+     * for a specific driver.
+     *
+     * <p>
+     * Counts are calculated directly from the CO orders table
+     * using driver_id.
+     */
+    @Query(value = """
+        SELECT
+            COUNT(*) AS totalOrdersCount,
+
+            COUNT(
+                CASE
+                    WHEN o.order_status = 'ORDER_COMPLETED'
+                    THEN 1
+                END
+            ) AS completedOrdersCount,
+
+            COUNT(
+                CASE
+                    WHEN o.order_status = 'ORDER_REJECTED'
+                    THEN 1
+                END
+            ) AS rejectedOrdersCount
+
+        FROM "jippy_customer_and_order"."orders" o
+
+        WHERE o.driver_id = :driverId
+        """,
+            nativeQuery = true)
+    CoOrderFlowCountProjection getOrderFlowCountsByDriverId(
+            @Param("driverId") Integer driverId
+    );
 }

@@ -8,11 +8,7 @@ import com.jippy.foodandmart.exception.FileProcessingException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmProductMapper;
 import com.jippy.foodandmart.mapper.FmProductVariantOptionMapper;
-import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
-import com.jippy.foodandmart.projections.FmProductCategoryProjection;
-import com.jippy.foodandmart.projections.FmOutletProductProjection;
-import com.jippy.foodandmart.projections.FmProductPriceProjection;
-import com.jippy.foodandmart.projections.OutletProductPricingProjection;
+import com.jippy.foodandmart.projections.*;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.FmProductService;
 import com.jippy.foodandmart.util.FmVariantExcelReader;
@@ -59,6 +55,7 @@ public class FmProductServiceImpl implements FmProductService {
 
     private final CacheInvalidateServiceImpl cacheInvalidateService;
 
+    private final FmPricingRepository pricingRepository;
 
     private final FmDaysOfWeekRepository daysOfWeekRepository;
 
@@ -417,6 +414,264 @@ public class FmProductServiceImpl implements FmProductService {
         return response;
     }
 
+    @Override
+    @Transactional
+    public FmProductUpdateResponseDto merchantEditProduct(Integer productId, FmProductUpdateRequestDto request) {
+        log.info("[MERCHANT-EDIT] START | productId={}", productId);
+
+        validateProductUpdateRequest(request);
+
+        FmProduct product = productRepository.findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id : " + productId));
+
+        boolean hasVariants = Boolean.TRUE.equals(request.getHasProductVariants());
+
+        // ---- Basic fields ----
+        product.setProductName(request.getProductName().trim());
+        product.setDescription(request.getDescription() == null ? "" : request.getDescription());
+        product.setIsVeg(request.getIsVeg() == null ? Boolean.TRUE : request.getIsVeg());
+        product.setImageLink(request.getImageLink());
+
+        if (request.getProductType() != null && !request.getProductType().trim().isEmpty()) {
+            product.setProductType(request.getProductType().trim());
+        }
+
+        if (request.getOutletCategoryId() != null) {
+            outletCategoryRepository.findByOutletCategoryId(request.getOutletCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Outlet Category not found with id : " + request.getOutletCategoryId()));
+            product.setOutletCategoryId(request.getOutletCategoryId());
+        }
+
+        product.setHasProductVariants(hasVariants);
+
+        // ---- Merchant price ----
+        BigDecimal merchantPrice = request.getMerchantPrice() == null ? BigDecimal.ZERO : request.getMerchantPrice();
+        if (merchantPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Merchant Price cannot be negative.");
+        }
+        product.setMerchantPrice(merchantPrice);
+
+        product.setUpdatedBy(SYSTEM_USER);
+        productRepository.save(product);
+
+        // ---- Timings: edit/add only ----
+        if (request.getTimings() != null && !request.getTimings().isEmpty()) {
+            upsertTimingsNoDelete(productId, request.getTimings());
+        }
+
+        // ---- Variants: edit/add only ----
+        if (hasVariants) {
+            upsertVariantOptionsNoDelete(productId, request.getVariantGroups());
+        }
+
+        // ---- OPTIMIZED CACHE INVALIDATION (Uses helper method instead of an extra DB query) ----
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        if (outletId != null) {
+            cacheInvalidateService.invalidateCache(outletId);
+        }
+
+        log.info("[MERCHANT-EDIT] COMPLETED | productId={}", productId);
+
+        return getProductById(productId);
+    }
+
+    @Override
+    public void deleteProductVariantOption(Integer productId, Integer optionId) {
+        log.info("[PRODUCT] DELETE_VARIANT_OPTION_START | productId={} | optionId={}",
+                productId, optionId);
+
+        productRepository.findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id : " + productId));
+
+        FmProductVariantOption option =
+                variantOptionRepository
+                        .findByProductVariantOptionsIdAndProductIdAndIsActiveTrue(
+                                optionId, productId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Variant Option not found for product : " + optionId));
+
+
+        option.setIsActive(FmAppConstants.FLAG_NO);
+        option.setUpdatedBy(SYSTEM_USER);
+        variantOptionRepository.save(option);
+
+        invalidateProductCache(productId);
+        log.info("[PRODUCT] DELETE_VARIANT_OPTION_SUCCESS | productId={} | optionId={}",
+                productId, optionId);
+    }
+
+    @Override
+    public void deleteProductVariantGroup(Integer productId, Integer groupId) {
+        log.info("[PRODUCT] DELETE_VARIANT_GROUP_START | productId={} | groupId={}",
+                productId, groupId);
+
+        productRepository.findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id : " + productId));
+
+        variantGroupRepository
+                .findByProductVariantGroupsIdAndIsActiveTrue(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Variant Group not found with id : " + groupId));
+
+        List<FmProductVariantOption> productOptions =
+                variantOptionRepository
+                        .findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(
+                                productId);
+
+        int deletedCount = 0;
+        for (FmProductVariantOption option : productOptions) {
+            FmProductVariantGroupValue value =
+                    variantGroupValueRepository
+                            .findByProductVariantGroupValuesIdAndIsActiveTrue(
+                                    option.getProductVariantGroupValuesId())
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Variant Value not found : "
+                                            + option.getProductVariantGroupValuesId()));
+
+            if (groupId.equals(value.getProductVariantGroupsId())) {
+
+                option.setIsActive(FmAppConstants.FLAG_NO);
+                option.setUpdatedBy(SYSTEM_USER);
+                variantOptionRepository.save(option);
+                deletedCount++;
+            }
+        }
+
+        if (deletedCount == 0) {
+            throw new ResourceNotFoundException(
+                    "Variant Group is not mapped to product : " + groupId);
+        }
+
+        invalidateProductCache(productId);
+        log.info("[PRODUCT] DELETE_VARIANT_GROUP_SUCCESS | productId={} | groupId={} | optionCount={}",
+                productId, groupId, deletedCount);
+    }
+
+    private void invalidateProductCache(Integer productId) {
+        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        if (outletId != null) {
+            cacheInvalidateService.invalidateCache(outletId);
+        }
+    }
+
+    /**
+     * Edit/add variant options. Never deletes. Optimized to prevent queries inside loops.
+     */
+    private void upsertVariantOptionsNoDelete(Integer productId, List<FmProductVariantOptionGroupDto> variantGroups) {
+        List<FmProductVariantOption> existingOptions =
+                variantOptionRepository.findByProductIdOrderByProductVariantOptionsIdAsc(productId);
+
+        Map<Integer, FmProductVariantOption> byId = new HashMap<>();
+        // Preload existing active variant value IDs into a Set to check duplicates in memory instantly
+        Set<Integer> existingValueIds = new HashSet<>();
+
+        for (FmProductVariantOption o : existingOptions) {
+            byId.put(o.getProductVariantOptionsId(), o);
+            if (Boolean.TRUE.equals(o.getIsActive())) {
+                existingValueIds.add(o.getProductVariantGroupValuesId());
+            }
+        }
+
+        for (FmProductVariantOptionGroupDto group : variantGroups) {
+            for (FmProductVariantOptionRequestDto req : group.getOptions()) {
+                String priceType = req.getPriceType().trim().toUpperCase(Locale.ROOT);
+
+                // EDIT
+                if (req.getProductVariantOptionsId() != null) {
+                    FmProductVariantOption entity = byId.get(req.getProductVariantOptionsId());
+                    if (entity == null) {
+                        throw new ResourceNotFoundException(
+                                "Variant Option not found for this product : " + req.getProductVariantOptionsId());
+                    }
+                    if (!Objects.equals(entity.getProductVariantGroupValuesId(), req.getProductVariantGroupValuesId())) {
+                        validateVariantValue(group.getProductVariantGroupsId(), req);
+                        entity.setProductVariantGroupValuesId(req.getProductVariantGroupValuesId());
+                    }
+                    if (!Objects.equals(entity.getPriceType(), priceType)) {
+                        entity.setPriceType(priceType);
+                    }
+                    if (!Objects.equals(entity.getVariantPrice(), req.getVariantPrice())) {
+                        entity.setVariantPrice(req.getVariantPrice());
+                    }
+                    entity.setUpdatedBy(SYSTEM_USER);
+                    variantOptionRepository.save(entity);
+                }
+                // ADD (Optimized: Memory lookup instead of database query)
+                else {
+                    if (existingValueIds.contains(req.getProductVariantGroupValuesId())) {
+                        log.warn("[MERCHANT-EDIT] DUPLICATE_VARIANT_SKIPPED | productId={} | valueId={}",
+                                productId, req.getProductVariantGroupValuesId());
+                        continue;
+                    }
+
+                    FmProductVariantOption entity = FmProductVariantOptionMapper.toEntity(productId, req);
+                    entity.setPriceType(priceType);
+                    entity.setCreatedBy(SYSTEM_USER);
+                    entity.setUpdatedBy(SYSTEM_USER);
+                    variantOptionRepository.save(entity);
+
+                    // Add to set so subsequent iterations in the same request catch local duplicates too
+                    existingValueIds.add(req.getProductVariantGroupValuesId());
+                }
+            }
+        }
+    }
+
+    /**
+     * Edit/add timings. Never deletes. Optimized with pre-fetched valid day IDs.
+     */
+    private void upsertTimingsNoDelete(Integer productId, List<FmProductTimingRequestDto> timings) {
+        Set<Integer> validDayIds = daysOfWeekRepository.findAll().stream()
+                .map(FmDaysOfWeek::getDayId)
+                .collect(Collectors.toSet());
+
+        List<FmProductAvailableTiming> existing =
+                productAvailableTimingRepository.findByProductIdOrderByProductAvailableTimingIdAsc(productId);
+
+        Map<Integer, FmProductAvailableTiming> byId = new HashMap<>();
+        for (FmProductAvailableTiming t : existing) {
+            byId.put(t.getProductAvailableTimingId(), t);
+        }
+
+        for (FmProductTimingRequestDto req : timings) {
+            if (!validDayIds.contains(req.getDayOfWeekId())) {
+                throw new IllegalArgumentException("Invalid Day Id : " + req.getDayOfWeekId());
+            }
+
+            LocalTime start = parseTime(req.getStartTime());
+            LocalTime end = parseTime(req.getEndTime());
+            if (start == null || end == null) {
+                throw new IllegalArgumentException("Invalid Product Timing.");
+            }
+
+            // EDIT
+            if (req.getProductAvailableTimingId() != null) {
+                FmProductAvailableTiming entity = byId.get(req.getProductAvailableTimingId());
+                if (entity == null) {
+                    throw new ResourceNotFoundException("Timing not found : " + req.getProductAvailableTimingId());
+                }
+                entity.setDayOfWeekId(req.getDayOfWeekId());
+                entity.setStartTime(start);
+                entity.setEndTime(end);
+                entity.setUpdatedBy(SYSTEM_USER);
+                productAvailableTimingRepository.save(entity);
+            }
+            // ADD
+            else {
+                FmProductAvailableTiming entity = new FmProductAvailableTiming();
+                entity.setProductId(productId);
+                entity.setDayOfWeekId(req.getDayOfWeekId());
+                entity.setStartTime(start);
+                entity.setEndTime(end);
+                entity.setCreatedBy(SYSTEM_USER);
+                entity.setUpdatedBy(SYSTEM_USER);
+                productAvailableTimingRepository.save(entity);
+            }
+        }
+    }
     @Override
     @Transactional
     public FmVariantBulkUploadResponseDto bulkUploadVariants(Integer outletId, MultipartFile file) {
@@ -1918,19 +2173,34 @@ public class FmProductServiceImpl implements FmProductService {
         }
 
         try {
-
             String time = value.trim();
 
+            // Handle single-digit hours if passed like '9:00' -> '09:00'
             if (time.indexOf(':') == 1) {
                 time = "0" + time;
             }
 
-            return LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm"));
+            // Support both HH:mm:ss and HH:mm formats seamlessly
+            List<DateTimeFormatter> formatters = Arrays.asList(
+                    DateTimeFormatter.ofPattern("HH:mm:ss"),
+                    DateTimeFormatter.ofPattern("HH:mm"),
+                    DateTimeFormatter.ofPattern("H:mm:ss"),
+                    DateTimeFormatter.ofPattern("H:mm")
+            );
+
+            for (DateTimeFormatter formatter : formatters) {
+                try {
+                    return LocalTime.parse(time, formatter);
+                } catch (Exception ignored) {
+                    // Try next formatter format
+                }
+            }
+
+            log.warn("Unable to parse time with any known format: {}", value);
+            return null;
 
         } catch (Exception ex) {
-
-            log.warn("Unable to parse time : {}", value);
-
+            log.warn("Unable to parse time : {}", value, ex);
             return null;
         }
     }
@@ -2061,9 +2331,24 @@ public class FmProductServiceImpl implements FmProductService {
              */
             if (!Boolean.TRUE.equals(product.getHasProductVariants())) {
 
+                BigDecimal onlinePrice = pricingRepository
+                        .findPricingRecord(
+                                product.getProductId(),
+                                product.getOutletCategoryId(),
+                                null
+                        )
+                        .map(FmProductOnlinePricing::getOnlinePrice)
+                        .orElse(null);
+
+
+
                 response.setVariantGroups(new ArrayList<>());
 
-                log.info("[PRODUCT-DETAIL] NO_VARIANTS | productId={}", productId);
+                log.info(
+                        "[PRODUCT-DETAIL] NO_VARIANTS | productId={} | onlinePrice={}",
+                        productId,
+                        onlinePrice
+                );
 
                 return response;
             }
@@ -2158,6 +2443,16 @@ public class FmProductServiceImpl implements FmProductService {
                 optionDto.setPriceType(option.getPriceType());
 
                 optionDto.setVariantPrice(option.getVariantPrice());
+
+                BigDecimal onlinePrice = pricingRepository
+                        .findPricingRecord(
+                                product.getProductId(),
+                                product.getOutletCategoryId(),
+                                option.getProductVariantOptionsId()
+                        )
+                        .map(FmProductOnlinePricing::getOnlinePrice)
+                        .orElse(null);
+
 
                 /*
                  * --------------------------------------------------------
@@ -2537,6 +2832,216 @@ public class FmProductServiceImpl implements FmProductService {
         return response;
     }
 
-}
+    @Override
+    public List<FmOrderItemsEvent> getOrderProductItemsForMerchant(List<Integer> productIds, List<Integer> productVariantIds) {
 
+        List<FmOrderProductItemsForMerchantProjection> orderItemsForMerchantProjection =
+                productRepository.getOrderProductItemsForMerchant(productIds, productVariantIds);
+
+        if (orderItemsForMerchantProjection != null && !orderItemsForMerchantProjection.isEmpty()) {
+
+            return orderItemsForMerchantProjection.stream()
+                    .collect(Collectors.groupingBy(
+                            FmOrderProductItemsForMerchantProjection::getProductId,
+                            LinkedHashMap::new, // Preserves SQL order
+                            Collectors.toList()
+                    ))
+                    .values().stream()
+                    .map(projectionsGroup -> {
+                        // Get common product metadata from the first entry in the group
+                        FmOrderProductItemsForMerchantProjection first = projectionsGroup.get(0);
+
+                        FmOrderItemsEvent event = new FmOrderItemsEvent();
+                        event.setProductId(first.getProductId());
+                        event.setProductName(first.getProductName());
+                        event.setProductPrice(first.getProductPrice());
+
+                        // Map variants list for this product
+                        List<FmOrderItemsEvent.VariantDto> variants = projectionsGroup.stream()
+                                .filter(p -> p.getProductVariantOptionsId() != null)
+                                .map(p -> {
+                                    FmOrderItemsEvent.VariantDto variant = new FmOrderItemsEvent.VariantDto();
+                                    variant.setProductVariantOptionsId(p.getProductVariantOptionsId());
+                                    variant.setVariantName(p.getVariantName());
+                                    variant.setVariantPrice(p.getVariantPrice());
+                                    variant.setPriceType(p.getPriceType());
+                                    return variant;
+                                })
+                                .collect(Collectors.toList());
+
+                        event.setVariants(variants);
+                        return event;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        return Collections.emptyList();
+    }
+    @Override
+    public FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive) {
+
+        log.info("SERVICE_START | INACTIVE_PRODUCT_OR_VARIANT | productId={} | isActive={}", productId, isActive);
+
+        if (productId == null || productId <= 0) {
+            return new FmResponseDto("500","Valid product ID is required.");
+        }
+
+        if (isActive == null || (!"Y".equalsIgnoreCase(isActive) && !"N".equalsIgnoreCase(isActive))) {
+            return new FmResponseDto("500","isActive must be 'Y' or 'N'.");
+        }
+
+        Optional<FmProduct> optionalFmProduct = productRepository.findById(productId);
+
+        FmProduct fmProduct = optionalFmProduct.orElseThrow(() -> {
+            log.warn("PRODUCT_NOT_FOUND | productId={}", productId);
+            return new ResourceNotFoundException("Product not found for ID: " + productId);
+        });
+
+        int updatedCount = productRepository.updateProductOrVariantStatus(productId, isActive);
+
+        if (updatedCount == 0) {
+            log.warn("NO_RECORDS_UPDATED | productId={} | isActive={}", productId, isActive);
+            return new FmResponseDto("404","No records found to update for product ID: " + productId);
+        }
+
+        log.info("SERVICE_SUCCESS | INACTIVE_PRODUCT_OR_VARIANT | productId={} | isActive={} | updatedCount={}", productId, isActive, updatedCount);
+
+        return new FmResponseDto("200","Successfully updated active status for product ID: " + productId + ". Records updated: " + updatedCount);
+    }
+
+//=====================================================================================
+//=====================================================================================
+    /**
+     * Updates the is_active status of either a PRODUCT
+     * or MASTERPRODUCT based on productType.
+     *
+     * PRODUCT       -> products table
+     * MASTERPRODUCT -> master_products table
+     *
+     * Y -> Enabled
+     * N -> Disabled
+     */
+    @Override
+    public String productIsActiveToggleByProductType(
+            FmProductIsActiveToggleRequestDto request) {
+
+        log.info(
+                "Received request to update product active status. " +
+                        "productId={}, productType={}, isActive={}",
+                request.getProductId(),
+                request.getProductType(),
+                request.getIsActive()
+        );
+
+        String productType = request.getProductType()
+                .trim()
+                .toUpperCase();
+
+        String isActive = request.getIsActive()
+                .trim()
+                .toUpperCase();
+
+        /*
+         * PRODUCT
+         *
+         * Updates the is_active column in the products table.
+         */
+        if (FmAppConstants.PRODUCT.equals(productType)) {
+
+
+            log.info(
+                    "Updating PRODUCT active status for productId={}",
+                    request.getProductId()
+            );
+
+            FmProduct product = productRepository
+                    .findById(request.getProductId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Product not found with ID: "
+                                    + request.getProductId()
+                    ));
+
+            product.setIsActive(isActive);
+
+            productRepository.save(product);
+
+            log.info(
+                    "PRODUCT active status updated successfully. " +
+                            "productId={}, isActive={}",
+                    request.getProductId(),
+                    isActive
+            );
+
+            if (FmAppConstants.IS_ACTIVE_YES.equals(isActive)) {
+
+                return productType
+                        + " with ID "
+                        + request.getProductId()
+                        + " is enabled to (isActive = Y) successfully";
+            }
+
+            return productType
+                    + " with ID "
+                    + request.getProductId()
+                    + " is disabled to (isActive = N) successfully";
+        }
+
+        /*
+         * MASTERPRODUCT
+         *
+         * Updates the is_active column in the master_products table.
+         */
+        if (FmAppConstants.PRODUCT_TYPE_MASTER_PRODUCT.equals(productType)) {
+
+            log.info(
+                    "Updating MASTERPRODUCT active status for masterProductId={}",
+                    request.getProductId()
+            );
+
+            FmMasterProduct masterProduct = masterProductRepository
+                    .findById(request.getProductId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Master product not found with ID: "
+                                    + request.getProductId()
+                    ));
+
+            masterProduct.setIsActive(isActive);
+
+            masterProductRepository.save(masterProduct);
+
+            log.info(
+                    "MASTERPRODUCT active status updated successfully. " +
+                            "masterProductId={}, isActive={}",
+                    request.getProductId(),
+                    isActive
+            );
+
+            if (FmAppConstants.IS_ACTIVE_YES.equals(isActive)) {
+
+                return productType
+                        + " with ID "
+                        + request.getProductId()
+                        + " is enabled to (isActive = Y) successfully";
+            }
+
+            return productType
+                    + " with ID "
+                    + request.getProductId()
+                    + " is disabled to (isActive = N) successfully";
+        }
+
+        /*
+         * If productType is neither PRODUCT nor MASTERPRODUCT,
+         * execution reaches here.
+         */
+        log.error(
+                "Unsupported product type received: {}",
+                productType
+        );
+
+        throw new IllegalArgumentException(
+                "Product type must be PRODUCT or MASTERPRODUCT"
+        );
+    }
+}
 

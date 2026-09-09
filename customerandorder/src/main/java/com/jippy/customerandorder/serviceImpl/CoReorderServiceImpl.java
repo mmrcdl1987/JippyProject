@@ -60,7 +60,7 @@ public class CoReorderServiceImpl implements ICoReorderService {
             throw new CoReorderException("Only completed orders can be reordered");
         }
 
-        List<CoOrderItem> orderItems = orderItemRepository.findByOrderId(requestDto.getOrderId());
+        List<CoOrderItem> orderItems = orderItemRepository.findByOrder_OrderId(requestDto.getOrderId());
 
         if (orderItems.isEmpty()) {
 
@@ -122,7 +122,7 @@ public class CoReorderServiceImpl implements ICoReorderService {
 
             cart.setProductId(item.getProductId());
 
-            cart.setVariantOptionId(item.getVariantOptionId());
+//            cart.setVariantOptionId(item.getVariantOptionId());
 
             cart.setQuantity(item.getQuantity());
 

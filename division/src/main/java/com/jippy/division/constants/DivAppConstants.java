@@ -21,11 +21,15 @@ public class DivAppConstants {
 
     public static final String CURRENCY="INR";
 
-    public static final String PAYMENT_STATUS_SUCCESS="SUCCESS";
+    public static final String PAYMENT_STATUS_SUCCESS="PAYMENT_SUCCESS";
 
-    public static final String START_PREPARING = "START_PREPARING";
+   // public static final String ORDER_CONFIRMED = "ORDER_CONFIRMED";
 
     public static final String PAYMENT_STATUS_CAPTURED="CAPTURED";
+
+    public static final String PAYMENT_STATUS_CAPTURED_FAILED="CAPTURED_FAILED";
+
+    public static final String PAYMENT_STATUS_FAILED="FAILED";
 
     public static final String PAYMENT_STATUS_REFUND_INITIATED="REFUND_INITIATED";
 
@@ -37,7 +41,11 @@ public class DivAppConstants {
 
     public static final String PAYMENT_MODE_PAYTM="PAYTM";
 
+    public static final String PAYMENT_MODE_PAYU = "PAYU";
+
     public static final String TYPE_MERCHANT="MERCHANT";
 
     public static final String TYPE_CUSTOMER="CUSTOMER";
+
+    public static final String ORDER_PLACED="ORDER_PLACED";
 }

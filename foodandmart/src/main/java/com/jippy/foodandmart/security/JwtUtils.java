@@ -99,5 +99,33 @@ public class JwtUtils {
             return false;
         }
     }
+    /**
+     * OTP Login JWT
+     *
+     * Used for Merchant and Driver mobile OTP authentication.
+     */
+    public String generateOtpLoginToken(
+            Long userId,
+            String username,
+            String userType,
+            List<String> roles
+    ) {
 
+        return Jwts.builder()
+                .subject(username)
+                .claim("roles", roles)
+                .claim("userId", userId)
+                .claim("userType", userType)
+                .issuedAt(new Date())
+                .expiration(
+                        new Date(
+                                System.currentTimeMillis()
+                                        + ACCESS_TOKEN_VALIDITY
+                        )
+                )
+                .signWith(
+                        Keys.hmacShaKeyFor(secretKey.getBytes())
+                )
+                .compact();
+    }
 }

@@ -1,25 +1,28 @@
 package com.jippy.customerandorder.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.math.BigDecimal;
+import java.util.List;
 
 @Data
-public class CoCartUpdateRequestDto  {
+public class CoCartUpdateRequestDto {
 
-    @NotNull
+    @NotNull(message = "Customer id is required")
+    @Min(value = 1, message = "Customer id must be greater than zero")
     private Integer customerId;
 
-    @NotNull
+    @NotNull(message = "Outlet id is required")
+    @Min(value = 1, message = "Outlet id must be greater than zero")
     private Integer outletId;
 
-    @NotNull
+    @NotNull(message = "Product id is required")
+    @Min(value = 1, message = "Product id must be greater than zero")
     private Integer productId;
 
-    @NotNull
-    private Integer quantity;   // UI sends updated qty
-
-    @NotNull
-    private BigDecimal unitPrice; // UI sends price
+    @Valid
+    private List<CoCartVariantDto> variants;
 }

@@ -13,10 +13,20 @@ public interface S3Service {
             Integer merchantId
     );
 
+    String uploadMerchantProfileImage(
+            MultipartFile image,
+            Integer merchantId
+    );
+
     String uploadCategoryImage(
             MultipartFile image,
             Integer categoryId
     );
+
+    String uploadKycDocument(MultipartFile document, String userType, Integer userId, String documentType);
+
+    String replaceKycDocument(MultipartFile document, String userType, Integer userId,
+                              String documentType, String oldFileUrl);
 
     void deleteFile(String fileUrl);
 }

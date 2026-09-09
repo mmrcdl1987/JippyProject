@@ -46,6 +46,64 @@ public class FmProductController {
         return ResponseEntity.ok(productMappingService.mapToProducts(req));
     }
 
+    /**
+     * PUT /api/fm/products/merchant-edit/{productId}
+     *
+     * Merchant edit — basic fields + merchant price, and edit/add
+     * timings & variants (incl. new groups). Never deletes existing records.
+     */
+    @PutMapping("/updateproduct/{productId}")
+    public ResponseEntity<FmProductUpdateResponseDto> merchantEditProduct(
+            @PathVariable Integer productId,
+            @Valid @RequestBody FmProductUpdateRequestDto request) {
+
+        log.info("[PRODUCT] MERCHANT_EDIT Product. ProductId={}", productId);
+
+        return ResponseEntity.ok(productMappingService.merchantEditProduct(productId, request));
+    }
+
+    /**
+     * DELETE /api/fm/products/updateproduct/{productId}/variant-options/{optionId}
+     *
+     * Removes one variant option from this product without deleting shared
+     * variant group/value catalogue records.
+     */
+    @DeleteMapping("/updateproduct/{productId}/variant-options/{optionId}")
+    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantOption(
+            @PathVariable Integer productId,
+            @PathVariable Integer optionId) {
+
+        log.info("[PRODUCT] DELETE variant option. ProductId={}, OptionId={}",
+                productId, optionId);
+
+        productMappingService.deleteProductVariantOption(productId, optionId);
+
+        return ResponseEntity.ok(FmApiResponse.success(
+                "Product Variant Option deleted successfully.", null));
+    }
+
+    /**
+     * DELETE /api/fm/products/updateproduct/{productId}/variant-groups/{groupId}
+     *
+     * Removes every variant option in the group from this product. The shared
+     * variant group and group values are not deleted.
+     */
+    @DeleteMapping("/updateproduct/{productId}/variant-groups/{groupId}")
+    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantGroup(
+            @PathVariable Integer productId,
+            @PathVariable Integer groupId) {
+
+        log.info("[PRODUCT] DELETE variant group. ProductId={}, GroupId={}",
+                productId, groupId);
+
+        productMappingService.deleteProductVariantGroup(productId, groupId);
+
+        return ResponseEntity.ok(FmApiResponse.success(
+                "Product Variant Group deleted successfully.", null));
+    }
+
+
+
 
     /**
      * POST /api/fm/products/map-from-master-category/{outletCategoryId}
@@ -325,11 +383,7 @@ public class FmProductController {
 
         return ResponseEntity.ok(products);
     }
-
-
-    // =================================================================================================
     // ================================= PRODUCT DETAILS ===============================================
-    // =================================================================================================
 
     /**
      * GET /api/fm/products/productdetails/{productId}
@@ -350,10 +404,7 @@ public class FmProductController {
 
         return ResponseEntity.ok(response);
     }
-    // =================================================================================================
-// ================================= MERCHANT PRICE UPDATE =========================================
-// =================================================================================================
-
+    // ================================= MERCHANT PRICE UPDATE =========================================
     @PutMapping("/{productId}/merchant-price")
     @Operation(summary = "Update merchant price", description = """
             Updates merchant price for a product.
@@ -376,6 +427,128 @@ public class FmProductController {
         log.info("[MERCHANT-PRICE] PUT /{}/merchant-price | price={} | role={} | updatedBy={}", productId, request.getMerchantPrice(), request.getRole(), request.getUpdatedBy());
 
         FmMerchantPriceUpdateResponse response = productMappingService.updateMerchantPrice(productId, request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/getOrderProductItemsForMerchant")
+    public ResponseEntity<List<FmOrderItemsEvent>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
+            @RequestParam List<Integer> productVariantIds) {
+
+        log.info("Get order product items for merchant  | productIds:{} , product variant ids:{} ", productIds,productVariantIds);
+
+        List<FmOrderItemsEvent> products = productMappingService.getOrderProductItemsForMerchant(productIds,productVariantIds);
+
+        return ResponseEntity.ok(products);
+    }
+//    =====================================================================================
+//    =====================================================================================
+    /**
+     * Activates or deactivates a PRODUCT or MASTERPRODUCT.
+     *
+     * PRODUCT       -> updates products.is_active
+     * MASTERPRODUCT -> updates master_products.is_active
+     *
+     * Supported productType:
+     * PRODUCT, MASTERPRODUCT
+     *
+     * Supported isActive:
+     * Y, N
+     */
+    @PutMapping("/productIsActiveToggleByProductType")
+    @Operation(
+            summary = "Update product active status by product type",
+            description =
+                    "Updates the active status of a PRODUCT or MASTERPRODUCT. "
+                            + "Supported productType values are PRODUCT and MASTERPRODUCT. "
+                            + "Supported isActive values are Y and N. "
+                            + "Y enables the product and N disables the product. "
+                            + "For PRODUCT, the products table is updated. "
+                            + "For MASTERPRODUCT, the master_products table is updated."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product active status updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid product ID, product type or active status"),
+            @ApiResponse(responseCode = "404", description = "Product or master product not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<String> productIsActiveToggleByProductType(
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description =
+                            "Provide productId, productType and isActive. "
+                                    + "productType supports PRODUCT or MASTERPRODUCT. "
+                                    + "isActive supports Y or N.",
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation =
+                                            FmProductIsActiveToggleRequestDto.class
+                            ),
+                            examples = {
+
+                                    @ExampleObject(
+                                            name = "PRODUCT",
+                                            summary = "Enable or disable PRODUCT",
+                                            value =
+                                                    """
+                                                    {
+                                                      "productId": 39,
+                                                      "productType": "PRODUCT",
+                                                      "isActive": "N"
+                                                    }
+                                                    """
+                                    ),
+
+                                    @ExampleObject(
+                                            name = "MASTERPRODUCT",
+                                            summary = "Enable or disable MASTERPRODUCT",
+                                            value =
+                                                    """
+                                                    {
+                                                      "productId": 8,
+                                                      "productType": "MASTERPRODUCT",
+                                                      "isActive": "Y"
+                                                    }
+                                                    """
+                                    )
+                            }
+                    )
+            )
+            @Valid
+            @RequestBody FmProductIsActiveToggleRequestDto request) {
+
+        log.info(
+                "Received request to update product active status. " +
+                        "productId={}, productType={}, isActive={}",
+                request.getProductId(),
+                request.getProductType(),
+                request.getIsActive()
+        );
+
+        String response =
+                productMappingService.productIsActiveToggleByProductType(request);
+
+        log.info(
+                "Product active status update completed successfully. " +
+                        "productId={}, productType={}, isActive={}",
+                request.getProductId(),
+                request.getProductType(),
+                request.getIsActive()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/inactiveProductOrProductVariant")
+    @Operation(summary = "Inactive Product or Product Variant",
+            description = "Variants also added as products, use this API to off such kind of products. If you want off the product send Y else N")
+    public ResponseEntity<FmResponseDto> inactiveProductOrProductVariant
+            (@RequestParam  Integer productId,@RequestParam String isActive) {
+
+        log.info("[Product in active] toggleForProduct API called. " + "outletId={}, isActive={}", productId , isActive);
+
+        FmResponseDto response = productMappingService.inactiveProductOrProductVariant(productId,isActive);
 
         return ResponseEntity.ok(response);
     }

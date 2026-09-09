@@ -16,6 +16,8 @@ public interface IFmMerchantService {
 
     FmMerchant createMerchant(FmMerchantRequestDTO dto);
 
+    // FmMerchant createMerchant(FmMerchantRequestDTO dto, MultipartFile aadharFile, MultipartFile panFile);
+
     FmBulkUploadResultDTO bulkUpload(MultipartFile file);
     // Get--> merchant + bank
     FmMerchantWithBankDto getMerchantWithBank(Integer merchantId);
@@ -24,6 +26,10 @@ public interface IFmMerchantService {
     FmMerchantWithBankDto updateMerchantProfile(FmMerchantWithBankDto dto);
 
     FmResponseDto updateMerchantProfilePic(FmMerchantDto merchantDto);
+
+    FmResponseDto toggleMerchant(FmToggleMerchantRequestDto requestDto);
+
+    FmMerchantAddressDto getMerchantAddress(Integer merchantId);
 
     FmMerchant createMerchantBulkUpload(FmMerchantRequestDTO dto);
 }

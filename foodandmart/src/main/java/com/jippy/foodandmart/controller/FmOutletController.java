@@ -77,7 +77,9 @@ public class FmOutletController {
 
     @PostMapping(value = "/createOutlet", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses({@ApiResponse(responseCode = "201", description = "Outlet created successfully"), @ApiResponse(responseCode = "400", description = "Validation Failed"), @ApiResponse(responseCode = "404", description = "Merchant Not Found"), @ApiResponse(responseCode = "409", description = "Duplicate Resource")})
-    public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(@Valid @RequestBody FmOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmOutletCreateResponseDTO>> createOutlet(
+            @Valid @RequestBody FmOutletRequestDTO dto
+           ) {
 
         log.info("Received request to create outlet: {}", dto.getOutletName());
 
@@ -128,7 +130,8 @@ public class FmOutletController {
     @PutMapping("/updateOutletDetailsByMerchant/{outletId}")
     @Operation(summary = "Update Outlet Details By Merchant", description = "Allows Merchant to update outlet details, address, " + "bank details and operating days. " + "[Username and Password cannot be updated].")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid request"), @ApiResponse(responseCode = "404", description = "Outlet or Merchant not found")})
-    public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(@PathVariable Integer outletId, @Valid @RequestBody FmUpdateOutletRequestDTO dto) {
+    public ResponseEntity<FmApiResponse<FmUpdateOutletRequestDTO>> updateOutletDetailsByMerchant(
+            @PathVariable Integer outletId, @Valid @RequestBody FmUpdateOutletRequestDTO dto) {
 
         FmUpdateOutletRequestDTO response = outletService.updateOutletDetailsByMerchant(outletId, dto);
 
@@ -956,37 +959,26 @@ public class FmOutletController {
             return "";
         }
 
-        String normalized = header
-                .replace("\uFEFF", "")
-                .trim();
+        String normalized = header.replace("\uFEFF", "").trim();
 
         // Handle headers exported with surrounding CSV quotes.
         // Examples:
         // "outletname"  -> outletname
         // "Outlet Name" -> outletname
-        if (normalized.length() >= 2
-                && normalized.startsWith("\"")
-                && normalized.endsWith("\"")) {
+        if (normalized.length() >= 2 && normalized.startsWith("\"") && normalized.endsWith("\"")) {
 
-            normalized = normalized.substring(
-                    1,
-                    normalized.length() - 1
-            );
+            normalized = normalized.substring(1, normalized.length() - 1);
         }
 
         // Remove BOM again in case it occurs inside quotes.
-        normalized = normalized
-                .replace("\uFEFF", "")
-                .trim();
+        normalized = normalized.replace("\uFEFF", "").trim();
 
         // Normalize all supported header formats:
         // Outlet Name -> outletname
         // outlet_name -> outletname
         // outlet-name -> outletname
         // outletname  -> outletname
-        return normalized
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[\\s_-]+", "");
+        return normalized.toLowerCase(Locale.ROOT).replaceAll("[\\s_-]+", "");
     }
 
 
@@ -1354,13 +1346,13 @@ public class FmOutletController {
 
     @Operation(summary = "Public: Get Outlet Details", description = """
             Fetches public outlet configuration based on outlet ID without authentication.
-
+            
             The response includes:
             - Outlet details (ID, name, availability)
             - Categories with products
             - Product details (name, description, price, veg status, image)
             - Product variants (if available)
-
+            
             This is a simplified version of the admin endpoint with only essential fields.
             """)
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Public outlet details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid outlet ID"), @ApiResponse(responseCode = "404", description = "Outlet not found")})
@@ -1379,17 +1371,184 @@ public class FmOutletController {
     }
 
     @GetMapping("/area/{outletId}")
-    public ResponseEntity<Integer> getAreaIdByOutletId(
-            @PathVariable Integer outletId) {
+    public ResponseEntity<Integer> getAreaIdByOutletId(@PathVariable Integer outletId) {
 
-        log.info(
-                "GET /api/fm/outlets/{}/area",
-                outletId
-        );
+        log.info("GET /api/fm/outlets/{}/area", outletId);
 
-        Integer areaId =
-                outletService.getAreaIdByOutletId(outletId);
+        Integer areaId = outletService.getAreaIdByOutletId(outletId);
 
         return ResponseEntity.ok(areaId);
     }
+
+
+    // ================================================================
+    // UPDATE OUTLET PROFILE PICTURE
+    // ================================================================
+
+    @PutMapping("/updateOutletProfilePic")
+    public ResponseEntity<FmResponseDto> updateOutletProfilePic(@RequestBody FmUpdateOutletProfilePicDto outletDto) {
+
+        FmResponseDto response = outletService.updateOutletProfilePic(outletDto);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ================================================================
+    // TOGGLE OUTLET
+    // ================================================================
+    //
+    // API used to enable or disable the outlet toggle.
+    //
+    // Request:
+    //
+    // {
+    //     "outletId": 132,
+    //     "isToggle": true
+    // }
+    //
+    // true  -> is_toggle = true
+    // false -> is_toggle = false
+    //
+    // ================================================================
+
+    @PutMapping("/toggleForOutlet")
+    @Operation(summary = "Toggle Outlet", description = "Updates the is_toggle value of an outlet")
+    @ApiResponses({
+
+            @ApiResponse(responseCode = "200", description = "Outlet toggle updated successfully"),
+
+            @ApiResponse(responseCode = "400", description = "Invalid outlet toggle request"),
+
+            @ApiResponse(responseCode = "404", description = "Outlet not found"),
+
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<FmResponseDto> toggleForOutlet(@RequestBody FmToggleOutletRequestDto requestDto) {
+
+        log.info("[OUTLET TOGGLE] toggleForOutlet API called. " + "outletId={}, isToggle={}", requestDto != null ? requestDto.getOutletId() : null, requestDto != null ? requestDto.getIsToggle() : null);
+
+        FmResponseDto response = outletService.toggleForOutlet(requestDto);
+
+        return ResponseEntity.ok(response);
+    }
+
+//    ===================================================================================
+//    ===================================================================================
+
+    /**
+     * Fetches outlet name and area name for multiple outlet IDs. used for Co through Feign
+     */
+    @PostMapping("/getOutletDetailsByIds")
+    @Operation(summary = "Get outlet details by outlet IDs", description = "Fetches outlet name and area name for multiple outlet IDs. " + "The outlet address is identified using jippy_address_id and " + "address_type = OUTLET.")
+    @ApiResponses(value = {
+
+            @ApiResponse(responseCode = "200", description = "Outlet details fetched successfully"),
+
+            @ApiResponse(responseCode = "400", description = "Invalid outlet IDs"),
+
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<List<FmOutletDetailsResponseDto>> getOutletDetailsByIds(
+
+            @Parameter(description = "List of outlet IDs", example = "[13, 14, 15]", required = true) @RequestBody FmOutletDetailsRequestDto request) {
+
+        log.info("Received request to fetch outlet details for {} outlet IDs", request.getOutletIds().size());
+
+        List<FmOutletDetailsResponseDto> response = outletService.getOutletDetailsByIds(request.getOutletIds());
+
+        log.info("Returning {} outlet details", response.size());
+
+        return ResponseEntity.ok(response);
+    }
+
+    //    ===================================================================================
+//    ===================================================================================
+    @GetMapping("/getOutletCompleteDetails")
+    @Operation(summary = "Get complete outlet details", description = """
+            Fetches outlet name, phone number, profile picture url
+            and outlet building number using outlet ID.
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Outlet details fetched successfully"), @ApiResponse(responseCode = "404", description = "Outlet not found"), @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<FmOutletCompleteDetailsDto> getOutletCompleteDetails(@RequestParam Integer outletId) {
+
+        log.info("GET getOutletCompleteDetails request received. outletId={}", outletId);
+
+        return ResponseEntity.ok(outletService.getOutletCompleteDetails(outletId));
+    }
+
+    /*===================================================================================*/
+    /*===================================================================================*/
+
+    /**
+     * Fetches all outlet IDs belonging to a merchant.
+     * <p>
+     * This API is mainly used by other microservices,
+     * such as Customer & Order, to resolve a merchant
+     * into its associated outlets.
+     */
+    @GetMapping("/getOutletIdsByMerchantId")
+    @Operation(summary = "Get outlet IDs by merchant ID", description = """
+            Fetches all outlet IDs associated with the given merchant ID
+            from the FM outlets table.
+            """)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Outlet IDs fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid merchant ID"),
+            @ApiResponse(responseCode = "404", description = "No outlets found for merchant"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<List<Integer>> getOutletIdsByMerchantId(
+
+            @Parameter(description = "Merchant ID", example = "50", required = true)
+            @RequestParam("merchantId") Integer merchantId) {
+
+        log.info("Received request to fetch outlet IDs. merchantId={}", merchantId);
+
+        if (merchantId == null || merchantId <= 0) {
+
+            log.warn("Invalid merchant ID received. merchantId={}", merchantId);
+
+            throw new IllegalArgumentException("Merchant ID must be greater than zero");
+        }
+
+        List<Integer> outletIds = outletService.getOutletIdsByMerchantId(merchantId);
+
+        log.info("Returning {} outlet IDs for merchantId={}", outletIds.size(), merchantId);
+
+        return ResponseEntity.ok(outletIds);
+    }
+
+    @Operation(summary = "Public Customer Nearby Outlets", description = """
+            Public version of the nearby outlets API.
+
+            Returns only the minimal outlet fields:
+            outletId, outletName, merchantId, review, isActive, isApproved,
+            distanceKm, isVegOutlet, outletPicUrl.
+
+            This endpoint does not require authentication.
+            """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Nearby outlets fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "lat or lng parameter is missing / invalid")
+    })
+    @GetMapping("/public/customer/nearby")
+    public ResponseEntity<FmPublicCustomerNearbyResponseDto> fetchPublicCustomerNearbyOutlets(
+            @Parameter(description = "Customer latitude (GPS)", example = "17.385", required = true)
+            @RequestParam double lat,
+            @Parameter(description = "Customer longitude (GPS)", example = "78.4867", required = true)
+            @RequestParam double lng) {
+
+        log.info("GET /api/fm/outlets/public/customer/nearby lat={}, lng={}", lat, lng);
+        FmPublicCustomerNearbyResponseDto response = outletService.fetchPublicCustomerNearbyOutlets(lat, lng);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping(path = "/saveOrUpdateDocuments",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Save or update  Documents", description = "Merchant,Outlet,Customer can upload their documents  using this API and the file will be stored in AWS S3 bucket and the URL of the file will be stored in database and also return the URL of the file in response")
+    public ResponseEntity<UploadDocumentsResponseDto> saveOrUpdateDocuments(@ModelAttribute UploadDocumentsRequestDto uploadDocumentsDto) {
+
+        log.info("Upload documents API called for user id: {}", uploadDocumentsDto.getEntityId());
+        UploadDocumentsResponseDto updateDocumentsResponseDto = outletService.saveOrUpdateDocuments(uploadDocumentsDto);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(updateDocumentsResponseDto);
+    }
+
 }

@@ -8,8 +8,14 @@ import java.math.BigDecimal;
 public class CoCartItemResponseDto {
 
     private Integer productId;
+
+    private Integer variantOptionId;
+
     private String productName;
+
     private String productImage;
+
     private Integer quantity;
+
     private BigDecimal totalPrice;
 }

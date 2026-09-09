@@ -1,7 +1,6 @@
 package com.jippy.division.config;
 
 
-import jakarta.ws.rs.HttpMethod;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +27,8 @@ public class DivSecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/v3/api-docs/**",  "/api/div/v3/api-docs").permitAll()
+                        .requestMatchers("/v3/api-docs/**",  "/api/div/v3/api-docs",
+                                "/api/div/email/sendOtp").permitAll()
 
                         // 2. ADD THIS: Allow Health Checks
                         .requestMatchers("/actuator/**").permitAll()

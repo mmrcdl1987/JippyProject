@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.jippy.customerandorder.enums.PromotionSourceType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -10,6 +11,8 @@ import java.util.List;
 
 @Data
 public class CoPlaceOrderRequestDto {
+
+    // ================= ORDER =================
 
     @NotNull(message = "Outlet id is required")
     private Integer outletId;
@@ -26,42 +29,95 @@ public class CoPlaceOrderRequestDto {
     @NotNull(message = "Payment mode id is required")
     private Integer paymentModeId;
 
-    private Integer couponId;
-
     @NotNull(message = "Order amount is required")
     private BigDecimal orderAmount;
 
-    private BigDecimal platformFee;
+    private BigDecimal orderAmountDiscounted;
 
-    private BigDecimal deliveryFee;
+    private PromotionSourceType promotionSourceType;
 
-    private BigDecimal surgeFee;
+    private Integer couponId;
 
-    private BigDecimal packagingFee;
-
-    private BigDecimal gst;
+    private BigDecimal couponDiscount;
 
     @NotNull(message = "Order total amount is required")
     private BigDecimal orderTotalAmount;
 
-    private BigDecimal couponDiscount;
+    // ================= DRIVER DELIVERY =================
 
-    /*
-     * WALLET USAGE
+    private BigDecimal pickUpDistanceKms;
+
+    private BigDecimal deliveryDistanceKms;
+
+    private BigDecimal pickUpCharges;
+
+    /**
+     * Driver delivery charge.
+     * No GST is applied to this amount.
      */
+    private BigDecimal driverDeliveryFee;
+
+    /**
+     * Total driver delivery fee.
+     * No driver delivery tax.
+     */
+    private BigDecimal totalDeliveryFee;
+
+    // ================= CUSTOMER DELIVERY =================
+
+    /**
+     * Customer delivery charge after free-distance benefit.
+     */
+    private BigDecimal customerDeliveryFee;
+
+    /**
+     * GST on customer delivery.
+     */
+    private BigDecimal customerDeliveryFeeTax;
+
+    // ================= PLATFORM FEE =================
+
+    private BigDecimal platformFee;
+
+    private BigDecimal platformFeeTax;
+
+    private Boolean platformFeeToggle;
+
+    // ================= SURGE FEE =================
+
+    private BigDecimal surgeFee;
+
+    private BigDecimal surgeFeeTax;
+
+    private Boolean surgeFeeToggle;
+
+    // ================= PACKAGING FEE =================
+
+    private BigDecimal packagingFee;
+
+    private BigDecimal packagingFeeTax;
+
+    private Boolean packagingFeeToggle;
+
+    // ================= FOOD TAX =================
+
+    private BigDecimal foodTax;
+
+    private BigDecimal totalTax;
+
+    // ================= WALLET =================
+
     private Boolean useWallet;
 
     private BigDecimal walletAmount;
 
-    /*
-     * DELIVERY DISTANCE
-     */
-    private BigDecimal pickUpDistanceKms;
-    private BigDecimal deliveryDistanceKms;
-    private BigDecimal pickUpCharges;
-    private BigDecimal deliveryCharges;
+    // ================= TIP =================
 
-    /*
+    private BigDecimal tip;
+
+    // ================= ORDER TYPE =================
+
+    /**
      * NORMAL
      * SCHEDULED_RECURRING
      * SCHEDULED_CUSTOM_PLAN
@@ -69,47 +125,47 @@ public class CoPlaceOrderRequestDto {
     @NotNull(message = "Order type is required")
     private String orderType;
 
-    /*
-     * RECURRING ONLY
-     */
+    // ================= SCHEDULED =================
+
     private LocalDateTime scheduledDeliveryDateTime;
 
-    /*
-     * RECURRING ONLY
-     */
     private LocalDateTime subscriptionStartDate;
 
-    /*
-     * RECURRING ONLY
-     */
     private LocalDateTime subscriptionEndDate;
 
-    /*
+    /**
      * BREAKFAST
      * LUNCH
      * DINNER
      */
     private String mealPreference;
 
-    /*
-     * RECURRING
-     */
     private List<CoOrderItemDto> items;
 
-    /*
-     * CUSTOM PLAN
-     */
+    // ================= CUSTOM PLAN =================
+
     private List<CoScheduledOrderDto> scheduledOrders;
+
+    // ================= AUDIT =================
 
     private Integer createdBy;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
-    // used only in group orders
+    // ================= GROUP ORDER =================
+
     private Integer groupOrderInvitationId;
+
+    // ================= ORDER =================
 
     private String orderId;
 
     private String orderStatus;
+
+    // ================= INSTRUCTIONS =================
+
+    private String cookingInstructions;
+
+    private Boolean isCutleryRequired;
 }

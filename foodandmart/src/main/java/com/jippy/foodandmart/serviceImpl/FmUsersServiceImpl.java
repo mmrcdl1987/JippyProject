@@ -115,7 +115,8 @@ public class FmUsersServiceImpl implements IFmUsersService {
         }
 
         //  Fetch role_permissions
-        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
+        List<FmRolePermissions> rolePermissionsList
+                = rolePermissionsRepository.findByRole(role);
 
         if (rolePermissionsList.isEmpty()) {
             throw new RuntimeException("No permissions mapped to role");
@@ -184,7 +185,7 @@ public class FmUsersServiceImpl implements IFmUsersService {
             return userDto;
         }
 
-        userDto.setUserId(user.get().getUsersId());
+//        userDto.setUserId(user.get().getUsersId());
         userDto.setUserId(user.get().getUserId());
         userDto.setUserType(user.get().getUserType());
         userDto.setUsername(user.get().getUsername());

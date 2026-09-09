@@ -9,8 +9,9 @@ import java.util.List;
 
 public interface IFmOutletService {
 
-    FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto);
+    //FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto);
 
+    FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto);
     String uploadOrUpdateOutletImage(
             Integer outletId,
             MultipartFile image
@@ -19,6 +20,7 @@ public interface IFmOutletService {
 //    and also updates the outlet bank details if provided in the request dto
 //    and also updates the outlet address details if provided in the request dto
 //    and also updates the outlet timings if provided in the request dto
+
 
     FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto);
 
@@ -78,4 +80,38 @@ public interface IFmOutletService {
     FmPublicOutletDetailsDto getPublicOutletDetails(Integer outletId);
 
     Integer getAreaIdByOutletId(Integer outletId);
+
+    FmResponseDto updateOutletProfilePic(FmUpdateOutletProfilePicDto outletDto);
+
+    // ================================================================
+    // TOGGLE OUTLET
+    // ================================================================
+    //
+    // Updates the is_toggle value of an outlet.
+    // ================================================================
+
+    FmResponseDto toggleForOutlet(FmToggleOutletRequestDto requestDto);
+
+    UploadDocumentsResponseDto saveOrUpdateDocuments(UploadDocumentsRequestDto uploadDocumentsDto);
+
+    /**
+     * Fetches outlet name and area name for multiple outlets.
+     *
+     * @param outletIds list of outlet IDs
+     * @return outlet and area details
+     */
+    List<FmOutletDetailsResponseDto> getOutletDetailsByIds(List<Integer> outletIds);
+
+    //    =====================================================================================
+    FmOutletCompleteDetailsDto getOutletCompleteDetails(Integer outletId);
+
+//    ==================================================================================
+    /**
+     * Fetches all outlet IDs belonging to a merchant.
+     *
+     * @param merchantId merchant ID
+     * @return list of outlet IDs
+     */
+    List<Integer> getOutletIdsByMerchantId(Integer merchantId);
+
 }

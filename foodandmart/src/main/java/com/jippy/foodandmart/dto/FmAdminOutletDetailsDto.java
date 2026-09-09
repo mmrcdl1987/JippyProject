@@ -105,6 +105,10 @@ public class FmAdminOutletDetailsDto {
     // KYC
     // =========================================================
 
+    private String aadharNumber;
+
+    private String panNumber;
+
     private String fssaiNumber;
 
     private String gstNumber;

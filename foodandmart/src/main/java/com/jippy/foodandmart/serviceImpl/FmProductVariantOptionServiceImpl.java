@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmProductVariantOptionRequestDto;
 import com.jippy.foodandmart.dto.FmProductVariantOptionResponseDto;
 import com.jippy.foodandmart.entity.FmProduct;
@@ -141,7 +142,7 @@ public class FmProductVariantOptionServiceImpl
                                             + productVariantOptionId);
                         });
 
-        entity.setIsActive(Boolean.FALSE);
+        entity.setIsActive(FmAppConstants.FLAG_NO);
 
         productVariantOptionRepository.save(entity);
 

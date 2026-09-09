@@ -37,10 +37,6 @@ public class CoMerchantSettlementMapper {
 
         dto.setQuantity(item.getQuantity());
 
-        dto.setMerchantUnitPrice(item.getMerchantUnitPrice());
-
-        dto.setMerchantTotalPrice(item.getMerchantPriceTotal());
-
         return dto;
     }
 

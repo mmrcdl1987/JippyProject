@@ -8,8 +8,10 @@ import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
+import com.jippy.foodandmart.exception.ImageValidationException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
+import com.jippy.foodandmart.feignClients.DriverFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.mapper.FmOutletMapper;
 import com.jippy.foodandmart.mapper.FmPublicOutletMapper;
@@ -82,6 +84,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final EmailService emailService;
     private final CacheInvalidateServiceImpl cacheInvalidateService;
     private final IFmApprovalRequestService approvalRequestService;
+    private final DriverFeignClient driverFeignClient;
+
+//    @Override
+//    @Transactional
+//    public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto) {
+//        return createOutlet(dto, null, null, null, null);
+//    }
 
     @Override
     @Transactional
@@ -196,9 +205,18 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * Create Response DTO.
          */
         FmOutletCreateResponseDTO createOutlet = FmOutletMapper.toCreateResponseDto(dto, outlet);
+        FmUserKyc savedKyc = userKycRepository.findByEntityIdAndEntityType(
+                outlet.getOutletId(), FmAppConstants.TYPE_OUTLET).orElse(null);
+        if (savedKyc != null) {
+            createOutlet.setAadhaarNumberUrl(savedKyc.getAadhaarNumberUrl());
+            createOutlet.setPanNumberUrl(savedKyc.getPanNumberUrl());
+            createOutlet.setFssaiNumberUrl(savedKyc.getFssaiNumberUrl());
+            createOutlet.setGstNumberUrl(savedKyc.getGstNumberUrl());
+        }
 
         return createOutlet;
     }
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -259,7 +277,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
     }
 
-    //---------------------------------------------------------------------------------------
+
     @Override
     @Transactional
     public FmUpdateOutletRequestDTO updateOutletDetailsByMerchant(Integer outletId, FmUpdateOutletRequestDTO dto) {
@@ -341,6 +359,19 @@ public class FmOutletServiceImpl implements IFmOutletService {
         log.info("Outlet bank details updated successfully.");
 
         /*
+         * Update Outlet KYC.
+         */
+        Optional<FmUserKyc> optionalFmUserKyc = userKycRepository.findByEntityIdAndEntityType(
+                outletId, FmAppConstants.TYPE_OUTLET);
+        FmUserKyc savUserKyc = optionalFmUserKyc.get();
+
+        log.info("=============================================" + savUserKyc.getKycId());
+        FmOutletMapper.updateOutletKycEntity(savUserKyc, dto);
+        userKycRepository.save(savUserKyc);
+
+        log.info("Outlet KYC details updated successfully.");
+
+        /*
          * Delete existing outlet operating days.
          */
         outletDayRepository.deleteByOutletId(outletId);
@@ -364,29 +395,95 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Return updated response.
          */
-        return FmOutletMapper.toUpdateResponseDto(dto, outlet);
+        FmUpdateOutletRequestDTO response = FmOutletMapper.toUpdateResponseDto(dto, outlet);
+
+//        if (savedKyc != null) {
+//            response.setAadhaarNumberUrl(savedKyc.getAadhaarNumberUrl());
+//            response.setPanNumberUrl(savedKyc.getPanNumberUrl());
+//            response.setFssaiNumberUrl(savedKyc.getFssaiNumberUrl());
+//            response.setGstNumberUrl(savedKyc.getGstNumberUrl());
+//        }
+        return response;
     }
 
+//    /**
+//     * Saves Outlet KYC Details.
+//     * <p>
+//     * Every newly created outlet stores its
+//     * FSSAI and GST details in user_kyc table.
+//     *
+//     * @param dto      Outlet Request DTO.
+//     * @param outletId Newly created Outlet Id.
+//     */
+//    private void saveOutletKyc(FmOutletRequestDTO dto) {
+//
+//        log.info("Saving Outlet KYC Details for Outlet Id: {}", outletId);
+//
+//        upsertOutletKyc(
+//                outletId,
+//                dto.getAadharNumber(),
+//                dto.getPanNumber(),
+//                dto.getFssaiNumber(),
+//                dto.getGstNumber(),
+//                aadharFile, panFile, fssaiFile, gstFile
+//        );
+//
+//        log.info("Outlet KYC Details saved successfully for Outlet Id: {}", outletId);
+//    }
 
-    /**
-     * Saves Outlet KYC Details.
-     * <p>
-     * Every newly created outlet stores its
-     * FSSAI and GST details in user_kyc table.
-     *
-     * @param dto      Outlet Request DTO.
-     * @param outletId Newly created Outlet Id.
-     */
-    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId) {
+//    private void saveOutletKyc(FmOutletRequestDTO dto, Integer outletId) {
+//        saveOutletKyc(dto, outletId, null, null, null, null);
+//    }
 
-        log.info("Saving Outlet KYC Details for Outlet Id: {}", outletId);
+    private void saveOutletKyc(FmOutletRequestDTO fmOutletRequestDTO, Integer outletId) {
 
-        FmUserKyc kyc = FmMerchantMapper.toOutletKycEntity(dto, outletId);
+        FmUserKyc kyc = userKycRepository
+                .findByEntityIdAndEntityType(outletId, FmAppConstants.TYPE_OUTLET)
+                .orElseGet(FmUserKyc::new);
+
+        kyc.setEntityId(outletId);
+        kyc.setEntityType(FmAppConstants.TYPE_OUTLET);
+
+        if (fmOutletRequestDTO.getAadharNumber() != null && !fmOutletRequestDTO.getAadharNumber().isBlank()) {
+            kyc.setAadhaarNumber(fmOutletRequestDTO.getAadharNumber());
+        }
+        if (fmOutletRequestDTO.getPanNumber() != null && !fmOutletRequestDTO.getPanNumber().isBlank()) {
+            kyc.setPanNumber(fmOutletRequestDTO.getPanNumber());
+        }
+        if (fmOutletRequestDTO.getFssaiNumber() != null && !fmOutletRequestDTO.getFssaiNumber().isBlank()) {
+            kyc.setFssaiNumber(fmOutletRequestDTO.getFssaiNumber());
+        }
+        if (fmOutletRequestDTO.getGstNumber() != null && !fmOutletRequestDTO.getGstNumber().isBlank()) {
+            kyc.setGstNumber(fmOutletRequestDTO.getGstNumber());
+        }
+//        uploadKycFile(kyc, aadharFile, FmAppConstants.TYPE_OUTLET, outletId, "aadhar");
+//        uploadKycFile(kyc, panFile, FmAppConstants.TYPE_OUTLET, outletId, "pan");
+//        uploadKycFile(kyc, fssaiFile, FmAppConstants.TYPE_OUTLET, outletId, "fssai");
+//        uploadKycFile(kyc, gstFile, FmAppConstants.TYPE_OUTLET, outletId, "gst");
+        if (kyc.getKycId() == null) {
+            kyc.setVerified(false);
+        }
 
         userKycRepository.save(kyc);
-
-        log.info("Outlet KYC Details saved successfully for Outlet Id: {}", outletId);
     }
+
+//    private void uploadKycFile(FmUserKyc kyc, MultipartFile file, String userType,
+//                               Integer userId, String documentType) {
+//        if (file == null || file.isEmpty()) {
+//            return;
+//        }
+//        switch (documentType) {
+//            case "aadhar" -> kyc.setAadhaarNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getAadhaarNumberUrl()));
+//            case "pan" -> kyc.setPanNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getPanNumberUrl()));
+//            case "fssai" -> kyc.setFssaiNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getFssaiNumberUrl()));
+//            case "gst" -> kyc.setGstNumberUrl(s3Service.replaceKycDocument(
+//                    file, userType, userId, documentType, kyc.getGstNumberUrl()));
+//            default -> throw new BadRequestException("Unsupported KYC document type.");
+//        }
+//    }
 
     /**
      * Saves outlet bank details into user_bank_details table.
@@ -1111,10 +1208,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
     /**
      * Resolves comma-separated cuisine names from CSV/Excel
      * into cuisine type IDs.
-     *
+     * <p>
      * Example:
      * Biryani,Chinese,North Indian
-     *
+     * <p>
      * becomes:
      * [1, 2, 5]
      */
@@ -1169,11 +1266,11 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     /**
      * Generates a unique outlet username from the outlet name.
-     *
+     * <p>
      * Example:
      * Mehfil Restaurant
      * -> mehfil_restaurant
-     *
+     * <p>
      * If already exists:
      * -> mehfil_restaurant_1
      * -> mehfil_restaurant_2
@@ -1216,7 +1313,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     /**
      * Generates a password satisfying the existing outlet
      * password policy:
-     *
+     * <p>
      * - uppercase
      * - lowercase
      * - number
@@ -1427,12 +1524,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
     /**
      * Saves operating-day slots for BULK UPLOAD only.
-     *
+     * <p>
      * The bulk CSV/Excel parser can create multiple FmOutletDayDTO rows
      * for the same day (for example, Monday 09:00-14:00 and Monday
      * 18:00-22:00). Each DTO is intentionally stored as a separate
      * FmOutletDay row.
-     *
+     * <p>
      * This method is kept separate from saveOperatingDays() so the
      * existing single-outlet create/update flow is not changed.
      */
@@ -2283,17 +2380,29 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Transactional
     public FmAddressRequestDto saveAddressDetails(FmAddressRequestDto fmAddressRequestDto) {
 
-        boolean exists = addressRepository.existsByJippyAddressIdAndAddressType(fmAddressRequestDto.getJippyAddressId(), fmAddressRequestDto.getAddressType());
+        FmOutletAddress address = addressRepository
+                .findByJippyAddressIdAndAddressType(
+                        fmAddressRequestDto.getJippyAddressId(),
+                        fmAddressRequestDto.getAddressType()
+                )
+                .orElseGet(FmOutletAddress::new);
 
-        if (exists) {
-            throw new DuplicateResourceException(String.format("%s address already exists for Jippy Address Id %d", fmAddressRequestDto.getAddressType(), fmAddressRequestDto.getJippyAddressId()));
-        }
-
-        FmOutletAddress address = FmOutletMapper.toAddressEntity(fmAddressRequestDto);
+        address.setJippyAddressId(fmAddressRequestDto.getJippyAddressId());
+        address.setAddressType(fmAddressRequestDto.getAddressType());
+        address.setBuildingNumber(fmAddressRequestDto.getBuildingNumber());
+        address.setRoad(fmAddressRequestDto.getRoad());
+        address.setLandmark(fmAddressRequestDto.getLandmark());
+        address.setCityId(fmAddressRequestDto.getCityId());
+        address.setStateId(fmAddressRequestDto.getStateId());
+        address.setAreaId(fmAddressRequestDto.getAreaId());
 
         FmOutletAddress savedAddress = addressRepository.save(address);
 
-        log.info("Address saved successfully with addressId={}", savedAddress.getAddressId());
+        log.info(
+                "Address saved successfully for jippyAddressId={} with addressId={}",
+                savedAddress.getJippyAddressId(),
+                savedAddress.getAddressId()
+        );
 
         return FmOutletMapper.toAddressRequestDto(savedAddress);
     }
@@ -2766,6 +2875,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         if (kyc != null) {
 
+            response.setAadharNumber(kyc.getAadhaarNumber());
+
+            response.setPanNumber(kyc.getPanNumber());
+
             response.setFssaiNumber(kyc.getFssaiNumber());
 
             response.setGstNumber(kyc.getGstNumber());
@@ -2869,5 +2982,508 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return address.getAreaId();
     }
 
+    @Override
+    public FmResponseDto updateOutletProfilePic(
+            FmUpdateOutletProfilePicDto outletDto
+    ) {
+
+        log.info(
+                "[OUTLET] Update profile picture API started. outletId={}",
+                outletDto != null ? outletDto.getOutletId() : null
+        );
+
+        // ================================================================
+        // 1. Validate request body
+        // ================================================================
+
+        if (outletDto == null) {
+
+            log.error("[OUTLET] Request body is null");
+
+            throw new IllegalArgumentException(
+                    "Outlet details are required"
+            );
+        }
+
+        // ================================================================
+        // 2. Validate outlet ID
+        // ================================================================
+
+        if (outletDto.getOutletId() == null) {
+
+            log.error("[OUTLET] Outlet ID is required");
+
+            throw new IllegalArgumentException(
+                    "Outlet ID is required"
+            );
+        }
+
+        log.info(
+                "[OUTLET] Outlet ID received: {}",
+                outletDto.getOutletId()
+        );
+
+        // ================================================================
+        // 3. Validate profile picture URL
+        // ================================================================
+
+        if (outletDto.getOutletPicUrl() == null ||
+                outletDto.getOutletPicUrl().trim().isEmpty()) {
+
+            log.error(
+                    "[OUTLET] Profile picture URL is required. outletId={}",
+                    outletDto.getOutletId()
+            );
+
+            throw new IllegalArgumentException(
+                    "Profile picture URL is required"
+            );
+        }
+
+        // ================================================================
+        // 4. Find outlet
+        // ================================================================
+
+        FmOutlet outlet = outletRepository
+                .findById(outletDto.getOutletId())
+                .orElseThrow(() -> {
+
+                    log.error(
+                            "[OUTLET] Outlet not found. outletId={}",
+                            outletDto.getOutletId()
+                    );
+
+                    return new ResourceNotFoundException(
+                            "Outlet not found with ID: "
+                                    + outletDto.getOutletId()
+                    );
+                });
+
+        // ================================================================
+        // 5. Update profile picture
+        // ================================================================
+
+        outlet.setOutletPicUrl(
+                outletDto.getOutletPicUrl()
+        );
+
+        // ================================================================
+        // 6. Save
+        // ================================================================
+
+        outletRepository.save(outlet);
+
+        log.info(
+                "[OUTLET] Profile picture updated successfully. outletId={}",
+                outlet.getOutletId()
+        );
+
+        // ================================================================
+        // 7. Return response
+        // ================================================================
+
+        return new FmResponseDto(
+                "200",
+                "Outlet profile picture updated successfully"
+        );
+    }
+//    ==============================================================================
+//    ==============================================================================
+    // ================================================================
+// TOGGLE OUTLET
+// ================================================================
+//
+// This method updates the is_toggle column of the outlet.
+//
+// Example:
+//
+// outletId = 132
+// isToggle = true
+//
+// Result:
+//
+// outlets
+// outlet_id | is_toggle
+// ----------+----------
+// 132       | true
+//
+// ================================================================
+
+    @Override
+    @Transactional
+    public FmResponseDto toggleForOutlet(
+            FmToggleOutletRequestDto requestDto
+    ) {
+
+        log.info(
+                "[OUTLET TOGGLE] Toggle API started. outletId={}, isToggle={}",
+                requestDto != null ? requestDto.getOutletId() : null,
+                requestDto != null ? requestDto.getIsToggle() : null
+        );
+
+        // ============================================================
+        // 1. Validate request body
+        // ============================================================
+
+        if (requestDto == null) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Request body is null"
+            );
+
+            throw new IllegalArgumentException(
+                    "Outlet toggle details are required"
+            );
+        }
+
+        // ============================================================
+        // 2. Validate outlet ID
+        // ============================================================
+
+        if (requestDto.getOutletId() == null) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Outlet ID is required"
+            );
+
+            throw new IllegalArgumentException(
+                    "Outlet ID is required"
+            );
+        }
+
+        // ============================================================
+        // 3. Validate isToggle
+        // ============================================================
+
+        if (requestDto.getIsToggle() == null) {
+
+            log.error(
+                    "[OUTLET TOGGLE] isToggle value is required. outletId={}",
+                    requestDto.getOutletId()
+            );
+
+            throw new IllegalArgumentException(
+                    "isToggle value is required"
+            );
+        }
+
+        log.info(
+                "[OUTLET TOGGLE] Updating outlet. outletId={}, isToggle={}",
+                requestDto.getOutletId(),
+                requestDto.getIsToggle()
+        );
+
+        // ============================================================
+        // 4. Check whether outlet exists
+        // ============================================================
+
+        boolean outletExists = outletRepository.existsById(
+                requestDto.getOutletId()
+        );
+
+        if (!outletExists) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Outlet not found. outletId={}",
+                    requestDto.getOutletId()
+            );
+
+            throw new ResourceNotFoundException(
+                    "Outlet not found with ID: "
+                            + requestDto.getOutletId()
+            );
+        }
+
+        // ============================================================
+        // 5. Update is_toggle column
+        // ============================================================
+
+        int updatedRows =
+                outletRepository.updateOutletToggle(
+                        requestDto.getOutletId(),
+                        requestDto.getIsToggle()
+                );
+
+        // ============================================================
+        // 6. Validate update
+        // ============================================================
+
+        if (updatedRows == 0) {
+
+            log.error(
+                    "[OUTLET TOGGLE] Failed to update outlet. outletId={}",
+                    requestDto.getOutletId()
+            );
+
+            throw new RuntimeException(
+                    "Failed to update outlet toggle"
+            );
+        }
+
+        // ============================================================
+        // 7. Log successful update
+        // ============================================================
+
+        log.info(
+                "[OUTLET TOGGLE] Outlet toggle updated successfully. " +
+                        "outletId={}, isToggle={}",
+                requestDto.getOutletId(),
+                requestDto.getIsToggle()
+        );
+
+        // ============================================================
+        // 8. Return success response
+        // ============================================================
+
+        String message =
+                Boolean.TRUE.equals(requestDto.getIsToggle())
+                        ? "Outlet toggle enabled successfully"
+                        : "Outlet toggle disabled successfully";
+
+        return new FmResponseDto("200", message);
+    }
+
+    @Override
+    public UploadDocumentsResponseDto saveOrUpdateDocuments(UploadDocumentsRequestDto uploadDocumentsDto) {
+        try {
+
+            UploadDocumentsResponseDto uploadDocumentsResponseDto = new UploadDocumentsResponseDto();
+
+            String entityType = uploadDocumentsDto.getEntityType().toUpperCase();
+            Integer entityId = uploadDocumentsDto.getEntityId();
+
+            boolean isDriver = FmAppConstants.TYPE_DRIVER.equalsIgnoreCase(uploadDocumentsDto.getEntityType());
+            FmDriverApprovalResponseDTO driverApprovalDTO = null;
+            DriverDocumentUpdateDTO driverDocumentUpdateDTO = null;
+
+            if (isDriver) {
+                driverApprovalDTO = driverFeignClient.getDriverById(uploadDocumentsDto.getEntityId());
+                driverDocumentUpdateDTO = new DriverDocumentUpdateDTO();
+                driverDocumentUpdateDTO.setDriverId(uploadDocumentsDto.getEntityId());
+            }
+
+            //get existing KYC details if present
+            Optional<FmUserKyc> optionalFmUserKyc = userKycRepository.findByEntityIdAndEntityType(entityId, entityType);
+            FmUserKyc userKyc = null;
+            if (optionalFmUserKyc.isPresent()) {
+                userKyc = optionalFmUserKyc.get();
+            }
+
+            // Process all files using the shared DTO instance
+            uploadIfPresent(uploadDocumentsDto.getAadharFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "aadhaar", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getPanFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "pan", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getFssaiFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "fssai", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getGstFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "gst", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getRcCopyFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "rcCopy", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+            uploadIfPresent(uploadDocumentsDto.getDrivingLicenseFile(), uploadDocumentsDto.getEntityType(), uploadDocumentsDto.getEntityId(), "drivingLicense", uploadDocumentsResponseDto, userKyc, driverDocumentUpdateDTO, driverApprovalDTO);
+
+            // Save Merchant/User KYC ONCE
+            if (userKyc != null) {
+                userKycRepository.save(userKyc);
+            }
+
+            // Call Feign Client ONCE with all populated URLs
+            if (isDriver && driverDocumentUpdateDTO != null) {
+                driverFeignClient.updateDriverDocuments(driverDocumentUpdateDTO);
+            }
+
+            return uploadDocumentsResponseDto;
+        } catch (Exception e) {
+            log.error("Error validating image file", e);
+            throw new ImageValidationException("Error validating image file: " + e.getMessage());
+        }
+
+    }
+
+    private UploadDocumentsResponseDto uploadIfPresent(
+            MultipartFile file, String entityType,
+            Integer entityId, String docType,
+            UploadDocumentsResponseDto uploadDocumentsResponseDto, FmUserKyc userKyc,
+            DriverDocumentUpdateDTO driverDocumentUpdateDTO,
+            FmDriverApprovalResponseDTO driverApprovalDTO
+    ) {
+
+        if (file != null && !file.isEmpty()) {
+
+//            FmDriverApprovalResponseDTO driverApprovalResponseDTO = null;
+//
+//            if (entityType.equalsIgnoreCase(FmAppConstants.TYPE_DRIVER)) {
+//                driverApprovalResponseDTO = driverFeignClient.getDriverById(entityId);
+//                driverDocumentUpdateDTO.setDriverId(entityId);
+//            }
+
+            uploadDocumentsResponseDto.setEntityId(entityId);
+            uploadDocumentsResponseDto.setEntityType(entityType);
+
+            if ("aadhar".equalsIgnoreCase(docType) || "aadhaar".equalsIgnoreCase(docType)) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldAadharUrl = userKyc.getAadhaarNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldAadharUrl);
+
+                    userKyc.setAadhaarNumberUrl(fileUrl);
+                }
+                if (entityType.equalsIgnoreCase(FmAppConstants.TYPE_DRIVER)) {
+
+                    String oldAadharUrl = driverApprovalDTO.getAadharDocUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldAadharUrl);
+
+                    driverDocumentUpdateDTO.setAadharDocUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setAadharFileUrl(fileUrl);
+
+            } else if (docType.equalsIgnoreCase("pan")) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldPanUrl = userKyc.getPanNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldPanUrl);
+
+                    userKyc.setPanNumberUrl(fileUrl);
+                }
+                if (entityType.equalsIgnoreCase(FmAppConstants.TYPE_DRIVER)) {
+
+                    String oldPanUrl = driverApprovalDTO.getPanDocUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldPanUrl);
+
+                    driverDocumentUpdateDTO.setPanDocUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setPanFileUrl(fileUrl);
+
+            } else if (docType.equalsIgnoreCase("fssai")) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldFssaiUrl = userKyc.getFssaiNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldFssaiUrl);
+
+                    userKyc.setFssaiNumberUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setFssaiFileUrl(fileUrl);
+
+            } else if (docType.equalsIgnoreCase("gst")) {
+
+                String fileUrl = "";
+                if (userKyc != null) {
+                    String oldGstUrl = userKyc.getGstNumberUrl();
+                    fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldGstUrl);
+
+                    userKyc.setGstNumberUrl(fileUrl);
+                }
+                uploadDocumentsResponseDto.setGstFileUrl(fileUrl);
+            }else if ("rc-copy".equalsIgnoreCase(docType) || "rcCopy".equalsIgnoreCase(docType)) {
+                System.out.println("==================================rc copy");
+                String oldRcCopy = driverApprovalDTO.getRcCopyDocUrl();
+                String fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldRcCopy);
+
+                driverDocumentUpdateDTO.setRcCopyDocUrl(fileUrl);
+                uploadDocumentsResponseDto.setRcCopyFileUrl(fileUrl);
+
+            } else if ("driving-license".equalsIgnoreCase(docType) || "drivingLicense".equalsIgnoreCase(docType)) {
+
+                System.out.println("==================================dl");
+                String oldDrivingLicenseUrl = driverApprovalDTO.getDrivingLicenseDocUrl();
+                String fileUrl = s3Service.replaceKycDocument(file, entityType, entityId, docType, oldDrivingLicenseUrl);
+
+                driverDocumentUpdateDTO.setDrivingLicenseDocUrl(fileUrl);
+                uploadDocumentsResponseDto.setDrivingLicenseFileUrl(fileUrl);
+            }
+            return uploadDocumentsResponseDto;
+        }
+        return uploadDocumentsResponseDto;
+    }
+    //    =================================================================================
+//    =================================================================================
+
+    //    =================================================================================
+//    =================================================================================
+
+    /**
+     * Fetches outlet and area details for multiple outlet IDs.
+     * <p>
+     * The information is fetched in one database query.
+     */
+    @Override
+    public List<FmOutletDetailsResponseDto> getOutletDetailsByIds(List<Integer> outletIds) {
+
+        log.info("Fetching outlet details for {} outlet IDs", outletIds.size());
+
+        List<FmOutletDetailsProjection> projections
+                = outletRepository.getOutletDetailsByIds(outletIds);
+
+        List<FmOutletDetailsResponseDto> response = new ArrayList<>();
+
+        for (FmOutletDetailsProjection projection : projections) {
+
+            FmOutletDetailsResponseDto dto = new FmOutletDetailsResponseDto();
+
+            dto.setOutletId(projection.getOutletId());
+
+            dto.setOutletName(projection.getOutletName());
+
+            dto.setAreaName(projection.getAreaName());
+
+            response.add(dto);
+        }
+
+        log.info("Successfully fetched {} outlet details", response.size());
+
+        return response;
+
+    }
+    //    =================================================================================
+//    =================================================================================
+    @Override
+    public FmOutletCompleteDetailsDto getOutletCompleteDetails(Integer outletId) {
+
+        log.info(
+                "Fetching complete outlet details for outletId={}",
+                outletId
+        );
+
+        FmOutletCompleteDetailsProjection projection =
+                outletRepository.getOutletCompleteDetails(outletId)
+                        .orElseThrow(() -> new RuntimeException(
+                                "Outlet not found with ID: " + outletId
+                        ));
+
+        FmOutletCompleteDetailsDto response =
+                FmOutletMapper.mapToCompleteDetailsDto(projection);
+
+        log.info(
+                "Complete outlet details fetched successfully. outletId={}",
+                outletId
+        );
+
+        return response;
+    }
+    //==========================================================================================
+//==========================================================================================
+    @Override
+    public List<Integer> getOutletIdsByMerchantId(Integer merchantId) {
+
+        log.info(
+                "Fetching outlet IDs for merchant. merchantId={}",
+                merchantId
+        );
+
+        List<Integer> outletIds =
+                outletRepository.findOutletIdsByMerchantId(merchantId);
+
+        log.info(
+                "Found {} outlets for merchant. merchantId={}",
+                outletIds.size(),
+                merchantId
+        );
+
+        return outletIds;
+    }
+
+
 }
+
+
+
+
 

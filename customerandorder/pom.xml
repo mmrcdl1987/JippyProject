@@ -191,8 +191,6 @@
                     <to>
                         <image>docker.io/mmrcdl1987/jippydeploy25may2026-${project.artifactId}:s1</image>
                         <auth>
-                            <username></username>
-                            <password></password>
                         </auth>
                     </to>
                 </configuration>
