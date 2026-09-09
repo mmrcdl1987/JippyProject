@@ -23,6 +23,21 @@ public class CoOrderCompleteDetailsResponseDto {
 
     private String paymentMode;
 
+    // ================= ORDER TIMELINE =================
+
+    private LocalDateTime merchantAcceptedTime;
+
+    private LocalDateTime foodPreparationCompletedTime;
+
+    private LocalDateTime driverOrderAcceptedTime;
+
+    private LocalDateTime driverOutletReachedTime;
+
+    private LocalDateTime driverFoodPickupTime;
+
+    private LocalDateTime driverFoodDeliveredTime;
+
+
 
     // ================= CUSTOMER =================
 

@@ -60,6 +60,9 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             "/api/div/email/sendOtp",
             // Terms and Conditions / Privacy Policy
             "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType",
+            // Android versions
+            "/api/fm/app-settings/getApplicationVersionByAppType",
+            "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType",
 
             //public api's for website
             "/api/fm/outlets/public/customer/nearby",

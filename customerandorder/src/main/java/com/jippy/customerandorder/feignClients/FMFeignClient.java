@@ -134,5 +134,10 @@ public interface FMFeignClient {
     List<Integer> getOutletIdsByMerchantId(
             @RequestParam("merchantId") Integer merchantId
     );
+//    =============================================================================
+//    @GetMapping("/api/fm/outlets/getOutletDetails")
+//    CoFmOutletDetailsDto getOutletDetails(
+//            @RequestParam("outletId") Integer outletId
+//    );
 
 }

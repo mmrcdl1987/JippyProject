@@ -20,6 +20,9 @@ import com.jippy.customerandorder.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,10 +31,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -76,8 +76,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         log.info("REFERRAL_QUALIFICATION_START | customerId={}", customerId);
 
         // Check if customer has a pending referral
-        Optional<CoCustomerReferral> referralOpt = customerReferralRepository
-                .findByRefereeCustomerIdAndReferralStatus(customerId, COConstants.REFERRAL_STATUS[0]);
+        Optional<CoCustomerReferral> referralOpt = customerReferralRepository.findByRefereeCustomerIdAndReferralStatus(customerId, COConstants.REFERRAL_STATUS[0]);
 
         if (referralOpt.isEmpty()) {
             log.info("REFERRAL_NO_PENDING | customerId={}", customerId);
@@ -93,8 +92,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             referral.setUpdatedBy(1);
             customerReferralRepository.save(referral);
 
-            log.info("REFERRAL_QUALIFIED_SUCCESS | referralId={} | referrerId={} | refereeCustomerId={}",
-                    referral.getReferralId(), referral.getReferrerCustomerId(), customerId);
+            log.info("REFERRAL_QUALIFIED_SUCCESS | referralId={} | referrerId={} | refereeCustomerId={}", referral.getReferralId(), referral.getReferrerCustomerId(), customerId);
 
         } catch (Exception ex) {
             log.error("REFERRAL_QUALIFICATION_FAILED | customerId={} | error={}", customerId, ex.getMessage(), ex);
@@ -109,8 +107,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         log.info("REFERRAL_REWARD_PROCESS_START | customerId={} | orderId={}", customerId, orderId);
 
         // Check if customer has a pending referral reward
-        Optional<CoCustomerReferral> referralOpt = customerReferralRepository
-                .findByRefereeCustomerIdAndReferralStatus(customerId, COConstants.REFERRAL_STATUS[1]);
+        Optional<CoCustomerReferral> referralOpt = customerReferralRepository.findByRefereeCustomerIdAndReferralStatus(customerId, COConstants.REFERRAL_STATUS[1]);
 
         if (referralOpt.isEmpty()) {
             log.info("REFERRAL_REWARD_NO_QUALIFIED | customerId={}", customerId);
@@ -121,15 +118,9 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         try {
             // Get referrer's wallet
-            CoCustomerWallet referrerWallet = walletRepository
-                    .findByCustomerCustomerId(referral.getReferrerCustomerId())
-                    .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+            CoCustomerWallet referrerWallet = walletRepository.findByCustomerCustomerId(referral.getReferrerCustomerId()).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
-            CoWalletSettings referralSettings =
-                    walletSettingsRepository
-                            .findBySettingType(COConstants.REFERRAL_REWARD_POINTS)
-                            .orElseThrow(() ->
-                                    new CoBusinessException("Referral reward points not configured"));
+            CoWalletSettings referralSettings = walletSettingsRepository.findBySettingType(COConstants.REFERRAL_REWARD_POINTS).orElseThrow(() -> new CoBusinessException("Referral reward points not configured"));
 
             Integer referralPoints = referralSettings.getSettingValue();
 
@@ -140,8 +131,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             referrerWallet.setUpdatedBy(1); // System user
             walletRepository.save(referrerWallet);
 
-            log.info("REFERRAL_REWARD_WALLET_UPDATED | referrerId={} | pointsAdded={} | newBalance={}",
-                    referral.getReferrerCustomerId(), COConstants.REFERRAL_REWARD_POINTS, referrerWallet.getBalancePoints());
+            log.info("REFERRAL_REWARD_WALLET_UPDATED | referrerId={} | pointsAdded={} | newBalance={}", referral.getReferrerCustomerId(), COConstants.REFERRAL_REWARD_POINTS, referrerWallet.getBalancePoints());
 
             // Record transaction
             CoCustomerWalletTransactions transaction = new CoCustomerWalletTransactions();
@@ -153,18 +143,9 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             transactionsRepository.save(transaction);
 
             // Publish Kafka event for referral reward points notification
-            CoWalletPointsEvent referralPointsEvent = CoWalletPointsMapper.toReferralPointsEvent(
-                    referral.getReferrerCustomerId(),
-                    referralPoints,
-                    orderId
-            );
+            CoWalletPointsEvent referralPointsEvent = CoWalletPointsMapper.toReferralPointsEvent(referral.getReferrerCustomerId(), referralPoints, orderId);
             walletPointsKafkaProducer.sendWalletPointsEvent(referralPointsEvent);
-            log.info(
-                    "REFERRAL_POINTS_EVENT_PUBLISHED | referrerId={} | points={} | orderId={}",
-                    referral.getReferrerCustomerId(),
-                    referralPoints,
-                    orderId
-            );
+            log.info("REFERRAL_POINTS_EVENT_PUBLISHED | referrerId={} | points={} | orderId={}", referral.getReferrerCustomerId(), referralPoints, orderId);
 
             // Update referral record status to rewarded
             referral.setReferralStatus(COConstants.REFERRAL_STATUS[2]);
@@ -172,8 +153,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             referral.setUpdatedBy(1);
             customerReferralRepository.save(referral);
 
-            log.info("REFERRAL_REWARD_PROCESSED_SUCCESS | referralId={} | referrerId={} | refereeCustomerId={}",
-                    referral.getReferralId(), referral.getReferrerCustomerId(), customerId);
+            log.info("REFERRAL_REWARD_PROCESSED_SUCCESS | referralId={} | referrerId={} | refereeCustomerId={}", referral.getReferralId(), referral.getReferrerCustomerId(), customerId);
 
         } catch (Exception ex) {
             log.error("REFERRAL_REWARD_PROCESS_FAILED | customerId={} | error={}", customerId, ex.getMessage(), ex);
@@ -192,14 +172,12 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         // GET EXISTING VERIFIED CUSTOMER
         // ==========================================
 
-        CoCustomer customer = customerRepository
-                .findById(dto.getCustomerId())
-                .orElseThrow(() -> {
+        CoCustomer customer = customerRepository.findById(dto.getCustomerId()).orElseThrow(() -> {
 
-                    log.error("CUSTOMER_NOT_FOUND | customerId={}", dto.getCustomerId());
+            log.error("CUSTOMER_NOT_FOUND | customerId={}", dto.getCustomerId());
 
-                    return new CoBadRequestException(COConstants.MSG_CUSTOMER_NOT_FOUND);
-                });
+            return new CoBadRequestException(COConstants.MSG_CUSTOMER_NOT_FOUND);
+        });
 
         // ==========================================
         // VERIFY PHONE NUMBER
@@ -212,44 +190,26 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
             if (verifiedPhone == null || !requestPhone.equals(verifiedPhone)) {
 
-                log.warn(
-                        "PHONE_NUMBER_MISMATCH | customerId={} | " +
-                                "verifiedPhone={} | requestPhone={}",
-                        customer.getCustomerId(),
-                        verifiedPhone,
-                        requestPhone
-                );
+                log.warn("PHONE_NUMBER_MISMATCH | customerId={} | " + "verifiedPhone={} | requestPhone={}", customer.getCustomerId(), verifiedPhone, requestPhone);
                 throw new CoBadRequestException("Phone number mismatch");
             }
 
-            log.info(
-                    "PHONE_NUMBER_VERIFIED | customerId={} | phone={}",
-                    customer.getCustomerId(),
-                    requestPhone
-            );
+            log.info("PHONE_NUMBER_VERIFIED | customerId={} | phone={}", customer.getCustomerId(), requestPhone);
         }
 
         // ==========================================
         // CHECK EMAIL
         // ==========================================
 
-        if(dto.getEmail().isBlank()){
-            throw  new CoBadRequestException("Email can not be blank");
-        }else{
-            Optional<CoCustomer> existingEmail = customerRepository.findByEmail(
-                    dto.getEmail().trim());
+        if (dto.getEmail().isBlank()) {
+            throw new CoBadRequestException("Email can not be blank");
+        } else {
+            Optional<CoCustomer> existingEmail = customerRepository.findByEmail(dto.getEmail().trim());
 
-            if (existingEmail.isPresent() &&
-                    !existingEmail.get().getCustomerId()
-                            .equals(customer.getCustomerId())) {
+            if (existingEmail.isPresent() && !existingEmail.get().getCustomerId().equals(customer.getCustomerId())) {
 
-                log.error(
-                        "EMAIL_ALREADY_EXISTS | email={} | existingCustomerId={}",
-                        dto.getEmail(),
-                        existingEmail.get().getCustomerId()
-                );
-                throw new CoBadRequestException(
-                        COConstants.EMAIL_ALREADY_EXISTS);
+                log.error("EMAIL_ALREADY_EXISTS | email={} | existingCustomerId={}", dto.getEmail(), existingEmail.get().getCustomerId());
+                throw new CoBadRequestException(COConstants.EMAIL_ALREADY_EXISTS);
             }
         }
 
@@ -264,20 +224,13 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         customer.setDateOfBirth(dto.getDOB());
 
         // Generate referral code for this customer
-        if (customer.getReferralCode() == null ||
-                customer.getReferralCode().isBlank()) {
+        if (customer.getReferralCode() == null || customer.getReferralCode().isBlank()) {
 
-            String referralCode =
-                    CoCustomerMapper.generateReferral(
-                            dto.getFirstName(),
-                            dto.getLastName(),
-                            dto.getPhoneNumber()
-                    );
+            String referralCode = CoCustomerMapper.generateReferral(dto.getFirstName(), dto.getLastName(), dto.getPhoneNumber());
 
             customer.setReferralCode(referralCode);
 
-            log.info("REFERRAL_CODE_GENERATED | customerId={} | referralCode={}",
-                    customer.getCustomerId(), referralCode);
+            log.info("REFERRAL_CODE_GENERATED | customerId={} | referralCode={}", customer.getCustomerId(), referralCode);
         }
 
         customer.setUpdatedAt(LocalDateTime.now());
@@ -285,10 +238,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         CoCustomer savedCustomer = customerRepository.save(customer);
 
-        log.info(
-                "CUSTOMER_UPDATED | customerId={}",
-                savedCustomer.getCustomerId()
-        );
+        log.info("CUSTOMER_UPDATED | customerId={}", savedCustomer.getCustomerId());
 
         // ==========================================
         // SAVE FCM TOKEN IN NOTIFICATION SERVICE
@@ -306,19 +256,11 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
                 notificationFeignClient.saveDeviceToken(deviceTokenRequest);
 
-                log.info(
-                        "FCM_TOKEN_SAVED_IN_NOTIFICATION_SERVICE | customerId={}",
-                        savedCustomer.getCustomerId()
-                );
+                log.info("FCM_TOKEN_SAVED_IN_NOTIFICATION_SERVICE | customerId={}", savedCustomer.getCustomerId());
 
             } catch (Exception ex) {
 
-                log.error(
-                        "FCM_TOKEN_SAVE_FAILED | customerId={} | error={}",
-                        savedCustomer.getCustomerId(),
-                        ex.getMessage(),
-                        ex
-                );
+                log.error("FCM_TOKEN_SAVE_FAILED | customerId={} | error={}", savedCustomer.getCustomerId(), ex.getMessage(), ex);
             }
         }
 
@@ -330,35 +272,18 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             String referralCode = dto.getReferralCodeUsed().trim();
 
             try {
-                CoCustomer referrer =
-                        customerRepository
-                                .findByReferralCode(referralCode)
-                                .orElseThrow(() ->
-                                        new CoBadRequestException(
-                                                "Invalid referral code")
-                                );
+                CoCustomer referrer = customerRepository.findByReferralCode(referralCode).orElseThrow(() -> new CoBadRequestException("Invalid referral code"));
                 // Prevent self referral
-                if (referrer.getCustomerId()
-                        .equals(savedCustomer.getCustomerId())) {
+                if (referrer.getCustomerId().equals(savedCustomer.getCustomerId())) {
 
-                    throw new CoBadRequestException(
-                            "Customer cannot use own referral code"
-                    );
+                    throw new CoBadRequestException("Customer cannot use own referral code");
                 }
 
-                Optional<CoCustomerReferral> existingReferral =
-                        customerReferralRepository
-                                .findByRefereeCustomerId(
-                                        savedCustomer.getCustomerId()
-                                );
+                Optional<CoCustomerReferral> existingReferral = customerReferralRepository.findByRefereeCustomerId(savedCustomer.getCustomerId());
 
                 if (existingReferral.isPresent()) {
 
-                    log.info(
-                            "REFERRAL_ALREADY_EXISTS | customerId={} | referralId={}",
-                            savedCustomer.getCustomerId(),
-                            existingReferral.get().getReferralId()
-                    );
+                    log.info("REFERRAL_ALREADY_EXISTS | customerId={} | referralId={}", savedCustomer.getCustomerId(), existingReferral.get().getReferralId());
 
                 } else {
 
@@ -378,22 +303,10 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
                     customerReferralRepository.save(referral);
                     savedCustomer.setUsedReferral(referralCode);
                     customerRepository.save(savedCustomer);
-                    log.info(
-                            "REFERRAL_CREATED | referralId={} | " +
-                                    "referrerId={} | refereeId={}",
-                            referral.getReferralId(),
-                            referrer.getCustomerId(),
-                            savedCustomer.getCustomerId()
-                    );
+                    log.info("REFERRAL_CREATED | referralId={} | " + "referrerId={} | refereeId={}", referral.getReferralId(), referrer.getCustomerId(), savedCustomer.getCustomerId());
                 }
             } catch (CoBadRequestException ex) {
-                log.error(
-                        "REFERRAL_FAILED | customerId={} | " +
-                                "referralCode={} | error={}",
-                        savedCustomer.getCustomerId(),
-                        referralCode,
-                        ex.getMessage()
-                );
+                log.error("REFERRAL_FAILED | customerId={} | " + "referralCode={} | error={}", savedCustomer.getCustomerId(), referralCode, ex.getMessage());
                 throw ex;
             }
         }
@@ -402,40 +315,18 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         // CREATE WALLET IF NOT EXISTS
         // ==========================================
 
-        Optional<CoCustomerWallet> existingWallet =
-                walletRepository.findByCustomerCustomerId(savedCustomer.getCustomerId());
+        Optional<CoCustomerWallet> existingWallet = walletRepository.findByCustomerCustomerId(savedCustomer.getCustomerId());
 
         if (existingWallet.isEmpty()) {
-            log.info("WALLET_NOT_FOUND | customerId={} | creating wallet",
-                    savedCustomer.getCustomerId()
-            );
+            log.info("WALLET_NOT_FOUND | customerId={} | creating wallet", savedCustomer.getCustomerId());
 
-            CoWalletSettings walletSettings =
-                    walletSettingsRepository
-                            .findBySettingType(
-                                    COConstants.WELCOME_POINTS
-                            )
-                            .orElseThrow(() ->
-                                    new CoBusinessException(
-                                            COConstants.WELCOME_POINTS_NOT_CONFIGURED
-                                    )
-                            );
+            CoWalletSettings walletSettings = walletSettingsRepository.findBySettingType(COConstants.WELCOME_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.WELCOME_POINTS_NOT_CONFIGURED));
 
-            CoCustomerWallet wallet =
-                    CoCustomerMapper.mapToWallet(
-                            savedCustomer,
-                            walletSettings.getSettingValue(),
-                            dto.getCreatedBy()
-                    );
+            CoCustomerWallet wallet = CoCustomerMapper.mapToWallet(savedCustomer, walletSettings.getSettingValue(), dto.getCreatedBy());
 
             CoCustomerWallet savedWallet = walletRepository.save(wallet);
 
-            log.info(
-                    "WALLET_CREATED | customerId={} | walletId={} | points={}",
-                    savedCustomer.getCustomerId(),
-                    savedWallet.getWalletId(),
-                    savedWallet.getBalancePoints()
-            );
+            log.info("WALLET_CREATED | customerId={} | walletId={} | points={}", savedCustomer.getCustomerId(), savedWallet.getWalletId(), savedWallet.getBalancePoints());
 
             // ==========================================
             // WELCOME TRANSACTION
@@ -448,40 +339,19 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             transaction.setCreatedAt(LocalDateTime.now());
             transaction.setCreatedBy(dto.getCreatedBy());
             transactionsRepository.save(transaction);
-            log.info(
-                    "WELCOME_TRANSACTION_CREATED | " +
-                            "customerId={} | walletId={} | points={}",
-                    savedCustomer.getCustomerId(),
-                    savedWallet.getWalletId(),
-                    walletSettings.getSettingValue()
-            );
+            log.info("WELCOME_TRANSACTION_CREATED | " + "customerId={} | walletId={} | points={}", savedCustomer.getCustomerId(), savedWallet.getWalletId(), walletSettings.getSettingValue());
 
             // Publish Kafka event for welcome points notification
-            CoWalletPointsEvent welcomePointsEvent = CoWalletPointsMapper.toWelcomePointsEvent(
-                    savedCustomer.getCustomerId(),
-                    walletSettings.getSettingValue(),
-                    dto.getFcmToken()
-            );
+            CoWalletPointsEvent welcomePointsEvent = CoWalletPointsMapper.toWelcomePointsEvent(savedCustomer.getCustomerId(), walletSettings.getSettingValue(), dto.getFcmToken());
             walletPointsKafkaProducer.sendWalletPointsEvent(welcomePointsEvent);
-            log.info(
-                    "WELCOME_POINTS_EVENT_PUBLISHED | customerId={} | points={}",
-                    savedCustomer.getCustomerId(),
-                    walletSettings.getSettingValue()
-            );
+            log.info("WELCOME_POINTS_EVENT_PUBLISHED | customerId={} | points={}", savedCustomer.getCustomerId(), walletSettings.getSettingValue());
 
         } else {
 
-            log.info(
-                    "WALLET_ALREADY_EXISTS | customerId={} | walletId={}",
-                    savedCustomer.getCustomerId(),
-                    existingWallet.get().getWalletId()
-            );
+            log.info("WALLET_ALREADY_EXISTS | customerId={} | walletId={}", savedCustomer.getCustomerId(), existingWallet.get().getWalletId());
         }
 
-        log.info(
-                "CUSTOMER_REGISTRATION_COMPLETION_SUCCESS | customerId={}",
-                savedCustomer.getCustomerId()
-        );
+        log.info("CUSTOMER_REGISTRATION_COMPLETION_SUCCESS | customerId={}", savedCustomer.getCustomerId());
 
         return savedCustomer;
     }
@@ -552,21 +422,10 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         log.info("Points conversion transaction saved");
 
         // PUBLISH CONVERSION NOTIFICATION EVENT
-        CoWalletPointsEvent conversionEvent =
-                CoWalletPointsMapper.toPointsConvertedEvent(
-                        customerId,
-                        eligibleBlocks * COConstants.MINIMUM_POINTS_REQUIRED,
-                        convertedAmount,
-                        "CONVERT-" + customerId + "-" + savedTransaction.getCustomerWalletTransactionsId()
-                );
+        CoWalletPointsEvent conversionEvent = CoWalletPointsMapper.toPointsConvertedEvent(customerId, eligibleBlocks * COConstants.MINIMUM_POINTS_REQUIRED, convertedAmount, "CONVERT-" + customerId + "-" + savedTransaction.getCustomerWalletTransactionsId());
         conversionEvent.setFcmToken(null);
         walletPointsKafkaProducer.sendWalletPointsEvent(conversionEvent);
-        log.info(
-                "POINTS_CONVERTED_EVENT_PUBLISHED | customerId={} | transactionId={} | amount={}",
-                customerId,
-                savedTransaction.getCustomerWalletTransactionsId(),
-                convertedAmount
-        );
+        log.info("POINTS_CONVERTED_EVENT_PUBLISHED | customerId={} | transactionId={} | amount={}", customerId, savedTransaction.getCustomerWalletTransactionsId(), convertedAmount);
 
         // RESPONSE
 
@@ -602,13 +461,9 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         // FETCH SETTINGS
 
-        CoWalletSettings streakSettings = walletSettingsRepository
-                .findBySettingType(COConstants.DAILY_STREAK_POINTS)
-                .orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
+        CoWalletSettings streakSettings = walletSettingsRepository.findBySettingType(COConstants.DAILY_STREAK_POINTS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
 
-        CoWalletSettings streakDaySettings = walletSettingsRepository
-                .findBySettingType(COConstants.MINIMUM_STREAK_DAYS)
-                .orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
+        CoWalletSettings streakDaySettings = walletSettingsRepository.findBySettingType(COConstants.MINIMUM_STREAK_DAYS).orElseThrow(() -> new CoBusinessException(COConstants.STREAK_SETTINGS_NOT_FOUND));
 
         // DAILY POINTS
 
@@ -912,19 +767,11 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         if (customer.getReferralCode() == null || customer.getReferralCode().isBlank()) {
 
-            String referral = CoCustomerMapper.generateReferral(
-                    requestDto.getFirstName(),
-                    requestDto.getLastName(),
-                    requestDto.getPhoneNumber()
-            );
+            String referral = CoCustomerMapper.generateReferral(requestDto.getFirstName(), requestDto.getLastName(), requestDto.getPhoneNumber());
 
             customer.setReferralCode(referral);
 
-            log.info(
-                    "UPDATE_CUSTOMER_REFERRAL_GENERATED | customerId={} | referral={}",
-                    customerId,
-                    referral
-            );
+            log.info("UPDATE_CUSTOMER_REFERRAL_GENERATED | customerId={} | referral={}", customerId, referral);
         }
 
         // ==============================
@@ -935,44 +782,31 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
             String referralCodeUsed = requestDto.getReferralCodeUsed().trim();
 
-            log.info("REFERRAL_CODE_PROVIDED_ON_UPDATE | customerId={} | referralCode={}",
-                    customerId,
-                    referralCodeUsed);
+            log.info("REFERRAL_CODE_PROVIDED_ON_UPDATE | customerId={} | referralCode={}", customerId, referralCodeUsed);
 
             try {
                 // --------------------------------
                 // Find referrer using referral code
                 // --------------------------------
-                CoCustomer referrer = customerRepository
-                        .findByReferralCode(referralCodeUsed)
-                        .orElseThrow(() ->
-                                new CoBadRequestException(
-                                        "Invalid referral code"
-                                )
-                        );
+                CoCustomer referrer = customerRepository.findByReferralCode(referralCodeUsed).orElseThrow(() -> new CoBadRequestException("Invalid referral code"));
 
                 // --------------------------------
                 // Customer cannot refer himself
                 // --------------------------------
 
                 if (referrer.getCustomerId().equals(customerId)) {
-                    throw new CoBadRequestException("Customer cannot use own referral code");}
+                    throw new CoBadRequestException("Customer cannot use own referral code");
+                }
 
                 // --------------------------------
                 // Check existing referral
                 // --------------------------------
 
-                Optional<CoCustomerReferral> existingReferral =
-                        customerReferralRepository
-                                .findByRefereeCustomerId(customerId);
+                Optional<CoCustomerReferral> existingReferral = customerReferralRepository.findByRefereeCustomerId(customerId);
 
                 if (existingReferral.isPresent()) {
 
-                    log.warn(
-                            "REFERRAL_ALREADY_EXISTS | customerId={} | referralId={}",
-                            customerId,
-                            existingReferral.get().getReferralId()
-                    );
+                    log.warn("REFERRAL_ALREADY_EXISTS | customerId={} | referralId={}", customerId, existingReferral.get().getReferralId());
 
                 } else {
 
@@ -998,34 +832,16 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
                     customer.setUsedReferral(referralCodeUsed);
 
-                    log.info(
-                            "REFERRAL_TRACKING_CREATED_ON_UPDATE | " +
-                                    "referralId={} | referrerId={} | refereeCustomerId={} | referralCode={}",
-                            referral.getReferralId(),
-                            referrer.getCustomerId(),
-                            customerId,
-                            referralCodeUsed
-                    );
+                    log.info("REFERRAL_TRACKING_CREATED_ON_UPDATE | " + "referralId={} | referrerId={} | refereeCustomerId={} | referralCode={}", referral.getReferralId(), referrer.getCustomerId(), customerId, referralCodeUsed);
                 }
 
             } catch (CoBadRequestException ex) {
 
-                log.error(
-                        "REFERRAL_UPDATE_FAILED | customerId={} | referralCode={} | error={}",
-                        customerId,
-                        referralCodeUsed,
-                        ex.getMessage()
-                );
+                log.error("REFERRAL_UPDATE_FAILED | customerId={} | referralCode={} | error={}", customerId, referralCodeUsed, ex.getMessage());
                 throw ex;
             } catch (Exception ex) {
 
-                log.error(
-                        "REFERRAL_UPDATE_FAILED | customerId={} | referralCode={} | error={}",
-                        customerId,
-                        referralCodeUsed,
-                        ex.getMessage(),
-                        ex
-                );
+                log.error("REFERRAL_UPDATE_FAILED | customerId={} | referralCode={} | error={}", customerId, referralCodeUsed, ex.getMessage(), ex);
                 // Do not fail customer update for unexpected referral errors
             }
         }
@@ -1081,7 +897,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         if (profilePic != null && !profilePic.isEmpty()) {
             try {
-                String profilePicUrl = s3ImageService.uploadFile(profilePic, "customerProfilePic"+requestDto.getCustomerId());
+                String profilePicUrl = s3ImageService.uploadFile(profilePic, "customerProfilePic" + requestDto.getCustomerId());
                 customer.setProfilePicUrl(profilePicUrl);
                 log.info("UPDATE_PROFILE_PIC_UPLOAD_SUCCESS | customerId={} | url={}", requestDto.getCustomerId(), profilePicUrl);
             } catch (IOException ex) {
@@ -1101,6 +917,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             throw new CoBadRequestException(COConstants.MSG_DATABASE_ERROR);
         }
     }
+
     @Override
     public List<CoCustomerListDto> getAllCustomers() {
 
@@ -1158,13 +975,13 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         return response;
     }
+
     @Override
     public CoCustomerWalletResponseDto getCustomerWallet(Integer customerId) {
 
         log.info("GET_CUSTOMER_WALLET_API_START | customerId={}", customerId);
 
-        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId)
-                .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
         CoCustomerWalletResponseDto response = new CoCustomerWalletResponseDto();
         response.setWalletId(wallet.getWalletId());
@@ -1182,19 +999,16 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         log.info("GET_WALLET_TRANSACTION_HISTORY_API_START | customerId={}", customerId);
 
-        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId)
-                .orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
 
-        List<CoWalletTransactionHistoryDto> transactions = transactionsRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId()).stream()
-                .map(transaction -> {
-                    CoWalletTransactionHistoryDto dto = new CoWalletTransactionHistoryDto();
-                    dto.setTransactionType(transaction.getTransactionType());
-                    dto.setPoints(transaction.getPoints());
-                    dto.setAmount(transaction.getAmount());
-                    dto.setCreatedAt(transaction.getCreatedAt());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        List<CoWalletTransactionHistoryDto> transactions = transactionsRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId()).stream().map(transaction -> {
+            CoWalletTransactionHistoryDto dto = new CoWalletTransactionHistoryDto();
+            dto.setTransactionType(transaction.getTransactionType());
+            dto.setPoints(transaction.getPoints());
+            dto.setAmount(transaction.getAmount());
+            dto.setCreatedAt(transaction.getCreatedAt());
+            return dto;
+        }).collect(Collectors.toList());
 
         log.info("GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={}", customerId);
 
@@ -1206,18 +1020,15 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         log.info("Received request to fetch customers with incomplete profiles.");
 
-        List<CoProfileIncompleteCustomer> customers = customerRepository.findAll().stream()
-                .filter(customer -> customer.getProfilePicUrl() == null || customer.getProfilePicUrl().isBlank())
-                .map(customer -> {
-                    CoProfileIncompleteCustomer dto = new CoProfileIncompleteCustomer();
-                    dto.setCustomerId(customer.getCustomerId());
-                    dto.setFirstName(customer.getFirstName());
-                    dto.setLastName(customer.getLastName());
-                    dto.setEmail(customer.getEmail());
-                    dto.setPhoneNumber(customer.getPhoneNumber());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        List<CoProfileIncompleteCustomer> customers = customerRepository.findAll().stream().filter(customer -> customer.getProfilePicUrl() == null || customer.getProfilePicUrl().isBlank()).map(customer -> {
+            CoProfileIncompleteCustomer dto = new CoProfileIncompleteCustomer();
+            dto.setCustomerId(customer.getCustomerId());
+            dto.setFirstName(customer.getFirstName());
+            dto.setLastName(customer.getLastName());
+            dto.setEmail(customer.getEmail());
+            dto.setPhoneNumber(customer.getPhoneNumber());
+            return dto;
+        }).collect(Collectors.toList());
 
         return customers;
     }
@@ -1235,13 +1046,9 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     // ================================================================
 
     @Override
-    public String updateCustomerProfilePic(
-            CustomerProfilePicDto customerDto) {
+    public String updateCustomerProfilePic(CustomerProfilePicDto customerDto) {
 
-        log.info(
-                "[CUSTOMER] Updating profile picture. customerId={}",
-                customerDto.getCustomerId()
-        );
+        log.info("[CUSTOMER] Updating profile picture. customerId={}", customerDto.getCustomerId());
 
         // ============================================================
         // 1. Validate customer ID
@@ -1249,44 +1056,29 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         if (customerDto.getCustomerId() == null) {
 
-            throw new IllegalArgumentException(
-                    "Customer ID is required"
-            );
+            throw new IllegalArgumentException("Customer ID is required");
         }
 
         // ============================================================
         // 2. Validate profile picture URL
         // ============================================================
 
-        if (customerDto.getProfilePicUrl() == null ||
-                customerDto.getProfilePicUrl().trim().isEmpty()) {
+        if (customerDto.getProfilePicUrl() == null || customerDto.getProfilePicUrl().trim().isEmpty()) {
 
-            throw new IllegalArgumentException(
-                    "Profile picture URL is required"
-            );
+            throw new IllegalArgumentException("Profile picture URL is required");
         }
 
         // ============================================================
         // 3. Find customer directly by ID
         // ============================================================
 
-        CoCustomer customer =
-                customerRepository
-                        .findById(customerDto.getCustomerId())
-                        .orElseThrow(() ->
-                                new CoResourceNotFoundException(
-                                        "Customer not found with id: "
-                                                + customerDto.getCustomerId()
-                                )
-                        );
+        CoCustomer customer = customerRepository.findById(customerDto.getCustomerId()).orElseThrow(() -> new CoResourceNotFoundException("Customer not found with id: " + customerDto.getCustomerId()));
 
         // ============================================================
         // 4. Update ONLY profile picture URL
         // ============================================================
 
-        customer.setProfilePicUrl(
-                customerDto.getProfilePicUrl()
-        );
+        customer.setProfilePicUrl(customerDto.getProfilePicUrl());
 
         // ============================================================
         // 5. Save customer
@@ -1294,27 +1086,22 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         customerRepository.save(customer);
 
-        log.info(
-                "[CUSTOMER] Profile picture updated successfully. " +
-                        "customerId={}",
-                customerDto.getCustomerId()
-        );
+        log.info("[CUSTOMER] Profile picture updated successfully. " + "customerId={}", customerDto.getCustomerId());
 
         // ============================================================
         // 6. Return success message with profile picture URL
         // ============================================================
 
-        return "Customer profile picture updated successfully. " +
-                "Profile picture url: " +
-                customerDto.getProfilePicUrl();
+        return "Customer profile picture updated successfully. " + "Profile picture url: " + customerDto.getProfilePicUrl();
     }
 //    ===============================================================================
 //    ===============================================================================
+
     /**
      * Fetches complete order flow counts based on order status.
-     *
+     * <p>
      * This method retrieves all five required counts:
-     *
+     * <p>
      * 1. Total orders
      * 2. Orders placed
      * 3. Orders confirmed
@@ -1329,8 +1116,7 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         log.info("Fetching complete orders flow counts");
 
-        CoCompleteOrdersFlowCountsProjection projection =
-                customerRepository.getCompleteOrdersFlowCounts();
+        CoCompleteOrdersFlowCountsProjection projection = customerRepository.getCompleteOrdersFlowCounts();
 
         if (projection == null) {
 
@@ -1339,18 +1125,9 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             return new CoCompleteOrdersFlowCountsDto();
         }
 
-        CoCompleteOrdersFlowCountsDto response =
-                CoCustomerMapper.mapToCompleteOrdersFlowCountsDto(projection);
+        CoCompleteOrdersFlowCountsDto response = CoCustomerMapper.mapToCompleteOrdersFlowCountsDto(projection);
 
-        log.info(
-                "Complete orders flow counts fetched successfully. " +
-                        "Total: {}, Placed: {}, Confirmed: {}, Shipped: {}, Completed: {}",
-                response.getTotalOrdersCount(),
-                response.getOrdersPlaced(),
-                response.getOrdersConfirmed(),
-                response.getOrdersShipped(),
-                response.getOrdersCompleted()
-        );
+        log.info("Complete orders flow counts fetched successfully. " + "Total: {}, Placed: {}, Confirmed: {}, Shipped: {}, Completed: {}", response.getTotalOrdersCount(), response.getOrdersPlaced(), response.getOrdersConfirmed(), response.getOrdersShipped(), response.getOrdersCompleted());
 
         return response;
     }
@@ -1367,55 +1144,64 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
      */
     /**
      * Fetches complete order details based on order status.
-     *
+     * <p>
      * CO database provides:
      * - Order details
      * - Customer name
      * - Order amount
-     *
+     * <p>
      * FM microservice provides:
      * - Outlet name
      * - Area name
-     *
+     * <p>
      * Driver microservice provides:
      * - Driver name
-     *
+     * <p>
      * Bulk APIs are used to avoid making one network request
      * for every individual order.
      */
     @Override
-    public List<CoOrderDetailsByOrderStatusDto>
-    getCompleteOrdersDetailsByOrderStatus(String orderStatus) {
+    public Page<CoOrderDetailsByOrderStatusDto> getCompleteOrdersDetailsByOrderStatus(
+            String orderStatus,
+            Pageable pageable) {
 
         log.info(
-                "Fetching complete order details for order status: {}",
+                "Fetching complete order details. orderStatus={}, page={}, size={}",
+                orderStatus,
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
+
+        // --------------------------------------------------------
+        // Step 1: Fetch paginated order information from CO database
+        // --------------------------------------------------------
+
+        Page<CoOrderDetailsByOrderStatusProjection> projectionPage =
+                customerRepository.getCompleteOrdersDetailsByOrderStatus(
+                        orderStatus,
+                        pageable
+                );
+
+        log.info(
+                "Found {} orders in current page. Total orders={}, orderStatus={}",
+                projectionPage.getNumberOfElements(),
+                projectionPage.getTotalElements(),
                 orderStatus
         );
 
         // --------------------------------------------------------
-        // Step 1: Fetch order information from CO database
+        // If no orders found
         // --------------------------------------------------------
 
-        List<CoOrderDetailsByOrderStatusProjection> projections =
-                customerRepository
-                        .getCompleteOrdersDetailsByOrderStatus(
-                                orderStatus
-                        );
-
-        log.info(
-                "Found {} orders for order status: {}",
-                projections.size(),
-                orderStatus
-        );
-
-        if (projections.isEmpty()) {
+        if (projectionPage.isEmpty()) {
 
             log.info(
-                    "No orders found for order status: {}",
-                    orderStatus
+                    "No orders found for orderStatus={}, page={}",
+                    orderStatus,
+                    pageable.getPageNumber()
             );
 
-            return new ArrayList<>();
+            return Page.empty(pageable);
         }
 
         // --------------------------------------------------------
@@ -1426,103 +1212,146 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
 
         List<Integer> driverIds = new ArrayList<>();
 
-        for (CoOrderDetailsByOrderStatusProjection projection : projections) {
+        for (CoOrderDetailsByOrderStatusProjection projection :
+                projectionPage.getContent()) {
 
-//            for outlet
-            addIfNotPresent(outletIds, projection.getOutletId());
+            // Add outlet ID if it is not already present
+            addIfNotPresent(
+                    outletIds,
+                    projection.getOutletId()
+            );
 
-//            for driver
-            addIfNotPresent(driverIds, projection.getDriverId());
+            // Add driver ID if it is not already present
+            addIfNotPresent(
+                    driverIds,
+                    projection.getDriverId()
+            );
         }
 
         log.info(
-                "Preparing FM bulk request for {} outlet IDs",
+                "Preparing FM request for {} outlet IDs",
                 outletIds.size()
         );
 
         log.info(
-                "Preparing Driver bulk request for {} driver IDs",
+                "Preparing Driver request for {} driver IDs",
                 driverIds.size()
         );
 
         // --------------------------------------------------------
-        // Step 3: Fetch outlet information from FM
+        // Step 3: Fetch outlet information from FM service
         // --------------------------------------------------------
 
-        List<CoFmOutletDetailsDto> outletDetails = new ArrayList<>();
+        List<CoFmOutletDetailsDto> outletDetails =
+                new ArrayList<>();
 
         if (!outletIds.isEmpty()) {
 
-            CoOutletDetailsRequestDto outletRequest = new CoOutletDetailsRequestDto();
+            CoOutletDetailsRequestDto outletRequest =
+                    new CoOutletDetailsRequestDto();
 
             outletRequest.setOutletIds(outletIds);
 
             outletDetails =
-                    fmFeignClient
-                            .getOutletDetailsByIds(outletRequest);
+                    fmFeignClient.getOutletDetailsByIds(
+                            outletRequest
+                    );
 
+            if (outletDetails != null) {
 
-            log.info(
-                    "Received {} outlet details from FM service",
-                    outletDetails.size()
-            );
+                log.info(
+                        "Received {} outlet details from FM service",
+                        outletDetails.size()
+                );
+
+            } else {
+
+                log.warn(
+                        "FM service returned null outlet details"
+                );
+            }
         }
 
         // --------------------------------------------------------
         // Step 4: Fetch driver information from Driver service
         // --------------------------------------------------------
 
-        List<CoDriverDetailsDto> driverDetails = new ArrayList<>();
+        List<CoDriverDetailsDto> driverDetails =
+                new ArrayList<>();
 
         if (!driverIds.isEmpty()) {
 
-            CoDriverDetailsRequestDto driverRequest = new CoDriverDetailsRequestDto();
+            CoDriverDetailsRequestDto driverRequest =
+                    new CoDriverDetailsRequestDto();
 
             driverRequest.setDriverIds(driverIds);
 
             driverDetails =
-                    driverFeignClient
-                            .getDriverDetailsByIds(
-                                    driverRequest
-                            );
-            log.info(
-                    "Driver service response: {}",
-                    driverDetails
-            );
-            log.info(
-                    "Received {} driver details from Driver service",
-                    driverDetails.size()
-            );
+                    driverFeignClient.getDriverDetailsByIds(
+                            driverRequest
+                    );
+
+            if (driverDetails != null) {
+
+                log.info(
+                        "Received {} driver details from Driver service",
+                        driverDetails.size()
+                );
+
+            } else {
+
+                log.warn(
+                        "Driver service returned null driver details"
+                );
+            }
         }
 
         // --------------------------------------------------------
-        // Step 5: Map everything into final response
+        // Step 5: Map current page data into final response
         // --------------------------------------------------------
 
-        List<CoOrderDetailsByOrderStatusDto> response =
-                CoCustomerMapper
-                        .mapToCompleteOrderDetails(
-                                projections,
-                                outletDetails,
-                                driverDetails
-                        );
+        List<CoOrderDetailsByOrderStatusDto> responseList =
+                CoCustomerMapper.mapToCompleteOrderDetails(
+                        projectionPage.getContent(),
+                        outletDetails,
+                        driverDetails
+                );
 
         log.info(
-                "Successfully prepared {} complete order details",
-                response.size()
+                "Successfully mapped {} orders for current page",
+                responseList.size()
         );
 
-        return response;
-    }
+        // --------------------------------------------------------
+        // Step 6: Create paginated response
+        // --------------------------------------------------------
 
+        Page<CoOrderDetailsByOrderStatusDto> responsePage =
+                new PageImpl<>(
+                        responseList,
+                        pageable,
+                        projectionPage.getTotalElements()
+                );
+
+        log.info(
+                "Successfully prepared paginated response. " +
+                        "page={}, size={}, currentElements={}, totalElements={}, totalPages={}",
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getNumberOfElements(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages()
+        );
+
+        return responsePage;
+    }
 //    ==============================================================================
 //    ==============================================================================
+
     /**
      * Adds an ID to the list only when it is not already present.
      */
-    private void addIfNotPresent(
-            List<Integer> ids,
-            Integer id) {
+    private void addIfNotPresent(List<Integer> ids, Integer id) {
 
         if (id == null) {
             return;
@@ -1532,533 +1361,344 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
             ids.add(id);
         }
     }
+
+    //    =================================================================================
 //    =================================================================================
-//    =================================================================================
-@Override
-public CoOrderCompleteDetailsResponseDto getOrderCompleteDetails(
-        String orderId) {
+    @Override
+    public CoOrderCompleteDetailsResponseDto getOrderCompleteDetails(String orderId) {
 
-    log.info(
-            "Fetching complete order details. orderId={}",
-            orderId
-    );
-
-    /*
-     * STEP 1
-     * Fetch main order information from CO database.
-     *
-     * This also fetches:
-     * - customer
-     * - customer address
-     * - payment mode
-     * - outlet ID
-     */
-    CoOrderCompleteDetailsProjection orderProjection =
-            coOrderRepository
-                    .getOrderCompleteDetails(orderId)
-                    .orElseThrow(() -> new RuntimeException(
-                            "Order not found with ID: " + orderId
-                    ));
-
-    log.info(
-            "Main order details fetched successfully. " +
-                    "orderId={}, customerId={}, outletId={}, driverId={}, status={}",
-            orderId,
-            orderProjection.getCustomerId(),
-            orderProjection.getOutletId(),
-            orderProjection.getDriverId(),
-            orderProjection.getOrderStatus()
-    );
-
-    CoOrderCompleteDetailsResponseDto response =
-            CoOrderCompleteDetailsMapper
-                    .mapMainDetails(orderProjection);
-
-    log.info(
-            "Main order details fetched successfully. " +
-                    "orderId={}, customerId={}, outletId={}, status={}",
-            orderId,
-            orderProjection.getCustomerId(),
-            orderProjection.getOutletId(),
-            orderProjection.getOrderStatus()
-    );
-
-    /*
-     * STEP 2
-     * Fetch outlet information from Food & Mart microservice.
-     */
-    try {
-
-        if (orderProjection.getOutletId() != null) {
-
-            log.info(
-                    "Calling FM service for outlet details. " +
-                            "outletId={}",
-                    orderProjection.getOutletId()
-            );
-
-            CoOutletDetailsDto outletDetails =
-                    fmFeignClient.getOutletCompleteDetails(
-                            orderProjection.getOutletId()
-                    );
-
-            response.setOutlet(outletDetails);
-
-            log.info(
-                    "FM outlet details fetched successfully. " +
-                            "outletId={}",
-                    orderProjection.getOutletId()
-            );
-        }
-
-    } catch (Exception e) {
-
-        log.error(
-                "Failed to fetch outlet details from FM service. " +
-                        "outletId={}",
-                orderProjection.getOutletId(),
-                e
-        );
-
-        throw new RuntimeException(
-                "Unable to fetch outlet details"
-        );
-    }
-    /*
-     * STEP 3
-     * Fetch driver information from Driver microservice.
-     *
-     * One order can have only one assigned driver.
-     * The driver ID is stored in the orders table.
-     *
-     * Driver name and mobile number are fetched
-     * from Driver microservice using Feign.
-     */
-    try {
-
-        if (orderProjection.getDriverId() != null) {
-
-            log.info(
-                    "Calling Driver service for driver details. " +
-                            "driverId={}, orderId={}",
-                    orderProjection.getDriverId(),
-                    orderId
-            );
-
-            CoDriverDetailsDto driverDetails =
-                    driverFeignClient.getDriverDetailsForOrder(
-                            orderProjection.getDriverId()
-                    );
-
-            response.setDriver(driverDetails);
-
-            log.info(
-                    "Driver details fetched successfully. " +
-                            "driverId={}, orderId={}",
-                    orderProjection.getDriverId(),
-                    orderId
-            );
-
-        } else {
-
-            log.info(
-                    "No driver assigned to order. orderId={}",
-                    orderId
-            );
-
-            response.setDriver(null);
-        }
-
-    } catch (Exception e) {
-
-        log.error(
-                "Failed to fetch driver details from Driver service. " +
-                        "driverId={}, orderId={}",
-                orderProjection.getDriverId(),
-                orderId,
-                e
-        );
+        log.info("Fetching complete order details. orderId={}", orderId);
 
         /*
-         * Driver details should not prevent
-         * the complete order response from being returned.
+         * STEP 1
+         * Fetch main order information from CO database.
+         *
+         * This also fetches:
+         * - customer
+         * - customer address
+         * - payment mode
+         * - outlet ID
          */
-        response.setDriver(null);
-    }
+        CoOrderCompleteDetailsProjection orderProjection
+                = coOrderRepository.getOrderCompleteDetails(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
 
-    /*
-     * STEP 3.1
-     * Fetch order items from CO database.
-     */
-    log.info(
-            "Fetching order items. orderId={}",
-            orderId
-    );
+        log.info("Main order details fetched successfully. " + "orderId={}, customerId={}, outletId={}, driverId={}, status={}", orderId, orderProjection.getCustomerId(), orderProjection.getOutletId(), orderProjection.getDriverId(), orderProjection.getOrderStatus());
 
-    List<CoOrderItemProjection> itemProjections =
-            coOrderItemRepository.getOrderItems(orderId);
+        CoOrderCompleteDetailsResponseDto response
+                = CoOrderCompleteDetailsMapper.mapMainDetails(orderProjection);
 
-    response.setItems(
-            CoOrderCompleteDetailsMapper
-                    .mapOrderItems(itemProjections)
-    );
+        log.info("Main order details fetched successfully. " + "orderId={}, customerId={}, outletId={}, status={}", orderId, orderProjection.getCustomerId(), orderProjection.getOutletId(), orderProjection.getOrderStatus());
 
-    log.info(
-            "Order items fetched successfully. " +
-                    "orderId={}, itemCount={}",
-            orderId,
-            itemProjections.size()
-    );
-
-    /*
-     * STEP 4
-     * Fetch price breakup from CO database.
-     */
-    log.info(
-            "Fetching order price breakup. orderId={}",
-            orderId
-    );
-
-    CoOrderPriceBreakupProjection priceProjection =
-            coOrderPriceBreakupRepository
-                    .getPriceBreakup(orderId)
-                    .orElse(null);
-
-    if (priceProjection != null) {
-
-        response.setPriceBreakup(
-                CoOrderCompleteDetailsMapper
-                        .mapPriceBreakup(priceProjection)
-        );
-
-        log.info(
-                "Order price breakup fetched successfully. " +
-                        "orderId={}",
-                orderId
-        );
-
-    } else {
-
-        log.warn(
-                "Price breakup not found for orderId={}",
-                orderId
-        );
-    }
-
-    /*
-     * STEP 5
-     * Refund details are required ONLY when
-     * order status is ORDER_REJECTED.
-     */
-    if (COConstants.ORDER_STATUS_REJECTED.equalsIgnoreCase(
-            orderProjection.getOrderStatus())) {
-
-        log.info(
-                "Order is rejected. Fetching refund details " +
-                        "from Division service. orderId={}",
-                orderId
-        );
-
+        /*
+         * STEP 2
+         * Fetch outlet information from Food & Mart microservice.
+         */
         try {
 
-            CoRefundDetailsDto refundDetails =
-                    divisionFeignClient.getRefundDetails(orderId);
+            if (orderProjection.getOutletId() != null) {
 
-            log.info(
-                    "Division refund API response received. orderId={}, refundDetails={}",
-                    orderId,
-                    refundDetails
-            );
+                log.info("Calling FM service for outlet details. " + "outletId={}", orderProjection.getOutletId());
 
-            log.info(
-                    "Refund response received from Division. orderId={}, refundDetails={}",
-                    orderId,
-                    refundDetails
-            );
+                CoOutletDetailsDto outletDetails = fmFeignClient.getOutletCompleteDetails(orderProjection.getOutletId());
 
-            response.setRefund(refundDetails);
+                response.setOutlet(outletDetails);
 
-            log.info(
-                    "Refund details set in complete order response. orderId={}",
-                    orderId
-            );
+                log.info("FM outlet details fetched successfully. " + "outletId={}", orderProjection.getOutletId());
+            }
 
         } catch (Exception e) {
 
-            log.error(
-                    "Failed to fetch refund details from " +
-                            "Division service. orderId={}",
-                    orderId,
-                    e
-            );
+            log.error("Failed to fetch outlet details from FM service. " + "outletId={}", orderProjection.getOutletId(), e);
+
+            throw new RuntimeException("Unable to fetch outlet details");
+        }
+        /*
+         * STEP 3
+         * Fetch driver information from Driver microservice.
+         *
+         * One order can have only one assigned driver.
+         * The driver ID is stored in the orders table.
+         *
+         * Driver name and mobile number are fetched
+         * from Driver microservice using Feign.
+         */
+        try {
+
+            if (orderProjection.getDriverId() != null) {
+
+                log.info("Calling Driver service for driver details. " + "driverId={}, orderId={}", orderProjection.getDriverId(), orderId);
+
+                CoDriverDetailsDto driverDetails = driverFeignClient.getDriverDetailsForOrder(orderProjection.getDriverId());
+
+                response.setDriver(driverDetails);
+
+                log.info("Driver details fetched successfully. " + "driverId={}, orderId={}", orderProjection.getDriverId(), orderId);
+
+            } else {
+
+                log.info("No driver assigned to order. orderId={}", orderId);
+
+                response.setDriver(null);
+            }
+
+        } catch (Exception e) {
+
+            log.error("Failed to fetch driver details from Driver service. " + "driverId={}, orderId={}", orderProjection.getDriverId(), orderId, e);
 
             /*
-             * We can keep refund as null if refund record
-             * does not exist yet.
+             * Driver details should not prevent
+             * the complete order response from being returned.
              */
+            response.setDriver(null);
+        }
+
+        /*
+         * STEP 3.1
+         * Fetch order items from CO database.
+         */
+        log.info("Fetching order items. orderId={}", orderId);
+
+        List<CoOrderItemProjection> itemProjections = coOrderItemRepository.getOrderItems(orderId);
+
+        response.setItems(CoOrderCompleteDetailsMapper.mapOrderItems(itemProjections));
+
+        log.info("Order items fetched successfully. " + "orderId={}, itemCount={}", orderId, itemProjections.size());
+
+        /*
+         * STEP 4
+         * Fetch price breakup from CO database.
+         */
+        log.info("Fetching order price breakup. orderId={}", orderId);
+
+        CoOrderPriceBreakupProjection priceProjection =
+                coOrderPriceBreakupRepository.getPriceBreakup(orderId).orElse(null);
+
+        if (priceProjection != null) {
+
+            response.setPriceBreakup(CoOrderCompleteDetailsMapper.mapPriceBreakup(priceProjection));
+
+            log.info("Order price breakup fetched successfully. " + "orderId={}", orderId);
+
+        } else {
+
+            log.warn("Price breakup not found for orderId={}", orderId);
+        }
+
+        /*
+         * STEP 5
+         * Refund details are required ONLY when
+         * order status is ORDER_REJECTED.
+         */
+        if (COConstants.ORDER_STATUS_REJECTED.equalsIgnoreCase(orderProjection.getOrderStatus())) {
+
+            log.info("Order is rejected. Fetching refund details " + "from Division service. orderId={}", orderId);
+
+            try {
+
+                CoRefundDetailsDto refundDetails = divisionFeignClient.getRefundDetails(orderId);
+
+                log.info("Division refund API response received. orderId={}, refundDetails={}", orderId, refundDetails);
+
+                log.info("Refund response received from Division. orderId={}, refundDetails={}", orderId, refundDetails);
+
+                response.setRefund(refundDetails);
+
+                log.info("Refund details set in complete order response. orderId={}", orderId);
+
+            } catch (Exception e) {
+
+                log.error("Failed to fetch refund details from " + "Division service. orderId={}", orderId, e);
+
+                /*
+                 * We can keep refund as null if refund record
+                 * does not exist yet.
+                 */
+                response.setRefund(null);
+            }
+
+        } else {
+
+            log.info("Order is not rejected. Refund details are not required. " + "orderId={}, status={}", orderId, orderProjection.getOrderStatus());
+
             response.setRefund(null);
         }
 
-    } else {
+        log.info("Complete order details fetched successfully. " + "orderId={}", orderId);
 
-        log.info(
-                "Order is not rejected. Refund details are not required. " +
-                        "orderId={}, status={}",
-                orderId,
-                orderProjection.getOrderStatus()
-        );
-
-        response.setRefund(null);
+        return response;
     }
 
-    log.info(
-            "Complete order details fetched successfully. " +
-                    "orderId={}",
-            orderId
-    );
+    //=======================================================================================
+    @Override
+    public CoOrderFlowCountForMerchantOutletOrDriverDto getOrderFlowCountForMerchantOrOutletOrDriver(Integer merchantId, Integer outletId, Integer driverId) {
 
-    return response;
-}
-//=======================================================================================
-@Override
-public CoOrderFlowCountForMerchantOutletOrDriverDto
-getOrderFlowCountForMerchantOrOutletOrDriver(
-        Integer merchantId,
-        Integer outletId,
-        Integer driverId) {
+        log.info("Fetching order flow counts. merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
 
-    log.info(
-            "Fetching order flow counts. merchantId={}, outletId={}, driverId={}",
-            merchantId,
-            outletId,
-            driverId
-    );
+        // ============================================================
+        // STEP 1: Validate input
+        // ============================================================
+        //
+        // Exactly ONE of the following must be provided:
+        //
+        // merchantId
+        // OR
+        // outletId
+        // OR
+        // driverId
+        //
+        // ============================================================
 
-    // ============================================================
-    // STEP 1: Validate input
-    // ============================================================
-    //
-    // Exactly ONE of the following must be provided:
-    //
-    // merchantId
-    // OR
-    // outletId
-    // OR
-    // driverId
-    //
-    // ============================================================
+        int providedParameters = 0;
 
-    int providedParameters = 0;
-
-    if (merchantId != null) {
-        providedParameters++;
-    }
-
-    if (outletId != null) {
-        providedParameters++;
-    }
-
-    if (driverId != null) {
-        providedParameters++;
-    }
-
-    // ============================================================
-    // No identifier provided
-    // ============================================================
-
-    if (providedParameters == 0) {
-
-        log.warn(
-                "Neither merchantId, outletId nor driverId was provided"
-        );
-
-        throw new IllegalArgumentException(
-                "Either merchantId, outletId or driverId must be provided"
-        );
-    }
-
-    // ============================================================
-    // Multiple identifiers provided
-    // ============================================================
-
-    if (providedParameters > 1) {
-
-        log.warn(
-                "Multiple identifiers provided. " +
-                        "merchantId={}, outletId={}, driverId={}",
-                merchantId,
-                outletId,
-                driverId
-        );
-
-        throw new IllegalArgumentException(
-                "Only one of merchantId, outletId or driverId can be provided"
-        );
-    }
-
-
-    // ============================================================
-    // STEP 2: Prepare outlet IDs
-    // ============================================================
-
-    List<Integer> outletIds = new ArrayList<>();
-
-
-    // ============================================================
-    // CASE 1: Merchant ID provided
-    // ============================================================
-    //
-    // CO → Feign → FM
-    //
-    // FM returns all outlet IDs belonging to merchant.
-    //
-    // CO then calculates order counts for those outlets.
-    // ============================================================
-
-    if (merchantId != null) {
-
-        log.info(
-                "Merchant ID provided. Fetching outlets from FM. " +
-                        "merchantId={}",
-                merchantId
-        );
-
-        List<Integer> merchantOutletIds =
-                fmFeignClient.getOutletIdsByMerchantId(
-                        merchantId
-                );
-
-        if (merchantOutletIds == null ||
-                merchantOutletIds.isEmpty()) {
-
-            log.info(
-                    "No outlets found for merchant. merchantId={}",
-                    merchantId
-            );
-
-            return createEmptyOrderFlowCountForMerchantOrOutletOrDriverResponse();        }
-
-        // Add merchant outlet IDs
-        for (Integer merchantOutletId : merchantOutletIds) {
-
-            if (merchantOutletId != null) {
-
-                outletIds.add(merchantOutletId);
-            }
+        if (merchantId != null) {
+            providedParameters++;
         }
 
-        log.info(
-                "Found {} outlets for merchant. merchantId={}",
-                outletIds.size(),
-                merchantId
-        );
+        if (outletId != null) {
+            providedParameters++;
+        }
 
-        // ========================================================
-        // Fetch order counts for merchant outlets
-        // ========================================================
+        if (driverId != null) {
+            providedParameters++;
+        }
 
-        CoOrderFlowCountProjection projection =
-                coOrderRepository.getOrderFlowCountsByOutletIds(
-                        outletIds
-                );
+        // ============================================================
+        // No identifier provided
+        // ============================================================
 
-        return CoCustomerMapper
-                .mapToOrderFlowCountForMerchantOrOutletOrDriver(
-                        projection
-                );
+        if (providedParameters == 0) {
+
+            log.warn("Neither merchantId, outletId nor driverId was provided");
+
+            throw new IllegalArgumentException("Either merchantId, outletId or driverId must be provided");
+        }
+
+        // ============================================================
+        // Multiple identifiers provided
+        // ============================================================
+
+        if (providedParameters > 1) {
+
+            log.warn("Multiple identifiers provided. " + "merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
+
+            throw new IllegalArgumentException("Only one of merchantId, outletId or driverId can be provided");
+        }
+
+
+        // ============================================================
+        // STEP 2: Prepare outlet IDs
+        // ============================================================
+
+        List<Integer> outletIds = new ArrayList<>();
+
+
+        // ============================================================
+        // CASE 1: Merchant ID provided
+        // ============================================================
+        //
+        // CO → Feign → FM
+        //
+        // FM returns all outlet IDs belonging to merchant.
+        //
+        // CO then calculates order counts for those outlets.
+        // ============================================================
+
+        if (merchantId != null) {
+
+            log.info("Merchant ID provided. Fetching outlets from FM. " + "merchantId={}", merchantId);
+
+            List<Integer> merchantOutletIds = fmFeignClient.getOutletIdsByMerchantId(merchantId);
+
+            if (merchantOutletIds == null || merchantOutletIds.isEmpty()) {
+
+                log.info("No outlets found for merchant. merchantId={}", merchantId);
+
+                return createEmptyOrderFlowCountForMerchantOrOutletOrDriverResponse();
+            }
+
+            // Add merchant outlet IDs
+            for (Integer merchantOutletId : merchantOutletIds) {
+
+                if (merchantOutletId != null) {
+
+                    outletIds.add(merchantOutletId);
+                }
+            }
+
+            log.info("Found {} outlets for merchant. merchantId={}", outletIds.size(), merchantId);
+
+            // ========================================================
+            // Fetch order counts for merchant outlets
+            // ========================================================
+
+            CoOrderFlowCountProjection projection = coOrderRepository.getOrderFlowCountsByOutletIds(outletIds);
+
+            return CoCustomerMapper.mapToOrderFlowCountForMerchantOrOutletOrDriver(projection);
+        }
+
+
+        // ============================================================
+        // CASE 2: Outlet ID provided
+        // ============================================================
+        //
+        // No FM call.
+        //
+        // Directly query CO orders table using outlet_id.
+        // ============================================================
+
+        if (outletId != null) {
+
+            log.info("Outlet ID provided. Fetching order counts. " + "outletId={}", outletId);
+
+            outletIds.add(outletId);
+
+            CoOrderFlowCountProjection projection = coOrderRepository.getOrderFlowCountsByOutletIds(outletIds);
+
+            return CoCustomerMapper.mapToOrderFlowCountForMerchantOrOutletOrDriver(projection);
+        }
+
+
+        // ============================================================
+        // CASE 3: Driver ID provided
+        // ============================================================
+        //
+        // No FM call.
+        //
+        // Directly query CO orders table using driver_id.
+        // ============================================================
+
+        log.info("Driver ID provided. Fetching order counts. " + "driverId={}", driverId);
+
+        CoOrderFlowCountProjection projection = coOrderRepository.getOrderFlowCountsByDriverId(driverId);
+
+
+        // ============================================================
+        // STEP 3: Map projection to response DTO
+        // ============================================================
+
+        CoOrderFlowCountForMerchantOutletOrDriverDto response = CoCustomerMapper.mapToOrderFlowCountForMerchantOrOutletOrDriver(projection);
+
+        log.info("Driver order flow counts fetched successfully. " + "driverId={}, total={}, completed={}, rejected={}", driverId, response.getTotalOrdersCount(), response.getCompletedOrdersCount(), response.getRejectedOrdersCount());
+
+        return response;
     }
-
-
-    // ============================================================
-    // CASE 2: Outlet ID provided
-    // ============================================================
-    //
-    // No FM call.
-    //
-    // Directly query CO orders table using outlet_id.
-    // ============================================================
-
-    if (outletId != null) {
-
-        log.info(
-                "Outlet ID provided. Fetching order counts. " +
-                        "outletId={}",
-                outletId
-        );
-
-        outletIds.add(outletId);
-
-        CoOrderFlowCountProjection projection =
-                coOrderRepository.getOrderFlowCountsByOutletIds(
-                        outletIds
-                );
-
-        return CoCustomerMapper
-                .mapToOrderFlowCountForMerchantOrOutletOrDriver(
-                        projection
-                );
-    }
-
-
-    // ============================================================
-    // CASE 3: Driver ID provided
-    // ============================================================
-    //
-    // No FM call.
-    //
-    // Directly query CO orders table using driver_id.
-    // ============================================================
-
-    log.info(
-            "Driver ID provided. Fetching order counts. " +
-                    "driverId={}",
-            driverId
-    );
-
-    CoOrderFlowCountProjection projection =
-            coOrderRepository.getOrderFlowCountsByDriverId(
-                    driverId
-            );
-
-
-    // ============================================================
-    // STEP 3: Map projection to response DTO
-    // ============================================================
-
-    CoOrderFlowCountForMerchantOutletOrDriverDto  response =
-            CoCustomerMapper
-                    .mapToOrderFlowCountForMerchantOrOutletOrDriver(
-                            projection
-                    );
-
-    log.info(
-            "Driver order flow counts fetched successfully. " +
-                    "driverId={}, total={}, completed={}, rejected={}",
-            driverId,
-            response.getTotalOrdersCount(),
-            response.getCompletedOrdersCount(),
-            response.getRejectedOrdersCount()
-    );
-
-    return response;
-}
 
 //===============================================================================
 //========================= HELPER METHODS ======================================
 //===============================================================================
+
     /**
      * Creates an empty order flow count response.
-     *
+     * <p>
      * This response is returned when:
      * - Merchant has no outlets
      * - No orders are found for the given driver
      * - No orders are found for the given outlet
      */
-    private CoOrderFlowCountForMerchantOutletOrDriverDto
-    createEmptyOrderFlowCountForMerchantOrOutletOrDriverResponse() {
+    private CoOrderFlowCountForMerchantOutletOrDriverDto createEmptyOrderFlowCountForMerchantOrOutletOrDriverResponse() {
 
-        CoOrderFlowCountForMerchantOutletOrDriverDto dto =
-                new CoOrderFlowCountForMerchantOutletOrDriverDto();
+        CoOrderFlowCountForMerchantOutletOrDriverDto dto = new CoOrderFlowCountForMerchantOutletOrDriverDto();
 
         dto.setTotalOrdersCount(0L);
         dto.setCompletedOrdersCount(0L);
@@ -2066,5 +1706,257 @@ getOrderFlowCountForMerchantOrOutletOrDriver(
 
         return dto;
     }
+
+    //    ============================================================================
+//    ============================================================================
+    @Override
+    public Page<CoOrderDetailsOfOutletDto> getOrderDetailsOfOutlet(Integer outletId, Pageable pageable) {
+
+        log.info("Fetching order details for outletId={}, page={}, size={}", outletId, pageable.getPageNumber(), pageable.getPageSize());
+
+        // Fetch paginated order details from CO database
+        Page<CoOrderDetailsOfOutletProjection> projectionPage = coOrderRepository.getOrderDetailsOfOutlet(outletId, pageable);
+
+        if (projectionPage == null || projectionPage.isEmpty()) {
+
+            log.info("No orders found for outletId={}", outletId);
+
+            return Page.empty(pageable);
+        }
+
+        // ============================================================
+        // OUTLET DETAILS FROM FM MICROSERVICE
+        // ============================================================
+
+        // FM API expects a List of outlet IDs.
+        // Since this API is for one outlet:
+        // outletId = 13 → outletIds = [13]
+
+        CoOutletDetailsRequestDto request = new CoOutletDetailsRequestDto();
+
+        request.setOutletIds(Collections.singletonList(outletId));
+
+        // Fetch outlet name and area name from FM
+        List<CoFmOutletDetailsDto> outletDetails = fmFeignClient.getOutletDetailsByIds(request);
+
+        CoFmOutletDetailsDto outlet = null;
+
+        if (outletDetails != null && !outletDetails.isEmpty()) {
+            outlet = outletDetails.get(0);
+        }
+
+        // ============================================================
+        // CREATE RESPONSE LIST
+        // ============================================================
+
+        List<CoOrderDetailsOfOutletDto> responseList = new ArrayList<>();
+
+        // ============================================================
+        // PROCESS EACH ORDER
+        // ============================================================
+
+        for (CoOrderDetailsOfOutletProjection projection : projectionPage.getContent()) {
+
+            log.info("Processing orderId={}", projection.getOrderId());
+
+            // Map CO database details to DTO
+            CoOrderDetailsOfOutletDto dto = CoCustomerMapper.mapToOrderDetailsOfOutlet(projection);
+
+            // ========================================================
+            // OUTLET DETAILS
+            // ========================================================
+
+            if (outlet != null) {
+
+                dto.setOutletName(outlet.getOutletName());
+
+                dto.setAreaName(outlet.getAreaName());
+            }
+
+            // ========================================================
+            // DRIVER DETAILS
+            // ========================================================
+
+            if (projection.getDriverId() != null) {
+
+                log.info("Fetching driver details for driverId={}", projection.getDriverId());
+
+                CoDriverDetailsDto driver = driverFeignClient.getDriverDetailsForOrder(projection.getDriverId());
+
+                if (driver != null) {
+
+                    dto.setDriverName(driver.getDriverName());
+
+                    dto.setDriverMobileNumber(driver.getDriverMobileNumber());
+                }
+            }
+
+            responseList.add(dto);
+        }
+
+        log.info("Successfully fetched {} orders for outletId={}", responseList.size(), outletId);
+
+        // Return paginated response
+        return new PageImpl<>(responseList, pageable, projectionPage.getTotalElements());
+    }
+
+//  ====================================================================================
+//  ====================================================================================
+@Override
+public Page<CoOrderDetailsOfDriverDto> getOrderDetailsOfDriver(
+        Integer driverId,
+        Pageable pageable) {
+
+    log.info(
+            "Fetching order details for driverId={}, page={}, size={}",
+            driverId,
+            pageable.getPageNumber(),
+            pageable.getPageSize()
+    );
+
+    // ============================================================
+    // FETCH ORDER DETAILS FROM CO DATABASE
+    // ============================================================
+
+    Page<CoOrderDetailsOfDriverProjection> projectionPage =
+            coOrderRepository.getOrderDetailsOfDriver(
+                    driverId,
+                    pageable
+            );
+
+    if (projectionPage == null || projectionPage.isEmpty()) {
+
+        log.info(
+                "No orders found for driverId={}",
+                driverId
+        );
+
+        return Page.empty(pageable);
+    }
+
+    List<CoOrderDetailsOfDriverDto> responseList =
+            new ArrayList<>();
+
+    // ============================================================
+    // PROCESS EACH ORDER
+    // ============================================================
+
+    for (CoOrderDetailsOfDriverProjection projection :
+            projectionPage.getContent()) {
+
+        log.info(
+                "Processing orderId={}, driverId={}",
+                projection.getOrderId(),
+                driverId
+        );
+
+        // ========================================================
+        // MAP CO DATABASE DATA TO DTO
+        // ========================================================
+
+        CoOrderDetailsOfDriverDto dto =
+                CoCustomerMapper.mapToOrderDetailsOfDriver(
+                        projection
+                );
+
+        // ========================================================
+        // OUTLET DETAILS FROM FM MICROSERVICE
+        // ========================================================
+
+        if (projection.getOutletId() != null) {
+
+            log.info(
+                    "Fetching outlet details for outletId={}",
+                    projection.getOutletId()
+            );
+
+            try {
+
+                CoOutletDetailsDto outlet =
+                        fmFeignClient.getOutletCompleteDetails(
+                                projection.getOutletId()
+                        );
+
+                if (outlet != null) {
+
+                    dto.setOutletName(
+                            outlet.getOutletName()
+                    );
+
+                } else {
+
+                    log.warn(
+                            "Outlet details returned null for outletId={}",
+                            projection.getOutletId()
+                    );
+                }
+
+            } catch (Exception e) {
+
+                // If outlet is not available in FM,
+                // don't fail the complete driver orders API.
+                // outletName will remain null.
+
+                log.warn(
+                        "Unable to fetch outlet details from FM for outletId={}. " +
+                                "Continuing with null outletName.",
+                        projection.getOutletId(),
+                        e
+                );
+            }
+        }
+
+        // ========================================================
+        // DRIVER DETAILS FROM DRIVER MICROSERVICE
+        // ========================================================
+
+        if (projection.getDriverId() != null) {
+
+            log.info(
+                    "Fetching driver details for driverId={}",
+                    projection.getDriverId()
+            );
+
+            CoDriverDetailsDto driver =
+                    driverFeignClient.getDriverDetailsForOrder(
+                            projection.getDriverId()
+                    );
+
+            if (driver != null) {
+
+                dto.setDriverName(
+                        driver.getDriverName()
+                );
+
+                dto.setDriverMobileNumber(
+                        driver.getDriverMobileNumber()
+                );
+            }
+        }
+
+        // Add completed DTO to response list
+        responseList.add(dto);
+    }
+
+    // ============================================================
+    // CREATE PAGINATED RESPONSE
+    // ============================================================
+
+    Page<CoOrderDetailsOfDriverDto> responsePage =
+            new PageImpl<>(
+                    responseList,
+                    pageable,
+                    projectionPage.getTotalElements()
+            );
+
+    log.info(
+            "Successfully fetched {} orders for driverId={}, totalElements={}",
+            responseList.size(),
+            driverId,
+            projectionPage.getTotalElements()
+    );
+
+    return responsePage;
+}
 }
 
