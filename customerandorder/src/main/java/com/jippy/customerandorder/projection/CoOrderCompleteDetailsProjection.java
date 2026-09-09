@@ -16,6 +16,20 @@ public interface CoOrderCompleteDetailsProjection {
 
     Integer getDriverId();
 
+    // ================= ORDER TIMELINE =================
+
+    LocalDateTime getMerchantAcceptedTime();
+
+    LocalDateTime getFoodPreparationCompletedTime();
+
+    LocalDateTime getDriverOrderAcceptedTime();
+
+    LocalDateTime getDriverOutletReachedTime();
+
+    LocalDateTime getDriverFoodPickupTime();
+
+    LocalDateTime getDriverFoodDeliveredTime();
+
 
     // ================= CUSTOMER =================
 

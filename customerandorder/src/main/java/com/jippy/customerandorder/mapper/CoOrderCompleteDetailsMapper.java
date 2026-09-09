@@ -19,6 +19,8 @@ public class CoOrderCompleteDetailsMapper {
 
         CoOrderCompleteDetailsResponseDto response = new CoOrderCompleteDetailsResponseDto();
 
+        // ================= ORDER =================
+
         response.setOrderId(projection.getOrderId());
 
         response.setCreatedAt(projection.getCreatedAt());
@@ -28,6 +30,22 @@ public class CoOrderCompleteDetailsMapper {
         response.setOrderStatus(projection.getOrderStatus());
 
         response.setPaymentMode(projection.getPaymentMode());
+
+        // ================= ORDER TIMELINE =================
+
+        response.setMerchantAcceptedTime(projection.getMerchantAcceptedTime());
+
+        response.setFoodPreparationCompletedTime(projection.getFoodPreparationCompletedTime());
+
+        response.setDriverOrderAcceptedTime(projection.getDriverOrderAcceptedTime());
+
+        response.setDriverOutletReachedTime(projection.getDriverOutletReachedTime());
+
+        response.setDriverFoodPickupTime(projection.getDriverFoodPickupTime());
+
+        response.setDriverFoodDeliveredTime(projection.getDriverFoodDeliveredTime());
+
+        // ================= CUSTOMER =================
 
         CoCustomerDetailsDto customer = new CoCustomerDetailsDto();
 
@@ -79,8 +97,7 @@ public class CoOrderCompleteDetailsMapper {
     /**
      * Maps price breakup projection to price breakup DTO.
      */
-    public static CoOrderPriceBreakupDto mapPriceBreakup(
-            CoOrderPriceBreakupProjection projection) {
+    public static CoOrderPriceBreakupDto mapPriceBreakup(CoOrderPriceBreakupProjection projection) {
 
         if (projection == null) {
             return null;
@@ -94,99 +111,59 @@ public class CoOrderCompleteDetailsMapper {
 
         dto.setOrderAmount(projection.getOrderAmount());
 
-        dto.setOrderAmountDiscounted(
-                projection.getOrderAmountDiscounted()
-        );
+        dto.setOrderAmountDiscounted(projection.getOrderAmountDiscounted());
 
         // ================= DELIVERY =================
 
-        dto.setPickUpDistanceKms(
-                projection.getPickUpDistanceInKms()
-        );
+        dto.setPickUpDistanceKms(projection.getPickUpDistanceInKms());
 
-        dto.setDeliveryDistanceKms(
-                projection.getDeliveryDistanceInKms()
-        );
+        dto.setDeliveryDistanceKms(projection.getDeliveryDistanceInKms());
 
-        dto.setPickUpCharges(
-                projection.getPickUpCharges()
-        );
+        dto.setPickUpCharges(projection.getPickUpCharges());
 
-        dto.setDriverDeliveryFee(
-                projection.getDriverDeliveryFee()
-        );
+        dto.setDriverDeliveryFee(projection.getDriverDeliveryFee());
 
-        dto.setCustomerDeliveryFee(
-                projection.getCustomerDeliveryFee()
-        );
+        dto.setCustomerDeliveryFee(projection.getCustomerDeliveryFee());
 
-        dto.setTotalDeliveryFee(
-                projection.getTotalDeliveryFee()
-        );
+        dto.setTotalDeliveryFee(projection.getTotalDeliveryFee());
 
-        dto.setCustomerDeliveryFeeTax(
-                projection.getCustomerDeliveryFeeTax()
-        );
+        dto.setCustomerDeliveryFeeTax(projection.getCustomerDeliveryFeeTax());
 
         // ================= PLATFORM =================
 
-        dto.setPlatformFee(
-                projection.getPlatformFee()
-        );
+        dto.setPlatformFee(projection.getPlatformFee());
 
-        dto.setPlatformFeeTax(
-                projection.getPlatformFeeTax()
-        );
+        dto.setPlatformFeeTax(projection.getPlatformFeeTax());
 
         // ================= SURGE =================
 
-        dto.setSurgeFee(
-                projection.getSurgeFee()
-        );
+        dto.setSurgeFee(projection.getSurgeFee());
 
-        dto.setSurgeFeeTax(
-                projection.getSurgeFeeTax()
-        );
+        dto.setSurgeFeeTax(projection.getSurgeFeeTax());
 
         // ================= PACKAGING =================
 
-        dto.setPackagingFee(
-                projection.getPackagingFee()
-        );
+        dto.setPackagingFee(projection.getPackagingFee());
 
-        dto.setPackagingFeeTax(
-                projection.getPackagingFeeTax()
-        );
+        dto.setPackagingFeeTax(projection.getPackagingFeeTax());
 
         // ================= TAX =================
 
-        dto.setFoodTax(
-                projection.getFoodTax()
-        );
+        dto.setFoodTax(projection.getFoodTax());
 
-        dto.setTotalTax(
-                projection.getTotalTax()
-        );
+        dto.setTotalTax(projection.getTotalTax());
 
         // ================= PAYMENT / DISCOUNT =================
 
-        dto.setTip(
-                projection.getTip()
-        );
+        dto.setTip(projection.getTip());
 
-        dto.setCouponDiscount(
-                projection.getCouponDiscount()
-        );
+        dto.setCouponDiscount(projection.getCouponDiscount());
 
-        dto.setWalletAmount(
-                projection.getWalletAmount()
-        );
+        dto.setWalletAmount(projection.getWalletAmount());
 
         // ================= FINAL =================
 
-        dto.setOrderTotalAmount(
-                projection.getOrderTotalAmount()
-        );
+        dto.setOrderTotalAmount(projection.getOrderTotalAmount());
 
         return dto;
     }

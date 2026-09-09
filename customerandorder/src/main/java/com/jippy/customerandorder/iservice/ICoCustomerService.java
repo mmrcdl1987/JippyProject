@@ -2,6 +2,8 @@ package com.jippy.customerandorder.iservice;
 
 import com.jippy.customerandorder.dto.*;
 import com.jippy.customerandorder.entity.CoCustomer;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -56,8 +58,9 @@ public interface ICoCustomerService {
      * @param orderStatus order status used for filtering
      * @return list of matching order details
      */
-    List<CoOrderDetailsByOrderStatusDto> getCompleteOrdersDetailsByOrderStatus
-        (String orderStatus);
+    Page<CoOrderDetailsByOrderStatusDto> getCompleteOrdersDetailsByOrderStatus(
+            String orderStatus,
+            Pageable pageable);
 
     //    =================================================================================
 //    =================================================================================
@@ -82,4 +85,17 @@ public interface ICoCustomerService {
             Integer outletId,
             Integer driverId
     );
+
+    //    =====================================================================================
+        Page<CoOrderDetailsOfOutletDto> getOrderDetailsOfOutlet(
+            Integer outletId,
+            Pageable pageable);
+
+//    =====================================================================================
+        Page<CoOrderDetailsOfDriverDto> getOrderDetailsOfDriver(
+                Integer driverId,
+                Pageable pageable
+        );
+//     ====================================================================================
+
 }

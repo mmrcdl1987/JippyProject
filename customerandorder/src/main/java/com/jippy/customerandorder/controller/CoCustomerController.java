@@ -18,6 +18,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -289,25 +292,65 @@ public class CoCustomerController {
      * from the orders table.
      */
     @GetMapping("/getCompleteOrdersDetailsByOrderStatus")
-    @Operation(summary = "Get complete order details by order status", description = "Fetches order ID, outlet ID, driver ID and order status " + "for all orders matching the supplied order status." +
+    @Operation(
+            summary = "Get complete order details by order status",
+            description = "Fetches complete order details for all orders matching the supplied order status with pagination support. " +
+                    "Supported values: ORDER_PLACED, ORDER_CONFIRMED, ORDER_SHIPPED, ORDER_COMPLETED."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order details fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid or missing order status"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<Page<CoOrderDetailsByOrderStatusDto>>
+                                        getCompleteOrdersDetailsByOrderStatus(
+            @Parameter(
+                    name = "orderStatus",
+                    description = "Order status filter. Supported values: ORDER_PLACED, ORDER_CONFIRMED, ORDER_SHIPPED, ORDER_COMPLETED.",
+                    example = "ORDER_SHIPPED",
+                    required = true
+            )
+            @RequestParam String orderStatus,
 
-            "Order status filter. Supported values: " +
+            @Parameter(
+                    name = "page",
+                    description = "Page number (starts from 0)",
+                    example = "0"
+            )
+            @RequestParam(defaultValue = "0") int page,
 
-            "ORDER_PLACED (Order Placed), " + "ORDER_CONFIRMED (Order Confirmed), " + "ORDER_SHIPPED (Order Shipped), " + "ORDER_COMPLETED (Order Completed).")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Order details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid or missing order status"), @ApiResponse(responseCode = "500", description = "Internal server error")})
-    public ResponseEntity<List<CoOrderDetailsByOrderStatusDto>> getCompleteOrdersDetailsByOrderStatus(
+            @Parameter(
+                    name = "size",
+                    description = "Number of records per page",
+                    example = "5"
+            )
+            @RequestParam(defaultValue = "5") int size) {
 
-            @Parameter(name = "orderStatus", description = "Order status filter. Supported values: " + "ORDER_PLACED (Order_Placed), " + "ORDER_CONFIRMED (Order_Confirmed), " + "ORDER_SHIPPED (Order_Shipped), " + "ORDER_COMPLETED (Order_Completed).", example = "ORDER_SHIPPED", required = true) @RequestParam String orderStatus) {
+        log.info(
+                "Received request to fetch complete order details. orderStatus={}, page={}, size={}",
+                orderStatus,
+                page,
+                size
+        );
 
-        log.info("Received request to fetch complete order details by order status: {}", orderStatus);
+        Pageable pageable = PageRequest.of(page, size);
 
-        List<CoOrderDetailsByOrderStatusDto> response = customerService.getCompleteOrdersDetailsByOrderStatus(orderStatus);
+        Page<CoOrderDetailsByOrderStatusDto> response =
+                customerService.getCompleteOrdersDetailsByOrderStatus(
+                        orderStatus,
+                        pageable
+                );
 
-        log.info("Successfully fetched {} orders for order status: {}", response.size(), orderStatus);
+        log.info(
+                "Successfully fetched {} orders for orderStatus={}, page={}, size={}",
+                response.getNumberOfElements(),
+                orderStatus,
+                page,
+                size
+        );
 
         return ResponseEntity.ok(response);
     }
-
     //    ========================================================================================
 //    ========================================================================================
     @GetMapping("/getOrderCompleteDetails")
@@ -367,83 +410,38 @@ public class CoCustomerController {
      * from the orders table.
      */
     @GetMapping("/getOrderFlowCountForMerchantOrOutletOrDriver")
-    @Operation(
-            summary = "Get order flow counts for merchant, outlet or driver",
-            description = """
-                Fetches total, completed and rejected order counts.
-
-                Exactly one of [ merchantId ], [ outletId ] OR [ driverId ]
-                must be provided.
-
-                If merchantId is provided, all outlets belonging to
-                that merchant are fetched from Food & Mart and the
-                order counts are calculated across those outlets.
-
-                If outletId is provided, the order counts are calculated
-                directly for that outlet from CO.
-
-                If driverId is provided, the order counts are calculated
-                directly for that driver from the CO orders table.
-                """
-    )
+    @Operation(summary = "Get order flow counts for merchant, outlet or driver", description = """
+            Fetches total, completed and rejected order counts.
+            
+            Exactly one of [ merchantId ], [ outletId ] OR [ driverId ]
+            must be provided.
+            
+            If merchantId is provided, all outlets belonging to
+            that merchant are fetched from Food & Mart and the
+            order counts are calculated across those outlets.
+            
+            If outletId is provided, the order counts are calculated
+            directly for that outlet from CO.
+            
+            If driverId is provided, the order counts are calculated
+            directly for that driver from the CO orders table.
+            """)
     @ApiResponses(value = {
 
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Order flow counts fetched successfully"
-            ),
+            @ApiResponse(responseCode = "200", description = "Order flow counts fetched successfully"),
 
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Exactly one of merchantId, outletId or driverId must be provided"
-            ),
+            @ApiResponse(responseCode = "400", description = "Exactly one of merchantId, outletId or driverId must be provided"),
 
-            @ApiResponse(
-                    responseCode = "500",
-                    description = "Internal server error"
-            )
-    })
-    public ResponseEntity<CoOrderFlowCountForMerchantOutletOrDriverDto >
-    getOrderFlowCountForMerchantOrOutletOrDriver(
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<CoOrderFlowCountForMerchantOutletOrDriverDto> getOrderFlowCountForMerchantOrOutletOrDriver(
 
-            @Parameter(
-                    description = "Merchant ID. Provide only one of merchantId, outletId or driverId.",
-                    example = "50"
-            )
-            @RequestParam(
-                    value = "merchantId",
-                    required = false
-            )
-            Integer merchantId,
+            @Parameter(description = "Merchant ID. Provide only one of merchantId, outletId or driverId.", example = "50") @RequestParam(value = "merchantId", required = false) Integer merchantId,
 
-            @Parameter(
-                    description = "Outlet ID. Provide only one of merchantId, outletId or driverId.",
-                    example = "13"
-            )
-            @RequestParam(
-                    value = "outletId",
-                    required = false
-            )
-            Integer outletId,
+            @Parameter(description = "Outlet ID. Provide only one of merchantId, outletId or driverId.", example = "13") @RequestParam(value = "outletId", required = false) Integer outletId,
 
-            @Parameter(
-                    description = "Driver ID. Provide only one of merchantId, outletId or driverId.",
-                    example = "15"
-            )
-            @RequestParam(
-                    value = "driverId",
-                    required = false
-            )
-            Integer driverId
-    ) {
+            @Parameter(description = "Driver ID. Provide only one of merchantId, outletId or driverId.", example = "15") @RequestParam(value = "driverId", required = false) Integer driverId) {
 
-        log.info(
-                "GET /getOrderFlowCountForMerchantOrOutletOrDriver called. " +
-                        "merchantId={}, outletId={}, driverId={}",
-                merchantId,
-                outletId,
-                driverId
-        );
+        log.info("GET /getOrderFlowCountForMerchantOrOutletOrDriver called. " + "merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
 
         // ============================================================
         // Validate that exactly ONE parameter is provided
@@ -466,49 +464,80 @@ public class CoCustomerController {
         // No parameter provided
         if (providedParameters == 0) {
 
-            log.warn(
-                    "Request rejected. None of merchantId, outletId or driverId provided"
-            );
+            log.warn("Request rejected. None of merchantId, outletId or driverId provided");
 
-            throw new IllegalArgumentException(
-                    "Either merchantId, outletId or driverId must be provided"
-            );
+            throw new IllegalArgumentException("Either merchantId, outletId or driverId must be provided");
         }
 
         // More than one parameter provided
         if (providedParameters > 1) {
 
-            log.warn(
-                    "Request rejected. Multiple identifiers provided. " +
-                            "merchantId={}, outletId={}, driverId={}",
-                    merchantId,
-                    outletId,
-                    driverId
-            );
+            log.warn("Request rejected. Multiple identifiers provided. " + "merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
 
-            throw new IllegalArgumentException(
-                    "Only one of merchantId, outletId or driverId can be provided"
-            );
+            throw new IllegalArgumentException("Only one of merchantId, outletId or driverId can be provided");
         }
 
         // ============================================================
         // Call service
         // ============================================================
 
-        CoOrderFlowCountForMerchantOutletOrDriverDto  response =
-                customerService.getOrderFlowCountForMerchantOrOutletOrDriver(
-                        merchantId,
-                        outletId,
-                        driverId
-                );
+        CoOrderFlowCountForMerchantOutletOrDriverDto response = customerService.getOrderFlowCountForMerchantOrOutletOrDriver(merchantId, outletId, driverId);
 
-        log.info(
-                "GET /getOrderFlowCountForMerchantOrOutletOrDriver completed successfully. " +
-                        "merchantId={}, outletId={}, driverId={}",
-                merchantId,
-                outletId,
-                driverId
-        );
+        log.info("GET /getOrderFlowCountForMerchantOrOutletOrDriver completed successfully. " + "merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    //    ==============================================================================
+//    ==============================================================================
+    @GetMapping("/getOrderDetailsOfOutlet")
+    @Operation(summary = "Get order details of outlet", description = """
+            Fetches all order details for the given outlet ID.
+            
+            The merchant total price is calculated from the
+            order_items table using merchant_total_price.
+            
+            For each order, merchant_total_price values of all
+            order items belonging to that order are added together.
+            
+            Example:
+            Order jippy202609013 has two order items:
+            
+            merchant_total_price = 150.00
+            merchant_total_price = 10.00
+            
+            Merchant total price = 160.00
+            """)
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Order details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid outlet ID"), @ApiResponse(responseCode = "404", description = "No orders found for the outlet"), @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<Page<CoOrderDetailsOfOutletDto>> getOrderDetailsOfOutlet(@RequestParam Integer outletId, Pageable pageable) {
+
+        return ResponseEntity.ok(customerService.getOrderDetailsOfOutlet(outletId, pageable));
+    }
+
+    //    ===================================================================================
+//    ===================================================================================
+    @GetMapping("/getOrderDetailsOfDriver")
+    @Operation(summary = "Get order details of driver", description = """
+            Fetches paginated order details assigned to a specific driverID.
+            
+            Driver ID is used to find orders from the Customer & Order
+            microservice. Driver charges are calculated using pickup
+            charges and driver delivery fee from order price breakup.
+            """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Driver order details fetched successfully"),
+            @ApiResponse(responseCode = "404", description = "No orders found for the driver"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<Page<CoOrderDetailsOfDriverDto>>
+                        getOrderDetailsOfDriver(@RequestParam
+                            @Parameter(description = "Driver ID", example = "15")
+                            Integer driverId,
+                            Pageable pageable) {
+
+        log.info("Received request to fetch orders for driverId={}", driverId);
+
+        Page<CoOrderDetailsOfDriverDto> response
+                    = customerService.getOrderDetailsOfDriver(driverId, pageable);
 
         return ResponseEntity.ok(response);
     }

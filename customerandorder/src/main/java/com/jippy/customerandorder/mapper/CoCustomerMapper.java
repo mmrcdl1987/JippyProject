@@ -5,9 +5,7 @@ import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.entity.CoCustomerStreak;
 import com.jippy.customerandorder.entity.CoCustomerWallet;
 import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
-import com.jippy.customerandorder.projection.CoCompleteOrdersFlowCountsProjection;
-import com.jippy.customerandorder.projection.CoOrderDetailsByOrderStatusProjection;
-import com.jippy.customerandorder.projection.CoOrderFlowCountProjection;
+import com.jippy.customerandorder.projection.*;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -335,30 +333,71 @@ public class CoCustomerMapper {
      * @param projection order flow count projection
      * @return order flow count response DTO
      */
-    public static CoOrderFlowCountForMerchantOutletOrDriverDto
-    mapToOrderFlowCountForMerchantOrOutletOrDriver(
-            CoOrderFlowCountProjection projection) {
+    public static CoOrderFlowCountForMerchantOutletOrDriverDto mapToOrderFlowCountForMerchantOrOutletOrDriver(CoOrderFlowCountProjection projection) {
 
-        CoOrderFlowCountForMerchantOutletOrDriverDto  dto =
-                new CoOrderFlowCountForMerchantOutletOrDriverDto ();
+        CoOrderFlowCountForMerchantOutletOrDriverDto dto = new CoOrderFlowCountForMerchantOutletOrDriverDto();
 
-        dto.setTotalOrdersCount(
-                projection.getTotalOrdersCount()
-        );
+        dto.setTotalOrdersCount(projection.getTotalOrdersCount());
 
-        dto.setCompletedOrdersCount(
-                projection.getCompletedOrdersCount()
-        );
+        dto.setCompletedOrdersCount(projection.getCompletedOrdersCount());
 
-        dto.setRejectedOrdersCount(
-                projection.getRejectedOrdersCount()
-        );
+        dto.setRejectedOrdersCount(projection.getRejectedOrdersCount());
 
         return dto;
     }
 
 //    ====================================================================================
 //    ====================================================================================
+
+    public static CoOrderDetailsOfOutletDto mapToOrderDetailsOfOutlet(CoOrderDetailsOfOutletProjection projection) {
+
+        CoOrderDetailsOfOutletDto dto = new CoOrderDetailsOfOutletDto();
+
+        dto.setOrderId(projection.getOrderId());
+
+        dto.setOutletId(projection.getOutletId());
+
+        dto.setCustomerName(projection.getCustomerName());
+
+        dto.setDriverId(projection.getDriverId());
+
+        dto.setOrderStatus(projection.getOrderStatus());
+
+        dto.setMerchantTotalPrice(projection.getMerchantTotalPrice());
+
+        return dto;
+    }
+
+    //    =================================================================================
+//    =================================================================================//
+    public static CoOrderDetailsOfDriverDto mapToOrderDetailsOfDriver(CoOrderDetailsOfDriverProjection projection) {
+
+        CoOrderDetailsOfDriverDto dto = new CoOrderDetailsOfDriverDto();
+
+        dto.setOrderId(projection.getOrderId());
+
+        dto.setOutletId(projection.getOutletId());
+
+        dto.setCustomerName(projection.getCustomerName());
+
+        dto.setDriverId(projection.getDriverId());
+
+        dto.setOrderStatus(projection.getOrderStatus());
+
+        dto.setPickUpDistanceInKms(projection.getPickUpDistanceInKms());
+
+        dto.setDeliveryDistanceInKms(projection.getDeliveryDistanceInKms());
+
+        dto.setPickUpCharges(projection.getPickUpCharges());
+
+        dto.setDriverDeliveryFee(projection.getDriverDeliveryFee());
+
+        dto.setDriverTotalCharges(projection.getDriverTotalCharges());
+
+        return dto;
+    }
+//    =================================================================================
+//    =================================================================================
 
     public CoCustomerResponseDto mapToResponse(CoCustomer customer) {
 

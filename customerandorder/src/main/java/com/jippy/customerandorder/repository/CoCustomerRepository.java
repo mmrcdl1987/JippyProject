@@ -5,6 +5,8 @@ package com.jippy.customerandorder.repository;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.projection.CoCompleteOrdersFlowCountsProjection;
 import com.jippy.customerandorder.projection.CoOrderDetailsByOrderStatusProjection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -137,36 +139,49 @@ public interface CoCustomerRepository extends JpaRepository<CoCustomer, Integer>
      * FM and Driver information are intentionally not fetched here
      * because they belong to separate microservices.
      */
-    @Query(value = """
-            SELECT
-                o.order_id AS orderId,
-                o.outlet_id AS outletId,
-                o.driver_id AS driverId,
-                o.order_status AS orderStatus,
+    @Query(
+            value = """
+                SELECT
+                    o.order_id AS orderId,
+                    o.outlet_id AS outletId,
+                    o.driver_id AS driverId,
+                    o.order_status AS orderStatus,
 
-                CONCAT_WS(
-                    ' ',
-                    c.first_name,
-                    c.last_name
-                ) AS customerName,
+                    CONCAT_WS(
+                        ' ',
+                        c.first_name,
+                        c.last_name
+                    ) AS customerName,
 
-                opb.order_total_amount AS orderAmount
+                    opb.order_total_amount AS orderAmount
 
-            FROM "jippy_customer_and_order"."orders" o
+                FROM "jippy_customer_and_order"."orders" o
 
-            LEFT JOIN "jippy_customer_and_order"."customer" c
-                ON c.customer_id = o.customer_id
+                LEFT JOIN "jippy_customer_and_order"."customer" c
+                    ON c.customer_id = o.customer_id
 
-            LEFT JOIN "jippy_customer_and_order"."order_price_breakup" opb
-                ON opb.order_id = o.order_id
+                LEFT JOIN "jippy_customer_and_order"."order_price_breakup" opb
+                    ON opb.order_id = o.order_id
 
-            WHERE o.order_status = :orderStatus
+                WHERE o.order_status = :orderStatus
 
-            ORDER BY o.created_at DESC
-            """,
-            nativeQuery = true)
-    List<CoOrderDetailsByOrderStatusProjection>
-        getCompleteOrdersDetailsByOrderStatus(@Param("orderStatus") String orderStatus);
+                ORDER BY o.created_at DESC
+                """,
+
+            countQuery = """
+                SELECT COUNT(*)
+                FROM "jippy_customer_and_order"."orders" o
+
+                WHERE o.order_status = :orderStatus
+                """,
+
+            nativeQuery = true
+    )
+    Page<CoOrderDetailsByOrderStatusProjection>
+    getCompleteOrdersDetailsByOrderStatus(
+            @Param("orderStatus") String orderStatus,
+            Pageable pageable
+    );
 
 //    =====================================================================================
 }

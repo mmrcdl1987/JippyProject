@@ -2,6 +2,8 @@ package com.jippy.customerandorder.repository;
 
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.projection.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -317,26 +319,39 @@ Optional<CoOrder> findByOrderIdAndDriverId(
      * - Payment mode
      * - Outlet ID
      */
-    @Query(value = """
+        @Query(value = """
         SELECT
-
+    
             -- ================= ORDER =================
-
+    
             o.order_id AS "orderId",
-
+    
             o.created_at AS "createdAt",
-
+    
             o.order_type AS "orderType",
-
+    
             o.order_status AS "orderStatus",
-
+    
             o.driver_id AS "driverId",
-
-
+    
+            -- ================= ORDER TIMELINE =================
+    
+            o.merchant_accepted_time AS "merchantAcceptedTime",
+    
+            o.food_preparation_completed_time AS "foodPreparationCompletedTime",
+    
+            o.driver_order_accepted_time AS "driverOrderAcceptedTime",
+    
+            o.driver_outlet_reached_time AS "driverOutletReachedTime",
+    
+            o.driver_food_pickup_time AS "driverFoodPickupTime",
+    
+            o.driver_food_delivered_time AS "driverFoodDeliveredTime",
+    
             -- ================= CUSTOMER =================
-
+    
             c.customer_id AS "customerId",
-
+    
             CONCAT(
                 COALESCE(c.first_name, ''),
                 CASE
@@ -346,57 +361,47 @@ Optional<CoOrder> findByOrderIdAndDriverId(
                     ELSE ''
                 END
             ) AS "customerName",
-
+    
             c.email AS "email",
-
+    
             c.phone_number AS "phoneNumber",
-
+    
             cda.building_name AS "buildingName",
-
-
+    
             -- ================= OUTLET =================
-
+    
             o.outlet_id AS "outletId",
-
-
+    
             -- ================= PAYMENT =================
-
+    
             o.payment_mode_id AS "paymentModeId",
-
+    
             pm.payment_mode AS "paymentMode"
-
-
+    
         FROM jippy_customer_and_order.orders o
-
-
+    
         -- ================= CUSTOMER =================
-
+    
         LEFT JOIN jippy_customer_and_order.customer c
             ON c.customer_id = o.customer_id
-
-
+    
         -- ================= CUSTOMER ADDRESS =================
-
+    
         LEFT JOIN jippy_customer_and_order.customer_delivery_addresses cda
             ON cda.customer_address_id =
                o.customer_delivery_address_id
-
-
+    
         -- ================= PAYMENT MODE =================
-
+    
         LEFT JOIN jippy_customer_and_order.payment_modes pm
             ON pm.payment_mode_id = o.payment_mode_id
-
-
-        -- ================= ORDER =================
-
+    
         WHERE o.order_id = :orderId
-
         """,
-            nativeQuery = true)
-    Optional<CoOrderCompleteDetailsProjection> getOrderCompleteDetails(
-            @Param("orderId") String orderId
-    );
+                nativeQuery = true)
+        Optional<CoOrderCompleteDetailsProjection> getOrderCompleteDetails(
+                @Param("orderId") String orderId
+        );
 //    ======================================================================================
 //    ======================================================================================
 
@@ -477,4 +482,112 @@ Optional<CoOrder> findByOrderIdAndDriverId(
     CoOrderFlowCountProjection getOrderFlowCountsByDriverId(
             @Param("driverId") Integer driverId
     );
+
+//    ==============================================================================
+//    ==============================================================================
+        @Query(value = """
+                SELECT
+                    o.order_id AS orderId,
+                    o.outlet_id AS outletId,
+                    o.customer_id AS customerId,
+        
+                    CONCAT_WS(
+                        ' ',
+                        c.first_name,
+                        c.last_name
+                    ) AS customerName,
+        
+                    o.driver_id AS driverId,
+                    o.order_status AS orderStatus,
+        
+                    COALESCE(
+                        SUM(oi.merchant_total_price),
+                        0
+                    ) AS merchantTotalPrice
+        
+                FROM jippy_customer_and_order.orders o
+        
+                LEFT JOIN jippy_customer_and_order.customer c
+                    ON c.customer_id = o.customer_id
+        
+                LEFT JOIN jippy_customer_and_order.order_items oi
+                    ON oi.order_id = o.order_id
+        
+                WHERE o.outlet_id = :outletId
+        
+                GROUP BY
+                    o.order_id,
+                    o.outlet_id,
+                    o.customer_id,
+                    c.first_name,
+                    c.last_name,
+                    o.driver_id,
+                    o.order_status,
+                    o.created_at
+        
+                ORDER BY o.created_at DESC
+                """,
+                countQuery = """
+                SELECT COUNT(*)
+                FROM jippy_customer_and_order.orders o
+                WHERE o.outlet_id = :outletId
+                """,
+                nativeQuery = true)
+        Page<CoOrderDetailsOfOutletProjection> getOrderDetailsOfOutlet(
+                @Param("outletId") Integer outletId,
+                Pageable pageable
+        );
+//    ======================================================================================
+//    ======================================================================================
+
+            @Query(
+                    value = """
+                SELECT
+                    o.order_id AS orderId,
+                    o.outlet_id AS outletId,
+        
+                    CONCAT_WS(
+                        ' ',
+                        c.first_name,
+                        c.last_name
+                    ) AS customerName,
+        
+                    o.driver_id AS driverId,
+                    o.order_status AS orderStatus,
+        
+                    opb.pick_up_distance_in_kms AS pickUpDistanceInKms,
+                    opb.delivery_distance_in_kms AS deliveryDistanceInKms,
+                    opb.pick_up_charges AS pickUpCharges,
+                    opb.driver_delivery_fee AS driverDeliveryFee,
+        
+                    COALESCE(opb.pick_up_charges, 0)
+                        + COALESCE(opb.driver_delivery_fee, 0)
+                        AS driverTotalCharges
+        
+                FROM jippy_customer_and_order.orders o
+        
+                LEFT JOIN jippy_customer_and_order.customer c
+                    ON c.customer_id = o.customer_id
+        
+                LEFT JOIN jippy_customer_and_order.order_price_breakup opb
+                    ON opb.order_id = o.order_id
+        
+                WHERE o.driver_id = :driverId
+        
+                ORDER BY o.created_at DESC
+                """,
+
+                    countQuery = """
+                SELECT COUNT(*)
+                FROM jippy_customer_and_order.orders o
+                WHERE o.driver_id = :driverId
+                """,
+
+                    nativeQuery = true
+            )
+            Page<CoOrderDetailsOfDriverProjection> getOrderDetailsOfDriver(
+                    @Param("driverId") Integer driverId,
+                    Pageable pageable
+            );
+// =========================================================================================
 }
