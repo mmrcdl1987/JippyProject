@@ -103,6 +103,8 @@ public interface FmAdminOutletMenuProjection {
 
     Boolean getHasProductVariants();
 
+    String getProductType();
+
     Boolean getProductAvailable();
 
     Boolean getProductToggle();

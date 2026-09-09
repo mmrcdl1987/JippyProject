@@ -1412,6 +1412,8 @@ public final class FmOutletMapper {
 
                 product.setHasProductVariants(row.getHasProductVariants());
 
+                product.setProductType(row.getProductType());
+
                 product.setIsAvailable(row.getProductAvailable());
                 product.setIsToggle(row.getProductToggle());
 

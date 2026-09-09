@@ -1131,6 +1131,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             p.merchant_price,
             p.is_veg,
             p.has_product_variants,
+            p.product_type AS product_type,
             p.is_toggle AS product_available,
             p.is_toggle AS product_toggle,
 

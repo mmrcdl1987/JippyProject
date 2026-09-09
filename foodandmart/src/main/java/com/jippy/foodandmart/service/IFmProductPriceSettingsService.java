@@ -14,5 +14,24 @@ public interface IFmProductPriceSettingsService {
 
     FmProductPriceSettingsResponseDto update(Integer id, FmProductPriceSettingsRequestDto request, Integer userId);
 
-    void delete(Integer id);
+//    //void delete(Integer id);
+//    /*
+//     * Soft delete.
+//     *
+//     * This will NOT delete the database row.
+//     * It will only set:
+//     *
+//     * is_active = 'N'
+//     */
+//    void delete(Integer id);
+//
+//    /*
+//     * Restore / Activate.
+//     *
+//     * This will set:
+//     *
+//     * is_active = 'Y'
+//     */
+//    void restore(Integer id);
+    void updateStatus(Integer id, String status);
 }

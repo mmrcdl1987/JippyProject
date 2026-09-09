@@ -1,7 +1,9 @@
 package com.jippy.foodandmart.serviceImpl;
 
+import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmProductPriceSettingsRequestDto;
 import com.jippy.foodandmart.dto.FmProductPriceSettingsResponseDto;
+import com.jippy.foodandmart.dto.FmResponseDto;
 import com.jippy.foodandmart.entity.FmProductPriceSettings;
 import com.jippy.foodandmart.exception.PriceSettingsException;
 import com.jippy.foodandmart.exception.PriceSettingsNotFoundException;
@@ -15,8 +17,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.time.LocalDateTime;
 
@@ -28,6 +34,8 @@ public class FmProductPriceSettingsServiceImpl implements IFmProductPriceSetting
     private final FmProductPriceSettingsRepository priceSettingsRepository;
     private final FmProductPriceSettingsMapper priceSettingsMapper;
     private final FmProductRepository productRepository;
+
+
 
     @Override
     @Transactional
@@ -130,23 +138,89 @@ public class FmProductPriceSettingsServiceImpl implements IFmProductPriceSetting
         return priceSettingsMapper.toDto(entity);
     }
 
+    //    @Override
+//    @Transactional
+//    public void delete(Integer id) {
+//
+//        log.info("Deleting product price setting | settingId={}", id);
+//
+//        validateId(id);
+//
+//        if (!priceSettingsRepository.existsById(id)) {
+//            log.warn("Product price setting not found | settingId={}", id);
+//
+//            throw new PriceSettingsNotFoundException("Product price setting not found with id: " + id);
+//        }
+//
+//        priceSettingsRepository.deleteById(id);
+//
+//        log.info("Product price setting deleted successfully | settingId={}", id);
+//    }
+    /*
+     * ============================================================
+     * DELETE / DEACTIVATE
+     * ============================================================
+     *
+     * Example:
+     *
+     * DELETE /product-price-settings/10
+     *
+     * Database:
+     *
+     * is_active = 'N'
+     *
+     * The row is NOT deleted.
+     */
+//    @Override
+//    @Transactional
+//    public void delete(Integer id) {
+//
+//        log.info("Deactivating product price setting | settingId={}", id);
+//
+//        validateId(id);
+//
+//        FmProductPriceSettings setting = priceSettingsRepository.findById(id).orElseThrow(() -> new PriceSettingsNotFoundException("Product price setting not found with id: " + id));
+//
+//        setting.setIsActive(FmAppConstants.INACTIVE);
+//
+//        priceSettingsRepository.save(setting);
+//
+//        log.info("Product price setting deactivated successfully | settingId={}", id);
+//    }
+//
+//
+//    @Override
+//    @Transactional
+//    public void restore(Integer id) {
+//
+//        log.info("Restoring product price setting | settingId={}", id);
+//
+//        validateId(id);
+//
+//        FmProductPriceSettings setting = priceSettingsRepository.findById(id).orElseThrow(() -> new PriceSettingsNotFoundException("Product price setting not found with id: " + id));
+//
+//        setting.setIsActive(FmAppConstants.ACTIVE);
+//
+//        priceSettingsRepository.save(setting);
+//
+//        log.info("Product price setting restored successfully | settingId={}", id);
+//    }
+
     @Override
     @Transactional
-    public void delete(Integer id) {
+    public void updateStatus(Integer id, String status) {
 
-        log.info("Deleting product price setting | settingId={}", id);
+        log.info("Updating product price setting status | settingId={} | status={}", id, status);
 
         validateId(id);
 
-        if (!priceSettingsRepository.existsById(id)) {
-            log.warn("Product price setting not found | settingId={}", id);
+        FmProductPriceSettings setting = priceSettingsRepository.findById(id).orElseThrow(() -> new PriceSettingsNotFoundException("Product price setting not found with id: " + id));
 
-            throw new PriceSettingsNotFoundException("Product price setting not found with id: " + id);
-        }
+        setting.setIsActive(status);
 
-        priceSettingsRepository.deleteById(id);
+        priceSettingsRepository.save(setting);
 
-        log.info("Product price setting deleted successfully | settingId={}", id);
+        log.info("Product price setting status updated successfully | settingId={} | status={}", id, status);
     }
 
     private FmProductPriceSettings findById(Integer id) {
