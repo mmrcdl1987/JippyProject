@@ -59,27 +59,24 @@ public interface DriverService {
 //
 //    Integer checkCustomerAddressWithCommunity(Double latitude, Double longitude, Integer communityId);
 
-    // ================================================================
     // READY TO ACCEPT ORDERS TOGGLE
-    // ================================================================
+
     //
     // Updates the driver's ready_to_accept_orders value.
-    // ================================================================
 
     DriverResponseDto readyToAcceptIsToggle(
             DriverReadyToAcceptRequestDto requestDto
     );
 
     String updateDriverDocuments(DriverDocumentUpdateDTO driverDocumentUpdateDTO);
-    /**
-     * Fetches driver details for multiple driver IDs.
-     *
-     * @param driverIds list of driver IDs
-     * @return driver details
-     */
-    List<DriverDetailsResponseDto> getDriverDetailsByIds(
-            List<Integer> driverIds
-    );
+
+    List<DriverDetailsResponseDto> getDriverDetailsByIds(List<Integer> driverIds);
 
     DriverDetailsResponseDto getDriverDetailsForOrder(Integer driverId);
+
+    DriverDto findByPhoneNumber(String phoneNumber);
+
+
+
+
 }

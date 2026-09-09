@@ -1,3 +1,5 @@
+
+
 package com.jippy.driver.serviceImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -1329,4 +1331,33 @@ public class DriverServiceImpl implements DriverService {
 
         return response;
     }
+
+        @Override
+        public DriverDto findByPhoneNumber(String phoneNumber) {
+
+            log.info(
+                    "DRIVER_SERVICE | FIND_BY_PHONE_NUMBER | phoneNumber={}",
+                    phoneNumber
+            );
+
+            Driver driver = driverRepository
+                    .findByPhoneNumber(phoneNumber)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Driver not found with phone number: " + phoneNumber
+                            )
+                    );
+
+            DriverDto driverDto = new DriverDto();
+
+            driverDto.setDriverId(driver.getDriverId());
+            driverDto.setFirstName(driver.getFirstName());
+            driverDto.setLastName(driver.getLastName());
+            driverDto.setPhoneNumber(driver.getPhoneNumber());
+            driverDto.setEmail(driver.getEmail());
+            driverDto.setIsApproved(driver.getIsApproved());
+            driverDto.setReadyToAcceptOrders(driver.getReadyToAcceptOrders());
+
+            return driverDto;
+        }
 }

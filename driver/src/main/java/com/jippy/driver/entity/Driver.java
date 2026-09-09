@@ -39,9 +39,9 @@ public class Driver {
     @Column(name = "email", length = 100)
     private String email;
 
-//    newly added feilds after changing requirement
-@Column(name = "nominee_name", length = 50)
-private String nomineeName;
+    //    newly added feilds after changing requirement
+    @Column(name = "nominee_name", length = 50)
+    private String nomineeName;
 
     @Column(name = "nominee_phone_number", length = 15)
     private String nomineePhoneNumber;
@@ -77,7 +77,7 @@ private String nomineeName;
     private Boolean isApproved;
 
     @Column(name = "ready_to_accept_orders")
-    private Boolean readyToAcceptOrders=false;
+    private Boolean readyToAcceptOrders = false;
 
     // One-to-One mapping with KYC
     @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL)

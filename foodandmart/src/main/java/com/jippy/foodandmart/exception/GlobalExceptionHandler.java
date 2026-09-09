@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
 
     // --- Resource & Duplicate Handling (Merged) ---
 
-    @ExceptionHandler({ResourceNotFoundException.class, MasterProductNotFoundException.class})
+    @ExceptionHandler({ResourceNotFoundException.class,UserNotFoundException.class, MasterProductNotFoundException.class})
     public ResponseEntity<FmApiResponse<Void>> handleNotFound(Exception ex) {
         log.warn("Resource not found: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(FmApiResponse.error(ex.getMessage()));
@@ -211,6 +211,22 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(FmApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SmsFailedException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleSmsFailedException(
+            SmsFailedException ex
+    ) {
+
+        log.error(
+                "[SMS] OTP sending failed | reason={}",
+                ex.getMessage(),
+                ex
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(FmApiResponse.error(ex.getMessage()));
     }
 
