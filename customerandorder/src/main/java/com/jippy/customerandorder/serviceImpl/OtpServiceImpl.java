@@ -232,6 +232,7 @@ public class OtpServiceImpl implements OtpService {
             response.setLastName(customer.getLastName());
             response.setAccessToken(responseDto.getJwt());
             response.setExpiresIn(24 * 60 * 60L);
+            response.setEmail(customer.getEmail());
 
             log.info("OTP_SERVICE | VERIFY_OTP | SUCCESS");
             return response;

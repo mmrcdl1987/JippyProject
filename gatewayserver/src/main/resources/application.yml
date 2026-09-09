@@ -1,6 +1,13 @@
 server:
   port: 8084
 
+smscountry:
+  auth-key: 7O7PgEmztmY5Nr70r0beANd
+  auth-token: 1sTCN36yT5iYW2kfgkrV7qNyLC845mlpJzjlY8J1
+  sender-id: JIPPYM
+  base-url: ${SMSCOUNTRY_BASE_URL}
+  templateId : 1707172854166470178
+
 jwt:
   secret: ks93w6IjKBc8TckMt9xjYSj2rE8YHJvduMBJiXBytHk=
 spring:

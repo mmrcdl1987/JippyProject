@@ -76,10 +76,11 @@ jwt:
   expiration: 86400000
 
 smscountry:
-  auth-key: 7O7PgEmztmY5Nr70r0beANd
-  auth-token: 1sTCN36yT5iYW2kfgkrV7qNyLC845mlpJzjlY8J1
+  auth-key: ${SMSCOUNTRY_AUTH_KEY}
+  auth-token: ${SMSCOUNTRY_AUTH_TOKEN}
   sender-id: JIPPYM
-  base-url: https://restapi.smscountry.com/v0.1
+  base-url: ${SMSCOUNTRY_BASE_URL}
+  templateId : ${SMSCOUNTRY_TEMPLATEID}
 
 management:
   tracing:

@@ -2,6 +2,7 @@ package com.jippy.customerandorder.exception;
 
 import com.jippy.customerandorder.dto.CoErrorResponseDto;
 import com.jippy.customerandorder.dto.CoResponseDto;
+
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -179,5 +180,7 @@ public class GlobalExceptionHandler {
                         "500",
                         "An unexpected error occurred: " + ex.getMessage()));
     }
+
+
 
 }

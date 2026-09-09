@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class SmsCountryServiceImpl implements SmsCountryService {
 
-    @Value("${smscountry.templateId}")
+    @Value("${SMSCOUNTRY_TEMPLATEID}")
     private String templateId;
 
     private final SmsCountryFeignClient smsCountryFeignClient;

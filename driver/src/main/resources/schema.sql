@@ -1,4 +1,5 @@
 CREATE SCHEMA IF NOT EXISTS jippy_driver;
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- 1. Base Drivers Table
 CREATE TABLE IF NOT EXISTS jippy_driver.driver(

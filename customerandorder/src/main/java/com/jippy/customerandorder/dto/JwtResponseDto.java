@@ -18,4 +18,6 @@ public class JwtResponseDto {
     private String tokenType = "Bearer";
 
     private Long expiresIn;
+
+    private String email;
 }

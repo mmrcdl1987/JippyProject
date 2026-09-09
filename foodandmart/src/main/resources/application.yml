@@ -7,6 +7,13 @@ default-banners : https://jippys3bucket.s3.ap-south-2.amazonaws.com/jippy-banner
 jwt:
   secret: ks93w6IjKBc8TckMt9xjYSj2rE8YHJvduMBJiXBytHk=
 
+smscountry:
+  auth-key: ${SMSCOUNTRY_AUTH_KEY}
+  auth-token: ${SMSCOUNTRY_AUTH_TOKEN}
+  sender-id: JIPPYM
+  base-url: ${SMSCOUNTRY_BASE_URL}
+  templateId : ${SMSCOUNTRY_TEMPLATEID}
+
 spring:
   application:
     name: foodandmart

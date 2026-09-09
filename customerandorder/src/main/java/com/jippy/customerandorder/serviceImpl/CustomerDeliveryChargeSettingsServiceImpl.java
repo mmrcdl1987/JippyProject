@@ -2,10 +2,10 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.dto.CustomerDeliveryChargeCalculationResponseDto;
 import com.jippy.customerandorder.dto.CustomerDeliveryChargeSettingsDTO;
 import com.jippy.customerandorder.entity.CustomerDeliveryChargeSettings;
+import com.jippy.customerandorder.exception.CoResourceNotFoundException;
+import com.jippy.customerandorder.exception.DuplicateResourceException;
 import com.jippy.customerandorder.iservice.CustomerDeliveryChargeSettingsService;
 import com.jippy.customerandorder.repository.CustomerDeliveryChargeSettingsRepository;
-import com.jippy.foodandmart.exception.DuplicateResourceException;
-import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -63,7 +63,7 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
         log.info("Fetching delivery charge setting by id={}", id);
 
-        CustomerDeliveryChargeSettings entity = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Delivery charge setting not found with id: " + id));
+        CustomerDeliveryChargeSettings entity = repository.findById(id).orElseThrow(() -> new CoResourceNotFoundException("Delivery charge setting not found with id: " + id));
 
         return mapEntityToDto(entity);
     }
@@ -82,7 +82,7 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
         log.info("Updating delivery charge setting id={}", id);
 
-        CustomerDeliveryChargeSettings entity = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Delivery charge setting not found with id: " + id));
+        CustomerDeliveryChargeSettings entity = repository.findById(id).orElseThrow(() -> new CoResourceNotFoundException("Delivery charge setting not found with id: " + id));
 
         boolean duplicateExists = repository.existsByCityIdAndOrderValueThresholdAndCustomerDeliveryChargeSettingsIdNot(dto.getCityId(), dto.getOrderValueThreshold(), id);
 
@@ -107,7 +107,7 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
         log.info("Deleting delivery charge setting id={}", id);
 
-        CustomerDeliveryChargeSettings entity = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Delivery charge setting not found with id: " + id));
+        CustomerDeliveryChargeSettings entity = repository.findById(id).orElseThrow(() -> new CoResourceNotFoundException("Delivery charge setting not found with id: " + id));
 
         repository.delete(entity);
 
@@ -120,7 +120,7 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
         log.info("Finding applicable delivery plan for cityId={}, orderValue={}", cityId, orderValue);
 
-        CustomerDeliveryChargeSettings entity = repository.findFirstByCityIdAndIsActiveTrueAndOrderValueThresholdLessThanEqualOrderByOrderValueThresholdDesc(cityId, orderValue).orElseThrow(() -> new ResourceNotFoundException("No active delivery charge plan found for cityId: " + cityId + " and order value: " + orderValue));
+        CustomerDeliveryChargeSettings entity = repository.findFirstByCityIdAndIsActiveTrueAndOrderValueThresholdLessThanEqualOrderByOrderValueThresholdDesc(cityId, orderValue).orElseThrow(() -> new CoResourceNotFoundException("No active delivery charge plan found for cityId: " + cityId + " and order value: " + orderValue));
 
         return mapEntityToDto(entity);
     }
