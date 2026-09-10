@@ -1,7 +1,6 @@
 
 package com.jippy.foodandmart.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -50,9 +49,9 @@ public class FmUserKyc {
 	@Column(name = "gst_number_url", length = 500)
 	private String gstNumberUrl;
 
-	@Column(name = "verified", nullable = false)
-	@Builder.Default
-	private Boolean verified = false;
+//	@Column(name = "verified", nullable = false)
+//	@Builder.Default
+//	private Boolean verified = false;
 
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
@@ -66,13 +65,13 @@ public class FmUserKyc {
 	@Column(name = "updated_by")
 	private Integer updatedBy;
 
-	@PrePersist
-	public void onCreate() {
-		this.createdAt = LocalDateTime.now();
-		if (this.verified == null) {
-			this.verified = false;
-		}
-	}
+//	@PrePersist
+//	public void onCreate() {
+//		this.createdAt = LocalDateTime.now();
+//		if (this.verified == null) {
+//			this.verified = false;
+//		}
+//	}
 
 	@PreUpdate
 	public void onUpdate() {

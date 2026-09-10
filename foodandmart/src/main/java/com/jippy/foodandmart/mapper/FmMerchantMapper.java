@@ -205,7 +205,7 @@ public final class FmMerchantMapper {
         kyc.setPanNumber(dto.getPanNumber());
         kyc.setFssaiNumber(dto.getFssaiNumber());
         kyc.setGstNumber(dto.getGstNumber());
-        kyc.setVerified(false);
+//        kyc.setVerified(false);
 
         return kyc;
     }
@@ -236,7 +236,7 @@ public final class FmMerchantMapper {
 //        kyc.setGstNumber(dto.getGstNumber() != null ? dto.getGstNumber().toUpperCase().trim() : null);
 
         // Default Values
-        kyc.setVerified(Boolean.valueOf(FmAppConstants.UN_APPROVED));
+//        kyc.setVerified(Boolean.valueOf(FmAppConstants.UN_APPROVED));
 
         return kyc;
     }

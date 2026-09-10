@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmApprovalTransaction;
+import com.jippy.foodandmart.projections.FmApprovalTransactionProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -62,5 +63,31 @@ public interface FmApprovalTransactionRepository extends JpaRepository<FmApprova
      * @return List of approval transactions with the specified status
      */
     List<FmApprovalTransaction> findByStatusIgnoreCaseOrderByApprovedAtDesc(String status);
+
+//    ==============================================================================
+@Query(value = """
+        SELECT
+            at.approval_transactions_id AS "approvalTransactionsId",
+            at.entity_type AS "entityType",
+            at.entity_id AS "entityId",
+            at.approval_level AS "approvalLevel",
+            at.status AS "status",
+            at.rejected_reason AS "rejectedReason",
+            at.approved_by AS "approvedBy",
+            at.approved_at AS "approvedAt",
+            at.updated_by AS "updatedBy",
+            at.updated_at AS "updatedAt",
+            e.employee_name AS "approverName"
+
+        FROM jippy_fm.approval_transactions at
+
+        LEFT JOIN jippy_fm.employees e
+               ON at.approved_by = e.employee_id
+
+        ORDER BY at.approved_at DESC
+        """, nativeQuery = true)
+List<FmApprovalTransactionProjection> getAllTransactions();
+
+//======================================================================
 
 }

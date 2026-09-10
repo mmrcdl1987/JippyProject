@@ -10,11 +10,11 @@ import java.util.List;
 
 /**
  * Request DTO used for both single outlet creation and bulk outlet upload.
- *
+ * <p>
  * Single outlet creation can use ID fields directly.
  * Bulk upload can additionally provide human-readable names, which are
  * resolved to IDs by the bulk upload service.
- *
+ * <p>
  * FSSAI and GST are intentionally optional here because merchant bulk
  * upload does not require those values.
  */
@@ -180,7 +180,7 @@ public class FmOutletRequestDTO {
 
     /**
      * Required for normal single-outlet creation.
-     *
+     * <p>
      * Bulk upload may generate username before service validation when
      * the CSV/Excel value is blank.
      */
@@ -199,7 +199,7 @@ public class FmOutletRequestDTO {
 
     /**
      * Required for normal single-outlet creation.
-     *
+     * <p>
      * Bulk upload may generate password before service validation when
      * the CSV/Excel value is blank.
      */

@@ -34,6 +34,9 @@ public class FmApprovalTransactionResponseDTO {
     @Schema(description = "Reason for rejection", example = "Documents missing")
     private String rejectedReason;
 
+    @Schema(description = "Name of the employee who approved or rejected the transaction", example = "rohan")
+    private String approverName;
+
     @Schema(description = "Approved By User Id", example = "5")
     private Integer approvedBy;
 

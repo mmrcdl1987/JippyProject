@@ -31,7 +31,7 @@ public class FmApprovalTransactionController {
     /**
      * Fetches all REJECTED approval transactions.
      *
-     * @return List of rejected approval transactions
+     * @return List of rejected approval transactions   -- extra api
      */
     @Operation(
             summary = "Get All Rejected Approvals",
@@ -102,7 +102,8 @@ public class FmApprovalTransactionController {
 
         log.info("Received request to get all approval transactions.");
 
-        List<FmApprovalTransactionResponseDTO> response = approvalTransactionService.getAllTransactions();
+        List<FmApprovalTransactionResponseDTO> response
+                = approvalTransactionService.getAllTransactions();
 
         log.info("Retrieved {} approval transactions.", response.size());
 

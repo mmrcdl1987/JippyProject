@@ -86,8 +86,8 @@ public class DriverDto {
     private String aadharNumber;
 
     @Schema(description = "Driver PAN number.", example = "ABCDE1234F")
-    @NotBlank(message = "PAN number is required")
-    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "PAN number must be valid")
+//    @NotBlank(message = "PAN number is required")
+//    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "PAN number must be valid")
     private String panNumber;
 
     @Schema(description = "Driver driving license number.", example = "TS0920200012345")

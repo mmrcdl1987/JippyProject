@@ -14,6 +14,7 @@ public interface FmEmployeeRepository extends JpaRepository<FmEmployee, Integer>
       */
     Optional<FmEmployee> findByEmailIgnoreCase(String email);
 
+    boolean existsByEmployeeId(Integer employeeId);
     /**
      * Check whether employee email already exists.
      */
