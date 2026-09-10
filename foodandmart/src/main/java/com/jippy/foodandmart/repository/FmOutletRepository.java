@@ -181,7 +181,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                               LEFT JOIN jippy_fm.product_variant_options pvo
                                      ON pvo.product_id = p.product_id
                                     AND p.has_product_variants = true
-                                    AND pvo.is_active = 'Y
+                                    AND pvo.is_active = 'Y' 
                                     
                                -- =========================================================
                                -- Variant Online Pricing
@@ -200,7 +200,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                                 LEFT JOIN jippy_fm.product_variant_group_values pvgv
                                        ON pvgv.product_variant_group_values_id =
                                           pvo.product_variant_group_values_id
-                                      AND pvgv.is_active = 'Y'
+                                      AND pvgv.is_active = 'Y' 
         
                                 -- =========================================================
                                 -- Product Variant Groups
@@ -521,7 +521,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 LEFT JOIN jippy_fm.product_variant_options pvo
                        ON pvo.product_id = p.product_id
                       AND p.has_product_variants = true
-                      AND pvo.is_active = 'Y'
+                      AND pvo.is_active = 'Y' 
         
         
                 -- =========================================================
@@ -534,7 +534,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                 LEFT JOIN jippy_fm.product_variant_group_values pvgv
                        ON pvgv.product_variant_group_values_id =
                           pvo.product_variant_group_values_id
-                      AND pvgv.is_active = 'Y'
+                      AND pvgv.is_active = 'Y' 
         
         
                 -- =========================================================
