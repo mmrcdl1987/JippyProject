@@ -760,64 +760,64 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
              Approval Transaction Details
              ------------------------------------------------------*/
 
-            at.approval_transactions_id AS approvalTransactionsId,
-            at.entity_type              AS entityType,
-            at.entity_id                AS entityId,
-            at.approval_level           AS approvalLevel,
-            at.status                   AS status,
-            at.rejected_reason          AS rejectedReason,
+            at.approval_transactions_id AS "approvalTransactionsId",
+            at.entity_type              AS "entityType",
+            at.entity_id                AS "entityId",
+            at.approval_level           AS "approvalLevel",
+            at.status                   AS "status",
+            at.rejected_reason          AS "rejectedReason",
 
             /* Rejected approval audit information */
-            at.approved_by              AS rejectedBy,
-            at.approved_at              AS rejectedAt,
+            at.approved_by              AS "rejectedBy",
+            at.approved_at              AS "rejectedAt",
 
             /*------------------------------------------------------
              Approval Request Details
              ------------------------------------------------------*/
 
-            ar.approval_request_id      AS approvalRequestId,
+            ar.approval_request_id      AS "approvalRequestId",
 
             /*------------------------------------------------------
              Entity Name
              ------------------------------------------------------*/
 
             CASE
-                WHEN at.entity_type = 'OUTLET'
+                WHEN UPPER(at.entity_type) = 'OUTLET'
                     THEN o.outlet_name
 
-                WHEN at.entity_type = 'MERCHANT'
+                WHEN UPPER(at.entity_type) = 'MERCHANT'
                     THEN m.merchant_name
 
                 ELSE NULL
-            END                         AS entityName,
+            END AS "entityName",
 
             /*------------------------------------------------------
              Entity Email
              ------------------------------------------------------*/
 
             CASE
-                WHEN at.entity_type = 'OUTLET'
+                WHEN UPPER(at.entity_type) = 'OUTLET'
                     THEN o.outlet_email
 
-                WHEN at.entity_type = 'MERCHANT'
+                WHEN UPPER(at.entity_type) = 'MERCHANT'
                     THEN m.merchant_email
 
                 ELSE NULL
-            END                         AS email,
+            END AS "email",
 
             /*------------------------------------------------------
              Entity Phone
              ------------------------------------------------------*/
 
             CASE
-                WHEN at.entity_type = 'OUTLET'
+                WHEN UPPER(at.entity_type) = 'OUTLET'
                     THEN o.outlet_phone
 
-                WHEN at.entity_type = 'MERCHANT'
+                WHEN UPPER(at.entity_type) = 'MERCHANT'
                     THEN m.merchant_phone
 
                 ELSE NULL
-            END                         AS phone,
+            END AS "phone",
 
             /*------------------------------------------------------
              Alternate Phone
@@ -825,39 +825,39 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
              ------------------------------------------------------*/
 
             CASE
-                WHEN at.entity_type = 'OUTLET'
+                WHEN UPPER(at.entity_type) = 'OUTLET'
                     THEN o.alternate_outlet_phone
 
                 ELSE NULL
-            END                         AS alternatePhone,
+            END AS "alternatePhone",
 
             /*------------------------------------------------------
              Profile / Image URL
              ------------------------------------------------------*/
 
             CASE
-                WHEN at.entity_type = 'OUTLET'
+                WHEN UPPER(at.entity_type) = 'OUTLET'
                     THEN o.outlet_pic_url
 
-                WHEN at.entity_type = 'MERCHANT'
+                WHEN UPPER(at.entity_type) = 'MERCHANT'
                     THEN m.profile_pic_url
 
                 ELSE NULL
-            END                         AS profilePicUrl,
+            END AS "profilePicUrl",
 
             /*------------------------------------------------------
              Entity Approval Status
              ------------------------------------------------------*/
 
             CASE
-                WHEN at.entity_type = 'OUTLET'
+                WHEN UPPER(at.entity_type) = 'OUTLET'
                     THEN o.is_approved
 
-                WHEN at.entity_type = 'MERCHANT'
+                WHEN UPPER(at.entity_type) = 'MERCHANT'
                     THEN m.is_approved
 
                 ELSE NULL
-            END                         AS approved
+            END AS "approved"
 
         /*==========================================================
          = Approval Transactions
@@ -867,11 +867,6 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
 
         /*==========================================================
          = Join Approval Request
-         =
-         = Transaction table does NOT contain approval_request_id.
-         = Therefore matching is done using:
-         =
-         = Entity Type + Entity Id + Approval Level
          ==========================================================*/
 
         INNER JOIN jippy_fm.approval_requests ar
@@ -881,29 +876,29 @@ public interface FmApprovalRequestRepository extends JpaRepository<FmApprovalReq
 
         /*==========================================================
          = Join Outlet
-         =
-         = Join executes only when Entity Type = OUTLET
          ==========================================================*/
 
         LEFT JOIN jippy_fm.outlets o
-               ON at.entity_type = 'OUTLET'
+               ON UPPER(at.entity_type) = 'OUTLET'
               AND at.entity_id = o.outlet_id
 
         /*==========================================================
          = Join Merchant
-         =
-         = Join executes only when Entity Type = MERCHANT
          ==========================================================*/
 
         LEFT JOIN jippy_fm.merchants m
-               ON at.entity_type = 'MERCHANT'
+               ON UPPER(at.entity_type) = 'MERCHANT'
               AND at.entity_id = m.merchant_id
 
         /*==========================================================
-         = Fetch Rejected Transactions Only
+         = Fetch Rejected Transactions
+         =
+         = IMPORTANT:
+         = Rejected status comes from approval_transactions,
+         = NOT approval_requests.
          ==========================================================*/
 
-        WHERE UPPER(ar.status) = 'REJECTED'
+        WHERE UPPER(at.status) = 'REJECTED'
 
         /*==========================================================
          = Latest Rejections First

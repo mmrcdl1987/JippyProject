@@ -10,10 +10,10 @@ import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmApprovalSettingsMapper;
 import com.jippy.foodandmart.repository.FmApprovalSettingsRepository;
+import com.jippy.foodandmart.repository.FmEmployeeRepository;
 import com.jippy.foodandmart.repository.FmManagerAreasRepository;
 import com.jippy.foodandmart.repository.FmUserRepository;
 import com.jippy.foodandmart.service.IFmApprovalSettingsService;
-import jakarta.ws.rs.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +34,7 @@ public class FmApprovalSettingsServiceImpl implements IFmApprovalSettingsService
     private final FmApprovalSettingsRepository repository;
     private final FmUserRepository userRepository;
     private final FmManagerAreasRepository managerAreasRepository;
+    private final FmEmployeeRepository employeeRepository;
 
     /**
      * Creates a new Approval Setting.
@@ -266,7 +267,20 @@ public class FmApprovalSettingsServiceImpl implements IFmApprovalSettingsService
                                     "Approval Settings not found with Id : "
                                             + requestDTO.getApprovalSettingsId());
                         });
+        //----------------------------------------------------------
+        // Validate New Approver / Employee
+        //----------------------------------------------------------
 
+        if (!employeeRepository.existsByEmployeeId(requestDTO.getApproverId())) {
+
+            log.warn(
+                    "Employee not found. Employee Id : {}",
+                    requestDTO.getApproverId());
+
+            throw new ResourceNotFoundException(
+                    "Employee not found with Id : "
+                            + requestDTO.getApproverId());
+        }
         //----------------------------------------------------------
         // Store Existing Approver Id
         //----------------------------------------------------------

@@ -460,9 +460,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
 //        uploadKycFile(kyc, panFile, FmAppConstants.TYPE_OUTLET, outletId, "pan");
 //        uploadKycFile(kyc, fssaiFile, FmAppConstants.TYPE_OUTLET, outletId, "fssai");
 //        uploadKycFile(kyc, gstFile, FmAppConstants.TYPE_OUTLET, outletId, "gst");
-        if (kyc.getKycId() == null) {
-            kyc.setVerified(false);
-        }
+//        if (kyc.getKycId() == null) {
+//            kyc.setVerified(false);
+//        }
 
         userKycRepository.save(kyc);
     }

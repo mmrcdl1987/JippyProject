@@ -373,7 +373,7 @@ public class DriverServiceImpl implements DriverService {
         // -----------------------------------------
         // 4. Combine everything
         // -----------------------------------------
-        return DriverMapper.mapToDriverDto(driver, address);
+        return DriverMapper.mapToDriverDto(driver, address ,user);
     }
 
     @Override

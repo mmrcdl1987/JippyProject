@@ -182,6 +182,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                                      ON pvo.product_id = p.product_id
                                     AND p.has_product_variants = true
                                     AND pvo.is_active = 'Y' 
+                         
                                     
                                -- =========================================================
                                -- Variant Online Pricing

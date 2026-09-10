@@ -5,6 +5,7 @@ import com.jippy.foodandmart.dto.FmApprovalRequestResponseDTO;
 import com.jippy.foodandmart.dto.FmApprovalTransactionResponseDTO;
 import com.jippy.foodandmart.entity.FmApprovalRequest;
 import com.jippy.foodandmart.entity.FmApprovalTransaction;
+import com.jippy.foodandmart.projections.FmApprovalTransactionProjection;
 import com.jippy.foodandmart.repository.FmApprovalRequestRepository;
 import com.jippy.foodandmart.repository.FmApprovalTransactionRepository;
 import com.jippy.foodandmart.service.IFmApprovalTransactionService;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,7 +44,7 @@ public class FmApprovalTransactionServiceImpl implements IFmApprovalTransactionS
         log.info("Found {} REJECTED approval transactions.", transactions.size());
 
         return transactions.stream()
-                .map(FmApprovalTransactionMapper::toTransactionResponseDTO)
+                .map(FmApprovalTransactionMapper::toRejectedTransactionResponseDTO)
                 .collect(Collectors.toList());
     }
 
@@ -76,12 +78,34 @@ public class FmApprovalTransactionServiceImpl implements IFmApprovalTransactionS
 
         log.info("Fetching all approval transactions.");
 
-        List<FmApprovalTransaction> transactions = transactionRepository.findAll();
+        List<FmApprovalTransactionProjection> transactions =
+                transactionRepository.getAllTransactions();
 
-        log.info("Found {} approval transactions.", transactions.size());
+        log.info("Found {} approval transactions.",
+                transactions.size());
 
-        return transactions.stream()
-                .map(FmApprovalTransactionMapper::toTransactionResponseDTO)
-                .collect(Collectors.toList());
+        List<FmApprovalTransactionResponseDTO> responseList =
+                new ArrayList<>();
+
+        for (FmApprovalTransactionProjection transaction : transactions) {
+
+            log.info("======================================");
+            log.info("Transaction ID : {}",
+                    transaction.getApprovalTransactionsId());
+            log.info("Approved By    : {}",
+                    transaction.getApprovedBy());
+            log.info("Approver Name  : {}",
+                    transaction.getApproverName());
+
+            FmApprovalTransactionResponseDTO response =
+                    FmApprovalTransactionMapper.toTransactionResponseDTO(
+                            transaction);
+
+            log.info("Mapped Name    : {}",
+                    response.getApproverName());
+
+            responseList.add(response);
+        }
+        return responseList;
     }
 }
