@@ -857,7 +857,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
                         ST_MakePoint(:customerLng, :customerLat),
                         4326
                     )::geography,
-                    COALESCE(sp.radius_in_kms * 1000, 50000)
+                    COALESCE(sp.radius_in_kms * 1000, 30000)
                   )
             ORDER BY distanceKm ASC
             """, nativeQuery = true)
@@ -1261,7 +1261,7 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
         LEFT JOIN jippy_fm.product_variant_options pvo
                ON pvo.product_id = p.product_id
               AND p.has_product_variants = true
-              AND pvo.is_active = true
+              AND pvo.is_active = 'Y'
 
         -- =========================================================
         -- VARIANT ONLINE PRICING

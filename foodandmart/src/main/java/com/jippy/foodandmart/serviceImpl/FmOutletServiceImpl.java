@@ -2798,7 +2798,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     public FmPublicCustomerNearbyResponseDto fetchPublicCustomerNearbyOutlets(double customerLat, double customerLng) {
 
-        double radiusKm = 10.0;
+        double radiusKm = 30.0;
 
         log.info("[OutletService] fetchPublicCustomerNearbyOutlets lat={} lng={} radius={} km", customerLat, customerLng, radiusKm);
 
