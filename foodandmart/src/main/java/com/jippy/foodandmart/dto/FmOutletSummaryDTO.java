@@ -1,89 +1,120 @@
-package com.jippy.foodandmart.dto;
+
+        package com.jippy.foodandmart.dto;
 
 import com.jippy.foodandmart.entity.FmOutlet;
 import com.jippy.foodandmart.entity.FmOutletAddress;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Lightweight summary DTO for outlet list views and dropdowns.
  *
- * <p>Why a summary DTO instead of returning the full {@link FmOutlet} entity:
- * the list view only needs a subset of fields. Returning the full entity
- * risks triggering lazy-loaded associations (merchant, address, days) and
- * exposes internal JPA details to API consumers.</p>
- *
- * <p>Address fields are optional — an outlet may exist before its physical
- * address is registered (e.g. during the initial onboarding step).</p>
+ * <p>Contains both master IDs and display names so API consumers can
+ * render human-readable values while still retaining IDs for navigation,
+ * edit, and update operations.</p>
  */
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class FmOutletSummaryDTO {
 
     private Integer outletId;
+
+    // ── Merchant ──────────────────────────────────────────────────────────────
+
     private Integer merchantId;
-    private String  outletName;
+
+    private String merchantName;
+
+    // ── Outlet ────────────────────────────────────────────────────────────────
+
+    private String outletName;
+
+    // ── Cuisine ───────────────────────────────────────────────────────────────
+
     private Integer[] cuisineType;
-    private String  outletPhone;
-    private String  isActive;
 
-    /** Number of menu items in this outlet — used by Copy Menu UI card badges. */
-    private long    menuItemCount;
+    private String[] cuisineNames;
 
-    // ── Address fields (optional) ─────────────────────────────────────────────
+    private String outletPhone;
 
-    /** FK to jippy_fm.states — integer state identifier. */
-    private Integer stateId;
-
-    /** FK to jippy_fm.area — integer area identifier resolved from area name during upload. */
-    private Integer areaId;
-    private String  road;
-    private String  landmark;
-    private String  buildingNumber;
+    private String isActive;
 
     /**
-     * Creates a summary DTO from an {@link FmOutlet} entity with a menu item count.
-     *
-     * <p>Why this overload: used by the menu service which has the item count
-     * from a {@code COUNT} query but does not load address data.</p>
-     *
-     * @param o         the outlet entity
-     * @param itemCount the number of menu items for this outlet
-     * @return a summary DTO without address fields populated
+     * Number of menu items in this outlet.
+     */
+    private long menuItemCount;
+
+    // ── Address ───────────────────────────────────────────────────────────────
+
+    private Integer stateId;
+
+    private String stateName;
+
+    private Integer areaId;
+
+    private String areaName;
+
+    private String road;
+
+    private String landmark;
+
+    private String buildingNumber;
+
+    /**
+     * Creates a summary DTO from an outlet entity with a menu item count.
      */
     public static FmOutletSummaryDTO from(FmOutlet o, long itemCount) {
+
         FmOutletSummaryDTO dto = new FmOutletSummaryDTO();
+
         dto.setOutletId(o.getOutletId());
+
         dto.setMerchantId(o.getMerchantId());
+
         dto.setOutletName(o.getOutletName());
+
         dto.setCuisineType(o.getCuisineType());
+
         dto.setOutletPhone(o.getOutletPhone());
+
         dto.setIsActive(o.getIsActive());
+
         dto.setMenuItemCount(itemCount);
+
         return dto;
     }
 
     /**
-     * Creates a summary DTO from an outlet entity, item count, and optional address.
-     *
-     * <p>Why accept a nullable {@link FmOutletAddress}: the outlet summary list
-     * page shows address fields when available. Passing null for newly created
-     * outlets (before an address is registered) is safe — those fields stay null
-     * in the DTO and are omitted or shown as blank in the UI.</p>
-     *
-     * @param o         the outlet entity
-     * @param itemCount the number of menu items
-     * @param addr      the outlet's address entity, or null if not yet saved
-     * @return a summary DTO with address fields populated if addr is non-null
+     * Creates a summary DTO from an outlet entity, item count,
+     * and optional address.
      */
-    public static FmOutletSummaryDTO from(FmOutlet o, long itemCount, FmOutletAddress addr) {
-        // Delegate to the simpler overload, then add address fields
+    public static FmOutletSummaryDTO from(
+            FmOutlet o,
+            long itemCount,
+            FmOutletAddress addr
+    ) {
+
         FmOutletSummaryDTO dto = from(o, itemCount);
+
         if (addr != null) {
+
             dto.setStateId(addr.getStateId());
+
             dto.setAreaId(addr.getAreaId());
+
             dto.setRoad(addr.getRoad());
+
             dto.setLandmark(addr.getLandmark());
+
             dto.setBuildingNumber(addr.getBuildingNumber());
         }
+
         return dto;
     }
 }

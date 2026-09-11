@@ -1,6 +1,5 @@
 package com.jippy.customerandorder.serviceImpl;
 
-import com.jippy.customerandorder.entity.CoCustomerWallet;
 import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
 import com.jippy.customerandorder.iservice.CoWalletTransactionsService;
 import com.jippy.customerandorder.repository.CoCustomerWalletRepository;
@@ -8,11 +7,14 @@ import com.jippy.customerandorder.repository.CoCustomerWalletTransactionsReposit
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CoWalletTransactionsServiceImpl implements CoWalletTransactionsService {
 
     private final CoCustomerWalletRepository walletRepository;
@@ -23,24 +25,22 @@ public class CoWalletTransactionsServiceImpl implements CoWalletTransactionsServ
             Integer customerId
     ) {
 
-        CoCustomerWallet wallet = walletRepository
+        return walletRepository
                 .findByCustomerCustomerId(customerId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Wallet not found for customer id: " + customerId
-                        )
-                );
-
-        return transactionsRepository
-                .findByWalletIdOrderByCreatedAtDesc(
-                        wallet.getWalletId()
-                );
+                .map(wallet ->
+                        transactionsRepository
+                                .findByWalletIdOrderByCreatedAtDesc(
+                                        wallet.getWalletId()
+                                )
+                )
+                .orElse(Collections.emptyList());
     }
 
     @Override
-    public List<CoCustomerWalletTransactions> getAllTransactions(){
+    public List<CoCustomerWalletTransactions> getAllTransactions() {
+
         return transactionsRepository.findAll(
-                Sort.by(Sort.Direction.DESC,"createdAt")
+                Sort.by(Sort.Direction.DESC, "createdAt")
         );
     }
 

@@ -1,8 +1,9 @@
 package com.jippy.customerandorder.controller;
 
+import com.jippy.customerandorder.dto.ApiResponseDto;
 import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
 import com.jippy.customerandorder.iservice.CoWalletTransactionsService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,27 +14,47 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/co/wallet/transactions")
-
+@RequiredArgsConstructor
 public class CoWalletTransactionsController {
 
-    @Autowired
-    private CoWalletTransactionsService walletTransactionsService;
+    private final CoWalletTransactionsService walletTransactionsService;
 
     @GetMapping("/{customerId}")
-    public ResponseEntity<List<CoCustomerWalletTransactions>>
-    getTransactionsByCustomerId(@PathVariable Integer customerId) {
+    public ResponseEntity<?> getTransactionsByCustomerId(
+            @PathVariable Integer customerId
+    ) {
 
-        return ResponseEntity.ok(
-                walletTransactionsService.getTransactionsByCustomerId(customerId)
-        );
+        List<CoCustomerWalletTransactions> transactions =
+                walletTransactionsService.getTransactionsByCustomerId(customerId);
+
+        if (transactions.isEmpty()) {
+            return ResponseEntity.ok(
+                    new ApiResponseDto(
+                            true,
+                            "No wallet transaction history found"
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(transactions);
     }
 
     @GetMapping
-    public ResponseEntity<List<CoCustomerWalletTransactions>>
-    getAllTransactions() {
+    public ResponseEntity<?> getAllTransactions() {
 
-        return ResponseEntity.ok(
-                walletTransactionsService.getAllTransactions()
-        );
+        List<CoCustomerWalletTransactions> transactions =
+                walletTransactionsService.getAllTransactions();
+
+        if (transactions.isEmpty()) {
+            return ResponseEntity.ok(
+                    new ApiResponseDto(
+                            true,
+                            "No wallet transaction history found"
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(transactions);
     }
+
 }

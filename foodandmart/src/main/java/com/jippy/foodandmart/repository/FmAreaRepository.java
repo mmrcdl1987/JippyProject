@@ -37,4 +37,8 @@ public interface FmAreaRepository extends JpaRepository<FmArea, Integer> {
             @Param("cityId") Integer cityId);
 
     Optional<FmArea> findByAreaId(Integer areaId);
+
+    List<FmArea> findByAreaIdIn(List<Integer> areaIds);
+
+
 }

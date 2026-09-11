@@ -127,23 +127,45 @@ public final class FmMerchantMapper {
     // --- Merchant Entity Mappings ---
 
     /**
-     * Maps MerchantRequestDTO to Merchant Entity (Commonly used for Registration/Creation).
+     * Maps FmMerchantRequestDTO to FmMerchant Entity.
      */
     public static FmMerchant toEntity(FmMerchantRequestDTO dto) {
-        String fullName = dto.getFirstName().trim() + " " + dto.getLastName().trim();
+
+        String firstName = dto.getFirstName().trim();
+        String lastName = dto.getLastName().trim();
+
+        String fullName = firstName + " " + lastName;
+
         FmMerchant merchant = new FmMerchant();
+
+        merchant.setFirstName(firstName);
+        merchant.setLastName(lastName);
+
         merchant.setMerchantName(fullName);
-        merchant.setMerchantEmail(dto.getEmail().toLowerCase().trim());
-        merchant.setMerchantPhone(dto.getPhone().trim());
-        merchant.setMerchantBusinessType(dto.getOutletType());
+
+        merchant.setMerchantEmail(
+                dto.getEmail().toLowerCase().trim()
+        );
+
+        merchant.setMerchantPhone(
+                dto.getPhone().trim()
+        );
+
+        merchant.setMerchantBusinessType(
+                dto.getOutletType().trim()
+        );
+
+        merchant.setDob(dto.getDob());
+        merchant.setUploadedBy(dto.getUploadedBy());
+
         merchant.setIsActive(FmAppConstants.FLAG_YES);
         merchant.setStatus(FmAppConstants.STATUS_PENDING);
-//        merchant.setIsApproved(Boolean.valueOf(FmAppConstants.UN_APPROVED));
         merchant.setIsApproved(FmAppConstants.STATUS_FALSE);
+
         merchant.setCreatedAt(LocalDateTime.now());
+
         return merchant;
     }
-
     /**
      * Maps FmMerchantDto to FmMerchant Entity (Standard CRUD mapping).
      */

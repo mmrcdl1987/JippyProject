@@ -29,6 +29,9 @@ public class FmOutlet {
     @Column(name = "outlet_name", length = 100, nullable = false)
     private String outletName;
 
+    @Column(name = "outlet_type", length = 30, nullable = false)
+    private String outletType;
+
     @Column(name = "outlet_pic_url")
     private String outletPicUrl;
 
@@ -55,7 +58,12 @@ public class FmOutlet {
     private String promotionStatus;
 
     @Column(name = "total_rating", precision = 2, scale = 1)
-    private BigDecimal review;
+    @Builder.Default
+    private BigDecimal totalRating = BigDecimal.ZERO;
+
+    @Column(name = "total_reviews")
+    @Builder.Default
+    private Integer totalReviews = 0;
 
     @Column(name = "is_active", length = 1)
     @Builder.Default
