@@ -13,7 +13,7 @@ public class ProductEntry {
     /**
      * Master product ID.
      *
-     * This is the primary field used by the backend
+     * Primary field used by the backend
      * to fetch the master product.
      */
     private Integer masterProductId;
@@ -21,10 +21,8 @@ public class ProductEntry {
     /**
      * Product name.
      *
-     * Kept for mobile/bulk request compatibility.
-     *
-     * During master-product mapping, the backend uses
-     * master_products.master_product_name.
+     * During master-product mapping, the backend
+     * should use master_products.master_product_name.
      */
     @NotBlank(message = "Product name is required")
     private String productName;
@@ -32,37 +30,28 @@ public class ProductEntry {
     /**
      * Product description.
      *
-     * During master-product mapping, the backend uses
-     * the description from master_products.
+     * During master-product mapping, the backend
+     * should use master_products.description.
      */
     private String description;
 
     /**
      * Category ID of the master product.
-     *
-     * Required for bulk mapping when products belong
-     * to different categories.
      */
     private Integer categoryId;
 
     /**
+     * Category name from master_products.category_name.
+     */
+    private String categoryName;
+
+    /**
      * Product type from master_products.product_type.
-     *
-     * Examples:
-     *
-     * RICE
-     * CURRY
-     * BREAKFAST
-     * NOODLES
-     * DESSERT
-     * BEVERAGE
      */
     private String productType;
 
     /**
      * Veg / Non-Veg.
-     *
-     * Kept for mobile compatibility.
      *
      * Master product value will be used during mapping.
      */
@@ -71,9 +60,7 @@ public class ProductEntry {
     /**
      * Product variants.
      *
-     * NOT USED while mapping master products.
-     *
-     * Kept so existing mobile requests do not break.
+     * Not used while mapping master products.
      */
     private Boolean hasProductVariants = false;
 
@@ -103,18 +90,12 @@ public class ProductEntry {
 
     /**
      * Explicit product timings.
-     *
-     * Kept for mobile compatibility.
      */
     @Valid
     private List<FmProductTimingRequestDto> timings;
 
     /**
      * Variant groups.
-     *
-     * NOT USED during master-product mapping.
-     *
-     * Kept only for compatibility with existing clients.
      */
     @Valid
     private List<FmProductVariantOptionGroupDto> variantGroups;

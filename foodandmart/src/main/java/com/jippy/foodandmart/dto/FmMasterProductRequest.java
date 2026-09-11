@@ -1,5 +1,4 @@
-
-        package com.jippy.foodandmart.dto;
+package com.jippy.foodandmart.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -8,68 +7,113 @@ import lombok.Data;
 @Data
 public class FmMasterProductRequest {
 
+    /**
+     * Master Product Name
+     * <p>
+     * Excel:
+     * master_product_name
+     */
     private String masterProductName;
 
+    /**
+     * Product Description
+     * <p>
+     * Excel:
+     * description
+     */
     private String description;
 
-    private String shortDescription;
-
+    /**
+     * Product Image URL
+     * <p>
+     * Excel:
+     * photo
+     */
     private String photo;
 
-    private String photos;
-
-    private String thumbnail;
-
+    /**
+     * Category ID
+     * <p>
+     * Excel:
+     * category_id
+     */
     private Integer categoryId;
 
+    /**
+     * Category Name
+     * <p>
+     * Excel:
+     * category_name
+     */
     private String categoryName;
 
-    private Integer subCategoryId;
-
-    private String subCategoryName;
-
-    private Integer veg = 0;
-
-    private Integer nonVeg = 0;
-
-    private String foodType;
-
-    private String cuisineType;
-
-    private Integer hasOptions = 0;
-
-    private Integer optionsEnabled = 0;
-
-    private String options;
-
-    private Integer calories = 0;
-
-    private Integer protein = 0;
-
-    private Integer fats = 0;
-
-    private Integer carbs = 0;
-
-    private Integer grams = 0;
+    /**
+     * Veg / Non-Veg
+     * <p>
+     * Preferred Excel:
+     * is_veg = true / false
+     * <p>
+     * Existing Excel:
+     * veg = 1, non_veg = 0
+     * <p>
+     * Database:
+     * jippy_fm.master_products.is_veg
+     */
+    private Boolean isVeg;
 
     /**
-     * Product type.
-     *
-     * This value is stored in:
+     * Cuisine Type
+     * <p>
+     * Excel:
+     * cuisine_type
+     */
+    private String cuisineType;
+
+    /**
+     * Indicates whether the product has options.
+     * <p>
+     * Excel:
+     * has_options
+     * <p>
+     * 0 = No
+     * 1 = Yes
+     */
+    private Integer hasOptions;
+
+    /**
+     * Product options.
+     * <p>
+     * Excel:
+     * options
+     * <p>
+     * Database:
+     * JSONB
+     */
+    private String options;
+
+    /**
+     * Product Type
+     * <p>
+     * Excel:
+     * product_type
+     * <p>
+     * Database:
      * jippy_fm.master_products.product_type
-     *
-     * Example:
-     * FOOD
-     * BEVERAGE
-     * GROCERY
-     * DESSERT
      */
     private String productType;
 
-    private Integer publish = 1;
-
+    /**
+     * User who created the product.
+     * <p>
+     * This is system/request information,
+     * not product information from Excel.
+     */
     private Integer createdBy;
 
+    /**
+     * User who updated the product.
+     * <p>
+     * Normally null during initial creation.
+     */
     private Integer updatedBy;
 }
-

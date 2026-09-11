@@ -7,106 +7,181 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Compare response.
+ * Response DTO for comparing an uploaded Master Product
+ * CSV/Excel file with the existing database records.
  *
- * CompareItem carries all product fields so that
- * /add-new-items can persist the full catalogue data
- * from the CSV.
+ * The CompareItem contains:
+ *
+ * 1. Fields belonging to jippy_fm.master_products
+ * 2. CSV/cache fields used for merchant pricing
+ *    and availability information.
+ *
+ * Merchant price, timing and day-of-week are NOT stored
+ * in the master_products table. They are retained here
+ * for the cache/pricing/availability flow.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class FmCompareFileResponse {
 
+    /**
+     * Products that already exist in the database.
+     */
     private List<CompareItem> duplicates;
+
+    /**
+     * Products that are present in the uploaded file
+     * but do not exist in the database.
+     */
     private List<CompareItem> newProducts;
 
+    /**
+     * Total number of products processed from the file.
+     */
     private int totalInFile;
+
+    /**
+     * Number of duplicate products found.
+     */
     private int duplicateCount;
+
+    /**
+     * Number of new products found.
+     */
     private int newCount;
+
+    /**
+     * Number of rows skipped during file processing.
+     */
     private int skippedCount;
 
+
+    /**
+     * Individual product information.
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CompareItem {
 
-        private Integer masterProductId;       // null for new items
+        /**
+         * Existing database ID.
+         *
+         * For a new product this will be null.
+         *
+         * DB:
+         * master_products.master_product_id
+         */
+        private Integer masterProductId;
 
-        private String masterProductName;
 
-        private Integer veg;
-
-        private Integer nonVeg;
-
-        private Integer categoryId;
-
-        private String categoryName;
-
-        //private Integer subCategoryId;
-
-       //private String subCategoryName;
-
-        private String description;
-
-       // private String shortDescription;
-
-        private String photo;
-
-        //private String photos;
-
-       // private String thumbnail;
-
-        private String foodType;
-
-        private String cuisineType;
-
-        private Integer hasOptions;
-
-        private Integer optionsEnabled;
-
-        private String options;
-
-        private Integer calories;
-
-        private Integer protein;
-
-        private Integer fats;
-
-        private Integer carbs;
-
-        private Integer grams;
+        // ============================================================
+        // MASTER PRODUCT TABLE FIELDS
+        // ============================================================
 
         /**
-         * Product type from CSV.
+         * DB:
+         * master_product_name
+         */
+        private String masterProductName;
+
+        /**
+         * DB:
+         * description
+         */
+        private String description;
+
+        /**
+         * DB:
+         * photo
+         */
+        private String photo;
+
+        /**
+         * DB:
+         * category_id
+         */
+        private Integer categoryId;
+
+        /**
+         * DB:
+         * category_name
+         */
+        private String categoryName;
+
+        /**
+         * DB:
+         * is_veg
          *
-         * Example:
-         * FOOD
-         * BEVERAGE
-         * GROCERY
+         * true  = Vegetarian
+         * false = Non-Vegetarian
+         */
+        private Boolean isVeg;
+
+        /**
+         * DB:
+         * cuisine_type
+         */
+        private String cuisineType;
+
+        /**
+         * DB:
+         * has_options
+         *
+         * 0 = No options
+         * 1 = Has options
+         */
+        private Integer hasOptions;
+
+        /**
+         * DB:
+         * options
+         *
+         * Stored as JSONB in PostgreSQL.
+         */
+        private String options;
+
+        /**
+         * DB:
+         * product_type
          */
         private String productType;
 
-        private Integer publish;
+
+        // ============================================================
+        // CSV / CACHE FIELDS
+        // ============================================================
 
         /**
-         * Price from the uploaded CSV file.
+         * Merchant price from the uploaded CSV/Excel file.
+         *
+         * This is NOT stored in master_products.
+         * It is retained for the pricing/cache flow.
          */
         private Double merchantPrice;
 
         /**
-         * Availability timing from the uploaded CSV file.
+         * Product availability timing from the CSV/Excel file.
          *
          * Example:
-         * 9:00-22:00
+         *
+         * 09:00-22:00
+         *
+         * This is NOT stored in master_products.
+         * It is retained for the cache/availability flow.
          */
         private String csvTiming;
 
         /**
-         * Day-of-week name from the CSV file.
+         * Day of week from the CSV/Excel file.
          *
          * Example:
+         *
          * Monday
+         *
+         * This is NOT stored in master_products.
+         * It is retained for the cache/availability flow.
          */
         private String csvDayOfWeek;
     }

@@ -1,12 +1,9 @@
-
-        package com.jippy.foodandmart.mapper;
+package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.dto.FmMasterProductRequest;
 import com.jippy.foodandmart.dto.FmMasterProductResponseDto;
 import com.jippy.foodandmart.entity.FmMasterProduct;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
 
 @Component
 public final class FmMasterProductMapper {
@@ -20,8 +17,13 @@ public final class FmMasterProductMapper {
 
     public static void validateForCreate(FmMasterProductRequest req) {
 
-        if (req == null)
+        if (req == null) {
             throw new IllegalArgumentException("Request cannot be null.");
+        }
+
+        // --------------------------------------------------------
+        // MASTER PRODUCT NAME
+        // --------------------------------------------------------
 
         if (req.getMasterProductName() == null
                 || req.getMasterProductName().isBlank()) {
@@ -31,8 +33,21 @@ public final class FmMasterProductMapper {
             );
         }
 
-        if (req.getCategoryId() == null)
-            throw new IllegalArgumentException("Category ID is required.");
+        if (req.getMasterProductName().trim().length() > 100) {
+            throw new IllegalArgumentException(
+                    "Master product name cannot exceed 100 characters."
+            );
+        }
+
+        // --------------------------------------------------------
+        // CATEGORY
+        // --------------------------------------------------------
+
+        if (req.getCategoryId() == null) {
+            throw new IllegalArgumentException(
+                    "Category ID is required."
+            );
+        }
 
         if (req.getCategoryName() == null
                 || req.getCategoryName().isBlank()) {
@@ -42,10 +57,67 @@ public final class FmMasterProductMapper {
             );
         }
 
-        validateVegNonVeg(
-                req.getVeg(),
-                req.getNonVeg()
+        if (req.getCategoryName().trim().length() > 100) {
+            throw new IllegalArgumentException(
+                    "Category name cannot exceed 100 characters."
+            );
+        }
+
+        // --------------------------------------------------------
+        // VEG / NON-VEG
+        // --------------------------------------------------------
+
+        if (req.getIsVeg() == null) {
+            throw new IllegalArgumentException(
+                    "Veg/Non-Veg selection is required."
+            );
+        }
+
+        // --------------------------------------------------------
+        // HAS OPTIONS
+        // --------------------------------------------------------
+
+        if (req.getHasOptions() == null) {
+            throw new IllegalArgumentException(
+                    "Has Options value is required."
+            );
+        }
+
+        validateBinaryValue(
+                req.getHasOptions(),
+                "Has Options"
         );
+
+        // --------------------------------------------------------
+        // OPTIONS
+        // --------------------------------------------------------
+
+        if (req.getHasOptions() == 0
+                && req.getOptions() != null
+                && !req.getOptions().isBlank()) {
+
+            throw new IllegalArgumentException(
+                    "Options must be empty when hasOptions is 0."
+            );
+        }
+
+        // --------------------------------------------------------
+        // PRODUCT TYPE
+        // --------------------------------------------------------
+
+        if (req.getProductType() == null
+                || req.getProductType().isBlank()) {
+
+            throw new IllegalArgumentException(
+                    "Product type is required."
+            );
+        }
+
+        if (req.getProductType().trim().length() > 10) {
+            throw new IllegalArgumentException(
+                    "Product type cannot exceed 10 characters."
+            );
+        }
     }
 
     // ============================================================
@@ -54,59 +126,88 @@ public final class FmMasterProductMapper {
 
     public static void validateForUpdate(FmMasterProductRequest req) {
 
-        if (req == null)
-            throw new IllegalArgumentException("Request cannot be null.");
-
-        if (req.getMasterProductName() != null
-                && req.getMasterProductName().isBlank()) {
-
+        if (req == null) {
             throw new IllegalArgumentException(
-                    "Master product name cannot be blank."
+                    "Request cannot be null."
             );
         }
 
-        if (req.getCategoryName() != null
-                && req.getCategoryName().isBlank()) {
+        // --------------------------------------------------------
+        // MASTER PRODUCT NAME
+        // --------------------------------------------------------
+
+        if (req.getMasterProductName() != null) {
+
+            if (req.getMasterProductName().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Master product name cannot be blank."
+                );
+            }
+
+            if (req.getMasterProductName().trim().length() > 100) {
+                throw new IllegalArgumentException(
+                        "Master product name cannot exceed 100 characters."
+                );
+            }
+        }
+
+        // --------------------------------------------------------
+        // CATEGORY
+        // --------------------------------------------------------
+
+        if (req.getCategoryName() != null) {
+
+            if (req.getCategoryName().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Category name cannot be blank."
+                );
+            }
+
+            if (req.getCategoryName().trim().length() > 100) {
+                throw new IllegalArgumentException(
+                        "Category name cannot exceed 100 characters."
+                );
+            }
+        }
+
+        if (req.getHasOptions() != null) {
+            validateBinaryValue(
+                    req.getHasOptions(),
+                    "Has Options"
+            );
+        }
+
+        if (req.getProductType() != null
+                && req.getProductType().trim().length() > 10) {
 
             throw new IllegalArgumentException(
-                    "Category name cannot be blank."
+                    "Product type cannot exceed 10 characters."
             );
+        }
+
+        if (req.getIsVeg() == null) {
+            // Allowed during partial update.
+            // Existing database value will be retained.
         }
     }
 
     // ============================================================
-    // VEG / NON-VEG VALIDATION
+    // BINARY VALUE VALIDATION
     // ============================================================
 
-    /**
-     * Validate Veg / Non-Veg values.
-     *
-     * Allowed:
-     *
-     * Veg = 1, NonVeg = 0
-     * Veg = 0, NonVeg = 1
-     */
-    private static void validateVegNonVeg(
-            Integer veg,
-            Integer nonVeg) {
+    private static void validateBinaryValue(
+            Integer value,
+            String fieldName) {
 
-        int vegValue = (veg == null) ? 0 : veg;
-        int nonVegValue = (nonVeg == null) ? 0 : nonVeg;
-
-        // Only 0 or 1 are allowed
-        if ((vegValue != 0 && vegValue != 1)
-                || (nonVegValue != 0 && nonVegValue != 1)) {
-
+        if (value == null) {
             throw new IllegalArgumentException(
-                    "Veg and Non-Veg values must be either 0 or 1."
+                    fieldName + " is required."
             );
         }
 
-        // Exactly one should be selected
-        if (vegValue + nonVegValue != 1) {
-
+        if (value != 0 && value != 1) {
             throw new IllegalArgumentException(
-                    "Please select either Veg or Non-Veg."
+                    fieldName + " must be either 0 or 1."
             );
         }
     }
@@ -187,31 +288,31 @@ public final class FmMasterProductMapper {
     public static FmMasterProduct toEntity(
             FmMasterProductRequest dto) {
 
+        if (dto == null) {
+            throw new IllegalArgumentException(
+                    "Request cannot be null."
+            );
+        }
+
         FmMasterProduct entity = new FmMasterProduct();
 
+        // --------------------------------------------------------
+        // BASIC INFORMATION
+        // --------------------------------------------------------
+
         entity.setMasterProductName(
-                dto.getMasterProductName().trim()
+                dto.getMasterProductName() != null
+                        ? dto.getMasterProductName().trim()
+                        : null
         );
 
         entity.setDescription(
                 dto.getDescription()
         );
 
-//        entity.setShortDescription(
-//                dto.getShortDescription()
-//        );
-
         entity.setPhoto(
                 dto.getPhoto()
         );
-
-//        entity.setPhotos(
-//                dto.getPhotos()
-//        );
-//
-//        entity.setThumbnail(
-//                dto.getThumbnail()
-//        );
 
         // --------------------------------------------------------
         // CATEGORY
@@ -227,37 +328,17 @@ public final class FmMasterProductMapper {
                         : null
         );
 
-//        entity.setSubCategoryId(
-//                dto.getSubCategoryId()
-//        );
-//
-//        entity.setSubCategoryName(
-//                dto.getSubCategoryName()
-//        );
-
         // --------------------------------------------------------
         // VEG / NON-VEG
         // --------------------------------------------------------
 
-        entity.setVeg(
-                dto.getVeg() != null
-                        ? dto.getVeg()
-                        : 0
-        );
-
-        entity.setNonVeg(
-                dto.getNonVeg() != null
-                        ? dto.getNonVeg()
-                        : 0
+        entity.setIsVeg(
+                dto.getIsVeg()
         );
 
         // --------------------------------------------------------
-        // FOOD
+        // CUISINE
         // --------------------------------------------------------
-
-        entity.setFoodType(
-                dto.getFoodType()
-        );
 
         entity.setCuisineType(
                 dto.getCuisineType()
@@ -273,49 +354,20 @@ public final class FmMasterProductMapper {
                         : 0
         );
 
-        entity.setOptionsEnabled(
-                dto.getOptionsEnabled() != null
-                        ? dto.getOptionsEnabled()
-                        : 0
-        );
+        /*
+         * options is stored as JSONB.
+         *
+         * Empty options should be stored as null.
+         */
+        if (dto.getOptions() != null
+                && !dto.getOptions().isBlank()) {
 
-        entity.setOptions(
-                dto.getOptions()
-        );
-
-        // --------------------------------------------------------
-        // NUTRITION
-        // --------------------------------------------------------
-
-        entity.setCalories(
-                dto.getCalories() != null
-                        ? dto.getCalories()
-                        : 0
-        );
-
-        entity.setProtein(
-                dto.getProtein() != null
-                        ? dto.getProtein()
-                        : 0
-        );
-
-        entity.setFats(
-                dto.getFats() != null
-                        ? dto.getFats()
-                        : 0
-        );
-
-        entity.setCarbs(
-                dto.getCarbs() != null
-                        ? dto.getCarbs()
-                        : 0
-        );
-
-        entity.setGrams(
-                dto.getGrams() != null
-                        ? dto.getGrams()
-                        : 0
-        );
+            entity.setOptions(
+                    dto.getOptions().trim()
+            );
+        } else {
+            entity.setOptions(null);
+        }
 
         // --------------------------------------------------------
         // PRODUCT TYPE
@@ -328,26 +380,32 @@ public final class FmMasterProductMapper {
         );
 
         // --------------------------------------------------------
-        // PUBLISH
+        // ACTIVE STATUS
         // --------------------------------------------------------
 
-        entity.setPublish(
-                dto.getPublish() != null
-                        ? dto.getPublish()
-                        : 1
-        );
+        /*
+         * System-generated field.
+         *
+         * Y = Active
+         */
+        entity.setIsActive("Y");
 
         // --------------------------------------------------------
         // AUDIT
         // --------------------------------------------------------
 
-        entity.setCreatedAt(
-                LocalDateTime.now()
-        );
-
+        /*
+         * createdAt is handled by @CreationTimestamp.
+         */
         entity.setCreatedBy(
                 dto.getCreatedBy()
         );
+
+        /*
+         * updatedAt / updatedBy remain null
+         * for a newly created record.
+         */
+        entity.setUpdatedBy(null);
 
         return entity;
     }
@@ -360,181 +418,123 @@ public final class FmMasterProductMapper {
             FmMasterProduct entity,
             FmMasterProductRequest dto) {
 
-        Integer veg =
-                dto.getVeg() != null
-                        ? dto.getVeg()
-                        : entity.getVeg();
+        if (entity == null) {
+            throw new IllegalArgumentException(
+                    "Existing product cannot be null."
+            );
+        }
 
-        Integer nonVeg =
-                dto.getNonVeg() != null
-                        ? dto.getNonVeg()
-                        : entity.getNonVeg();
-
-        validateVegNonVeg(
-                veg,
-                nonVeg
-        );
+        if (dto == null) {
+            throw new IllegalArgumentException(
+                    "Request cannot be null."
+            );
+        }
 
         // --------------------------------------------------------
         // BASIC INFORMATION
         // --------------------------------------------------------
 
-        if (dto.getMasterProductName() != null)
+        if (dto.getMasterProductName() != null) {
+
             entity.setMasterProductName(
                     dto.getMasterProductName().trim()
             );
+        }
 
-        if (dto.getDescription() != null)
+        if (dto.getDescription() != null) {
+
             entity.setDescription(
                     dto.getDescription()
             );
+        }
 
-//        if (dto.getShortDescription() != null)
-//            entity.setShortDescription(
-//                    dto.getShortDescription()
-//            );
+        if (dto.getPhoto() != null) {
 
-        if (dto.getPhoto() != null)
             entity.setPhoto(
                     dto.getPhoto()
             );
-
-//        if (dto.getPhotos() != null)
-//            entity.setPhotos(
-//                    dto.getPhotos()
-//            );
-//
-//        if (dto.getThumbnail() != null)
-//            entity.setThumbnail(
-//                    dto.getThumbnail()
-//            );
+        }
 
         // --------------------------------------------------------
         // CATEGORY
         // --------------------------------------------------------
 
-        if (dto.getCategoryId() != null)
+        if (dto.getCategoryId() != null) {
+
             entity.setCategoryId(
                     dto.getCategoryId()
             );
+        }
 
-        if (dto.getCategoryName() != null)
+        if (dto.getCategoryName() != null) {
+
             entity.setCategoryName(
                     dto.getCategoryName().trim()
             );
-
-//        if (dto.getSubCategoryId() != null)
-//            entity.setSubCategoryId(
-//                    dto.getSubCategoryId()
-//            );
-//
-//        if (dto.getSubCategoryName() != null)
-//            entity.setSubCategoryName(
-//                    dto.getSubCategoryName()
-//            );
+        }
 
         // --------------------------------------------------------
         // VEG / NON-VEG
         // --------------------------------------------------------
 
-        if (dto.getVeg() != null)
-            entity.setVeg(
-                    dto.getVeg()
-            );
+        if (dto.getIsVeg() != null) {
 
-        if (dto.getNonVeg() != null)
-            entity.setNonVeg(
-                    dto.getNonVeg()
+            entity.setIsVeg(
+                    dto.getIsVeg()
             );
+        }
 
         // --------------------------------------------------------
-        // FOOD
+        // CUISINE
         // --------------------------------------------------------
 
-        if (dto.getFoodType() != null)
-            entity.setFoodType(
-                    dto.getFoodType()
-            );
+        if (dto.getCuisineType() != null) {
 
-        if (dto.getCuisineType() != null)
             entity.setCuisineType(
                     dto.getCuisineType()
             );
+        }
 
         // --------------------------------------------------------
         // OPTIONS
         // --------------------------------------------------------
 
-        if (dto.getHasOptions() != null)
+        if (dto.getHasOptions() != null) {
+
             entity.setHasOptions(
                     dto.getHasOptions()
             );
+        }
 
-        if (dto.getOptionsEnabled() != null)
-            entity.setOptionsEnabled(
-                    dto.getOptionsEnabled()
-            );
+        if (dto.getOptions() != null) {
 
-        if (dto.getOptions() != null)
-            entity.setOptions(
-                    dto.getOptions()
-            );
-
-        // --------------------------------------------------------
-        // NUTRITION
-        // --------------------------------------------------------
-
-        if (dto.getCalories() != null)
-            entity.setCalories(
-                    dto.getCalories()
-            );
-
-        if (dto.getProtein() != null)
-            entity.setProtein(
-                    dto.getProtein()
-            );
-
-        if (dto.getFats() != null)
-            entity.setFats(
-                    dto.getFats()
-            );
-
-        if (dto.getCarbs() != null)
-            entity.setCarbs(
-                    dto.getCarbs()
-            );
-
-        if (dto.getGrams() != null)
-            entity.setGrams(
-                    dto.getGrams()
-            );
+            if (dto.getOptions().isBlank()) {
+                entity.setOptions(null);
+            } else {
+                entity.setOptions(
+                        dto.getOptions().trim()
+                );
+            }
+        }
 
         // --------------------------------------------------------
         // PRODUCT TYPE
         // --------------------------------------------------------
 
-        if (dto.getProductType() != null)
+        if (dto.getProductType() != null) {
+
             entity.setProductType(
                     dto.getProductType().trim()
             );
-
-        // --------------------------------------------------------
-        // PUBLISH
-        // --------------------------------------------------------
-
-        if (dto.getPublish() != null)
-            entity.setPublish(
-                    dto.getPublish()
-            );
+        }
 
         // --------------------------------------------------------
         // AUDIT
         // --------------------------------------------------------
 
-        entity.setUpdatedAt(
-                LocalDateTime.now()
-        );
-
+        /*
+         * updatedAt is handled by @UpdateTimestamp.
+         */
         entity.setUpdatedBy(
                 dto.getUpdatedBy()
         );
@@ -546,6 +546,10 @@ public final class FmMasterProductMapper {
 
     public FmMasterProductResponseDto toResponseDto(
             FmMasterProduct product) {
+
+        if (product == null) {
+            return null;
+        }
 
         FmMasterProductResponseDto dto =
                 new FmMasterProductResponseDto();
@@ -570,26 +574,22 @@ public final class FmMasterProductMapper {
                 product.getPhoto()
         );
 
-//        dto.setThumbnail(
-//                product.getThumbnail()
-//        );
-
-        dto.setVeg(
-                product.getVeg()
+        dto.setIsVeg(
+                product.getIsVeg()
         );
 
-        dto.setNonVeg(
-                product.getNonVeg()
+        dto.setCuisineType(
+                product.getCuisineType()
         );
 
-        dto.setPublish(
-                product.getPublish()
+        dto.setHasOptions(
+                product.getHasOptions()
         );
 
-        /*
-         * Add this line only after adding productType
-         * to FmMasterProductResponseDto.
-         */
+        dto.setOptions(
+                product.getOptions()
+        );
+
         dto.setProductType(
                 product.getProductType()
         );
@@ -597,4 +597,3 @@ public final class FmMasterProductMapper {
         return dto;
     }
 }
-

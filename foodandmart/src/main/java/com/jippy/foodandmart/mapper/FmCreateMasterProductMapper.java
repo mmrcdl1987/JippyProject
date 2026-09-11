@@ -23,6 +23,10 @@ public class FmCreateMasterProductMapper {
             );
         }
 
+        // --------------------------------------------------------
+        // MASTER PRODUCT NAME
+        // --------------------------------------------------------
+
         if (request.getMasterProductName() == null
                 || request.getMasterProductName()
                 .trim()
@@ -33,6 +37,20 @@ public class FmCreateMasterProductMapper {
             );
         }
 
+        if (request.getMasterProductName()
+                .trim()
+                .length() > 100) {
+
+            throw new IllegalArgumentException(
+                    "Master Product Name cannot exceed 100 characters."
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // CATEGORY ID
+        // --------------------------------------------------------
+
         if (request.getCategoryId() == null) {
 
             throw new IllegalArgumentException(
@@ -40,34 +58,58 @@ public class FmCreateMasterProductMapper {
             );
         }
 
-        /*
-         * PHOTO IS OPTIONAL.
-         *
-         * Do NOT validate photo here.
-         *
-         * Product can be created/added to outlet
-         * without a photo.
-         */
+        if (request.getCategoryId() <= 0) {
 
+            throw new IllegalArgumentException(
+                    "Category Id must be greater than 0."
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // IS VEG
+        // --------------------------------------------------------
+
+        /*
+         * New database column:
+         *
+         * is_veg BOOLEAN NOT NULL
+         *
+         * true  = Veg
+         * false = Non-Veg
+         */
         if (request.getIsVeg() == null) {
 
             throw new IllegalArgumentException(
-                    "Veg/Non Veg selection is required."
+                    "is_veg value is required. Use true or false."
             );
         }
 
+
         // --------------------------------------------------------
-        // PRODUCT TYPE VALIDATION
+        // PRODUCT TYPE
         // --------------------------------------------------------
 
-        if (request.getProductType() != null
-                && request.getProductType().trim().length() > 20) {
+        if (request.getProductType() == null
+                || request.getProductType()
+                .trim()
+                .isEmpty()) {
 
             throw new IllegalArgumentException(
-                    "Product Type cannot exceed 20 characters."
+                    "Product Type is required."
+            );
+        }
+
+        if (request.getProductType()
+                .trim()
+                .length() > 10) {
+
+            throw new IllegalArgumentException(
+                    "Product Type cannot exceed 10 characters."
             );
         }
     }
+
 
     // ============================================================
     // REQUEST DTO -> ENTITY
@@ -78,12 +120,20 @@ public class FmCreateMasterProductMapper {
             String categoryName,
             Integer createdBy) {
 
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Request cannot be null."
+            );
+        }
+
+
         FmMasterProduct entity =
                 new FmMasterProduct();
 
-        // --------------------------------------------------------
+
+        // ========================================================
         // BASIC INFORMATION
-        // --------------------------------------------------------
+        // ========================================================
 
         entity.setMasterProductName(
                 request.getMasterProductName()
@@ -94,34 +144,25 @@ public class FmCreateMasterProductMapper {
                 request.getDescription()
         );
 
-//        entity.setShortDescription(
-//                request.getShortDescription()
-//        );
 
-        // --------------------------------------------------------
+        // ========================================================
         // PHOTO
-        // --------------------------------------------------------
+        // ========================================================
 
         /*
          * PHOTO IS OPTIONAL.
          *
-         * If photo is not provided, null will be stored.
+         * If photo is not provided,
+         * null will be stored.
          */
         entity.setPhoto(
                 request.getPhoto()
         );
 
-//        entity.setPhotos(
-//                request.getPhotos()
-//        );
-//
-//        entity.setThumbnail(
-//                request.getThumbnail()
-//        );
 
-        // --------------------------------------------------------
+        // ========================================================
         // CATEGORY
-        // --------------------------------------------------------
+        // ========================================================
 
         entity.setCategoryId(
                 request.getCategoryId()
@@ -131,37 +172,38 @@ public class FmCreateMasterProductMapper {
                 categoryName
         );
 
-        // --------------------------------------------------------
-        // VEG / NON VEG
-        // --------------------------------------------------------
 
-        entity.setVeg(
-                Boolean.TRUE.equals(
-                        request.getIsVeg()
-                ) ? 1 : 0
+        // ========================================================
+        // IS VEG
+        // ========================================================
+
+        /*
+         * New database structure:
+         *
+         * is_veg BOOLEAN
+         *
+         * true  -> Veg
+         * false -> Non-Veg
+         *
+         * Do NOT create veg/nonVeg integer values.
+         */
+        entity.setIsVeg(
+                request.getIsVeg()
         );
 
-        entity.setNonVeg(
-                Boolean.TRUE.equals(
-                        request.getIsVeg()
-                ) ? 0 : 1
-        );
 
-        // --------------------------------------------------------
-        // FOOD
-        // --------------------------------------------------------
-
-        entity.setFoodType(
-                request.getFoodType()
-        );
+        // ========================================================
+        // CUISINE
+        // ========================================================
 
         entity.setCuisineType(
                 request.getCuisineType()
         );
 
-        // --------------------------------------------------------
+
+        // ========================================================
         // PRODUCT TYPE
-        // --------------------------------------------------------
+        // ========================================================
 
         entity.setProductType(
                 request.getProductType() != null
@@ -170,39 +212,33 @@ public class FmCreateMasterProductMapper {
                         : null
         );
 
-        // --------------------------------------------------------
+
+        // ========================================================
         // OPTIONS
-        // --------------------------------------------------------
+        // ========================================================
 
+        /*
+         * The create DTO currently does not contain
+         * hasOptions/options fields.
+         *
+         * Therefore the create API uses:
+         *
+         * has_options = 0
+         * options = null
+         *
+         * This is a system default for the create API.
+         *
+         * Bulk Excel upload uses the actual Excel
+         * has_options and options values.
+         */
         entity.setHasOptions(0);
-
-        entity.setOptionsEnabled(0);
 
         entity.setOptions(null);
 
-        // --------------------------------------------------------
-        // NUTRITION
-        // --------------------------------------------------------
 
-        entity.setCalories(0);
-
-        entity.setProtein(0);
-
-        entity.setFats(0);
-
-        entity.setCarbs(0);
-
-        entity.setGrams(0);
-
-        // --------------------------------------------------------
-        // PUBLISH
-        // --------------------------------------------------------
-
-        entity.setPublish(1);
-
-        // --------------------------------------------------------
+        // ========================================================
         // AUDIT
-        // --------------------------------------------------------
+        // ========================================================
 
         entity.setCreatedAt(
                 LocalDateTime.now()
@@ -212,8 +248,34 @@ public class FmCreateMasterProductMapper {
                 createdBy
         );
 
+        entity.setUpdatedAt(
+                null
+        );
+
+        entity.setUpdatedBy(
+                null
+        );
+
+
+        // ========================================================
+        // ACTIVE STATUS
+        // ========================================================
+
+        /*
+         * Database:
+         *
+         * is_active VARCHAR(1) NOT NULL
+         *
+         * Y = Active
+         *
+         * This is a system status, not product-specific data.
+         */
+        entity.setIsActive("Y");
+
+
         return entity;
     }
+
 
     // ============================================================
     // ENTITY -> RESPONSE DTO
@@ -222,16 +284,36 @@ public class FmCreateMasterProductMapper {
     public FmCreateMasterProductResponseDto toResponseDto(
             FmMasterProduct entity) {
 
+        if (entity == null) {
+            return null;
+        }
+
+
         FmCreateMasterProductResponseDto response =
                 new FmCreateMasterProductResponseDto();
+
+
+        // --------------------------------------------------------
+        // ID
+        // --------------------------------------------------------
 
         response.setMasterProductId(
                 entity.getMasterProductId()
         );
 
+
+        // --------------------------------------------------------
+        // NAME
+        // --------------------------------------------------------
+
         response.setMasterProductName(
                 entity.getMasterProductName()
         );
+
+
+        // --------------------------------------------------------
+        // CATEGORY
+        // --------------------------------------------------------
 
         response.setCategoryId(
                 entity.getCategoryId()
@@ -241,35 +323,44 @@ public class FmCreateMasterProductMapper {
                 entity.getCategoryName()
         );
 
+
+        // --------------------------------------------------------
+        // PHOTO
+        // --------------------------------------------------------
+
         response.setPhoto(
                 entity.getPhoto()
         );
 
-//        response.setThumbnail(
-//                entity.getThumbnail()
-//        );
 
-        response.setVeg(
-                entity.getVeg()
-        );
-
-        response.setNonVeg(
-                entity.getNonVeg()
-        );
+        // --------------------------------------------------------
+        // IS VEG
+        // --------------------------------------------------------
 
         /*
-         * Product type returned in API response.
+         * New API response should use:
          *
-         * This requires productType to exist in
-         * FmCreateMasterProductResponseDto.
+         * isVeg = true
+         * isVeg = false
+         *
+         * instead of:
+         *
+         * veg = 1
+         * nonVeg = 0
          */
+        response.setIsVeg(
+                entity.getIsVeg()
+        );
+
+
+        // --------------------------------------------------------
+        // PRODUCT TYPE
+        // --------------------------------------------------------
+
         response.setProductType(
                 entity.getProductType()
         );
 
-        response.setPublish(
-                entity.getPublish()
-        );
 
         return response;
     }

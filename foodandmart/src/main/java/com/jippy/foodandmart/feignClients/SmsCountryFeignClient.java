@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
         name = "sms-country-client",
-        url = "${smscountry.base-url}",
+        url = "${SMSCOUNTRY_BASE_URL}",
         configuration = SmsCountryFeignConfig.class
 )
 public interface SmsCountryFeignClient {

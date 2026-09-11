@@ -15,10 +15,14 @@ import java.util.List;
 public class FmMapToProductRequest {
 
     /**
-     * Existing mobile application may send this.
+     * Outlet category ID.
      *
-     * Bulk upload can leave this null when products
-     * belong to different categories.
+     * When provided, all selected products are mapped
+     * into this outlet category.
+     *
+     * Can be null when products belong to different categories
+     * and the backend needs to resolve the outlet category
+     * from each master product.
      */
     private Integer outletCategoryId;
 
@@ -28,9 +32,14 @@ public class FmMapToProductRequest {
     private Integer outletId;
 
     /**
-     * Selected master/outlet products.
+     * Selected master products.
      */
     private List<ProductEntry> products;
+
+
+    // ============================================================
+    // PRODUCT ENTRY
+    // ============================================================
 
     @Getter
     @Setter
@@ -39,33 +48,29 @@ public class FmMapToProductRequest {
     @Builder
     public static class ProductEntry {
 
-        private String productName;
-
-        private String description;
-
-        private BigDecimal merchantPrice;
-
-        private Boolean isVeg;
-
-        /**
-         * Kept for mobile compatibility.
-         *
-         * Master-product mapping will always create
-         * the outlet product without variants.
-         */
-        private Boolean hasProductVariants;
-
-        /**
-         * Kept for compatibility.
-         *
-         * Not used during master-product mapping.
-         */
-        private List<VariantEntry> variants;
-
         /**
          * Master product ID.
+         *
+         * Primary reference used by backend to fetch
+         * the actual master product.
          */
         private Integer masterProductId;
+
+        /**
+         * Product name.
+         *
+         * Backend should prefer:
+         * master_products.master_product_name
+         */
+        private String productName;
+
+        /**
+         * Product description.
+         *
+         * Backend should prefer:
+         * master_products.description
+         */
+        private String description;
 
         /**
          * Master product category ID.
@@ -73,25 +78,99 @@ public class FmMapToProductRequest {
         private Integer categoryId;
 
         /**
+         * Master product category name.
+         *
+         * Example:
+         * Rice & Noodles
+         */
+        private String categoryName;
+
+        /**
          * Product type from master_products.product_type.
+         *
+         * Examples:
+         * RICE
+         * CURRY
+         * BREAKFAST
+         * NOODLES
+         * DESSERT
+         * BEVERAGE
          */
         private String productType;
 
         /**
-         * CSV day.
+         * Veg / Non-Veg.
+         *
+         * Backend should prefer the value from
+         * master_products.is_veg.
          */
-        private String csvDayOfWeek;
+        private Boolean isVeg;
+
+        /**
+         * Merchant price supplied from CSV/UI.
+         *
+         * This value should be saved into:
+         * jippy_fm.products.merchant_price
+         */
+        private BigDecimal merchantPrice;
+
+        /**
+         * Kept for mobile compatibility.
+         *
+         * Master-product mapping normally creates
+         * the outlet product without variants.
+         */
+        private Boolean hasProductVariants;
+
+        /**
+         * Kept for compatibility.
+         */
+        private List<VariantEntry> variants;
+
+        /**
+         * Product image supplied by client.
+         *
+         * During master-product mapping the backend
+         * should prefer master_products.photo.
+         */
+        private String imageLink;
 
         /**
          * CSV timing.
+         *
+         * Example:
+         * 11:00-22:00
          */
         private String csvTiming;
 
         /**
+         * CSV day of week.
+         *
+         * Example:
+         * Monday
+         */
+        private String csvDayOfWeek;
+
+        /**
          * Explicit timing rows.
+         *
+         * Used when the request already contains
+         * resolved day IDs and start/end times.
          */
         private List<TimingEntry> timings;
+
+        /**
+         * Variant groups.
+         *
+         * Kept for compatibility with existing clients.
+         */
+        private List<?> variantGroups;
     }
+
+
+    // ============================================================
+    // TIMING ENTRY
+    // ============================================================
 
     @Getter
     @Setter
@@ -100,12 +179,38 @@ public class FmMapToProductRequest {
     @Builder
     public static class TimingEntry {
 
+        /**
+         * Day ID from days_of_week table.
+         *
+         * 1 = Monday
+         * ...
+         * 7 = Sunday
+         *
+         * 0 can be used for all days.
+         */
         private Integer dayOfWeekId;
 
+        /**
+         * Start time.
+         *
+         * Example:
+         * 11:00
+         */
         private String startTime;
 
+        /**
+         * End time.
+         *
+         * Example:
+         * 22:00
+         */
         private String endTime;
     }
+
+
+    // ============================================================
+    // VARIANT ENTRY
+    // ============================================================
 
     @Getter
     @Setter
