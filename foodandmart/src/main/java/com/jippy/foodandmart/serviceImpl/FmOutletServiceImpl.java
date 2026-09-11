@@ -40,6 +40,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -358,16 +359,17 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         log.info("Outlet bank details updated successfully.");
 
-        /*
-         * Update Outlet KYC.
-         */
-        Optional<FmUserKyc> optionalFmUserKyc = userKycRepository.findByEntityIdAndEntityType(
-                outletId, FmAppConstants.TYPE_OUTLET);
-        FmUserKyc savUserKyc = optionalFmUserKyc.get();
+        FmUserKyc savedUserKyc = userKycRepository
+                .findByEntityIdAndEntityType(outletId, FmAppConstants.TYPE_OUTLET)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Outlet KYC details not found for outlet id: " + outletId
+                        )
+                );
 
-        log.info("=============================================" + savUserKyc.getKycId());
-        FmOutletMapper.updateOutletKycEntity(savUserKyc, dto);
-        userKycRepository.save(savUserKyc);
+        log.info("=============================================" + savedUserKyc.getKycId());
+        FmOutletMapper.updateOutletKycEntity(savedUserKyc, dto);
+        userKycRepository.save(savedUserKyc);
 
         log.info("Outlet KYC details updated successfully.");
 
@@ -544,15 +546,94 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FmOutletSummaryDTO> getAllOutletsSummary() {
+
+        log.info("Fetching all outlet summaries");
+
         List<FmOutlet> outlets = outletRepository.findAll();
-        List<FmOutletSummaryDTO> result = new ArrayList<>();
-        for (FmOutlet o : outlets) {
-            FmOutletAddress addr = addressRepository.findByJippyAddressIdAndAddressType(o.getOutletId(), FmAppConstants.ADDRESS_TYPE_OUTLET).orElse(null);
-            result.add(FmOutletSummaryDTO.from(o, 0, addr));
+
+        if (outlets.isEmpty()) {
+            return Collections.emptyList();
         }
-        return result;
+
+        List<Integer> outletIds = outlets.stream().map(FmOutlet::getOutletId).toList();
+
+        // ============================================================
+        // FETCH ALL OUTLET ADDRESSES
+        // ============================================================
+
+        List<FmOutletAddress> addresses = addressRepository.findByJippyAddressIdInAndAddressType(outletIds, FmAppConstants.ADDRESS_TYPE_OUTLET);
+
+        Map<Integer, FmOutletAddress> addressMap = addresses.stream().collect(Collectors.toMap(FmOutletAddress::getJippyAddressId, Function.identity(), (existing, replacement) -> existing));
+
+        // ============================================================
+        // FETCH ALL MERCHANTS
+        // ============================================================
+
+        List<Integer> merchantIds = outlets.stream().map(FmOutlet::getMerchantId).filter(Objects::nonNull).distinct().toList();
+
+        Map<Integer, String> merchantNameMap = merchantRepository.findByMerchantIdIn(merchantIds).stream().collect(Collectors.toMap(FmMerchant::getMerchantId, FmMerchant::getMerchantName));
+
+        // ============================================================
+        // FETCH ALL CUISINES
+        // ============================================================
+
+        List<Integer> cuisineIds = outlets.stream().map(FmOutlet::getCuisineType).filter(Objects::nonNull).flatMap(Arrays::stream).filter(Objects::nonNull).distinct().toList();
+
+        Map<Integer, String> cuisineNameMap = cuisineTypeRepository.findByCuisineTypesIdIn(cuisineIds).stream().collect(Collectors.toMap(FmCuisineType::getCuisineTypesId, FmCuisineType::getCuisineTypesName));
+
+        // ============================================================
+        // FETCH ALL STATES
+        // ============================================================
+
+        List<Integer> stateIds = addresses.stream().map(FmOutletAddress::getStateId).filter(Objects::nonNull).distinct().toList();
+
+        Map<Integer, String> stateNameMap = stateRepository.findByStateIdIn(stateIds).stream().collect(Collectors.toMap(FmState::getStateId, FmState::getStateName));
+
+        // ============================================================
+        // FETCH ALL AREAS
+        // ============================================================
+
+        List<Integer> areaIds = addresses.stream().map(FmOutletAddress::getAreaId).filter(Objects::nonNull).distinct().toList();
+
+        Map<Integer, String> areaNameMap = areaRepository.findByAreaIdIn(areaIds).stream().collect(Collectors.toMap(FmArea::getAreaId, FmArea::getAreaName));
+
+        // ============================================================
+        // BUILD RESPONSE
+        // ============================================================
+
+        return outlets.stream().map(outlet -> {
+
+            FmOutletAddress address = addressMap.get(outlet.getOutletId());
+
+            FmOutletSummaryDTO dto = FmOutletSummaryDTO.from(outlet, 0L, address);
+
+            // Merchant Name
+            dto.setMerchantName(merchantNameMap.get(outlet.getMerchantId()));
+
+            // Cuisine Names
+            Integer[] outletCuisineIds = outlet.getCuisineType();
+
+            if (outletCuisineIds != null) {
+
+                String[] cuisineNames = Arrays.stream(outletCuisineIds).map(cuisineNameMap::get).filter(Objects::nonNull).toArray(String[]::new);
+
+                dto.setCuisineNames(cuisineNames);
+            }
+
+            // State Name
+            if (address != null) {
+
+                dto.setStateName(stateNameMap.get(address.getStateId()));
+
+                dto.setAreaName(areaNameMap.get(address.getAreaId()));
+            }
+
+            return dto;
+        }).toList();
     }
+
 
     @Override
     @Transactional(readOnly = true)

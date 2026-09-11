@@ -21,7 +21,7 @@ public class FmFavoriteOutletResponseDto {
     private Boolean isFavourite;
 
     // Outlet Details
-    private BigDecimal review;
+    private Integer review;
     private String outletName;
     private String outletPicUrl;
 

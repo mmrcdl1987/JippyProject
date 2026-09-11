@@ -3,6 +3,7 @@ package com.jippy.foodandmart.repository;
 import com.jippy.foodandmart.entity.FmCuisineType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface FmCuisineTypeRepository
@@ -20,4 +21,6 @@ public interface FmCuisineTypeRepository
     Optional<FmCuisineType> findByCuisineTypesNameIgnoreCase(
             String cuisineTypesName
     );
+    List<FmCuisineType> findByCuisineTypesIdIn(List<Integer> cuisineTypeIds);
+
 }

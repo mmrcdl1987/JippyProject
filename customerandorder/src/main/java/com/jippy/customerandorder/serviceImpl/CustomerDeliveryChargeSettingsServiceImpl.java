@@ -3,9 +3,10 @@ import com.jippy.customerandorder.dto.CustomerDeliveryChargeCalculationResponseD
 import com.jippy.customerandorder.dto.CustomerDeliveryChargeSettingsDTO;
 import com.jippy.customerandorder.entity.CustomerDeliveryChargeSettings;
 import com.jippy.customerandorder.exception.CoResourceNotFoundException;
-import com.jippy.customerandorder.exception.DuplicateResourceException;
+
 import com.jippy.customerandorder.iservice.CustomerDeliveryChargeSettingsService;
 import com.jippy.customerandorder.repository.CustomerDeliveryChargeSettingsRepository;
+import com.jippy.foodandmart.exception.DuplicateResourceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

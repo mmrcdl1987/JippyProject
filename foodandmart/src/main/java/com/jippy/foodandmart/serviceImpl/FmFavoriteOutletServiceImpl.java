@@ -193,7 +193,7 @@ public class FmFavoriteOutletServiceImpl implements FmFavoriteOutletService {
 
             dto.setOutletName(outlet.getOutletName());
             dto.setOutletPicUrl(outlet.getOutletPicUrl());
-            dto.setReview(outlet.getReview());
+            dto.setReview(outlet.getTotalReviews());
 
         }
         /*

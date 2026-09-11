@@ -219,16 +219,26 @@ public class CoCustomerController {
     }
 
     @GetMapping("/wallet/history/{customerId}")
-    public ResponseEntity<List<CoWalletTransactionHistoryDto>> getWalletTransactionHistory(@PathVariable Integer customerId) {
+    public ResponseEntity<?> getWalletTransactionHistory(@PathVariable Integer customerId) {
 
         log.info("GET_WALLET_TRANSACTION_HISTORY_API_START | customerId={}", customerId);
 
         List<CoWalletTransactionHistoryDto> response = customerService.getWalletTransactionHistory(customerId);
 
-        log.info("GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={}", customerId);
+        if (response.isEmpty()) {
+
+            log.info("GET_WALLET_TRANSACTION_HISTORY_EMPTY | customerId={}", customerId);
+
+            return ResponseEntity.ok(new ApiResponseDto(true, "No wallet transaction history found"));
+        }
+
+        log.info("GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={} | transactionCount={}", customerId, response.size());
 
         return ResponseEntity.ok(response);
+
+
     }
+
 
     @GetMapping("/profile-incomplete")
     public ResponseEntity<List<CoProfileIncompleteCustomer>> getProfileIncompleteCustomers() {
@@ -240,19 +250,19 @@ public class CoCustomerController {
         return ResponseEntity.ok(customers);
     }
 
-    // ================================================================
-    // UPDATE CUSTOMER PROFILE PICTURE
-    // ================================================================
-
-    @PutMapping("/updateCustomerProfilePic")
-    public ResponseEntity<CoResponseDto> updateCustomerProfilePic(@RequestBody CustomerProfilePicDto customerDto) {
-
-        log.info("[CUSTOMER] Updating profile picture. customerId={}", customerDto.getCustomerId());
-
-        String message = customerService.updateCustomerProfilePic(customerDto);
-
-        return ResponseEntity.ok(new CoResponseDto("200", message));
-    }
+//    // ================================================================
+//    // UPDATE CUSTOMER PROFILE PICTURE
+//    // ================================================================
+//
+//    @PutMapping("/updateCustomerProfilePic")
+//    public ResponseEntity<CoResponseDto> updateCustomerProfilePic(@RequestBody CustomerProfilePicDto customerDto) {
+//
+//        log.info("[CUSTOMER] Updating profile picture. customerId={}", customerDto.getCustomerId());
+//
+//        String message = customerService.updateCustomerProfilePic(customerDto);
+//
+//        return ResponseEntity.ok(new CoResponseDto("200", message));
+//    }
 //    ====================================================================================
 //    ====================================================================================
 
@@ -351,6 +361,7 @@ public class CoCustomerController {
 
         return ResponseEntity.ok(response);
     }
+
     //    ========================================================================================
 //    ========================================================================================
     @GetMapping("/getOrderCompleteDetails")
@@ -519,7 +530,9 @@ public class CoCustomerController {
     @GetMapping("/getOrderDetailsOfDriver")
     @Operation(summary = "Get order details of driver", description = """
             Fetches paginated order details assigned to a specific driverID.
+        CoOrderFlowCountForMerchantOutletOrDriverDto response = customerService.getOrderFlowCountForMerchantOrOutletOrDriver(merchantId, outletId, driverId);
             
+        log.info("GET /getOrderFlowCountForMerchantOrOutletOrDriver completed successfully. " + "merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
             Driver ID is used to find orders from the Customer & Order
             microservice. Driver charges are calculated using pickup
             charges and driver delivery fee from order price breakup.

@@ -90,6 +90,7 @@ public class DriverDto {
 //    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "PAN number must be valid")
     private String panNumber;
 
+
     @Schema(description = "Driver driving license number.", example = "TS0920200012345")
     @NotBlank(message = "Driving license number is required ,Ex: TS0920200012345 , Driving Licence format")
 //    @Pattern(regexp = "^[A-Z]{2}[0-9]{2}[0-9]{11}$", message = "Invalid driving license number format")

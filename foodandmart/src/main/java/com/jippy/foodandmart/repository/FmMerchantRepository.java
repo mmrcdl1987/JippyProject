@@ -25,6 +25,9 @@ public interface FmMerchantRepository
             String email
     );
 
+
+    List<FmMerchant> findByMerchantIdIn(List<Integer> merchantIds);
+
     Optional<FmMerchant> findByMerchantEmailIgnoreCase(
             String merchantEmail
     );

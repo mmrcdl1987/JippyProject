@@ -1481,12 +1481,20 @@ public class FmProductServiceImpl implements FmProductService {
         /*
          * ============================================================
          * Merchant Price
+         *
+         * Product-level merchant price is independent of variants.
+         * Merchant can decrease the existing price only.
          * ============================================================
          */
-        if (hasVariants) {
-            product.setMerchantPrice(BigDecimal.ZERO);
-        } else {
-            product.setMerchantPrice(request.getMerchantPrice() == null ? BigDecimal.ZERO : request.getMerchantPrice());
+        if (request.getMerchantPrice() != null) {
+
+            validateMerchantPriceDecreaseOnly(
+                    product.getMerchantPrice(),
+                    request.getMerchantPrice(),
+                    "Product"
+            );
+
+            product.setMerchantPrice(request.getMerchantPrice());
         }
 
         productRepository.save(product);
@@ -1552,6 +1560,31 @@ public class FmProductServiceImpl implements FmProductService {
         return getProductById(productId);
     }
 
+    private void validateMerchantPriceDecreaseOnly(
+            BigDecimal existingPrice,
+            BigDecimal requestedPrice,
+            String priceType) {
+
+        if (requestedPrice == null) {
+            return;
+        }
+
+        if (requestedPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException(
+                    priceType + " merchant price cannot be negative."
+            );
+        }
+
+        if (existingPrice != null
+                && requestedPrice.compareTo(existingPrice) > 0) {
+
+            throw new IllegalArgumentException(
+                    priceType
+                            + " merchant price cannot be increased. "
+                            + "Please contact admin."
+            );
+        }
+    }
     @Override
     @Transactional
     public FmMerchantPriceUpdateResponse updateMerchantPrice(Integer productId, FmMerchantPriceUpdateRequest request) {
@@ -1797,9 +1830,12 @@ public class FmProductServiceImpl implements FmProductService {
         log.info("Completed saving Variant Options. ProductId={}", productId);
     }
 
-    private void updateProductVariantOptions(Integer productId, List<FmProductVariantOptionGroupDto> variantGroups) {
+    private void updateProductVariantOptions(
+            Integer productId,
+            List<FmProductVariantOptionGroupDto> variantGroups) {
 
-        List<FmProductVariantOption> existingOptions = variantOptionRepository.findByProductIdOrderByProductVariantOptionsIdAsc(productId);
+        List<FmProductVariantOption> existingOptions =
+                variantOptionRepository.findByProductIdOrderByProductVariantOptionsIdAsc(productId);
 
         Map<Integer, FmProductVariantOption> existingMap = new HashMap<>();
 
@@ -1814,72 +1850,142 @@ public class FmProductServiceImpl implements FmProductService {
             for (FmProductVariantOptionRequestDto requestOption : group.getOptions()) {
 
                 /*
-                 * UPDATE
+                 * ============================================================
+                 * UPDATE EXISTING VARIANT OPTION
+                 * ============================================================
                  */
                 if (requestOption.getProductVariantOptionsId() != null) {
 
-                    FmProductVariantOption entity = existingMap.get(requestOption.getProductVariantOptionsId());
+                    FmProductVariantOption entity =
+                            existingMap.get(requestOption.getProductVariantOptionsId());
 
                     if (entity == null) {
-                        throw new ResourceNotFoundException("Variant Option not found : " + requestOption.getProductVariantOptionsId());
+                        throw new ResourceNotFoundException(
+                                "Variant Option not found : "
+                                        + requestOption.getProductVariantOptionsId()
+                        );
                     }
 
-                    // Update only changed fields
+                    /*
+                     * Update Variant Value
+                     */
+                    if (!Objects.equals(
+                            entity.getProductVariantGroupValuesId(),
+                            requestOption.getProductVariantGroupValuesId())) {
 
-                    if (!Objects.equals(entity.getProductVariantGroupValuesId(), requestOption.getProductVariantGroupValuesId())) {
+                        validateVariantValue(
+                                group.getProductVariantGroupsId(),
+                                requestOption
+                        );
 
-                        validateVariantValue(group.getProductVariantGroupsId(), requestOption);
-
-                        entity.setProductVariantGroupValuesId(requestOption.getProductVariantGroupValuesId());
+                        entity.setProductVariantGroupValuesId(
+                                requestOption.getProductVariantGroupValuesId()
+                        );
                     }
 
-                    if (!Objects.equals(entity.getPriceType(), requestOption.getPriceType())) {
+                    /*
+                     * Update Price Type
+                     */
+                    if (!Objects.equals(
+                            entity.getPriceType(),
+                            requestOption.getPriceType())) {
 
-                        entity.setPriceType(requestOption.getPriceType());
+                        entity.setPriceType(
+                                requestOption.getPriceType()
+                        );
                     }
 
-                    if (!Objects.equals(entity.getVariantPrice(), requestOption.getVariantPrice())) {
+                    /*
+                     * ============================================================
+                     * Variant Price
+                     *
+                     * Existing variant price can only be decreased.
+                     * Price increase requires admin approval.
+                     * ============================================================
+                     */
+                    if (!Objects.equals(
+                            entity.getVariantPrice(),
+                            requestOption.getVariantPrice())) {
 
-                        entity.setVariantPrice(requestOption.getVariantPrice());
+                        validateMerchantPriceDecreaseOnly(
+                                entity.getVariantPrice(),
+                                requestOption.getVariantPrice(),
+                                "Variant"
+                        );
+
+                        entity.setVariantPrice(
+                                requestOption.getVariantPrice()
+                        );
                     }
 
                     entity.setUpdatedBy(SYSTEM_USER);
 
                     variantOptionRepository.save(entity);
 
-                    processedIds.add(entity.getProductVariantOptionsId());
+                    processedIds.add(
+                            entity.getProductVariantOptionsId()
+                    );
                 }
 
                 /*
-                 * INSERT
+                 * ============================================================
+                 * INSERT NEW VARIANT OPTION
+                 * ============================================================
                  */
                 else {
 
-                    FmProductVariantOption entity = FmProductVariantOptionMapper.toEntity(productId, requestOption);
+                    /*
+                     * New variant has no existing price.
+                     * Only validate that the initial price is not negative.
+                     */
+                    if (requestOption.getVariantPrice() != null
+                            && requestOption.getVariantPrice()
+                            .compareTo(BigDecimal.ZERO) < 0) {
+
+                        throw new IllegalArgumentException(
+                                "Variant merchant price cannot be negative."
+                        );
+                    }
+
+                    FmProductVariantOption entity =
+                            FmProductVariantOptionMapper.toEntity(
+                                    productId,
+                                    requestOption
+                            );
 
                     entity.setCreatedBy(SYSTEM_USER);
                     entity.setUpdatedBy(SYSTEM_USER);
 
-                    FmProductVariantOption saved = variantOptionRepository.save(entity);
+                    FmProductVariantOption saved =
+                            variantOptionRepository.save(entity);
 
-                    processedIds.add(saved.getProductVariantOptionsId());
+                    processedIds.add(
+                            saved.getProductVariantOptionsId()
+                    );
                 }
             }
         }
 
         /*
+         * ============================================================
          * DELETE REMOVED OPTIONS
+         * ============================================================
          */
         for (FmProductVariantOption existing : existingOptions) {
 
-            if (!processedIds.contains(existing.getProductVariantOptionsId())) {
+            if (!processedIds.contains(
+                    existing.getProductVariantOptionsId())) {
 
                 variantOptionRepository.delete(existing);
             }
         }
 
-        // Invalidate outlet details cache
-        Integer outletId = cacheInvalidateService.getOutletIdForProduct(productId);
+        /*
+         * Invalidate outlet details cache
+         */
+        Integer outletId =
+                cacheInvalidateService.getOutletIdForProduct(productId);
+
         cacheInvalidateService.invalidateCache(outletId);
     }
 

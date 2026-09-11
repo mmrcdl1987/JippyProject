@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -977,40 +978,82 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CoCustomerWalletResponseDto getCustomerWallet(Integer customerId) {
 
         log.info("GET_CUSTOMER_WALLET_API_START | customerId={}", customerId);
 
-        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+        CoCustomerWallet wallet = walletRepository
+                .findByCustomerCustomerId(customerId)
+                .orElseThrow(() -> {
+                    log.warn("GET_CUSTOMER_WALLET_API_FAILED | wallet not found | customerId={}", customerId);
+                    return new CoBusinessException("Wallet is empty for customerId: " + customerId);
+                });
+
+        CoCustomer customer = wallet.getCustomer();
+
+        String customerName = Stream.of(
+                        customer.getFirstName(),
+                        customer.getLastName()
+                )
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .collect(Collectors.joining(" "));
 
         CoCustomerWalletResponseDto response = new CoCustomerWalletResponseDto();
-        response.setWalletId(wallet.getWalletId());
-        response.setCustomerId(wallet.getCustomer().getCustomerId());
-        response.setBalancePoints(wallet.getBalancePoints());
-        response.setBalanceAmount(wallet.getBalanceAmount());
 
-        log.info("GET_CUSTOMER_WALLET_API_SUCCESS | customerId={}", customerId);
+        response.setWalletId(wallet.getWalletId());
+        response.setCustomerId(customer.getCustomerId());
+        response.setCustomerName(customerName);
+        response.setReferralCode(customer.getReferralCode());
+        response.setBalanceAmount(wallet.getBalanceAmount());
+        response.setBalancePoints(wallet.getBalancePoints());
+
+        log.info(
+                "GET_CUSTOMER_WALLET_API_SUCCESS | customerId={} | walletId={}",
+                customerId,
+                wallet.getWalletId()
+        );
 
         return response;
     }
+
+
+
 
     @Override
     public List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId) {
 
         log.info("GET_WALLET_TRANSACTION_HISTORY_API_START | customerId={}", customerId);
 
-        CoCustomerWallet wallet = walletRepository.findByCustomerCustomerId(customerId).orElseThrow(() -> new CoBusinessException(COConstants.WALLET_NOT_FOUND));
+        CoCustomerWallet wallet = walletRepository
+                .findByCustomerCustomerId(customerId)
+                .orElseThrow(() ->
+                        new CoBusinessException("Wallet transactions not found for customerId: " + customerId));
 
-        List<CoWalletTransactionHistoryDto> transactions = transactionsRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId()).stream().map(transaction -> {
-            CoWalletTransactionHistoryDto dto = new CoWalletTransactionHistoryDto();
-            dto.setTransactionType(transaction.getTransactionType());
-            dto.setPoints(transaction.getPoints());
-            dto.setAmount(transaction.getAmount());
-            dto.setCreatedAt(transaction.getCreatedAt());
-            return dto;
-        }).collect(Collectors.toList());
+        List<CoWalletTransactionHistoryDto> transactions =
+                transactionsRepository
+                        .findByWalletIdOrderByCreatedAtDesc(wallet.getWalletId())
+                        .stream()
+                        .map(transaction -> {
 
-        log.info("GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={}", customerId);
+                            CoWalletTransactionHistoryDto dto =
+                                    new CoWalletTransactionHistoryDto();
+
+                            dto.setTransactionType(transaction.getTransactionType());
+                            dto.setPoints(transaction.getPoints());
+                            dto.setAmount(transaction.getAmount());
+                            dto.setCreatedAt(transaction.getCreatedAt());
+
+                            return dto;
+                        })
+                        .collect(Collectors.toList());
+
+        log.info(
+                "GET_WALLET_TRANSACTION_HISTORY_API_SUCCESS | customerId={}",
+                customerId
+        );
 
         return transactions;
     }
@@ -1800,163 +1843,162 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         return new PageImpl<>(responseList, pageable, projectionPage.getTotalElements());
     }
 
+    //  ====================================================================================
 //  ====================================================================================
-//  ====================================================================================
-@Override
-public Page<CoOrderDetailsOfDriverDto> getOrderDetailsOfDriver(
-        Integer driverId,
-        Pageable pageable) {
-
-    log.info(
-            "Fetching order details for driverId={}, page={}, size={}",
-            driverId,
-            pageable.getPageNumber(),
-            pageable.getPageSize()
-    );
-
-    // ============================================================
-    // FETCH ORDER DETAILS FROM CO DATABASE
-    // ============================================================
-
-    Page<CoOrderDetailsOfDriverProjection> projectionPage =
-            coOrderRepository.getOrderDetailsOfDriver(
-                    driverId,
-                    pageable
-            );
-
-    if (projectionPage == null || projectionPage.isEmpty()) {
+    @Override
+    public Page<CoOrderDetailsOfDriverDto> getOrderDetailsOfDriver(
+            Integer driverId,
+            Pageable pageable) {
 
         log.info(
-                "No orders found for driverId={}",
-                driverId
+                "Fetching order details for driverId={}, page={}, size={}",
+                driverId,
+                pageable.getPageNumber(),
+                pageable.getPageSize()
         );
 
-        return Page.empty(pageable);
-    }
+        // ============================================================
+        // FETCH ORDER DETAILS FROM CO DATABASE
+        // ============================================================
 
-    List<CoOrderDetailsOfDriverDto> responseList =
-            new ArrayList<>();
-
-    // ============================================================
-    // PROCESS EACH ORDER
-    // ============================================================
-
-    for (CoOrderDetailsOfDriverProjection projection :
-            projectionPage.getContent()) {
-
-        log.info(
-                "Processing orderId={}, driverId={}",
-                projection.getOrderId(),
-                driverId
-        );
-
-        // ========================================================
-        // MAP CO DATABASE DATA TO DTO
-        // ========================================================
-
-        CoOrderDetailsOfDriverDto dto =
-                CoCustomerMapper.mapToOrderDetailsOfDriver(
-                        projection
+        Page<CoOrderDetailsOfDriverProjection> projectionPage =
+                coOrderRepository.getOrderDetailsOfDriver(
+                        driverId,
+                        pageable
                 );
 
-        // ========================================================
-        // OUTLET DETAILS FROM FM MICROSERVICE
-        // ========================================================
-
-        if (projection.getOutletId() != null) {
+        if (projectionPage == null || projectionPage.isEmpty()) {
 
             log.info(
-                    "Fetching outlet details for outletId={}",
-                    projection.getOutletId()
+                    "No orders found for driverId={}",
+                    driverId
             );
 
-            try {
+            return Page.empty(pageable);
+        }
 
-                CoOutletDetailsDto outlet =
-                        fmFeignClient.getOutletCompleteDetails(
-                                projection.getOutletId()
+        List<CoOrderDetailsOfDriverDto> responseList =
+                new ArrayList<>();
+
+        // ============================================================
+        // PROCESS EACH ORDER
+        // ============================================================
+
+        for (CoOrderDetailsOfDriverProjection projection :
+                projectionPage.getContent()) {
+
+            log.info(
+                    "Processing orderId={}, driverId={}",
+                    projection.getOrderId(),
+                    driverId
+            );
+
+            // ========================================================
+            // MAP CO DATABASE DATA TO DTO
+            // ========================================================
+
+            CoOrderDetailsOfDriverDto dto =
+                    CoCustomerMapper.mapToOrderDetailsOfDriver(
+                            projection
+                    );
+
+            // ========================================================
+            // OUTLET DETAILS FROM FM MICROSERVICE
+            // ========================================================
+
+            if (projection.getOutletId() != null) {
+
+                log.info(
+                        "Fetching outlet details for outletId={}",
+                        projection.getOutletId()
+                );
+
+                try {
+
+                    CoOutletDetailsDto outlet =
+                            fmFeignClient.getOutletCompleteDetails(
+                                    projection.getOutletId()
+                            );
+
+                    if (outlet != null) {
+
+                        dto.setOutletName(
+                                outlet.getOutletName()
                         );
 
-                if (outlet != null) {
+                    } else {
 
-                    dto.setOutletName(
-                            outlet.getOutletName()
-                    );
+                        log.warn(
+                                "Outlet details returned null for outletId={}",
+                                projection.getOutletId()
+                        );
+                    }
 
-                } else {
+                } catch (Exception e) {
+
+                    // If outlet is not available in FM,
+                    // don't fail the complete driver orders API.
+                    // outletName will remain null.
 
                     log.warn(
-                            "Outlet details returned null for outletId={}",
-                            projection.getOutletId()
+                            "Unable to fetch outlet details from FM for outletId={}. " +
+                                    "Continuing with null outletName.",
+                            projection.getOutletId(),
+                            e
                     );
                 }
-
-            } catch (Exception e) {
-
-                // If outlet is not available in FM,
-                // don't fail the complete driver orders API.
-                // outletName will remain null.
-
-                log.warn(
-                        "Unable to fetch outlet details from FM for outletId={}. " +
-                                "Continuing with null outletName.",
-                        projection.getOutletId(),
-                        e
-                );
             }
-        }
 
-        // ========================================================
-        // DRIVER DETAILS FROM DRIVER MICROSERVICE
-        // ========================================================
+            // ========================================================
+            // DRIVER DETAILS FROM DRIVER MICROSERVICE
+            // ========================================================
 
-        if (projection.getDriverId() != null) {
+            if (projection.getDriverId() != null) {
 
-            log.info(
-                    "Fetching driver details for driverId={}",
-                    projection.getDriverId()
-            );
+                log.info(
+                        "Fetching driver details for driverId={}",
+                        projection.getDriverId()
+                );
 
-            CoDriverDetailsDto driver =
-                    driverFeignClient.getDriverDetailsForOrder(
-                            projection.getDriverId()
+                CoDriverDetailsDto driver =
+                        driverFeignClient.getDriverDetailsForOrder(
+                                projection.getDriverId()
+                        );
+
+                if (driver != null) {
+
+                    dto.setDriverName(
+                            driver.getDriverName()
                     );
 
-            if (driver != null) {
-
-                dto.setDriverName(
-                        driver.getDriverName()
-                );
-
-                dto.setDriverMobileNumber(
-                        driver.getDriverMobileNumber()
-                );
+                    dto.setDriverMobileNumber(
+                            driver.getDriverMobileNumber()
+                    );
+                }
             }
+
+            // Add completed DTO to response list
+            responseList.add(dto);
         }
 
-        // Add completed DTO to response list
-        responseList.add(dto);
+        // ============================================================
+        // CREATE PAGINATED RESPONSE
+        // ============================================================
+
+        Page<CoOrderDetailsOfDriverDto> responsePage =
+                new PageImpl<>(
+                        responseList,
+                        pageable,
+                        projectionPage.getTotalElements()
+                );
+
+        log.info(
+                "Successfully fetched {} orders for driverId={}, totalElements={}",
+                responseList.size(),
+                driverId,
+                projectionPage.getTotalElements()
+        );
+
+        return responsePage;
     }
-
-    // ============================================================
-    // CREATE PAGINATED RESPONSE
-    // ============================================================
-
-    Page<CoOrderDetailsOfDriverDto> responsePage =
-            new PageImpl<>(
-                    responseList,
-                    pageable,
-                    projectionPage.getTotalElements()
-            );
-
-    log.info(
-            "Successfully fetched {} orders for driverId={}, totalElements={}",
-            responseList.size(),
-            driverId,
-            projectionPage.getTotalElements()
-    );
-
-    return responsePage;
 }
-}
-
