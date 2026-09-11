@@ -1632,6 +1632,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
         for (FmOutletDayDTO d : dto.getOperatingDays()) {
 
             if (d == null || d.getDayOfWeekId() == null) {
+                log.warn(
+                        "[OUTLET_BULK] Skipping invalid operating slot | outletId={}",
+                        outletId
+                );
                 continue;
             }
 
@@ -1683,22 +1687,39 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
             day.setOutletId(outletId);
             day.setDayOfWeekId(d.getDayOfWeekId());
+
             day.setIsOpen(
                     d.getIsOpen() != null
                             ? d.getIsOpen()
-                            : true
+                            : Boolean.TRUE
+            );
+
+            day.setOpeningTime(
+                    d.getOpeningTime() != null
+                            ? d.getOpeningTime()
+                            : LocalTime.of(9, 0)
             );
             day.setOpeningTime(openingTime);
             day.setClosingTime(closingTime);
 
             outletDays.add(day);
+            day.setClosingTime(
+                    d.getClosingTime() != null
+                            ? d.getClosingTime()
+                            : LocalTime.of(22, 0)
+            );
+
+            outletDays.add(day);
 
             log.info(
                     "[OUTLET_BULK] OPERATING_TIMING_PREPARED | outletId={} | dayOfWeekId={} | opening={} | closing={}",
+                    "[OUTLET_BULK] OPERATING_SLOT_CREATED | outletId={} | dayOfWeekId={} | opening={} | closing={}",
                     outletId,
                     d.getDayOfWeekId(),
                     openingTime,
-                    closingTime
+                    closingTime,
+                    day.getOpeningTime(),
+                    day.getClosingTime()
             );
         }
 
@@ -1712,31 +1733,70 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 outletDays.size()
         );
     }
-
     private void saveOperatingDays(FmOutletRequestDTO dto, Integer outletId) {
-        if (dto.getOperatingDays() == null || dto.getOperatingDays().isEmpty()) return;
-        for (FmOutletDayDTO d : dto.getOperatingDays()) {
-            if (d.getDayOfWeekId() == null) continue;
 
-            /*
-             * If slotType is not provided,
-             * treat it as a normal/full-day slot.
-             */
-            boolean isEvening = d.getSlotType() != null && "evening".equalsIgnoreCase(d.getSlotType());
+        if (dto.getOperatingDays() == null || dto.getOperatingDays().isEmpty()) {
+            log.info(
+                    "[OUTLET] No operating slots provided | outletId={}",
+                    outletId
+            );
+            return;
+        }
 
-//            boolean isEvening = "evening".equalsIgnoreCase(d.getSlotType());
-            LocalTime defOpen = isEvening ? LocalTime.of(17, 0) : LocalTime.of(9, 0);
-            LocalTime defClose = isEvening ? LocalTime.of(22, 0) : LocalTime.of(14, 0);
+        List<FmOutletDay> operatingDays = new ArrayList<>();
+
+        for (FmOutletDayDTO dayDto : dto.getOperatingDays()) {
+
+            if (dayDto == null || dayDto.getDayOfWeekId() == null) {
+                log.warn(
+                        "[OUTLET] Skipping invalid operating slot | outletId={}",
+                        outletId
+                );
+                continue;
+            }
 
             FmOutletDay day = new FmOutletDay();
+
             day.setOutletId(outletId);
-            day.setDayOfWeekId(d.getDayOfWeekId());
-            day.setIsOpen(d.getIsOpen() != null ? d.getIsOpen() : true);
-            day.setOpeningTime(parseTime(String.valueOf(d.getOpeningTime()), defOpen));
-            day.setClosingTime(parseTime(String.valueOf(d.getClosingTime()), defClose));
-            dayRepository.save(day);
+            day.setDayOfWeekId(dayDto.getDayOfWeekId());
+            day.setIsOpen(
+                    dayDto.getIsOpen() != null
+                            ? dayDto.getIsOpen()
+                            : Boolean.TRUE
+            );
+
+            day.setOpeningTime(
+                    dayDto.getOpeningTime() != null
+                            ? dayDto.getOpeningTime()
+                            : LocalTime.of(9, 0)
+            );
+
+            day.setClosingTime(
+                    dayDto.getClosingTime() != null
+                            ? dayDto.getClosingTime()
+                            : LocalTime.of(22, 0)
+            );
+
+            operatingDays.add(day);
+
+            log.info(
+                    "[OUTLET] OPERATING_SLOT_CREATED | outletId={} | dayOfWeekId={} | opening={} | closing={}",
+                    outletId,
+                    dayDto.getDayOfWeekId(),
+                    day.getOpeningTime(),
+                    day.getClosingTime()
+            );
         }
-        log.info("[OUTLET] Operating slots saved for outletId={}", outletId);
+
+        if (!operatingDays.isEmpty()) {
+            dayRepository.saveAll(operatingDays);
+        }
+
+        log.info(
+                "[OUTLET] Operating slots saved | outletId={} | slots={}",
+                outletId,
+                operatingDays.size()
+        );
     }
 
     private void saveOutletUser(String username, String password, Integer outletId) {
@@ -2821,7 +2881,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Override
     public FmPublicCustomerNearbyResponseDto fetchPublicCustomerNearbyOutlets(double customerLat, double customerLng) {
 
-        double radiusKm = 30.0;
+        double radiusKm = 10.0;
 
         log.info("[OutletService] fetchPublicCustomerNearbyOutlets lat={} lng={} radius={} km", customerLat, customerLng, radiusKm);
 
@@ -3586,3 +3646,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
 
 }
+
+
+
+
+
