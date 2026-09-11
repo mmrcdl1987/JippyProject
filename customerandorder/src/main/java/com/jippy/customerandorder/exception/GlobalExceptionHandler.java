@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
@@ -179,6 +180,31 @@ public class GlobalExceptionHandler {
                 .body(new CoResponseDto(
                         "500",
                         "An unexpected error occurred: " + ex.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleGenericException(Exception ex) {
+
+        log.error("Unexpected exception occurred", ex);
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                        "success", false,
+                        "message", "Something went wrong. Please try again later."
+                ));
+    }
+
+    @ExceptionHandler(CoWalletNotFoundException.class)
+    public ResponseEntity<?> handleWalletNotFound(
+            CoWalletNotFoundException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "success", false,
+                        "message", ex.getMessage()
+                ));
     }
 
 

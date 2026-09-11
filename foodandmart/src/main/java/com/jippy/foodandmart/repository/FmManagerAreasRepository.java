@@ -81,40 +81,4 @@ public interface FmManagerAreasRepository
      * Area 3
      */
     List<FmManagerAreas> findByUserId(Integer userId);
-
-
-    /**
-     * Updates the Manager Id for all mapped Areas.
-     *
-     * Business Rule:
-     * When an Approval Setting Approver changes,
-     * all Area mappings of the previous Approver
-     * are transferred to the new Approver.
-     *
-     * Example:
-     *
-     * Before
-     * -------
-     * User 80
-     * Area 1
-     * Area 2
-     * Area 3
-     *
-     * After
-     * ------
-     * User 81
-     * Area 1
-     * Area 2
-     * Area 3
-     */
-            @Modifying
-            @Transactional
-            @Query("""
-        UPDATE FmManagerAreas m
-        SET m.userId=:newUserId
-        WHERE m.userId=:oldUserId
-        """)
-    int updateManagerAreas(
-            @Param("oldUserId") Integer oldUserId,
-            @Param("newUserId") Integer newUserId);
 }

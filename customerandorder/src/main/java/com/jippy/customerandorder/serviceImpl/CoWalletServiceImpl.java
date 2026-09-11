@@ -1,10 +1,10 @@
 package com.jippy.customerandorder.serviceImpl;
 
-
 import com.jippy.customerandorder.dto.CoCustomerWalletResponseDto;
 import com.jippy.customerandorder.entity.CoCustomer;
 import com.jippy.customerandorder.entity.CoCustomerWallet;
 import com.jippy.customerandorder.entity.CoCustomerWalletTransactions;
+import com.jippy.customerandorder.exception.CoWalletNotFoundException;
 import com.jippy.customerandorder.iservice.CoWalletService;
 import com.jippy.customerandorder.repository.CoCustomerWalletRepository;
 import com.jippy.customerandorder.repository.CoCustomerWalletTransactionsRepository;
@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 @Service
@@ -24,25 +23,33 @@ public class CoWalletServiceImpl implements CoWalletService {
     private final CoCustomerWalletTransactionsRepository transactionsRepository;
 
     @Override
-     public CoCustomerWalletResponseDto getByCustomerId(Integer customerId) {
+    public CoCustomerWalletResponseDto getByCustomerId(Integer customerId) {
 
         CoCustomerWallet wallet = walletRepository
                 .findByCustomerCustomerId(customerId)
-                .orElseThrow(() -> new RuntimeException(
-                                "Wallet not found for customer id: " + customerId));
+                .orElseThrow(() ->
+                        new CoWalletNotFoundException(
+                                "Wallet not found for customer id: " + customerId
+                        )
+                );
 
-        CoCustomerWalletResponseDto response = new CoCustomerWalletResponseDto();
+        CoCustomerWalletResponseDto response =
+                new CoCustomerWalletResponseDto();
 
         response.setWalletId(wallet.getWalletId());
+
         CoCustomer customer = wallet.getCustomer();
+
         response.setCustomerId(customer.getCustomerId());
-        response.setCustomerName(customer.getFirstName() + " " + customer.getLastName());
+        response.setCustomerName(
+                customer.getFirstName() + " " + customer.getLastName()
+        );
+
         response.setBalanceAmount(wallet.getBalanceAmount());
         response.setBalancePoints(wallet.getBalancePoints());
 
         return response;
     }
-
 
     @Override
     @Transactional
@@ -53,7 +60,7 @@ public class CoWalletServiceImpl implements CoWalletService {
         CoCustomerWallet existingWallet =
                 walletRepository.findByCustomerCustomerId(customerId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new CoWalletNotFoundException(
                                         "Wallet not found for customer id: "
                                                 + customerId
                                 )
@@ -75,11 +82,10 @@ public class CoWalletServiceImpl implements CoWalletService {
                 ? walletDetails.getBalanceAmount()
                 : BigDecimal.ZERO;
 
-        // Calculate differences
         int pointsDifference = newPoints - oldPoints;
-        BigDecimal amountDifference = newAmount.subtract(oldAmount);
+        BigDecimal amountDifference =
+                newAmount.subtract(oldAmount);
 
-        // Update wallet
         existingWallet.setBalancePoints(newPoints);
         existingWallet.setBalanceAmount(newAmount);
         existingWallet.setUpdatedBy(walletDetails.getUpdatedBy());
@@ -88,15 +94,14 @@ public class CoWalletServiceImpl implements CoWalletService {
         CoCustomerWallet updatedWallet =
                 walletRepository.save(existingWallet);
 
-        // Create transaction if points or amount changed
-        if (pointsDifference != 0 || amountDifference.compareTo(BigDecimal.ZERO) != 0) {
+        if (pointsDifference != 0
+                || amountDifference.compareTo(BigDecimal.ZERO) != 0) {
 
             CoCustomerWalletTransactions transaction =
                     new CoCustomerWalletTransactions();
 
             transaction.setWalletId(existingWallet.getWalletId());
 
-            // Store absolute values
             if (pointsDifference != 0) {
                 transaction.setPoints(Math.abs(pointsDifference));
             }
@@ -105,7 +110,6 @@ public class CoWalletServiceImpl implements CoWalletService {
                 transaction.setAmount(amountDifference.abs());
             }
 
-            // Determine transaction type
             if (pointsDifference > 0
                     || amountDifference.compareTo(BigDecimal.ZERO) > 0) {
 

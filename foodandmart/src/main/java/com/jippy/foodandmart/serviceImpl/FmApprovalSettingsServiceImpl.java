@@ -6,6 +6,7 @@ import com.jippy.foodandmart.dto.FmApprovalSettingsResponseDTO;
 import com.jippy.foodandmart.dto.FmUpdateApprovalSettingsRequestDTO;
 import com.jippy.foodandmart.dto.FmUpdateApprovalSettingsResponseDTO;
 import com.jippy.foodandmart.entity.FmApprovalSettings;
+import com.jippy.foodandmart.entity.FmManagerAreas;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmApprovalSettingsMapper;
@@ -318,18 +319,76 @@ public class FmApprovalSettingsServiceImpl implements IFmApprovalSettingsService
                 approvalSetting.getApprovalSettingsId());
 
         //----------------------------------------------------------
-        // Update Manager Areas
-        //----------------------------------------------------------
+// Transfer Manager Areas
+//----------------------------------------------------------
 
-        int updatedRows = managerAreasRepository.updateManagerAreas(
+        Integer newApproverId = requestDTO.getApproverId();
+
+        List<FmManagerAreas> oldManagerAreas =
+                managerAreasRepository.findByUserId(oldApproverId);
+
+        int transferredCount = 0;
+        int duplicateCount = 0;
+
+        for (FmManagerAreas oldManagerArea : oldManagerAreas) {
+
+            Integer areaId = oldManagerArea.getAreaId();
+
+            //------------------------------------------------------
+            // Check whether New Approver already has this Area
+            //------------------------------------------------------
+
+            boolean alreadyAssigned =
+                    managerAreasRepository.existsByUserIdAndAreaId(
+                            newApproverId,
+                            areaId);
+
+            if (alreadyAssigned) {
+
+                //--------------------------------------------------
+                // Area already exists for New Approver.
+                // Remove Old Approver's duplicate mapping.
+                //--------------------------------------------------
+
+                managerAreasRepository.delete(oldManagerArea);
+
+                duplicateCount++;
+
+                log.info(
+                        "Area {} already assigned to User {}. " +
+                                "Removed duplicate mapping from User {}",
+                        areaId,
+                        newApproverId,
+                        oldApproverId);
+
+            } else {
+
+                //--------------------------------------------------
+                // Transfer Area to New Approver
+                //--------------------------------------------------
+
+                oldManagerArea.setUserId(newApproverId);
+
+                managerAreasRepository.save(oldManagerArea);
+
+                transferredCount++;
+
+                log.info(
+                        "Transferred Area {} from User {} to User {}",
+                        areaId,
                         oldApproverId,
-                        requestDTO.getApproverId());
+                        newApproverId);
+            }
+        }
 
         log.info(
-                "{} Manager Area records updated from User {} to User {}",
-                updatedRows,
+                "Manager Area transfer completed. " +
+                        "Transferred : {}, Duplicates removed : {}, " +
+                        "Old User : {}, New User : {}",
+                transferredCount,
+                duplicateCount,
                 oldApproverId,
-                requestDTO.getApproverId());
+                newApproverId);
 
         //----------------------------------------------------------
         // Prepare Response
