@@ -28,7 +28,4 @@ public class FmOutletDayDTO {
     @Schema(description = "Outlet closing time", example = "22:00")
     private LocalTime closingTime;
 
-    @Schema(description = "Operating slot type", example = "FULL_DAY")
-    // "morning" or "evening" — optional, used when outlet has two slots per day
-    private String slotType;
 }

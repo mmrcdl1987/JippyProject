@@ -903,41 +903,6 @@ public class FmOutletController {
 
                     dayDto.setClosingTime(closingTime);
 
-                    /*
-                     * Slot type.
-                     *
-                     * One timing:
-                     * FULL_DAY
-                     *
-                     * First of multiple:
-                     * MORNING
-                     *
-                     * Second:
-                     * EVENING
-                     *
-                     * Third and later:
-                     * SLOT_3, SLOT_4...
-                     */
-
-                    if (timings.length == 1) {
-
-                        dayDto.setSlotType("FULL_DAY");
-
-                    } else if (slotIndex == 0) {
-
-                        dayDto.setSlotType("MORNING");
-
-                    } else if (slotIndex == 1) {
-
-                        dayDto.setSlotType("EVENING");
-
-                    } else {
-
-                        dayDto.setSlotType("SLOT_" + (slotIndex + 1));
-                    }
-
-                    days.add(dayDto);
-
                 } catch (DateTimeException e) {
 
                     throw new IllegalArgumentException("Invalid operating time '" + timing + "' for " + dayKeys[i] + ". Expected HH:mm-HH:mm");
