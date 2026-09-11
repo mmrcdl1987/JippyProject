@@ -33,43 +33,29 @@ public class FmApprovalTransactionController {
      *
      * @return List of rejected approval transactions   -- extra api
      */
-    @Operation(
-            summary = "Get All Rejected Approvals",
-            description = "Retrieves all approval transactions with REJECTED status."
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "Rejected approvals retrieved successfully.")
-    @ApiResponse(
-            responseCode = "500",
-            description = "Internal Server Error.")
-    @GetMapping("/getRejectedApprovals")
-    public ResponseEntity<FmApiResponse<List<FmApprovalTransactionResponseDTO>>> getRejectedApprovals() {
-
-        log.info("Received request to get all REJECTED approval transactions.");
-
-        List<FmApprovalTransactionResponseDTO> response = approvalTransactionService.getRejectedApprovals();
-
-        log.info("Retrieved {} REJECTED approval transactions.", response.size());
-
-        return ResponseEntity.ok(FmApiResponse.success("Rejected approvals retrieved successfully.", response));
-    }
+//    @Operation(summary = "Get All Rejected Approvals", description = "Retrieves all approval transactions with REJECTED status.")
+//    @ApiResponse(responseCode = "200", description = "Rejected approvals retrieved successfully.")
+//    @ApiResponse(responseCode = "500", description = "Internal Server Error.")
+//    @GetMapping("/getRejectedApprovals")
+//    public ResponseEntity<FmApiResponse<List<FmApprovalTransactionResponseDTO>>> getRejectedApprovals() {
+//
+//        log.info("Received request to get all REJECTED approval transactions.");
+//
+//        List<FmApprovalTransactionResponseDTO> response = approvalTransactionService.getRejectedApprovals();
+//
+//        log.info("Retrieved {} REJECTED approval transactions.", response.size());
+//
+//        return ResponseEntity.ok(FmApiResponse.success("Rejected approvals retrieved successfully.", response));
+//    }
 
     /**
      * Fetches all PENDING approval requests from approval_request table.
      *
      * @return List of pending approval requests
      */
-    @Operation(
-            summary = "Get All Pending Approvals",
-            description = "Retrieves all approval requests with PENDING status from approval_request table."
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "Pending approvals retrieved successfully.")
-    @ApiResponse(
-            responseCode = "500",
-            description = "Internal Server Error.")
+    @Operation(summary = "Get All Pending Approvals", description = "Retrieves all approval requests with PENDING status from approval_request table.")
+    @ApiResponse(responseCode = "200", description = "Pending approvals retrieved successfully.")
+    @ApiResponse(responseCode = "500", description = "Internal Server Error.")
     @GetMapping("/getPendingApprovals")
     public ResponseEntity<FmApiResponse<List<FmApprovalRequestResponseDTO>>> getPendingApprovals() {
 
@@ -87,23 +73,15 @@ public class FmApprovalTransactionController {
      *
      * @return List of all approval transactions
      */
-    @Operation(
-            summary = "Get All Transactions",
-            description = "Retrieves all approval transactions regardless of status."
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "All transactions retrieved successfully.")
-    @ApiResponse(
-            responseCode = "500",
-            description = "Internal Server Error.")
+    @Operation(summary = "Get All Transactions", description = "Retrieves all approval transactions regardless of status.")
+    @ApiResponse(responseCode = "200", description = "All transactions retrieved successfully.")
+    @ApiResponse(responseCode = "500", description = "Internal Server Error.")
     @GetMapping("/getAllTransactions")
     public ResponseEntity<FmApiResponse<List<FmApprovalTransactionResponseDTO>>> getAllTransactions() {
 
         log.info("Received request to get all approval transactions.");
 
-        List<FmApprovalTransactionResponseDTO> response
-                = approvalTransactionService.getAllTransactions();
+        List<FmApprovalTransactionResponseDTO> response = approvalTransactionService.getAllTransactions();
 
         log.info("Retrieved {} approval transactions.", response.size());
 

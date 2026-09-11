@@ -36,7 +36,9 @@ public class FmMerchantWithBankDto {
         @NotBlank(message = "Business type should not be empty")
         private String businessType;
 
-        private String status;
+        private Boolean isApproved;
+
+//        private String status;
 
         // merchant address details
         private String buildingNumber;

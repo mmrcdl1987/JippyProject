@@ -1233,17 +1233,17 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
                 FmMerchantWithBankDto response = FmMerchantMapper.mapToMerchantWithBankDto(data);
 
-                FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(
-                        merchantId,
-                        FmAppConstants.TYPE_MERCHANT
-                ).orElse(null);
+//                FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(
+//                        merchantId,
+//                        FmAppConstants.TYPE_MERCHANT
+//                ).orElse(null);
 
-                if (kyc != null) {
-                    response.setAadharNumber(kyc.getAadhaarNumber());
-                    response.setPanNumber(kyc.getPanNumber());
+//                if (kyc != null) {
+//                    response.setAadharNumber(kyc.getAadhaarNumber());
+//                    response.setPanNumber(kyc.getPanNumber());
 //            response.setAadhaarNumberUrl(kyc.getAadhaarNumberUrl());
 //            response.setPanNumberUrl(kyc.getPanNumberUrl());
-                }
+//                }
 
                 return response;
             }

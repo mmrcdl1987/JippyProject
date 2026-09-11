@@ -64,19 +64,32 @@ public class SesEmailService implements EmailService {
 
         log.info("MERCHANT_REGISTRATION_EMAIL_SUCCESS | email={}", merchantEmail);
     }
-
     @Override
-    public void sendMerchantApprovedEmail(String merchantEmail, String merchantName) {
+    public void sendMerchantApprovedEmail(
+            String merchantEmail,
+            String merchantName,
+            String approvalLevel) {
 
-        log.info("MERCHANT_APPROVED_EMAIL_START | email={}, merchantName={}", merchantEmail, merchantName);
+        log.info(
+                "MERCHANT_APPROVED_EMAIL_START | email={}, merchantName={}, approvalLevel={}",
+                merchantEmail,
+                merchantName,
+                approvalLevel);
 
-        String subject = "Your Jippy Mart Merchant Account is Approved - Add Your Outlet";
+        String subject =
+                "Your Jippy Mart Merchant Account is Approved - Add Your Outlet";
 
-        String htmlBody = buildMerchantApprovedTemplate(merchantName);
+        String htmlBody =
+                buildMerchantApprovedTemplate(
+                        merchantName,
+                        approvalLevel);
 
         sendEmail(merchantEmail, subject, htmlBody);
 
-        log.info("MERCHANT_APPROVED_EMAIL_SUCCESS | email={}", merchantEmail);
+        log.info(
+                "MERCHANT_APPROVED_EMAIL_SUCCESS | email={}, approvalLevel={}",
+                merchantEmail,
+                approvalLevel);
     }
 
     @Override
@@ -94,7 +107,11 @@ public class SesEmailService implements EmailService {
     }
 
     @Override
-    public void sendOutletOnlineEmail(String outletEmail, String outletName, String merchantName) {
+    public void sendOutletOnlineEmail(
+            String outletEmail,
+            String outletName,
+            String merchantName,
+            String approvalLevel) {
 
         log.info("OUTLET_ONLINE_EMAIL_START | email={}, outletName={}, merchantName={}", outletEmail, outletName, merchantName);
 
@@ -103,8 +120,13 @@ public class SesEmailService implements EmailService {
         // Current date and time when outlet becomes ONLINE
         String goLiveDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"));
 
-        String htmlBody = buildOutletOnlineTemplate(outletName, merchantName, outletEmail, goLiveDate);
-
+        String htmlBody = buildOutletOnlineTemplate(
+                outletName,
+                merchantName,
+                outletEmail,
+                goLiveDate,
+                approvalLevel
+        );
         sendEmail(outletEmail, subject, htmlBody);
 
         log.info("OUTLET_ONLINE_EMAIL_SUCCESS | email={}, outletName={}, goLiveDate={}", outletEmail, outletName, goLiveDate);
@@ -798,8 +820,12 @@ public class SesEmailService implements EmailService {
                 """.formatted(outletName, outletName, merchantName, outletEmail);
     }
 
-    private String buildOutletOnlineTemplate(String outletName, String merchantName, String outletEmail, String goLiveDate) {
-
+    private String buildOutletOnlineTemplate(
+            String outletName,
+            String merchantName,
+            String outletEmail,
+            String goLiveDate,
+            String approvalLevel) {
         return """
                 <!DOCTYPE html>
                 <html>
@@ -993,7 +1019,8 @@ public class SesEmailService implements EmailService {
                                                         color:#222222;
                                                     ">
                 
-                                                        Your outlet is now live on
+                                                        Your outlet has completed
+                                                        <b>%s</b> approval with
                                                         <b>Jippy Food Delivery.</b>
                 
                                                     </p>
@@ -2210,10 +2237,19 @@ public class SesEmailService implements EmailService {
                 
                 </body>
                 </html>
-                """.formatted(merchantName, outletName, merchantName, outletEmail, goLiveDate);
+     """.formatted(
+                approvalLevel,
+                merchantName,
+                outletName,
+                merchantName,
+                outletEmail,
+                goLiveDate
+        );
     }
 
-    private String buildMerchantApprovedTemplate(String merchantName) {
+    private String buildMerchantApprovedTemplate(
+            String merchantName,
+            String approvalLevel) {
 
         return """
                 <!DOCTYPE html>
@@ -2431,8 +2467,8 @@ public class SesEmailService implements EmailService {
                                         ">
                 
                                             Congratulations! Your merchant account
-                                            has been approved by
-                                            <b>Jippy Food Delivery</b>.
+                                            has completed <b>%s</b> approval
+                                            with <b>Jippy Food Delivery</b>.
                 
                                         </p>
                 
@@ -2971,7 +3007,7 @@ public class SesEmailService implements EmailService {
                 
                 </body>
                 </html>
-                """.formatted(merchantName);
+                """.formatted(merchantName,approvalLevel);
     }
 
     private String buildMerchantRegistrationTemplate(String merchantName, String merchantEmail) {

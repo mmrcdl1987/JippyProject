@@ -69,8 +69,8 @@ public class FmProductVariantOptionServiceImpl
 
         List<FmProductVariantOption> options =
                 productVariantOptionRepository
-                        .findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(
-                                productId);
+                        .findByProductIdAndIsActiveOrderByProductVariantOptionsIdAsc(
+                                productId, FmAppConstants.FLAG_YES);
 
         log.info("Fetched {} Variant Options for ProductId={}",
                 options.size(),

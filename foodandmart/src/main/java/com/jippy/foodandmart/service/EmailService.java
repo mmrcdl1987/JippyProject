@@ -3,7 +3,6 @@ package com.jippy.foodandmart.service;
 import com.jippy.foodandmart.dto.SchedulerSummaryDto;
 
 import java.io.File;
-import java.util.List;
 
 /**
  * Common Email Service interface.
@@ -49,8 +48,8 @@ public interface EmailService {
 
     void sendMerchantApprovedEmail(
             String merchantEmail,
-            String merchantName
-    );
+            String merchantName,
+            String approvalLevel);
 
     void sendOutletRegistrationEmail(
             String outletEmail,
@@ -61,7 +60,8 @@ public interface EmailService {
     void sendOutletOnlineEmail(
             String outletEmail,
             String outletName,
-            String merchantName
+            String merchantName,
+            String approvalLevel
     );
 
 }

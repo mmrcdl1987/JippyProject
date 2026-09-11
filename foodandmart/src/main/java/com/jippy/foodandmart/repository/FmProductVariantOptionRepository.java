@@ -16,8 +16,10 @@ public interface FmProductVariantOptionRepository
     /**
      * Fetch all active variant options of a product.
      */
-    List<FmProductVariantOption> findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(
-            Integer productId);
+    List<FmProductVariantOption>
+    findByProductIdAndIsActiveOrderByProductVariantOptionsIdAsc(
+            Integer productId,
+            String isActive);
 
     /**
      * Fetch one active variant option.
