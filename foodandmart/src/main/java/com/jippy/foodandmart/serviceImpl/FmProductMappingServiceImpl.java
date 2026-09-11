@@ -3,11 +3,22 @@ package com.jippy.foodandmart.serviceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jippy.foodandmart.dto.*;
-import com.jippy.foodandmart.entity.*;
-import com.jippy.foodandmart.mapper.FmCreateMasterProductMapper;
-import com.jippy.foodandmart.mapper.FmProductMapper;
-import com.jippy.foodandmart.repository.*;
+import com.jippy.foodandmart.dto.FmMapToProductRequest;
+import com.jippy.foodandmart.dto.FmMapToProductResult;
+import com.jippy.foodandmart.dto.FmMasterProductMappingResultDTO;
+import com.jippy.foodandmart.entity.FmCategory;
+import com.jippy.foodandmart.entity.FmMasterProduct;
+import com.jippy.foodandmart.entity.FmOutletCategory;
+import com.jippy.foodandmart.entity.FmProduct;
+import com.jippy.foodandmart.entity.FmProductAvailableTiming;
+import com.jippy.foodandmart.entity.FmProductVariant;
+import com.jippy.foodandmart.repository.FmCategoryRepository;
+import com.jippy.foodandmart.repository.FmDaysOfWeekRepository;
+import com.jippy.foodandmart.repository.FmMasterProductRepository;
+import com.jippy.foodandmart.repository.FmOutletCategoryRepository;
+import com.jippy.foodandmart.repository.FmProductAvailableTimingRepository;
+import com.jippy.foodandmart.repository.FmProductRepository;
+import com.jippy.foodandmart.repository.FmProductVariantRepository;
 import com.jippy.foodandmart.service.IFmProductMappingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,17 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Service for mapping master products into outlet-specific product tables.
- *
- * <p>Why a separate service: product mapping is a distinct business operation
- * (importing from the global master catalogue into a specific outlet's menu)
- * that sits outside the normal CRUD flow and deserves its own service.</p>
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -41,372 +46,1604 @@ public class FmProductMappingServiceImpl implements IFmProductMappingService {
     private final FmMasterProductRepository masterProductRepository;
     private final FmProductAvailableTimingRepository productAvailableTimingRepository;
     private final FmDaysOfWeekRepository daysOfWeekRepository;
-    private final ObjectMapper                     objectMapper;
-    private final FmCreateMasterProductMapper mapper;
+    private final ObjectMapper objectMapper;
 
 
-    /**
-     * Maps a list of manually supplied product entries into the outlet's product table.
-     *
-     * <p>Why skip duplicates silently: when an admin re-runs the mapping for the
-     * same outlet category, already-existing products should be skipped rather
-     * than throwing an error or inserting duplicates.</p>
-     *
-     * <p>Why variants are saved separately: the products table holds the base
-     * product while product_variants holds the per-size/per-option pricing.
-     * A product is only marked hasProductVariants=true when at least one variant
-     * entry is present in the request.</p>
-     *
-     * @param req the mapping request containing outletCategoryId and product entries
-     * @return a {@link FmMapToProductResult} with counts of saved vs skipped products
-     * @throws IllegalArgumentException if outletCategoryId is missing or category not found
-     */
+    // ============================================================
+    // MAP SELECTED MASTER PRODUCTS -> OUTLET PRODUCTS
+    // ============================================================
+
     @Override
-    public FmMapToProductResult mapToProducts(FmMapToProductRequest req) {
-        if (req.getProducts() == null || req.getProducts().isEmpty())
-            throw new IllegalArgumentException("No products provided.");
+    public FmMapToProductResult mapToProducts(
+            FmMapToProductRequest req) {
 
-        // Validate explicit outletCategoryId if provided
-        if (req.getOutletCategoryId() != null) {
-            outletCategoryRepository.findById(req.getOutletCategoryId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "OutletCategory ID " + req.getOutletCategoryId() + " not found."));
+        if (req == null) {
+            throw new IllegalArgumentException(
+                    "Mapping request cannot be null."
+            );
         }
 
-        List<String> savedNames   = new ArrayList<>();
-        List<String> skippedNames = new ArrayList<>();
+        if (req.getProducts() == null ||
+                req.getProducts().isEmpty()) {
 
-        for (FmMapToProductRequest.ProductEntry entry : req.getProducts()) {
-            String name = entry.getProductName() == null ? "" : entry.getProductName().trim();
-            if (name.isBlank()) { skippedNames.add("(blank)"); continue; }
+            throw new IllegalArgumentException(
+                    "No products provided."
+            );
+        }
 
-            // Resolve outletCategoryId: use explicit value or derive from master product's category
-            Integer resolvedOutletCategoryId = req.getOutletCategoryId();
+        /*
+         * ==========================================================
+         * OUTLET CATEGORY IS REQUIRED
+         * ==========================================================
+         *
+         * The selected outlet category is the destination
+         * for every selected master product.
+         */
+        if (req.getOutletCategoryId() == null ||
+                req.getOutletCategoryId() <= 0) {
 
-            if (resolvedOutletCategoryId == null) {
-                // Derive category from the entry's categoryId or master product lookup
-                Integer categoryId = entry.getCategoryId();
-                if (categoryId == null && entry.getMasterProductId() != null) {
-                    categoryId = masterProductRepository.findById(entry.getMasterProductId())
-                            .map(FmMasterProduct::getCategoryId)
+            throw new IllegalArgumentException(
+                    "Outlet category ID is required."
+            );
+        }
+
+        /*
+         * ==========================================================
+         * LOAD OUTLET CATEGORY
+         * ==========================================================
+         */
+        FmOutletCategory outletCategory =
+                outletCategoryRepository
+                        .findById(req.getOutletCategoryId())
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "OutletCategory ID "
+                                                + req.getOutletCategoryId()
+                                                + " not found."
+                                )
+                        );
+
+        /*
+         * ==========================================================
+         * CHECK OUTLET ID
+         * ==========================================================
+         */
+        if (req.getOutletId() != null &&
+                !req.getOutletId().equals(
+                        outletCategory.getOutletId()
+                )) {
+
+            throw new IllegalArgumentException(
+                    "OutletCategory ID "
+                            + req.getOutletCategoryId()
+                            + " does not belong to outlet "
+                            + req.getOutletId()
+            );
+        }
+
+        /*
+         * Category attached to the selected outlet category.
+         */
+        Integer outletCategoryCategoryId =
+                outletCategory.getCategoryId();
+
+        if (outletCategoryCategoryId == null ||
+                outletCategoryCategoryId <= 0) {
+
+            throw new IllegalArgumentException(
+                    "Selected outlet category does not have a valid category."
+            );
+        }
+
+        /*
+         * ==========================================================
+         * RESULT COLLECTIONS
+         * ==========================================================
+         */
+        List<String> savedNames =
+                new ArrayList<>();
+
+        List<String> skippedNames =
+                new ArrayList<>();
+
+
+        // ============================================================
+        // PROCESS EACH MASTER PRODUCT
+        // ============================================================
+
+        for (FmMapToProductRequest.ProductEntry entry
+                : req.getProducts()) {
+
+            if (entry == null) {
+
+                skippedNames.add(
+                        "(null)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * MASTER PRODUCT ID
+             * ======================================================
+             */
+            if (entry.getMasterProductId() == null ||
+                    entry.getMasterProductId() <= 0) {
+
+                String requestName =
+                        entry.getProductName() == null
+                                ? "(unknown)"
+                                : entry.getProductName().trim();
+
+                skippedNames.add(
+                        requestName
+                                + " (invalid master product ID)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * FETCH MASTER PRODUCT
+             * ======================================================
+             */
+            FmMasterProduct masterProduct =
+                    masterProductRepository
+                            .findById(
+                                    entry.getMasterProductId()
+                            )
                             .orElse(null);
-                }
-                if (categoryId == null) {
-                    log.warn("[MAP] Cannot resolve categoryId for product '{}' — skipping", name);
-                    skippedNames.add(name + " (no category)");
-                    continue;
-                }
-                if (req.getOutletId() == null) {
-                    log.warn("[MAP] outletId missing for product '{}' — skipping", name);
-                    skippedNames.add(name + " (no outlet)");
-                    continue;
-                }
-                // Find or create outlet_categories row for this outlet + category
-                final Integer finalCategoryId = categoryId;
-                FmOutletCategory outletCategory = outletCategoryRepository
-                        .findByOutletIdAndCategoryId(req.getOutletId(), categoryId)
-                        .orElseGet(() -> {
-                            FmOutletCategory oc = new FmOutletCategory();
-                            oc.setOutletId(req.getOutletId());
-                            oc.setCategoryId(finalCategoryId);
-                            FmOutletCategory saved2 = outletCategoryRepository.save(oc);
-                            log.info("[MAP] Created OutletCategory: outletId={} categoryId={} => outletCategoryId={}",
-                                    req.getOutletId(), finalCategoryId, saved2.getOutletCategoryId());
-                            return saved2;
-                        });
-                resolvedOutletCategoryId = outletCategory.getOutletCategoryId();
-            }
 
-            // Skip duplicate check
-            if (productRepository.existsByOutletCategoryIdAndProductNameIgnoreCase(
-                    resolvedOutletCategoryId, name)) {
-                skippedNames.add(name);
+            if (masterProduct == null) {
+
+                skippedNames.add(
+                        "Master Product ID "
+                                + entry.getMasterProductId()
+                                + " (not found)"
+                );
+
                 continue;
             }
 
-            boolean hasVariants = Boolean.TRUE.equals(entry.getHasProductVariants())
-                    && entry.getVariants() != null && !entry.getVariants().isEmpty();
 
-            // Resolve images from master product if masterProductId is provided
-            String imageLink = null;
-            String photos    = null;
-            String thumbnail = null;
-            if (entry.getMasterProductId() != null) {
-                FmMasterProduct mp = masterProductRepository.findById(entry.getMasterProductId())
-                        .orElse(null);
-                if (mp != null) {
-                    imageLink = mp.getPhoto();
-//                    photos    = mp.getPhotos();
-//                    thumbnail = mp.getThumbnail();
-                }
+            /*
+             * ======================================================
+             * MASTER PRODUCT NAME
+             * ======================================================
+             */
+            String name =
+                    masterProduct.getMasterProductName() == null
+                            ? ""
+                            : masterProduct
+                            .getMasterProductName()
+                            .trim();
+
+            if (name.isBlank()) {
+
+                skippedNames.add(
+                        "(blank master product name)"
+                );
+
+                continue;
             }
 
-            // IMAGE IS MANDATORY — throw error if master product has no image
-            if (imageLink == null || imageLink.isBlank()) {
+
+            /*
+             * ======================================================
+             * MASTER CATEGORY
+             * ======================================================
+             */
+            Integer masterCategoryId =
+                    masterProduct.getCategoryId();
+
+            String masterCategoryName =
+                    masterProduct.getCategoryName() == null
+                            ? ""
+                            : masterProduct
+                            .getCategoryName()
+                            .trim();
+
+            if (masterCategoryId == null ||
+                    masterCategoryId <= 0) {
+
+                skippedNames.add(
+                        name
+                                + " (master product has no category)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * VALIDATE CATEGORY MATCH
+             * ======================================================
+             *
+             * The selected outlet category must belong to
+             * the same global category as the master product.
+             */
+            if (!masterCategoryId.equals(
+                    outletCategoryCategoryId
+            )) {
+
+                skippedNames.add(
+                        name
+                                + " (category mismatch)"
+                );
+
+                log.warn(
+                        "[MAP] Category mismatch | " +
+                                "masterProductId={} | " +
+                                "product={} | " +
+                                "masterCategoryId={} | " +
+                                "masterCategoryName={} | " +
+                                "outletCategoryId={} | " +
+                                "outletCategoryCategoryId={}",
+                        masterProduct.getMasterProductId(),
+                        name,
+                        masterCategoryId,
+                        masterCategoryName,
+                        req.getOutletCategoryId(),
+                        outletCategoryCategoryId
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * DUPLICATE PRODUCT CHECK
+             * ======================================================
+             *
+             * Current products table does not have master_product_id.
+             *
+             * Therefore duplicate detection is:
+             *
+             * outlet_category_id + product_name
+             *
+             * Same product + same outlet category = invalid duplicate.
+             */
+            boolean alreadyExists =
+                    productRepository
+                            .existsByOutletCategoryIdAndProductNameIgnoreCase(
+                                    req.getOutletCategoryId(),
+                                    name
+                            );
+
+            if (alreadyExists) {
+
+                skippedNames.add(
+                        name + " (Already Exists)"
+                );
+
+                log.info(
+                        "[MAP] Duplicate product skipped | " +
+                                "product={} | " +
+                                "outletCategoryId={}",
+                        name,
+                        req.getOutletCategoryId()
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * MASTER DESCRIPTION
+             * ======================================================
+             */
+            String description =
+                    masterProduct.getDescription() == null
+                            ? ""
+                            : masterProduct
+                            .getDescription()
+                            .trim();
+
+            /*
+             * products.description is NOT NULL.
+             */
+            if (description.length() > 500) {
+
+                description =
+                        description.substring(
+                                0,
+                                500
+                        );
+            }
+
+
+            /*
+             * ======================================================
+             * MASTER PRODUCT TYPE
+             * ======================================================
+             */
+            String productType =
+                    masterProduct.getProductType() == null
+                            ? ""
+                            : masterProduct
+                            .getProductType()
+                            .trim();
+
+            if (productType.isBlank()) {
+
+                skippedNames.add(
+                        name
+                                + " (product type missing)"
+                );
+
+                continue;
+            }
+
+            if (productType.length() > 20) {
+
+                productType =
+                        productType.substring(
+                                0,
+                                20
+                        );
+            }
+
+
+            /*
+             * ======================================================
+             * MASTER VEG STATUS
+             * ======================================================
+             */
+            Boolean isVeg =
+                    masterProduct.getIsVeg();
+
+            if (isVeg == null) {
+
+                skippedNames.add(
+                        name
+                                + " (isVeg missing)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * MASTER IMAGE
+             * ======================================================
+             */
+            String imageLink =
+                    masterProduct.getPhoto();
+
+            if (imageLink == null ||
+                    imageLink.isBlank()) {
+
                 throw new IllegalArgumentException(
-                        "Product '" + name + "' cannot be added: no image found in master product. " +
-                                "Please add an image to the master product first.");
+                        "Product '"
+                                + name
+                                + "' cannot be added: no image found "
+                                + "in master product."
+                );
             }
 
-            // Create the base product record
-            FmProduct product = new FmProduct();
-            product.setOutletCategoryId(resolvedOutletCategoryId);
-            product.setProductName(name);
-            product.setDescription(entry.getDescription() == null ? "" : entry.getDescription());
-            product.setIsVeg(entry.getIsVeg() == null ? Boolean.TRUE : entry.getIsVeg());
-            product.setHasProductVariants(hasVariants);
-            product.setImageLink(imageLink);
-//            product.setPhotos(photos);
-//            product.setThumbnail(thumbnail);
-            // Use the price explicitly sent from the frontend (per-item or default).
-            // Fall back to the CSV-derived static map only when nothing was provided.
-            BigDecimal requestPrice = entry.getMerchantPrice();
-            if (requestPrice != null && requestPrice.compareTo(BigDecimal.ZERO) > 0) {
-                product.setMerchantPrice(requestPrice);
-            } else {
-                product.setMerchantPrice(resolvePrice(name));
+
+            /*
+             * ======================================================
+             * HAS VARIANTS
+             * ======================================================
+             */
+            boolean hasVariants =
+                    Boolean.TRUE.equals(
+                            entry.getHasProductVariants()
+                    )
+                            && entry.getVariants() != null
+                            && !entry.getVariants().isEmpty();
+
+
+            /*
+             * ======================================================
+             * MERCHANT PRICE
+             * ======================================================
+             *
+             * IMPORTANT:
+             *
+             * Price comes from:
+             *
+             * CSV
+             *   ↓
+             * Compare
+             *   ↓
+             * Add To Outlet
+             *   ↓
+             * entry.merchantPrice
+             *
+             * We do NOT use the old static price mapper.
+             */
+            BigDecimal merchantPrice =
+                    entry.getMerchantPrice();
+
+            if (merchantPrice == null) {
+
+                merchantPrice =
+                        BigDecimal.ZERO;
             }
-            FmProduct saved = productRepository.save(product);
 
-            // Save availability timings from CSV or explicit timing entries
-            saveTimings(saved.getProductId(), entry);
+            if (merchantPrice.compareTo(
+                    BigDecimal.ZERO
+            ) < 0) {
 
-            // Save each variant if this product has options (e.g. Small/Medium/Large)
+                throw new IllegalArgumentException(
+                        "Merchant price cannot be negative "
+                                + "for product: "
+                                + name
+                );
+            }
+
+
+            /*
+             * ======================================================
+             * CREATE OUTLET PRODUCT
+             * ======================================================
+             */
+            FmProduct product =
+                    new FmProduct();
+
+
+            /*
+             * Outlet category
+             */
+            product.setOutletCategoryId(
+                    req.getOutletCategoryId()
+            );
+
+
+            /*
+             * Product name FROM MASTER
+             */
+            product.setProductName(
+                    name
+            );
+
+
+            /*
+             * Description FROM MASTER
+             */
+            product.setDescription(
+                    description
+            );
+
+
+            /*
+             * Merchant price FROM CSV/UI
+             */
+            product.setMerchantPrice(
+                    merchantPrice
+            );
+
+
+            /*
+             * Veg status FROM MASTER
+             */
+            product.setIsVeg(
+                    isVeg
+            );
+
+
+            /*
+             * Variants
+             */
+            product.setHasProductVariants(
+                    hasVariants
+            );
+
+
+            /*
+             * Image FROM MASTER
+             */
+            product.setImageLink(
+                    imageLink
+            );
+
+
+            /*
+             * Product type FROM MASTER
+             */
+            product.setProductType(
+                    productType
+            );
+
+
+            /*
+             * Required DB defaults.
+             */
+            product.setIsImageDescUpdated(
+                    Boolean.FALSE
+            );
+
+            product.setIsActive(
+                    "Y"
+            );
+
+            product.setIsToggle(
+                    Boolean.TRUE
+            );
+
+
+            /*
+             * ======================================================
+             * SAVE PRODUCT
+             * ======================================================
+             */
+            log.info(
+                    "[MAP] Saving outlet product | " +
+                            "masterProductId={} | " +
+                            "productName={} | " +
+                            "categoryId={} | " +
+                            "categoryName={} | " +
+                            "outletCategoryId={} | " +
+                            "merchantPrice={} | " +
+                            "productType={} | " +
+                            "isVeg={}",
+                    masterProduct.getMasterProductId(),
+                    name,
+                    masterCategoryId,
+                    masterCategoryName,
+                    req.getOutletCategoryId(),
+                    merchantPrice,
+                    productType,
+                    isVeg
+            );
+
+
+            FmProduct saved =
+                    productRepository.save(
+                            product
+                    );
+
+
+            /*
+             * ======================================================
+             * SAVE TIMINGS
+             * ======================================================
+             */
+            saveTimings(
+                    saved.getProductId(),
+                    entry
+            );
+
+
+            /*
+             * ======================================================
+             * SAVE VARIANTS
+             * ======================================================
+             */
             if (hasVariants) {
-                for (FmMapToProductRequest.VariantEntry ve : entry.getVariants()) {
-                    if (ve.getVariantName() == null || ve.getVariantName().isBlank()) continue;
-                    FmProductVariant variant = new FmProductVariant();
-                    variant.setProductId(saved.getProductId());
-                    variant.setVariantName(ve.getVariantName().trim());
-                    variant.setMerchantPrice(ve.getMerchantPrice() == null ? BigDecimal.ZERO : ve.getMerchantPrice());
-                    productVariantRepository.save(variant);
-                }
-            }
-            savedNames.add(name);
-        }
 
-        log.info("[MAP] Done: saved={} skipped={}", savedNames.size(), skippedNames.size());
-        FmMapToProductResult result = new FmMapToProductResult();
-        result.setSavedCount(savedNames.size());
-        result.setSkippedCount(skippedNames.size());
-        result.setSavedNames(savedNames);
-        result.setSkippedNames(skippedNames);
-        return result;
-    }
+                for (FmMapToProductRequest.VariantEntry ve
+                        : entry.getVariants()) {
 
-    /**
-     * Maps all published master products from a global category into an outlet category.
-     *
-     * <p>Why filter by publish=1: unpublished master products are drafts or
-     * discontinued items and should not appear in outlet menus.</p>
-     *
-     * <p>Why parse JSON options: master products may have a JSON options field
-     * (e.g. {@code [{"name":"Small","price":99}]}) that represents product
-     * variants. We parse this JSON and insert individual variant rows.</p>
-     *
-     * @param outletCategoryId the target outlet category to receive the products
-     * @return a {@link FmMasterProductMappingResultDTO} with counts and names of saved vs skipped
-     * @throws IllegalArgumentException if the outlet category or its linked category is not found
-     */
-    @Override
-    public FmMasterProductMappingResultDTO mapFromMasterByCategory(Integer outletCategoryId) {
-        FmOutletCategory outletCategory = outletCategoryRepository.findById(outletCategoryId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "OutletCategory ID " + outletCategoryId + " not found."));
+                    if (ve == null ||
+                            ve.getVariantName() == null ||
+                            ve.getVariantName().isBlank()) {
 
-        Integer categoryId = outletCategory.getCategoryId();
-        FmCategory category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Category ID " + categoryId + " not found."));
-
-        // Load all master products linked to this global category
-        List<FmMasterProduct> masterProducts =
-                masterProductRepository.findByCategoryIdOrderByMasterProductIdAsc(categoryId);
-
-        log.info("[MASTER-MAP] outletCategoryId={} categoryId={} — {} master products found",
-                outletCategoryId, categoryId, masterProducts.size());
-
-        List<String> savedNames   = new ArrayList<>();
-        List<String> skippedNames = new ArrayList<>();
-
-        for (FmMasterProduct mp : masterProducts) {
-            // Skip unpublished products — they are drafts not ready for outlet menus
-            if (mp.getPublish() == null || mp.getPublish() != 1) {
-                skippedNames.add(mp.getMasterProductName() + " (unpublished)");
-                continue;
-            }
-
-            String name = mp.getMasterProductName().trim();
-            // Skip if this product name already exists in the target outlet category
-            if (productRepository.existsByOutletCategoryIdAndProductNameIgnoreCase(outletCategoryId, name)) {
-                skippedNames.add(name);
-                continue;
-            }
-
-            boolean hasVariants = mp.getHasOptions() != null && mp.getHasOptions() == 1
-                    && mp.getOptions() != null && !mp.getOptions().isBlank();
-
-            // IMAGE IS MANDATORY — skip with error message if master product has no image
-            if (mp.getPhoto() == null || mp.getPhoto().isBlank()) {
-                log.warn("[MASTER-MAP] Skipping '{}' (master_product_id={}) — no image found in master product",
-                        name, mp.getMasterProductId());
-                skippedNames.add(name + " (no image in master product)");
-                continue;
-            }
-
-            FmProduct product = new FmProduct();
-            product.setOutletCategoryId(outletCategoryId);
-            product.setProductName(name);
-            product.setDescription(mp.getDescription() == null ? "" : mp.getDescription());
-            // Price defaults to zero at mapping time — outlet manager sets their selling price
-            product.setMerchantPrice(BigDecimal.ZERO);
-            product.setIsVeg(mp.getVeg() != null && mp.getVeg() == 1);
-            product.setHasProductVariants(hasVariants);
-            // Copy images from master product -> outlet product
-            product.setImageLink(mp.getPhoto());
-//            product.setPhotos(mp.getPhotos());
-//            product.setThumbnail(mp.getThumbnail());
-            FmProduct saved = productRepository.save(product);
-
-            // Parse the JSON options field and create a ProductVariant row per option
-            if (hasVariants) {
-                try {
-                    List<Map<String, Object>> optionsList = objectMapper.readValue(
-                            mp.getOptions(), new TypeReference<List<Map<String, Object>>>() {});
-                    for (Map<String, Object> opt : optionsList) {
-                        String variantName = opt.getOrDefault("name", "").toString().trim();
-                        if (variantName.isBlank()) continue;
-                        BigDecimal price = BigDecimal.ZERO;
-                        Object pv = opt.get("price");
-                        if (pv != null) {
-                            try { price = new BigDecimal(pv.toString()); }
-                            catch (NumberFormatException ignored) {}
-                        }
-                        FmProductVariant variant = new FmProductVariant();
-                        variant.setProductId(saved.getProductId());
-                        variant.setVariantName(variantName);
-                        variant.setMerchantPrice(price);
-                        productVariantRepository.save(variant);
+                        continue;
                     }
-                } catch (JsonProcessingException e) {
-                    log.warn("[MASTER-MAP] Could not parse options for master_product_id={}: {}",
-                            mp.getMasterProductId(), e.getMessage());
+
+                    FmProductVariant variant =
+                            new FmProductVariant();
+
+                    variant.setProductId(
+                            saved.getProductId()
+                    );
+
+                    variant.setVariantName(
+                            ve.getVariantName()
+                                    .trim()
+                    );
+
+                    variant.setMerchantPrice(
+                            ve.getMerchantPrice() == null
+                                    ? BigDecimal.ZERO
+                                    : ve.getMerchantPrice()
+                    );
+
+                    productVariantRepository.save(
+                            variant
+                    );
                 }
             }
-            savedNames.add(name);
+
+
+            /*
+             * ======================================================
+             * SUCCESS
+             * ======================================================
+             */
+            savedNames.add(
+                    name
+            );
         }
 
-        log.info("[MASTER-MAP] Done — saved={} skipped={}", savedNames.size(), skippedNames.size());
-        FmMasterProductMappingResultDTO result = new FmMasterProductMappingResultDTO();
-        result.setOutletCategoryId(outletCategoryId);
-        result.setCategoryId(categoryId);
-        result.setCategoryName(category.getCategoryName());
-        result.setTotalMasterProducts(masterProducts.size());
-        result.setSavedCount(savedNames.size());
-        result.setSkippedCount(skippedNames.size());
-        result.setSavedProductNames(savedNames);
-        result.setSkippedProductNames(skippedNames);
+
+        /*
+         * ==========================================================
+         * LOG RESULT
+         * ==========================================================
+         */
+        log.info(
+                "[MAP] Completed | saved={} | skipped={}",
+                savedNames.size(),
+                skippedNames.size()
+        );
+
+
+        /*
+         * ==========================================================
+         * RESPONSE
+         * ==========================================================
+         */
+        FmMapToProductResult result =
+                new FmMapToProductResult();
+
+        result.setSavedCount(
+                savedNames.size()
+        );
+
+        result.setSkippedCount(
+                skippedNames.size()
+        );
+
+        result.setSavedNames(
+                savedNames
+        );
+
+        result.setSkippedNames(
+                skippedNames
+        );
+
         return result;
     }
-    private BigDecimal resolvePrice(String productName) {
-        Double price = FmProductMapper.priceMapper.get(productName);
-        if (price == null || price < 0) {
-            return BigDecimal.ZERO;
+
+
+    // ============================================================
+    // MAP ALL MASTER PRODUCTS BY CATEGORY
+    // ============================================================
+
+    @Override
+    public FmMasterProductMappingResultDTO mapFromMasterByCategory(
+            Integer outletCategoryId) {
+
+        if (outletCategoryId == null ||
+                outletCategoryId <= 0) {
+
+            throw new IllegalArgumentException(
+                    "OutletCategory ID cannot be null or invalid."
+            );
         }
-        return BigDecimal.valueOf(price);
+
+
+        /*
+         * ==========================================================
+         * LOAD OUTLET CATEGORY
+         * ==========================================================
+         */
+        FmOutletCategory outletCategory =
+                outletCategoryRepository
+                        .findById(outletCategoryId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "OutletCategory ID "
+                                                + outletCategoryId
+                                                + " not found."
+                                )
+                        );
+
+
+        Integer categoryId =
+                outletCategory.getCategoryId();
+
+
+        /*
+         * ==========================================================
+         * LOAD CATEGORY
+         * ==========================================================
+         */
+        FmCategory category =
+                categoryRepository
+                        .findById(categoryId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Category ID "
+                                                + categoryId
+                                                + " not found."
+                                )
+                        );
+
+
+        /*
+         * ==========================================================
+         * LOAD MASTER PRODUCTS
+         * ==========================================================
+         */
+        List<FmMasterProduct> masterProducts =
+                masterProductRepository
+                        .findByCategoryIdOrderByMasterProductIdAsc(
+                                categoryId
+                        );
+
+
+        log.info(
+                "[MASTER-MAP] outletCategoryId={} " +
+                        "categoryId={} categoryName={} " +
+                        "masterProducts={}",
+                outletCategoryId,
+                categoryId,
+                category.getCategoryName(),
+                masterProducts.size()
+        );
+
+
+        List<String> savedNames =
+                new ArrayList<>();
+
+        List<String> skippedNames =
+                new ArrayList<>();
+
+
+        /*
+         * ==========================================================
+         * PROCESS MASTER PRODUCTS
+         * ==========================================================
+         */
+        for (FmMasterProduct mp :
+                masterProducts) {
+
+            if (mp == null) {
+                continue;
+            }
+
+
+            String name =
+                    mp.getMasterProductName() == null
+                            ? ""
+                            : mp.getMasterProductName()
+                            .trim();
+
+
+            if (name.isBlank()) {
+
+                skippedNames.add(
+                        "(blank master product)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * ACTIVE CHECK
+             * ======================================================
+             */
+            String isActive =
+                    mp.getIsActive();
+
+            if (isActive == null ||
+                    !"Y".equalsIgnoreCase(
+                            isActive.trim()
+                    )) {
+
+                skippedNames.add(
+                        name + " (inactive)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * DUPLICATE CHECK
+             * ======================================================
+             */
+            if (productRepository
+                    .existsByOutletCategoryIdAndProductNameIgnoreCase(
+                            outletCategoryId,
+                            name
+                    )) {
+
+                skippedNames.add(
+                        name + " (Already Exists)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * HAS VARIANTS
+             * ======================================================
+             */
+            boolean hasVariants =
+                    mp.getHasOptions() != null
+                            && mp.getHasOptions() == 1
+                            && mp.getOptions() != null
+                            && !mp.getOptions().isBlank();
+
+
+            /*
+             * ======================================================
+             * IMAGE
+             * ======================================================
+             */
+            if (mp.getPhoto() == null ||
+                    mp.getPhoto().isBlank()) {
+
+                log.warn(
+                        "[MASTER-MAP] Skipping product={} " +
+                                "masterProductId={} because image is missing",
+                        name,
+                        mp.getMasterProductId()
+                );
+
+                skippedNames.add(
+                        name + " (no image in master product)"
+                );
+
+                continue;
+            }
+
+
+            /*
+             * ======================================================
+             * DESCRIPTION
+             * ======================================================
+             */
+            String description =
+                    mp.getDescription() == null
+                            ? ""
+                            : mp.getDescription()
+                            .trim();
+
+            if (description.length() > 500) {
+
+                description =
+                        description.substring(
+                                0,
+                                500
+                        );
+            }
+
+
+            /*
+             * ======================================================
+             * PRODUCT TYPE
+             * ======================================================
+             */
+            String productType =
+                    mp.getProductType() == null
+                            ? ""
+                            : mp.getProductType()
+                            .trim();
+
+            if (productType.length() > 20) {
+
+                productType =
+                        productType.substring(
+                                0,
+                                20
+                        );
+            }
+
+
+            /*
+             * ======================================================
+             * CREATE PRODUCT
+             * ======================================================
+             */
+            FmProduct product =
+                    new FmProduct();
+
+
+            product.setOutletCategoryId(
+                    outletCategoryId
+            );
+
+
+            /*
+             * Master name
+             */
+            product.setProductName(
+                    name
+            );
+
+
+            /*
+             * Master description
+             */
+            product.setDescription(
+                    description
+            );
+
+
+            /*
+             * Default price for category auto-map.
+             *
+             * This endpoint does not receive CSV price.
+             */
+            product.setMerchantPrice(
+                    BigDecimal.ZERO
+            );
+
+
+            /*
+             * Master veg status
+             */
+            product.setIsVeg(
+                    mp.getIsVeg()
+            );
+
+
+            /*
+             * Variant status
+             */
+            product.setHasProductVariants(
+                    hasVariants
+            );
+
+
+            /*
+             * Master image
+             */
+            product.setImageLink(
+                    mp.getPhoto()
+            );
+
+
+            /*
+             * Master product type
+             */
+            product.setProductType(
+                    productType
+            );
+
+
+            /*
+             * Required DB defaults.
+             */
+            product.setIsImageDescUpdated(
+                    Boolean.FALSE
+            );
+
+            product.setIsActive(
+                    "Y"
+            );
+
+            product.setIsToggle(
+                    Boolean.TRUE
+            );
+
+
+            /*
+             * ======================================================
+             * SAVE PRODUCT
+             * ======================================================
+             */
+            FmProduct saved =
+                    productRepository.save(
+                            product
+                    );
+
+
+            /*
+             * ======================================================
+             * SAVE MASTER OPTIONS AS VARIANTS
+             * ======================================================
+             */
+            if (hasVariants) {
+
+                try {
+
+                    List<Map<String, Object>> optionsList =
+                            objectMapper.readValue(
+                                    mp.getOptions(),
+                                    new TypeReference<
+                                            List<Map<String, Object>>
+                                            >() {
+                                    }
+                            );
+
+
+                    if (optionsList != null) {
+
+                        for (Map<String, Object> opt :
+                                optionsList) {
+
+                            if (opt == null) {
+                                continue;
+                            }
+
+
+                            Object nameObject =
+                                    opt.get("name");
+
+                            if (nameObject == null) {
+                                continue;
+                            }
+
+
+                            String variantName =
+                                    nameObject
+                                            .toString()
+                                            .trim();
+
+
+                            if (variantName.isBlank()) {
+                                continue;
+                            }
+
+
+                            BigDecimal price =
+                                    BigDecimal.ZERO;
+
+
+                            Object priceObject =
+                                    opt.get("price");
+
+
+                            if (priceObject != null) {
+
+                                try {
+
+                                    price =
+                                            new BigDecimal(
+                                                    priceObject
+                                                            .toString()
+                                            );
+
+                                } catch (
+                                        NumberFormatException ignored
+                                ) {
+
+                                    log.warn(
+                                            "[MASTER-MAP] Invalid variant price={} " +
+                                                    "masterProductId={}",
+                                            priceObject,
+                                            mp.getMasterProductId()
+                                    );
+                                }
+                            }
+
+
+                            FmProductVariant variant =
+                                    new FmProductVariant();
+
+
+                            variant.setProductId(
+                                    saved.getProductId()
+                            );
+
+
+                            variant.setVariantName(
+                                    variantName
+                            );
+
+
+                            variant.setMerchantPrice(
+                                    price
+                            );
+
+
+                            productVariantRepository.save(
+                                    variant
+                            );
+                        }
+                    }
+
+                } catch (
+                        JsonProcessingException e
+                ) {
+
+                    log.warn(
+                            "[MASTER-MAP] Could not parse options " +
+                                    "for masterProductId={}: {}",
+                            mp.getMasterProductId(),
+                            e.getMessage()
+                    );
+                }
+            }
+
+
+            savedNames.add(
+                    name
+            );
+        }
+
+
+        /*
+         * ==========================================================
+         * RESULT
+         * ==========================================================
+         */
+        log.info(
+                "[MASTER-MAP] Completed | " +
+                        "outletCategoryId={} | " +
+                        "saved={} | " +
+                        "skipped={}",
+                outletCategoryId,
+                savedNames.size(),
+                skippedNames.size()
+        );
+
+
+        FmMasterProductMappingResultDTO result =
+                new FmMasterProductMappingResultDTO();
+
+
+        result.setOutletCategoryId(
+                outletCategoryId
+        );
+
+
+        result.setCategoryId(
+                categoryId
+        );
+
+
+        result.setCategoryName(
+                category.getCategoryName()
+        );
+
+
+        result.setTotalMasterProducts(
+                masterProducts.size()
+        );
+
+
+        result.setSavedCount(
+                savedNames.size()
+        );
+
+
+        result.setSkippedCount(
+                skippedNames.size()
+        );
+
+
+        result.setSavedProductNames(
+                savedNames
+        );
+
+
+        result.setSkippedProductNames(
+                skippedNames
+        );
+
+
+        return result;
     }
 
-    /**
-     * Parses and inserts product_available_timings rows for the saved product.
-     *
-     * <p>Priority:
-     * <ol>
-     *   <li>If the request carries explicit {@code timings} list - use those.</li>
-     *   <li>Otherwise parse {@code csvTiming} (comma-separated, e.g. "7:00-5:00,7:00-9:00")
-     *       together with {@code csvDayOfWeek} to look up the real day_id from the
-     *       days_of_week table.  One row is inserted per timing slot.</li>
-     *   <li>Fall back to the static {@link FmProductMapper#timingMapper} and
-     *       {@link FmProductMapper#dayOfWeekMapper} populated during the compare step.</li>
-     * </ol>
-     *
-     * <p>Multiple timings for the same day are supported via comma separation,
-     * e.g. "7:00-9:00,12:00-14:00" inserts two rows for the same day.</p>
-     */
-    private void saveTimings(Integer productId, FmMapToProductRequest.ProductEntry entry) {
-        // --- explicit timing rows take priority ---
-        if (entry.getTimings() != null && !entry.getTimings().isEmpty()) {
-            for (FmMapToProductRequest.TimingEntry te : entry.getTimings()) {
-                LocalTime start = parseTime(te.getStartTime());
-                LocalTime end   = parseTime(te.getEndTime());
-                if (start == null || end == null) continue;
-                FmProductAvailableTiming pat = new FmProductAvailableTiming();
-                pat.setProductId(productId);
-                pat.setDayOfWeekId(te.getDayOfWeekId() != null ? te.getDayOfWeekId() : 0);
-                pat.setStartTime(start);
-                pat.setEndTime(end);
-                productAvailableTimingRepository.save(pat);
-            }
+
+    // ============================================================
+    // SAVE TIMINGS
+    // ============================================================
+
+    private void saveTimings(
+            Integer productId,
+            FmMapToProductRequest.ProductEntry entry) {
+
+        if (productId == null ||
+                entry == null) {
+
             return;
         }
 
-        // --- fall back to csvTiming string / static map ---
-        String rawTiming = entry.getCsvTiming();
-        if (rawTiming == null || rawTiming.isBlank()) {
-            rawTiming = FmProductMapper.timingMapper.get(entry.getProductName());
-        }
-        if (rawTiming == null || rawTiming.isBlank()) return;
 
-        // Resolve the day_of_week_id from the days_of_week table using the day name
-        String dayName = entry.getCsvDayOfWeek();
-        if (dayName == null || dayName.isBlank()) {
-            dayName = FmProductMapper.dayOfWeekMapper.get(entry.getProductName());
-        }
-        Integer dayId = 0; // default: all days
-        if (dayName != null && !dayName.isBlank()) {
-            String finalDayName = dayName.trim();
-            dayId = daysOfWeekRepository.findByDayNameIgnoreCase(finalDayName)
-                    .map(d -> d.getDayId())
-                    .orElseGet(() -> {
-                        log.warn("[MAP] Day name '{}' not found in days_of_week table, using 0 (all days)", finalDayName);
-                        return 0;
-                    });
+        /*
+         * ==========================================================
+         * EXPLICIT TIMINGS
+         * ==========================================================
+         */
+        if (entry.getTimings() != null &&
+                !entry.getTimings().isEmpty()) {
+
+            for (FmMapToProductRequest.TimingEntry te :
+                    entry.getTimings()) {
+
+                if (te == null) {
+                    continue;
+                }
+
+
+                LocalTime start =
+                        parseTime(
+                                te.getStartTime()
+                        );
+
+
+                LocalTime end =
+                        parseTime(
+                                te.getEndTime()
+                        );
+
+
+                if (start == null ||
+                        end == null) {
+
+                    log.warn(
+                            "[MAP] Invalid explicit timing | " +
+                                    "productId={} | " +
+                                    "start={} | " +
+                                    "end={}",
+                            productId,
+                            te.getStartTime(),
+                            te.getEndTime()
+                    );
+
+                    continue;
+                }
+
+
+                Integer dayId =
+                        te.getDayOfWeekId() == null
+                                ? 0
+                                : te.getDayOfWeekId();
+
+
+                FmProductAvailableTiming timing =
+                        new FmProductAvailableTiming();
+
+
+                timing.setProductId(
+                        productId
+                );
+
+
+                timing.setDayOfWeekId(
+                        dayId
+                );
+
+
+                timing.setStartTime(
+                        start
+                );
+
+
+                timing.setEndTime(
+                        end
+                );
+
+
+                productAvailableTimingRepository.save(
+                        timing
+                );
+
+
+                log.info(
+                        "[MAP] Saved explicit timing | " +
+                                "productId={} | " +
+                                "dayId={} | " +
+                                "start={} | " +
+                                "end={}",
+                        productId,
+                        dayId,
+                        start,
+                        end
+                );
+            }
+
+
+            return;
         }
 
-        // Support multiple comma-separated time slots, e.g. "7:00-5:00,7:00-9:00"
-        String[] slots = rawTiming.trim().split(",");
-        for (String slot : slots) {
-            slot = slot.trim();
-            String[] parts = slot.split("-", 2);
+
+        /*
+         * ==========================================================
+         * CSV TIMING
+         * ==========================================================
+         */
+        String rawTiming =
+                entry.getCsvTiming();
+
+
+        if (rawTiming == null ||
+                rawTiming.isBlank()) {
+
+            log.info(
+                    "[MAP] No CSV timing for productId={}",
+                    productId
+            );
+
+            return;
+        }
+
+
+        /*
+         * ==========================================================
+         * CSV DAY
+         * ==========================================================
+         */
+        String dayName =
+                entry.getCsvDayOfWeek();
+
+
+        Integer dayId =
+                resolveDayId(
+                        dayName
+                );
+
+
+        /*
+         * ==========================================================
+         * TIMING SLOTS
+         * ==========================================================
+         *
+         * Supported:
+         *
+         * 11:00-22:00
+         *
+         * 11:00-14:00,18:00-22:00
+         *
+         * 11:00 AM-02:00 PM
+         *
+         * 11:00 AM - 02:00 PM
+         */
+        String[] slots =
+                rawTiming
+                        .trim()
+                        .split(",");
+
+
+        for (String slot :
+                slots) {
+
+            if (slot == null ||
+                    slot.isBlank()) {
+
+                continue;
+            }
+
+
+            String trimmedSlot =
+                    slot.trim();
+
+
+            String[] parts =
+                    trimmedSlot.split(
+                            "-",
+                            2
+                    );
+
+
             if (parts.length != 2) {
-                log.warn("[MAP] Cannot parse timing slot '{}' for productId={}", slot, productId);
+
+                log.warn(
+                        "[MAP] Could not parse timing slot '{}' | productId={}",
+                        trimmedSlot,
+                        productId
+                );
+
                 continue;
             }
-            LocalTime start = parseTime(parts[0].trim());
-            LocalTime end   = parseTime(parts[1].trim());
-            if (start == null || end == null) {
-                log.warn("[MAP] Invalid time in timing slot '{}' for productId={}", slot, productId);
+
+
+            LocalTime start =
+                    parseTime(
+                            parts[0].trim()
+                    );
+
+
+            LocalTime end =
+                    parseTime(
+                            parts[1].trim()
+                    );
+
+
+            if (start == null ||
+                    end == null) {
+
+                log.warn(
+                        "[MAP] Invalid timing slot '{}' | productId={}",
+                        trimmedSlot,
+                        productId
+                );
+
                 continue;
             }
-            FmProductAvailableTiming pat = new FmProductAvailableTiming();
-            pat.setProductId(productId);
-            pat.setDayOfWeekId(dayId);
-            pat.setStartTime(start);
-            pat.setEndTime(end);
-            productAvailableTimingRepository.save(pat);
-            log.info("[MAP] Saved timing productId={} dayOfWeekId={} dayName='{}' start={} end={}", productId, dayId, dayName, start, end);
+
+
+            FmProductAvailableTiming timing =
+                    new FmProductAvailableTiming();
+
+
+            timing.setProductId(
+                    productId
+            );
+
+
+            timing.setDayOfWeekId(
+                    dayId
+            );
+
+
+            timing.setStartTime(
+                    start
+            );
+
+
+            timing.setEndTime(
+                    end
+            );
+
+
+            productAvailableTimingRepository.save(
+                    timing
+            );
+
+
+            log.info(
+                    "[MAP] Saved CSV timing | " +
+                            "productId={} | " +
+                            "dayName={} | " +
+                            "dayId={} | " +
+                            "start={} | " +
+                            "end={}",
+                    productId,
+                    dayName,
+                    dayId,
+                    start,
+                    end
+            );
         }
     }
 
-    /** Parses "H:mm" or "HH:mm" safely; returns null on failure. */
-    private LocalTime parseTime(String raw) {
-        if (raw == null || raw.isBlank()) return null;
-        try {
-            // Pad single-digit hours: "7:00" → "07:00"
-            String padded = raw.trim();
-            if (padded.indexOf(':') == 1) padded = "0" + padded;
-            return LocalTime.parse(padded, DateTimeFormatter.ofPattern("HH:mm"));
-        } catch (Exception e) {
-            log.warn("[MAP] Could not parse time '{}': {}", raw, e.getMessage());
+
+    // ============================================================
+    // RESOLVE DAY OF WEEK
+    // ============================================================
+
+    private Integer resolveDayId(
+            String dayName) {
+
+        /*
+         * 0 = all days
+         */
+        if (dayName == null ||
+                dayName.isBlank()) {
+
+            return 0;
+        }
+
+
+        String finalDayName =
+                dayName.trim();
+
+
+        return daysOfWeekRepository
+                .findByDayNameIgnoreCase(
+                        finalDayName
+                )
+                .map(d ->
+                        d.getDayId()
+                )
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Day of week '"
+                                        + finalDayName
+                                        + "' not found in days_of_week table."
+                        )
+                );
+    }
+
+
+    // ============================================================
+    // PARSE TIME
+    // ============================================================
+
+    private LocalTime parseTime(
+            String raw) {
+
+        if (raw == null ||
+                raw.isBlank()) {
+
             return null;
         }
+
+
+        String value =
+                raw.trim()
+                        .replaceAll(
+                                "\\s+",
+                                " "
+                        );
+
+
+        /*
+         * ==========================================================
+         * HH:mm
+         * ==========================================================
+         */
+        try {
+
+            return LocalTime.parse(
+                    value,
+                    DateTimeFormatter.ofPattern(
+                            "H:mm"
+                    )
+            );
+
+        } catch (DateTimeParseException ignored) {
+            // Try next format.
+        }
+
+
+        /*
+         * ==========================================================
+         * HH:mm:ss
+         * ==========================================================
+         */
+        try {
+
+            return LocalTime.parse(
+                    value,
+                    DateTimeFormatter.ofPattern(
+                            "H:mm:ss"
+                    )
+            );
+
+        } catch (DateTimeParseException ignored) {
+            // Try next format.
+        }
+
+
+        /*
+         * ==========================================================
+         * hh:mm AM/PM
+         * ==========================================================
+         */
+        try {
+
+            return LocalTime.parse(
+                    value.toUpperCase(),
+                    DateTimeFormatter.ofPattern(
+                            "h:mm a"
+                    )
+            );
+
+        } catch (DateTimeParseException ignored) {
+            // Continue.
+        }
+
+
+        /*
+         * ==========================================================
+         * hh:mm:ss AM/PM
+         * ==========================================================
+         */
+        try {
+
+            return LocalTime.parse(
+                    value.toUpperCase(),
+                    DateTimeFormatter.ofPattern(
+                            "h:mm:ss a"
+                    )
+            );
+
+        } catch (DateTimeParseException ignored) {
+            // Continue.
+        }
+
+
+        log.warn(
+                "[MAP] Could not parse time '{}'",
+                raw
+        );
+
+
+        return null;
     }
 }

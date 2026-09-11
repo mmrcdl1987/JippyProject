@@ -17,14 +17,15 @@ public class FmCreateMasterProductResponseDto {
 
     private String thumbnail;
 
-    private Integer veg;
-
-    private Integer nonVeg;
+    /**
+     * Vegetarian status.
+     * true  = Veg
+     * false = Non-Veg
+     */
+    private Boolean isVeg;
 
     /**
      * Product type stored in master_products.product_type.
      */
     private String productType;
-
-    private Integer publish;
 }

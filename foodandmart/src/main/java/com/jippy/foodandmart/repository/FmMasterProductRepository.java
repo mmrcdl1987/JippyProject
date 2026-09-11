@@ -42,8 +42,8 @@ public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct
     @Query("""
             SELECT p FROM FmMasterProduct p WHERE
             (:type = 'all')
-            OR (:type = 'veg'    AND p.veg = 1)
-            OR (:type = 'nonveg' AND p.nonVeg = 1)
+            OR (:type = 'veg' AND p.isVeg = true)
+             OR (:type = 'nonveg' AND p.isVeg = false)
             ORDER BY p.masterProductId ASC
             """)
     List<FmMasterProduct> filterByType(@Param("type") String type);
@@ -52,7 +52,6 @@ public interface FmMasterProductRepository extends JpaRepository<FmMasterProduct
         SELECT p
         FROM FmMasterProduct p
         WHERE p.categoryId = :categoryId
-        AND p.publish = 1
         AND (
              :keyword IS NULL
              OR :keyword = ''

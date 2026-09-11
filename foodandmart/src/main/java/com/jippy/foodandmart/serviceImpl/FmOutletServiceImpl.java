@@ -1,5 +1,4 @@
-package com.jippy.foodandmart.serviceImpl;
-
+ package com.jippy.foodandmart.serviceImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jippy.division.dto.FmNearbyOutletDto;
@@ -1604,27 +1603,31 @@ public class FmOutletServiceImpl implements IFmOutletService {
     }
 
     /**
-     * Saves operating-day slots for BULK UPLOAD only.
-     * <p>
-     * The bulk CSV/Excel parser can create multiple FmOutletDayDTO rows
-     * for the same day (for example, Monday 09:00-14:00 and Monday
-     * 18:00-22:00). Each DTO is intentionally stored as a separate
-     * FmOutletDay row.
-     * <p>
-     * This method is kept separate from saveOperatingDays() so the
-     * existing single-outlet create/update flow is not changed.
+     * Saves operating-day timings for BULK UPLOAD only.
+     *
+     * Multiple timings are allowed for the same day.
+     *
+     * Example:
+     * Monday 07:00-12:00
+     * Monday 19:00-23:00
+     *
+     * Each timing is stored as a separate FmOutletDay row.
+     *
+     * No slot type is used. Different timings on the same day
+     * are identified by their opening and closing times.
      */
     private void saveBulkOperatingDays(FmOutletRequestDTO dto, Integer outletId) {
 
         if (dto.getOperatingDays() == null || dto.getOperatingDays().isEmpty()) {
             log.info(
-                    "[OUTLET_BULK] No operating slots provided | outletId={}",
+                    "[OUTLET_BULK] No operating timings provided | outletId={}",
                     outletId
             );
             return;
         }
 
-        int savedSlots = 0;
+        List<FmOutletDay> outletDays = new ArrayList<>();
+        Set<String> timingKeys = new HashSet<>();
 
         for (FmOutletDayDTO d : dto.getOperatingDays()) {
 
@@ -1632,15 +1635,49 @@ public class FmOutletServiceImpl implements IFmOutletService {
                 continue;
             }
 
-            boolean isEvening =
-                    d.getSlotType() != null
-                            && "evening".equalsIgnoreCase(d.getSlotType());
+            /*
+             * Use the timing supplied by the bulk-upload sheet.
+             *
+             * Do NOT group by dayOfWeekId.
+             * Multiple rows for the same day are intentionally allowed.
+             */
+            LocalTime openingTime = parseTime(
+                    d.getOpeningTime() == null
+                            ? null
+                            : String.valueOf(d.getOpeningTime()),
+                    LocalTime.of(9, 0)
+            );
 
-            LocalTime defaultOpeningTime =
-                    isEvening ? LocalTime.of(17, 0) : LocalTime.of(9, 0);
+            LocalTime closingTime = parseTime(
+                    d.getClosingTime() == null
+                            ? null
+                            : String.valueOf(d.getClosingTime()),
+                    LocalTime.of(14, 0)
+            );
 
-            LocalTime defaultClosingTime =
-                    isEvening ? LocalTime.of(22, 0) : LocalTime.of(14, 0);
+            /*
+             * Reject only an exact duplicate timing within this upload.
+             *
+             * Monday 07:00-12:00 -> allowed
+             * Monday 19:00-23:00 -> allowed
+             * Monday 07:00-12:00 -> duplicate
+             */
+            String timingKey =
+                    outletId + "|" +
+                            d.getDayOfWeekId() + "|" +
+                            openingTime + "|" +
+                            closingTime;
+
+            if (!timingKeys.add(timingKey)) {
+                throw new IllegalArgumentException(
+                        "Duplicate operating timing found for dayOfWeekId="
+                                + d.getDayOfWeekId()
+                                + ": "
+                                + openingTime
+                                + "-"
+                                + closingTime
+                );
+            }
 
             FmOutletDay day = new FmOutletDay();
 
@@ -1651,42 +1688,28 @@ public class FmOutletServiceImpl implements IFmOutletService {
                             ? d.getIsOpen()
                             : true
             );
+            day.setOpeningTime(openingTime);
+            day.setClosingTime(closingTime);
 
-            day.setOpeningTime(
-                    parseTime(
-                            d.getOpeningTime() == null
-                                    ? null
-                                    : String.valueOf(d.getOpeningTime()),
-                            defaultOpeningTime
-                    )
-            );
-
-            day.setClosingTime(
-                    parseTime(
-                            d.getClosingTime() == null
-                                    ? null
-                                    : String.valueOf(d.getClosingTime()),
-                            defaultClosingTime
-                    )
-            );
-
-            dayRepository.save(day);
-            savedSlots++;
+            outletDays.add(day);
 
             log.info(
-                    "[OUTLET_BULK] OPERATING_SLOT_CREATED | outletId={} | dayOfWeekId={} | opening={} | closing={} | slotType={}",
+                    "[OUTLET_BULK] OPERATING_TIMING_PREPARED | outletId={} | dayOfWeekId={} | opening={} | closing={}",
                     outletId,
                     d.getDayOfWeekId(),
-                    day.getOpeningTime(),
-                    day.getClosingTime(),
-                    d.getSlotType()
+                    openingTime,
+                    closingTime
             );
         }
 
+        if (!outletDays.isEmpty()) {
+            dayRepository.saveAll(outletDays);
+        }
+
         log.info(
-                "[OUTLET_BULK] Operating slots saved | outletId={} | slots={}",
+                "[OUTLET_BULK] Operating timings saved | outletId={} | timings={}",
                 outletId,
-                savedSlots
+                outletDays.size()
         );
     }
 
@@ -3563,8 +3586,3 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
 
 }
-
-
-
-
-

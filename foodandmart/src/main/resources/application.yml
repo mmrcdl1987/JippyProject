@@ -144,8 +144,3 @@ aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
     product-content-file: product-content/master_products_descriptions_images.xlsx
-
-
-
-
-

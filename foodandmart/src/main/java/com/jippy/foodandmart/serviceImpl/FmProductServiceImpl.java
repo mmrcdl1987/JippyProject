@@ -63,356 +63,996 @@ public class FmProductServiceImpl implements FmProductService {
 
     private final FmMerchantPriceChangeHistoryRepository merchantPriceChangeHistoryRepository;
 
-    @Override
-    @Transactional
-    public FmMapToProductResult mapToProducts(FmMapToProduct request) {
+//    @Override
+//    @Transactional
+//    public FmMapToProductResult mapToProducts(FmMapToProduct request) {
+//
+//        log.info("[PRODUCT-MAP] Product mapping initiated | outletId={} | categoryId={} | outletCategoryId={} | requestedProducts={}", request != null ? request.getOutletId() : null, request != null ? request.getCategoryId() : null, request != null ? request.getOutletCategoryId() : null, request != null && request.getProducts() != null ? request.getProducts().size() : 0);
+//
+//        // ============================================================
+//        // 1. VALIDATE REQUEST
+//        // ============================================================
+//
+//        if (request == null) {
+//            throw new IllegalArgumentException("Request cannot be null.");
+//        }
+//
+//        if (request.getOutletId() == null || request.getOutletId() <= 0) {
+//            throw new IllegalArgumentException("Valid Outlet Id is required.");
+//        }
+//
+//        if (request.getProducts() == null || request.getProducts().isEmpty()) {
+//            throw new IllegalArgumentException("Products are required.");
+//        }
+//
+//        Integer outletId = request.getOutletId();
+//
+//        /*
+//         * IMPORTANT:
+//         * The outlet_categories table is using a PostgreSQL generated-id
+//         * sequence. If that sequence is behind the current MAX(id), Hibernate
+//         * can receive an already-used ID (for example 97) and the INSERT fails
+//         * with outlet_categories_pkey duplicate key.
+//         *
+//         * Keep the sequence synchronized before this operation. The database
+//         * should also be fixed permanently with the SQL provided separately.
+//         */
+//        synchronizeOutletCategorySequence();
+//
+//        List<String> savedNames = new ArrayList<>();
+//        List<String> skippedNames = new ArrayList<>();
+//
+//        // ============================================================
+//        // 2. PROCESS EACH MASTER PRODUCT INDEPENDENTLY
+//        //
+//        // A single bulk request may contain master products from
+//        // different categories. Therefore outletCategoryId is resolved
+//        // separately for every product.
+//        // ============================================================
+//
+//        for (ProductEntry entry : request.getProducts()) {
+//
+//            if (entry == null) {
+//                skippedNames.add("(null product)");
+//                continue;
+//            }
+//
+//            String productName = entry.getProductName() == null ? "" : entry.getProductName().trim();
+//
+//            // --------------------------------------------------------
+//            // 2.1 MASTER PRODUCT ID
+//            // --------------------------------------------------------
+//
+//            if (entry.getMasterProductId() == null || entry.getMasterProductId() <= 0) {
+//
+//                log.warn("[PRODUCT-MAP] Skipping product | productName={} | reason=Master Product Id missing", productName);
+//
+//                skippedNames.add(productName.isBlank() ? "(Master Product Id Missing)" : productName + " (Master Product Id Missing)");
+//
+//                continue;
+//            }
+//
+//            // --------------------------------------------------------
+//            // 2.2 LOAD MASTER PRODUCT
+//            // --------------------------------------------------------
+//
+//            FmMasterProduct masterProduct = masterProductRepository.findById(entry.getMasterProductId()).orElseThrow(() -> {
+//                log.warn("[PRODUCT-MAP] Master product not found | masterProductId={}", entry.getMasterProductId());
+//
+//                return new ResourceNotFoundException("Master Product not found with id : " + entry.getMasterProductId());
+//            });
+//
+//            // --------------------------------------------------------
+//            // 2.3 MASTER PRODUCT MUST BE PUBLISHED
+//            // --------------------------------------------------------
+//
+//            if (masterProduct.getPublish() == null || masterProduct.getPublish() != 1) {
+//
+//                log.warn("[PRODUCT-MAP] Skipping unpublished master product | masterProductId={} | productName={}", masterProduct.getMasterProductId(), masterProduct.getMasterProductName());
+//
+//                skippedNames.add(masterProduct.getMasterProductName() + " (Master Product Not Published)");
+//
+//                continue;
+//            }
+//
+//            // --------------------------------------------------------
+//            // 2.4 USE MASTER PRODUCT NAME WHEN REQUEST NAME IS EMPTY
+//            // --------------------------------------------------------
+//
+//            if (productName.isBlank()) {
+//                productName = masterProduct.getMasterProductName() == null ? "" : masterProduct.getMasterProductName().trim();
+//            }
+//
+//            if (productName.isBlank()) {
+//                skippedNames.add("(Blank Product Name)");
+//                continue;
+//            }
+//
+//            // ========================================================
+//            // 3. RESOLVE CATEGORY FROM MASTER PRODUCT
+//            // ========================================================
+//
+//            Integer masterCategoryId = masterProduct.getCategoryId();
+//
+//            if (masterCategoryId == null || masterCategoryId <= 0) {
+//
+//                log.warn("[PRODUCT-MAP] Skipping master product | masterProductId={} | reason=Category missing", masterProduct.getMasterProductId());
+//
+//                skippedNames.add(productName + " (Category Missing)");
+//
+//                continue;
+//            }
+//
+//            /*
+//             * Mobile compatibility:
+//             *
+//             * If categoryId is supplied, validate it against the
+//             * selected master product.
+//             *
+//             * Bulk mapping normally leaves categoryId null. In that
+//             * case the category comes from each master product.
+//             */
+//            Integer categoryId = request.getCategoryId() != null ? request.getCategoryId() : masterCategoryId;
+//
+//            if (!Objects.equals(masterCategoryId, categoryId)) {
+//
+//                log.warn("[PRODUCT-MAP] Skipping category mismatch | masterProductId={} | masterCategoryId={} | requestedCategoryId={}", masterProduct.getMasterProductId(), masterCategoryId, categoryId);
+//
+//                skippedNames.add(productName + " (Category Mismatch)");
+//
+//                continue;
+//            }
+//
+//            // ========================================================
+//            // 4. RESOLVE OUTLET CATEGORY
+//            // ========================================================
+//
+//            FmOutletCategory outletCategory;
+//
+//            if (request.getOutletCategoryId() != null) {
+//
+//                // ----------------------------------------------------
+//                // Existing mobile flow
+//                // ----------------------------------------------------
+//
+//                outletCategory = outletCategoryRepository.findByOutletCategoryId(request.getOutletCategoryId()).orElseThrow(() -> new ResourceNotFoundException("Outlet Category not found with id : " + request.getOutletCategoryId()));
+//
+//                if (!Objects.equals(outletCategory.getOutletId(), outletId)) {
+//                    throw new IllegalArgumentException("Outlet Category does not belong to Outlet Id : " + outletId);
+//                }
+//
+//                if (!Objects.equals(outletCategory.getCategoryId(), categoryId)) {
+//                    throw new IllegalArgumentException("Outlet Category does not belong to Category Id : " + categoryId);
+//                }
+//
+//            } else {
+//
+//                // ----------------------------------------------------
+//                // Bulk flow
+//                //
+//                // Each master product can have a different category.
+//                // ----------------------------------------------------
+//
+//                Optional<FmOutletCategory> existingOutletCategory = outletCategoryRepository.findByOutletIdAndCategoryId(outletId, categoryId);
+//
+//                if (existingOutletCategory.isPresent()) {
+//
+//                    outletCategory = existingOutletCategory.get();
+//
+//                    log.info("[PRODUCT-MAP] Reusing existing outlet category | outletId={} | categoryId={} | outletCategoryId={}", outletId, categoryId, outletCategory.getOutletCategoryId());
+//
+//                } else {
+//
+//                    log.info("[PRODUCT-MAP] Creating outlet category | outletId={} | categoryId={}", outletId, categoryId);
+//
+//                    FmOutletCategory entity = new FmOutletCategory();
+//
+//                    entity.setOutletId(outletId);
+//                    entity.setCategoryId(categoryId);
+//                    entity.setCreatedBy(SYSTEM_USER);
+//                    entity.setUpdatedBy(SYSTEM_USER);
+//                    entity.setIsToggle(true);
+//                    entity.setIsActive("Y");
+//
+//                    FmOutletCategory saved = outletCategoryRepository.saveAndFlush(entity);
+//
+//                    log.info("[PRODUCT-MAP] Outlet category created | outletCategoryId={}", saved.getOutletCategoryId());
+//
+//                    outletCategory = saved;
+//                }
+//            }
+//
+//            if (!"Y".equalsIgnoreCase(outletCategory.getIsActive() == null ? "Y" : outletCategory.getIsActive())) {
+//
+//                throw new IllegalArgumentException("Outlet Category is inactive for outletId=" + outletId + ", categoryId=" + categoryId);
+//            }
+//
+//            Integer outletCategoryId = outletCategory.getOutletCategoryId();
+//
+//            // ========================================================
+//            // 5. DUPLICATE CHECK
+//            // ========================================================
+//
+//            if (productRepository.existsByOutletCategoryIdAndProductNameIgnoreCase(outletCategoryId, productName)) {
+//
+//                log.info("[PRODUCT-MAP] Product already mapped | outletCategoryId={} | productName={}", outletCategoryId, productName);
+//
+//                skippedNames.add(productName + " (Already Exists)");
+//
+//                continue;
+//            }
+//
+//            // ========================================================
+//            // 6. CREATE OUTLET PRODUCT
+//            // ========================================================
+//
+//            FmProduct product = new FmProduct();
+//
+//            product.setOutletCategoryId(outletCategoryId);
+//
+//            product.setProductName(productName);
+//
+//            String description = entry.getDescription();
+//
+//            if (description == null || description.isBlank()) {
+//                description = masterProduct.getDescription();
+//            }
+//
+//            // products.description is NOT NULL.
+//            product.setDescription(description == null ? "" : description);
+//
+//            // --------------------------------------------------------
+//            // VEG / NON-VEG
+//            // --------------------------------------------------------
+//
+//            Boolean isVeg = entry.getIsVeg();
+//
+//            if (isVeg == null) {
+//                isVeg = masterProduct.getVeg() != null && masterProduct.getVeg() == 1;
+//            }
+//
+//            product.setIsVeg(isVeg);
+//
+//            // ========================================================
+//            // 7. NO VARIANTS DURING MASTER PRODUCT MAPPING
+//            // ========================================================
+//
+//            /*
+//             * This mapping operation only creates the base outlet
+//             * product. Variant functionality remains available through
+//             * the existing variant APIs/update flow.
+//             */
+//            product.setHasProductVariants(false);
+//
+//            // ========================================================
+//            // 8. IMAGE
+//            // ========================================================
+//
+//            product.setImageLink(masterProduct.getPhoto());
+//
+//            // ========================================================
+//            // 9. PRODUCT TYPE
+//            // ========================================================
+//
+//            /*
+//             * IMPORTANT FIX:
+//             *
+//             * master_products.product_type
+//             *              ->
+//             * products.product_type
+//             */
+//            String productType = masterProduct.getProductType();
+//
+//            if (productType != null && !productType.trim().isEmpty()) {
+//                product.setProductType(productType.trim());
+//            } else {
+//                product.setProductType(null);
+//
+//                log.warn("[PRODUCT-MAP] Master product has no productType | masterProductId={} | productName={}", masterProduct.getMasterProductId(), productName);
+//            }
+//
+//            // ========================================================
+//            // 10. MERCHANT PRICE
+//            // ========================================================
+//
+//            BigDecimal merchantPrice = entry.getMerchantPrice();
+//
+//            if (merchantPrice == null) {
+//                merchantPrice = BigDecimal.ZERO;
+//            }
+//
+//            if (merchantPrice.compareTo(BigDecimal.ZERO) < 0) {
+//                throw new IllegalArgumentException("Merchant Price cannot be negative for product : " + productName);
+//            }
+//
+//            product.setMerchantPrice(merchantPrice);
+//
+//            // ========================================================
+//            // 11. AUDIT / ACTIVE STATUS
+//            // ========================================================
+//
+//            product.setCreatedBy(SYSTEM_USER);
+//            product.setUpdatedBy(SYSTEM_USER);
+//            product.setIsActive("Y");
+//
+//            // ========================================================
+//            // 12. SAVE PRODUCT
+//            // ========================================================
+//
+//            FmProduct savedProduct = productRepository.save(product);
+//
+//            // ========================================================
+//            // 13. SAVE TIMINGS
+//            // ========================================================
+//
+//            saveTimings(savedProduct.getProductId(), entry);
+//
+//            savedNames.add(productName);
+//
+//            log.info("[PRODUCT-MAP] Product mapped successfully | masterProductId={} | productId={} | outletId={} | outletCategoryId={} | categoryId={} | productType={}", masterProduct.getMasterProductId(), savedProduct.getProductId(), outletId, outletCategoryId, categoryId, savedProduct.getProductType());
+//        }
+//
+//        // ============================================================
+//        // 14. INVALIDATE OUTLET CACHE
+//        // ============================================================
+//
+//        cacheInvalidateService.invalidateCache(outletId);
+//
+//        // ============================================================
+//        // 15. RESPONSE
+//        // ============================================================
+//
+//        FmMapToProductResult response = new FmMapToProductResult();
+//
+//        response.setSavedCount(savedNames.size());
+//        response.setSkippedCount(skippedNames.size());
+//        response.setSavedNames(savedNames);
+//        response.setSkippedNames(skippedNames);
+//
+//        log.info("[PRODUCT-MAP] Product mapping completed | outletId={} | saved={} | skipped={}", outletId, savedNames.size(), skippedNames.size());
+//
+//        return response;
+//    }
+@Override
+@Transactional
+public FmMapToProductResult mapToProducts(FmMapToProduct request) {
 
-        log.info("[PRODUCT-MAP] Product mapping initiated | outletId={} | categoryId={} | outletCategoryId={} | requestedProducts={}", request != null ? request.getOutletId() : null, request != null ? request.getCategoryId() : null, request != null ? request.getOutletCategoryId() : null, request != null && request.getProducts() != null ? request.getProducts().size() : 0);
+    log.info(
+            "[PRODUCT-MAP] Product mapping initiated | outletId={} | categoryId={} | outletCategoryId={} | requestedProducts={}",
+            request != null ? request.getOutletId() : null,
+            request != null ? request.getCategoryId() : null,
+            request != null ? request.getOutletCategoryId() : null,
+            request != null && request.getProducts() != null
+                    ? request.getProducts().size()
+                    : 0
+    );
 
-        // ============================================================
-        // 1. VALIDATE REQUEST
-        // ============================================================
+    // ============================================================
+    // 1. VALIDATE REQUEST
+    // ============================================================
 
-        if (request == null) {
-            throw new IllegalArgumentException("Request cannot be null.");
+    if (request == null) {
+        throw new IllegalArgumentException("Request cannot be null.");
+    }
+
+    if (request.getOutletId() == null || request.getOutletId() <= 0) {
+        throw new IllegalArgumentException("Valid Outlet Id is required.");
+    }
+
+    if (request.getProducts() == null || request.getProducts().isEmpty()) {
+        throw new IllegalArgumentException("Products are required.");
+    }
+
+    Integer outletId = request.getOutletId();
+
+    /*
+     * Keep outlet category sequence synchronized before creating
+     * new outlet category records.
+     */
+    synchronizeOutletCategorySequence();
+
+    List<String> savedNames = new ArrayList<>();
+    List<String> skippedNames = new ArrayList<>();
+
+    // ============================================================
+    // 2. PROCESS EACH MASTER PRODUCT INDEPENDENTLY
+    //
+    // A single request can contain products belonging to
+    // different master categories.
+    //
+    // Therefore outletCategoryId is resolved separately for
+    // every product.
+    // ============================================================
+
+    for (ProductEntry entry : request.getProducts()) {
+
+        if (entry == null) {
+            skippedNames.add("(null product)");
+            continue;
         }
 
-        if (request.getOutletId() == null || request.getOutletId() <= 0) {
-            throw new IllegalArgumentException("Valid Outlet Id is required.");
+        String productName =
+                entry.getProductName() == null
+                        ? ""
+                        : entry.getProductName().trim();
+
+        // ========================================================
+        // 2.1 MASTER PRODUCT ID
+        // ========================================================
+
+        if (entry.getMasterProductId() == null
+                || entry.getMasterProductId() <= 0) {
+
+            log.warn(
+                    "[PRODUCT-MAP] Skipping product | productName={} | reason=Master Product Id missing",
+                    productName
+            );
+
+            skippedNames.add(
+                    productName.isBlank()
+                            ? "(Master Product Id Missing)"
+                            : productName + " (Master Product Id Missing)"
+            );
+
+            continue;
         }
 
-        if (request.getProducts() == null || request.getProducts().isEmpty()) {
-            throw new IllegalArgumentException("Products are required.");
+        // ========================================================
+        // 2.2 LOAD MASTER PRODUCT
+        // ========================================================
+
+        FmMasterProduct masterProduct =
+                masterProductRepository
+                        .findById(entry.getMasterProductId())
+                        .orElseThrow(() -> {
+
+                            log.warn(
+                                    "[PRODUCT-MAP] Master product not found | masterProductId={}",
+                                    entry.getMasterProductId()
+                            );
+
+                            return new ResourceNotFoundException(
+                                    "Master Product not found with id : "
+                                            + entry.getMasterProductId()
+                            );
+                        });
+
+        // ========================================================
+        // 2.3 MASTER PRODUCT ACTIVE CHECK
+        // ========================================================
+        //
+        // OLD:
+        // masterProduct.getPublish()
+        //
+        // NEW:
+        // masterProduct.getIsActive()
+        //
+        // master_products.is_active:
+        // Y = active
+        // N = inactive
+        // ========================================================
+
+        String masterProductActive =
+                masterProduct.getIsActive();
+
+        if (masterProductActive == null
+                || !"Y".equalsIgnoreCase(masterProductActive.trim())) {
+
+            log.warn(
+                    "[PRODUCT-MAP] Skipping inactive master product | masterProductId={} | productName={} | isActive={}",
+                    masterProduct.getMasterProductId(),
+                    masterProduct.getMasterProductName(),
+                    masterProductActive
+            );
+
+            skippedNames.add(
+                    masterProduct.getMasterProductName()
+                            + " (Master Product Inactive)"
+            );
+
+            continue;
         }
 
-        Integer outletId = request.getOutletId();
+        // ========================================================
+        // 2.4 USE MASTER PRODUCT NAME WHEN REQUEST NAME IS EMPTY
+        // ========================================================
+
+        if (productName.isBlank()) {
+
+            productName =
+                    masterProduct.getMasterProductName() == null
+                            ? ""
+                            : masterProduct
+                            .getMasterProductName()
+                            .trim();
+        }
+
+        if (productName.isBlank()) {
+
+            skippedNames.add("(Blank Product Name)");
+            continue;
+        }
+
+        // ========================================================
+        // 3. RESOLVE CATEGORY FROM MASTER PRODUCT
+        // ========================================================
+
+        Integer masterCategoryId =
+                masterProduct.getCategoryId();
+
+        if (masterCategoryId == null
+                || masterCategoryId <= 0) {
+
+            log.warn(
+                    "[PRODUCT-MAP] Skipping master product | masterProductId={} | reason=Category missing",
+                    masterProduct.getMasterProductId()
+            );
+
+            skippedNames.add(
+                    productName + " (Category Missing)"
+            );
+
+            continue;
+        }
 
         /*
-         * IMPORTANT:
-         * The outlet_categories table is using a PostgreSQL generated-id
-         * sequence. If that sequence is behind the current MAX(id), Hibernate
-         * can receive an already-used ID (for example 97) and the INSERT fails
-         * with outlet_categories_pkey duplicate key.
+         * If categoryId is supplied by the request, validate it
+         * against the master product.
          *
-         * Keep the sequence synchronized before this operation. The database
-         * should also be fixed permanently with the SQL provided separately.
+         * For bulk mapping categoryId can be null, in which case
+         * the category is taken directly from the master product.
          */
-        synchronizeOutletCategorySequence();
-
-        List<String> savedNames = new ArrayList<>();
-        List<String> skippedNames = new ArrayList<>();
-
-        // ============================================================
-        // 2. PROCESS EACH MASTER PRODUCT INDEPENDENTLY
-        //
-        // A single bulk request may contain master products from
-        // different categories. Therefore outletCategoryId is resolved
-        // separately for every product.
-        // ============================================================
-
-        for (ProductEntry entry : request.getProducts()) {
-
-            if (entry == null) {
-                skippedNames.add("(null product)");
-                continue;
-            }
-
-            String productName = entry.getProductName() == null ? "" : entry.getProductName().trim();
-
-            // --------------------------------------------------------
-            // 2.1 MASTER PRODUCT ID
-            // --------------------------------------------------------
-
-            if (entry.getMasterProductId() == null || entry.getMasterProductId() <= 0) {
-
-                log.warn("[PRODUCT-MAP] Skipping product | productName={} | reason=Master Product Id missing", productName);
-
-                skippedNames.add(productName.isBlank() ? "(Master Product Id Missing)" : productName + " (Master Product Id Missing)");
-
-                continue;
-            }
-
-            // --------------------------------------------------------
-            // 2.2 LOAD MASTER PRODUCT
-            // --------------------------------------------------------
-
-            FmMasterProduct masterProduct = masterProductRepository.findById(entry.getMasterProductId()).orElseThrow(() -> {
-                log.warn("[PRODUCT-MAP] Master product not found | masterProductId={}", entry.getMasterProductId());
-
-                return new ResourceNotFoundException("Master Product not found with id : " + entry.getMasterProductId());
-            });
-
-            // --------------------------------------------------------
-            // 2.3 MASTER PRODUCT MUST BE PUBLISHED
-            // --------------------------------------------------------
-
-            if (masterProduct.getPublish() == null || masterProduct.getPublish() != 1) {
-
-                log.warn("[PRODUCT-MAP] Skipping unpublished master product | masterProductId={} | productName={}", masterProduct.getMasterProductId(), masterProduct.getMasterProductName());
-
-                skippedNames.add(masterProduct.getMasterProductName() + " (Master Product Not Published)");
-
-                continue;
-            }
-
-            // --------------------------------------------------------
-            // 2.4 USE MASTER PRODUCT NAME WHEN REQUEST NAME IS EMPTY
-            // --------------------------------------------------------
-
-            if (productName.isBlank()) {
-                productName = masterProduct.getMasterProductName() == null ? "" : masterProduct.getMasterProductName().trim();
-            }
-
-            if (productName.isBlank()) {
-                skippedNames.add("(Blank Product Name)");
-                continue;
-            }
-
-            // ========================================================
-            // 3. RESOLVE CATEGORY FROM MASTER PRODUCT
-            // ========================================================
-
-            Integer masterCategoryId = masterProduct.getCategoryId();
-
-            if (masterCategoryId == null || masterCategoryId <= 0) {
-
-                log.warn("[PRODUCT-MAP] Skipping master product | masterProductId={} | reason=Category missing", masterProduct.getMasterProductId());
-
-                skippedNames.add(productName + " (Category Missing)");
-
-                continue;
-            }
-
-            /*
-             * Mobile compatibility:
-             *
-             * If categoryId is supplied, validate it against the
-             * selected master product.
-             *
-             * Bulk mapping normally leaves categoryId null. In that
-             * case the category comes from each master product.
-             */
-            Integer categoryId = request.getCategoryId() != null ? request.getCategoryId() : masterCategoryId;
-
-            if (!Objects.equals(masterCategoryId, categoryId)) {
-
-                log.warn("[PRODUCT-MAP] Skipping category mismatch | masterProductId={} | masterCategoryId={} | requestedCategoryId={}", masterProduct.getMasterProductId(), masterCategoryId, categoryId);
-
-                skippedNames.add(productName + " (Category Mismatch)");
-
-                continue;
-            }
-
-            // ========================================================
-            // 4. RESOLVE OUTLET CATEGORY
-            // ========================================================
-
-            FmOutletCategory outletCategory;
-
-            if (request.getOutletCategoryId() != null) {
-
-                // ----------------------------------------------------
-                // Existing mobile flow
-                // ----------------------------------------------------
-
-                outletCategory = outletCategoryRepository.findByOutletCategoryId(request.getOutletCategoryId()).orElseThrow(() -> new ResourceNotFoundException("Outlet Category not found with id : " + request.getOutletCategoryId()));
-
-                if (!Objects.equals(outletCategory.getOutletId(), outletId)) {
-                    throw new IllegalArgumentException("Outlet Category does not belong to Outlet Id : " + outletId);
-                }
-
-                if (!Objects.equals(outletCategory.getCategoryId(), categoryId)) {
-                    throw new IllegalArgumentException("Outlet Category does not belong to Category Id : " + categoryId);
-                }
-
-            } else {
-
-                // ----------------------------------------------------
-                // Bulk flow
-                //
-                // Each master product can have a different category.
-                // ----------------------------------------------------
-
-                Optional<FmOutletCategory> existingOutletCategory = outletCategoryRepository.findByOutletIdAndCategoryId(outletId, categoryId);
-
-                if (existingOutletCategory.isPresent()) {
-
-                    outletCategory = existingOutletCategory.get();
-
-                    log.info("[PRODUCT-MAP] Reusing existing outlet category | outletId={} | categoryId={} | outletCategoryId={}", outletId, categoryId, outletCategory.getOutletCategoryId());
-
-                } else {
-
-                    log.info("[PRODUCT-MAP] Creating outlet category | outletId={} | categoryId={}", outletId, categoryId);
-
-                    FmOutletCategory entity = new FmOutletCategory();
-
-                    entity.setOutletId(outletId);
-                    entity.setCategoryId(categoryId);
-                    entity.setCreatedBy(SYSTEM_USER);
-                    entity.setUpdatedBy(SYSTEM_USER);
-                    entity.setIsToggle(true);
-                    entity.setIsActive("Y");
-
-                    FmOutletCategory saved = outletCategoryRepository.saveAndFlush(entity);
-
-                    log.info("[PRODUCT-MAP] Outlet category created | outletCategoryId={}", saved.getOutletCategoryId());
-
-                    outletCategory = saved;
-                }
-            }
-
-            if (!"Y".equalsIgnoreCase(outletCategory.getIsActive() == null ? "Y" : outletCategory.getIsActive())) {
-
-                throw new IllegalArgumentException("Outlet Category is inactive for outletId=" + outletId + ", categoryId=" + categoryId);
-            }
-
-            Integer outletCategoryId = outletCategory.getOutletCategoryId();
-
-            // ========================================================
-            // 5. DUPLICATE CHECK
-            // ========================================================
-
-            if (productRepository.existsByOutletCategoryIdAndProductNameIgnoreCase(outletCategoryId, productName)) {
-
-                log.info("[PRODUCT-MAP] Product already mapped | outletCategoryId={} | productName={}", outletCategoryId, productName);
-
-                skippedNames.add(productName + " (Already Exists)");
-
-                continue;
-            }
-
-            // ========================================================
-            // 6. CREATE OUTLET PRODUCT
-            // ========================================================
-
-            FmProduct product = new FmProduct();
-
-            product.setOutletCategoryId(outletCategoryId);
-
-            product.setProductName(productName);
-
-            String description = entry.getDescription();
-
-            if (description == null || description.isBlank()) {
-                description = masterProduct.getDescription();
-            }
-
-            // products.description is NOT NULL.
-            product.setDescription(description == null ? "" : description);
-
-            // --------------------------------------------------------
-            // VEG / NON-VEG
-            // --------------------------------------------------------
-
-            Boolean isVeg = entry.getIsVeg();
-
-            if (isVeg == null) {
-                isVeg = masterProduct.getVeg() != null && masterProduct.getVeg() == 1;
-            }
-
-            product.setIsVeg(isVeg);
-
-            // ========================================================
-            // 7. NO VARIANTS DURING MASTER PRODUCT MAPPING
-            // ========================================================
-
-            /*
-             * This mapping operation only creates the base outlet
-             * product. Variant functionality remains available through
-             * the existing variant APIs/update flow.
-             */
-            product.setHasProductVariants(false);
-
-            // ========================================================
-            // 8. IMAGE
-            // ========================================================
-
-            product.setImageLink(masterProduct.getPhoto());
-
-            // ========================================================
-            // 9. PRODUCT TYPE
-            // ========================================================
-
-            /*
-             * IMPORTANT FIX:
-             *
-             * master_products.product_type
-             *              ->
-             * products.product_type
-             */
-            String productType = masterProduct.getProductType();
-
-            if (productType != null && !productType.trim().isEmpty()) {
-                product.setProductType(productType.trim());
-            } else {
-                product.setProductType(null);
-
-                log.warn("[PRODUCT-MAP] Master product has no productType | masterProductId={} | productName={}", masterProduct.getMasterProductId(), productName);
-            }
-
-            // ========================================================
-            // 10. MERCHANT PRICE
-            // ========================================================
-
-            BigDecimal merchantPrice = entry.getMerchantPrice();
-
-            if (merchantPrice == null) {
-                merchantPrice = BigDecimal.ZERO;
-            }
-
-            if (merchantPrice.compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Merchant Price cannot be negative for product : " + productName);
-            }
-
-            product.setMerchantPrice(merchantPrice);
-
-            // ========================================================
-            // 11. AUDIT / ACTIVE STATUS
-            // ========================================================
-
-            product.setCreatedBy(SYSTEM_USER);
-            product.setUpdatedBy(SYSTEM_USER);
-            product.setIsActive("Y");
-
-            // ========================================================
-            // 12. SAVE PRODUCT
-            // ========================================================
-
-            FmProduct savedProduct = productRepository.save(product);
-
-            // ========================================================
-            // 13. SAVE TIMINGS
-            // ========================================================
-
-            saveTimings(savedProduct.getProductId(), entry);
-
-            savedNames.add(productName);
-
-            log.info("[PRODUCT-MAP] Product mapped successfully | masterProductId={} | productId={} | outletId={} | outletCategoryId={} | categoryId={} | productType={}", masterProduct.getMasterProductId(), savedProduct.getProductId(), outletId, outletCategoryId, categoryId, savedProduct.getProductType());
+        Integer categoryId =
+                request.getCategoryId() != null
+                        ? request.getCategoryId()
+                        : masterCategoryId;
+
+        if (!Objects.equals(
+                masterCategoryId,
+                categoryId
+        )) {
+
+            log.warn(
+                    "[PRODUCT-MAP] Skipping category mismatch | masterProductId={} | masterCategoryId={} | requestedCategoryId={}",
+                    masterProduct.getMasterProductId(),
+                    masterCategoryId,
+                    categoryId
+            );
+
+            skippedNames.add(
+                    productName + " (Category Mismatch)"
+            );
+
+            continue;
         }
 
-        // ============================================================
-        // 14. INVALIDATE OUTLET CACHE
-        // ============================================================
+        // ========================================================
+        // 4. RESOLVE OUTLET CATEGORY
+        // ========================================================
 
-        cacheInvalidateService.invalidateCache(outletId);
+        FmOutletCategory outletCategory;
 
-        // ============================================================
-        // 15. RESPONSE
-        // ============================================================
+        if (request.getOutletCategoryId() != null) {
 
-        FmMapToProductResult response = new FmMapToProductResult();
+            // ----------------------------------------------------
+            // EXISTING MOBILE FLOW
+            // ----------------------------------------------------
 
-        response.setSavedCount(savedNames.size());
-        response.setSkippedCount(skippedNames.size());
-        response.setSavedNames(savedNames);
-        response.setSkippedNames(skippedNames);
+            outletCategory =
+                    outletCategoryRepository
+                            .findByOutletCategoryId(
+                                    request.getOutletCategoryId()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Outlet Category not found with id : "
+                                                    + request.getOutletCategoryId()
+                                    )
+                            );
 
-        log.info("[PRODUCT-MAP] Product mapping completed | outletId={} | saved={} | skipped={}", outletId, savedNames.size(), skippedNames.size());
+            if (!Objects.equals(
+                    outletCategory.getOutletId(),
+                    outletId
+            )) {
 
-        return response;
+                throw new IllegalArgumentException(
+                        "Outlet Category does not belong to Outlet Id : "
+                                + outletId
+                );
+            }
+
+            if (!Objects.equals(
+                    outletCategory.getCategoryId(),
+                    categoryId
+            )) {
+
+                throw new IllegalArgumentException(
+                        "Outlet Category does not belong to Category Id : "
+                                + categoryId
+                );
+            }
+
+        } else {
+
+            // ----------------------------------------------------
+            // BULK FLOW
+            // ----------------------------------------------------
+            //
+            // Find existing outlet-category mapping.
+            // Create it if it does not exist.
+            // ----------------------------------------------------
+
+            Optional<FmOutletCategory> existingOutletCategory =
+                    outletCategoryRepository
+                            .findByOutletIdAndCategoryId(
+                                    outletId,
+                                    categoryId
+                            );
+
+            if (existingOutletCategory.isPresent()) {
+
+                outletCategory =
+                        existingOutletCategory.get();
+
+                log.info(
+                        "[PRODUCT-MAP] Reusing existing outlet category | outletId={} | categoryId={} | outletCategoryId={}",
+                        outletId,
+                        categoryId,
+                        outletCategory.getOutletCategoryId()
+                );
+
+            } else {
+
+                log.info(
+                        "[PRODUCT-MAP] Creating outlet category | outletId={} | categoryId={}",
+                        outletId,
+                        categoryId
+                );
+
+                FmOutletCategory entity =
+                        new FmOutletCategory();
+
+                entity.setOutletId(outletId);
+                entity.setCategoryId(categoryId);
+
+                entity.setCreatedBy(SYSTEM_USER);
+                entity.setUpdatedBy(SYSTEM_USER);
+
+                entity.setIsToggle(true);
+                entity.setIsActive("Y");
+
+                FmOutletCategory saved =
+                        outletCategoryRepository.saveAndFlush(
+                                entity
+                        );
+
+                log.info(
+                        "[PRODUCT-MAP] Outlet category created | outletCategoryId={}",
+                        saved.getOutletCategoryId()
+                );
+
+                outletCategory = saved;
+            }
+        }
+
+        // ========================================================
+        // 4.1 CHECK OUTLET CATEGORY ACTIVE STATUS
+        // ========================================================
+
+        if (!"Y".equalsIgnoreCase(
+                outletCategory.getIsActive()
+        )) {
+
+            throw new IllegalArgumentException(
+                    "Outlet Category is inactive for outletId="
+                            + outletId
+                            + ", categoryId="
+                            + categoryId
+            );
+        }
+
+        Integer outletCategoryId =
+                outletCategory.getOutletCategoryId();
+
+        // ========================================================
+        // 5. DUPLICATE CHECK
+        // ========================================================
+
+        if (productRepository
+                .existsByOutletCategoryIdAndProductNameIgnoreCase(
+                        outletCategoryId,
+                        productName
+                )) {
+
+            log.info(
+                    "[PRODUCT-MAP] Product already mapped | outletCategoryId={} | productName={}",
+                    outletCategoryId,
+                    productName
+            );
+
+            skippedNames.add(
+                    productName + " (Already Exists)"
+            );
+
+            continue;
+        }
+
+        // ========================================================
+        // 6. CREATE OUTLET PRODUCT
+        // ========================================================
+
+        FmProduct product =
+                new FmProduct();
+
+        product.setOutletCategoryId(
+                outletCategoryId
+        );
+
+        product.setProductName(
+                productName
+        );
+
+        // ========================================================
+        // 6.1 DESCRIPTION
+        // ========================================================
+
+        String description =
+                entry.getDescription();
+
+        if (description == null
+                || description.isBlank()) {
+
+            description =
+                    masterProduct.getDescription();
+        }
+
+        /*
+         * products.description is NOT NULL.
+         */
+        product.setDescription(
+                description == null
+                        ? ""
+                        : description
+        );
+
+        // ========================================================
+        // 6.2 VEG / NON-VEG
+        // ========================================================
+        //
+        // NEW MASTER PRODUCT FIELD:
+        //
+        // master_products.is_veg
+        //
+        // true  = Veg
+        // false = Non-Veg
+        //
+        // OLD getVeg()/getNonVeg() logic is removed.
+        // ========================================================
+
+        Boolean isVeg =
+                entry.getIsVeg();
+
+        /*
+         * If request does not provide isVeg, use the value
+         * directly from master_products.is_veg.
+         */
+        if (isVeg == null) {
+
+            isVeg =
+                    masterProduct.getIsVeg();
+        }
+
+        /*
+         * Do not invent a product-specific Veg/Non-Veg value.
+         * The value must come from the request/master product.
+         */
+        if (isVeg == null) {
+
+            log.warn(
+                    "[PRODUCT-MAP] Skipping product because isVeg is missing | masterProductId={} | productName={}",
+                    masterProduct.getMasterProductId(),
+                    productName
+            );
+
+            skippedNames.add(
+                    productName + " (isVeg Missing)"
+            );
+
+            continue;
+        }
+
+        product.setIsVeg(
+                isVeg
+        );
+
+        // ========================================================
+        // 7. PRODUCT OPTIONS / VARIANTS
+        // ========================================================
+        //
+        // The master_products table contains:
+        //
+        // has_options
+        // options
+        //
+        // The current mapping flow creates only the base product.
+        // Variant APIs can continue to manage outlet variants.
+        // ========================================================
+
+        product.setHasProductVariants(
+                false
+        );
+
+        // ========================================================
+        // 8. IMAGE
+        // ========================================================
+
+        String masterPhoto =
+                masterProduct.getPhoto();
+
+        if (masterPhoto == null
+                || masterPhoto.isBlank()) {
+
+            log.warn(
+                    "[PRODUCT-MAP] Skipping product because image is missing | masterProductId={} | productName={}",
+                    masterProduct.getMasterProductId(),
+                    productName
+            );
+
+            skippedNames.add(
+                    productName + " (Image Missing)"
+            );
+
+            continue;
+        }
+
+        product.setImageLink(
+                masterPhoto
+        );
+
+        // ========================================================
+        // 9. PRODUCT TYPE
+        // ========================================================
+        //
+        // master_products.product_type
+        //              ->
+        // products.product_type
+        // ========================================================
+
+        String productType =
+                masterProduct.getProductType();
+
+        if (productType != null
+                && !productType.trim().isEmpty()) {
+
+            product.setProductType(
+                    productType.trim()
+            );
+
+        } else {
+
+            product.setProductType(null);
+
+            log.warn(
+                    "[PRODUCT-MAP] Master product has no productType | masterProductId={} | productName={}",
+                    masterProduct.getMasterProductId(),
+                    productName
+            );
+        }
+
+        // ========================================================
+        // 10. MERCHANT PRICE
+        // ========================================================
+
+        BigDecimal merchantPrice =
+                entry.getMerchantPrice();
+
+        if (merchantPrice == null) {
+            merchantPrice = BigDecimal.ZERO;
+        }
+
+        if (merchantPrice.compareTo(
+                BigDecimal.ZERO
+        ) < 0) {
+
+            throw new IllegalArgumentException(
+                    "Merchant Price cannot be negative for product : "
+                            + productName
+            );
+        }
+
+        product.setMerchantPrice(
+                merchantPrice
+        );
+
+        // ========================================================
+        // 11. AUDIT / ACTIVE STATUS
+        // ========================================================
+
+        product.setCreatedBy(
+                SYSTEM_USER
+        );
+
+        product.setUpdatedBy(
+                SYSTEM_USER
+        );
+
+        product.setIsActive(
+                "Y"
+        );
+
+        // ========================================================
+        // 12. SAVE PRODUCT
+        // ========================================================
+
+        FmProduct savedProduct =
+                productRepository.save(
+                        product
+                );
+
+        // ========================================================
+        // 13. SAVE TIMINGS
+        // ========================================================
+
+        saveTimings(
+                savedProduct.getProductId(),
+                entry
+        );
+
+        savedNames.add(
+                productName
+        );
+
+        log.info(
+                "[PRODUCT-MAP] Product mapped successfully | masterProductId={} | productId={} | outletId={} | outletCategoryId={} | categoryId={} | productType={}",
+                masterProduct.getMasterProductId(),
+                savedProduct.getProductId(),
+                outletId,
+                outletCategoryId,
+                categoryId,
+                savedProduct.getProductType()
+        );
     }
+
+    // ============================================================
+    // 14. INVALIDATE OUTLET CACHE
+    // ============================================================
+
+    cacheInvalidateService.invalidateCache(
+            outletId
+    );
+
+    // ============================================================
+    // 15. RESPONSE
+    // ============================================================
+
+    FmMapToProductResult response =
+            new FmMapToProductResult();
+
+    response.setSavedCount(
+            savedNames.size()
+    );
+
+    response.setSkippedCount(
+            skippedNames.size()
+    );
+
+    response.setSavedNames(
+            savedNames
+    );
+
+    response.setSkippedNames(
+            skippedNames
+    );
+
+    log.info(
+            "[PRODUCT-MAP] Product mapping completed | outletId={} | saved={} | skipped={}",
+            outletId,
+            savedNames.size(),
+            skippedNames.size()
+    );
+
+    return response;
+}
 
     @Override
     @Transactional

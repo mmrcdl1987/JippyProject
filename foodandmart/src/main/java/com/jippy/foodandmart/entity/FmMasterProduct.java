@@ -1,5 +1,4 @@
-
-        package com.jippy.foodandmart.entity;
+package com.jippy.foodandmart.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -21,211 +20,170 @@ import java.time.LocalDateTime;
 @Table(name = "master_products", schema = "jippy_fm")
 public class FmMasterProduct {
 
+    /**
+     * Primary Key
+     * <p>
+     * The database should generate this value.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "master_product_id")
     private Integer masterProductId;
 
+    /**
+     * Master Product Name
+     */
     @NotBlank(message = "Master product name is required")
     @Size(max = 100)
-    @Column(
-            name = "master_product_name",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "master_product_name", nullable = false, length = 100)
     private String masterProductName;
 
-    @Column(
-            name = "description",
-            columnDefinition = "TEXT"
-    )
+    /**
+     * Product Description
+     */
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-//    @Column(
-//            name = "short_description",
-//            columnDefinition = "TEXT"
-//    )
-//    private String shortDescription;
-
-    @Column(
-            name = "photo",
-            columnDefinition = "TEXT"
-    )
+    /**
+     * Product Image
+     */
+    @Column(name = "photo", columnDefinition = "TEXT")
     private String photo;
 
-//    @Column(
-//            name = "photos",
-//            columnDefinition = "TEXT"
-//    )
-//    private String photos;
-//
-//    @Column(
-//            name = "thumbnail",
-//            columnDefinition = "TEXT"
-//    )
-//    private String thumbnail;
-
-    @Column(
-            name = "category_id",
-            nullable = false
-    )
+    /**
+     * Category ID
+     */
+    @Column(name = "category_id", nullable = false)
     private Integer categoryId;
 
-    @Column(
-            name = "category_name",
-            length = 100,
-            nullable = false
-    )
+    /**
+     * Category Name
+     */
+    @Column(name = "category_name", nullable = false, length = 100)
     private String categoryName;
 
-//    @Column(name = "sub_category_id")
-//    private Integer subCategoryId;
-//
-//    @Column(
-//            name = "sub_category_name",
-//            length = 100
-//    )
-//    private String subCategoryName;
+    /**
+     * Veg / Non-Veg
+     * <p>
+     * true  = Veg
+     * false = Non-Veg
+     */
+    @Column(name = "is_veg", nullable = false)
+    private Boolean isVeg;
 
-    @Column(
-            name = "has_options",
-            nullable = false
-    )
+    /**
+     * Cuisine Type
+     */
+    @Column(name = "cuisine_type", length = 100)
+    private String cuisineType;
+
+    /**
+     * Indicates whether the product has options.
+     * <p>
+     * 0 = No
+     * 1 = Yes
+     */
+    @Column(name = "has_options", nullable = false)
     @Builder.Default
     private Integer hasOptions = 0;
 
-    @Column(
-            name = "options_enabled",
-            nullable = false
-    )
-    @Builder.Default
-    private Integer optionsEnabled = 0;
-
+    /**
+     * Product options stored as JSONB.
+     * <p>
+     * Example:
+     * <p>
+     * [
+     * {
+     * "name": "Size",
+     * "values": [
+     * "Small",
+     * "Medium",
+     * "Large"
+     * ]
+     * }
+     * ]
+     */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(
-            name = "options",
-            columnDefinition = "jsonb"
-    )
+    @Column(name = "options", columnDefinition = "jsonb")
     private String options;
 
-    @Column(
-            name = "veg",
-            nullable = false
-    )
-    @Builder.Default
-    private Integer veg = 0;
-
-    @Column(
-            name = "non_veg",
-            nullable = false
-    )
-    @Builder.Default
-    private Integer nonVeg = 0;
-
-    @Column(
-            name = "food_type",
-            length = 50
-    )
-    private String foodType;
-
-    @Column(
-            name = "cuisine_type",
-            length = 100
-    )
-    private String cuisineType;
-
-    @Column(name = "calories")
-    @Builder.Default
-    private Integer calories = 0;
-
-    @Column(name = "protein")
-    @Builder.Default
-    private Integer protein = 0;
-
-    @Column(name = "fats")
-    @Builder.Default
-    private Integer fats = 0;
-
-    @Column(name = "carbs")
-    @Builder.Default
-    private Integer carbs = 0;
-
-    @Column(name = "grams")
-    @Builder.Default
-    private Integer grams = 0;
     /**
-     * Indicates whether the master product is active.
-     *
-     * Y = Active / Enabled
-     * N = Inactive / Disabled
+     * Product Type
      */
-    @Column(
-            name = "is_active",
-            length = 1
-    )
+    @Column(name = "product_type", nullable = false, length = 10)
+    private String productType;
+
+    /**
+     * Active Status
+     * <p>
+     * Y = Active
+     * N = Inactive
+     */
+    @Column(name = "is_active", nullable = false, length = 1)
+    @Builder.Default
     private String isActive = "Y";
 
     /**
-     * Product type/category classification.
-     *
-     * Example values:
-     * FOOD
-     * BEVERAGE
-     * GROCERY
-     * DESSERT
-     * SNACK
+     * Created Timestamp
      */
-    @Column(
-            name = "product_type",
-            length = 20
-    )
-    private String productType;
-
-    @Column(
-            name = "publish",
-            nullable = false
-    )
-    @Builder.Default
-    private Integer publish = 1;
-
     @CreationTimestamp
-    @Column(
-            name = "created_at",
-            updatable = false
-    )
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * Created By
+     */
     @Column(name = "created_by")
     private Integer createdBy;
 
+    /**
+     * Updated Timestamp
+     */
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /**
+     * Updated By
+     */
     @Column(name = "updated_by")
     private Integer updatedBy;
 
+
+    // ============================================================
+    // CSV / EXCEL TEMPORARY VALUES
+    // ============================================================
+
     /**
-     * Transient — carries the merchant_price from an uploaded CSV file.
-     * Never persisted to the master_products table.
+     * Merchant price from uploaded CSV/Excel.
+     * <p>
+     * IMPORTANT:
+     * <p>
+     * This field is NOT stored in master_products.
+     * It is only used temporarily during:
+     * <p>
+     * CSV -> Compare -> Add To Outlet Products
      */
     @Transient
     private Double csvMerchantPrice;
 
     /**
-     * Transient — carries the raw availability timing string
-     * (e.g. "9:00-22:00") from an uploaded CSV file.
-     * Never persisted to master_products.
+     * Timing from uploaded CSV/Excel.
+     * <p>
+     * IMPORTANT:
+     * <p>
+     * This field is NOT stored in master_products.
      */
     @Transient
     private String csvTiming;
 
     /**
-     * Transient — carries the day-of-week name
-     * (e.g. "Monday", "Sunday") from an uploaded CSV file.
-     * Never persisted to master_products.
+     * Day of week from uploaded CSV/Excel.
+     * <p>
+     * IMPORTANT:
+     * <p>
+     * This field is NOT stored in master_products.
      */
     @Transient
     private String csvDayOfWeek;
 }
-
