@@ -1,15 +1,18 @@
 package com.jippy.driver.serviceImpl;
 
+import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.DriverZoneAssignmentRequestDto;
 import com.jippy.driver.dto.DriverZoneAssignmentResponseDto;
+import com.jippy.driver.dto.ZoneStatusToggleRequestDto;
 import com.jippy.driver.entity.Driver;
-import com.jippy.driver.entity.DriverZoneAssignment;
 import com.jippy.driver.entity.DriverZone;
+import com.jippy.driver.entity.DriverZoneAssignment;
 import com.jippy.driver.mapper.DriverZoneAssignmentMapper;
 import com.jippy.driver.repositary.DriverRepository;
 import com.jippy.driver.repositary.DriverZoneAssignmentRepository;
 import com.jippy.driver.repositary.DriverZoneRepository;
 import com.jippy.driver.service.DriverZoneAssignmentService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
@@ -130,5 +133,71 @@ public class DriverZoneAssignmentServiceImpl implements DriverZoneAssignmentServ
 
         // Return response dto with assignment details
         return DriverZoneAssignmentMapper.mapToResponseDto(assignment);
+    }
+//    =====================================================================================
+//    =====================================================================================
+
+    @Override
+    @Transactional
+    public String statusToggleForZone(
+            ZoneStatusToggleRequestDto requestDTO) {
+
+        log.info(
+                "[ZONE STATUS] Status toggle started | zoneId={} | requestedStatus={}",
+                requestDTO.getZoneId(),
+                requestDTO.getStatus());
+
+        //----------------------------------------------------------
+        // Fetch Zone
+        //----------------------------------------------------------
+
+        DriverZone zone = zoneRepository
+                .findById(requestDTO.getZoneId())
+                .orElseThrow(() -> {
+
+                    log.warn(
+                            "[ZONE STATUS] Zone not found | zoneId={}",
+                            requestDTO.getZoneId());
+
+                    return new ResourceNotFoundException(
+                            "Zone not found with id : "
+                                    + requestDTO.getZoneId());
+                });
+
+        //----------------------------------------------------------
+        // Update Status
+        //----------------------------------------------------------
+
+        zone.setStatus(requestDTO.getStatus());
+
+        zone.setUpdatedAt(LocalDateTime.now());
+
+        //----------------------------------------------------------
+        // Save Zone
+        //----------------------------------------------------------
+
+        zoneRepository.save(zone);
+
+        log.info(
+                "[ZONE STATUS] Zone status updated successfully | zoneId={} | status={}",
+                zone.getZoneId(),
+                zone.getStatus());
+
+        //----------------------------------------------------------
+        // Prepare Message
+        //----------------------------------------------------------
+
+        if (DConstants.STATUS_YES.equals(requestDTO.getStatus())) {
+
+            return "Zone enabled successfully. for Zone Id: "
+                    + requestDTO.getZoneId()
+                    + ", to Status: Y";
+
+        } else {
+
+            return "Zone disabled successfully. for Zone Id: "
+                    + requestDTO.getZoneId()
+                    + ",to Status: N";
+        }
     }
 }

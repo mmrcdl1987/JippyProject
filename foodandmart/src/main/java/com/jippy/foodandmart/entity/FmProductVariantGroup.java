@@ -22,7 +22,7 @@ public class FmProductVariantGroup {
     @Column(name = "group_name", nullable = false, length = 100)
     private String groupName;
 
-    @Column(name = "selection_type", nullable = false, length = 20)
+    @Column(name = "selection_time", nullable = false, length = 20)
     private String selectionType;
 
     @Column(name = "min_selection", nullable = false)

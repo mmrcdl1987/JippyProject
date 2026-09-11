@@ -32,7 +32,6 @@ public class FmProductController {
 
     private final FmProductService productMappingService;
 
-
     /**
      * POST /api/fm/products/from-master
      * <p>
@@ -178,7 +177,7 @@ public class FmProductController {
      * <p>
      * Gets product by product ID.
      */
-    @GetMapping("/{productId}")
+    @GetMapping("/getCompleteProductDetails/{productId}")
     public ResponseEntity<FmProductUpdateResponseDto> getProductById(@PathVariable Integer productId) {
 
         log.info("[PRODUCT] GET Product. ProductId={}", productId);

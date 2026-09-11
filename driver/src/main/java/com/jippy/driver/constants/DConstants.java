@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 public final class DConstants {
 
     public static final Boolean STATUS_FALSE = false;
+    public static final String STATUS_YES = "Y";
+    public static final String STATUS_NO = "N";
 
     // ============================================================
     // COMMON STATUS CONSTANTS

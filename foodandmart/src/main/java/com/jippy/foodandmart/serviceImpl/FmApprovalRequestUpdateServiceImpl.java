@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -672,7 +671,9 @@ public class FmApprovalRequestUpdateServiceImpl
             emailService.sendOutletOnlineEmail(
                     outlet.getOutletEmail(),
                     outlet.getOutletName(),
-                    merchant.getMerchantName()
+                    merchant.getMerchantName(),
+                    approvalRequest.getCurrentLevel()
+
             );
 
             log.info(
@@ -709,7 +710,8 @@ public class FmApprovalRequestUpdateServiceImpl
             // Email #2 - Merchant Approved
             emailService.sendMerchantApprovedEmail(
                     merchant.getMerchantEmail(),
-                    merchant.getMerchantName()
+                    merchant.getMerchantName(),
+                    approvalRequest.getCurrentLevel()
             );
 
             log.info(

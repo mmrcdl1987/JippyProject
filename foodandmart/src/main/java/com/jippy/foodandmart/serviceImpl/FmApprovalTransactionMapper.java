@@ -31,25 +31,25 @@ public class FmApprovalTransactionMapper {
 
         return transaction;
     }
-    public static FmApprovalTransactionResponseDTO toRejectedTransactionResponseDTO(
-            FmApprovalTransaction transaction) {
-
-        FmApprovalTransactionResponseDTO dto =
-                new FmApprovalTransactionResponseDTO();
-
-        dto.setApprovalTransactionsId(transaction.getApprovalTransactionsId());
-        dto.setEntityType(transaction.getEntityType());
-        dto.setEntityId(transaction.getEntityId());
-        dto.setApprovalLevel(transaction.getApprovalLevel());
-        dto.setStatus(transaction.getStatus());
-        dto.setRejectedReason(transaction.getRejectedReason());
-        dto.setApprovedBy(transaction.getApprovedBy());
-        dto.setApprovedAt(transaction.getApprovedAt());
-        dto.setUpdatedBy(transaction.getUpdatedBy());
-        dto.setUpdatedAt(transaction.getUpdatedAt());
-
-        return dto;
-    }
+//    public static FmApprovalTransactionResponseDTO toRejectedTransactionResponseDTO(
+//            FmApprovalTransaction transaction) {
+//
+//        FmApprovalTransactionResponseDTO dto =
+//                new FmApprovalTransactionResponseDTO();
+//
+//        dto.setApprovalTransactionsId(transaction.getApprovalTransactionsId());
+//        dto.setEntityType(transaction.getEntityType());
+//        dto.setEntityId(transaction.getEntityId());
+//        dto.setApprovalLevel(transaction.getApprovalLevel());
+//        dto.setStatus(transaction.getStatus());
+//        dto.setRejectedReason(transaction.getRejectedReason());
+//        dto.setApprovedBy(transaction.getApprovedBy());
+//        dto.setApprovedAt(transaction.getApprovedAt());
+//        dto.setUpdatedBy(transaction.getUpdatedBy());
+//        dto.setUpdatedAt(transaction.getUpdatedAt());
+//
+//        return dto;
+//    }
     public static FmApprovalTransactionResponseDTO toTransactionResponseDTO(
             FmApprovalTransactionProjection projection) {
 

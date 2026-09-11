@@ -10,8 +10,9 @@ public interface FmMerchantWithBankProjection {
     String getMerchantEmail();
     String getMerchantPhone();
     String getBusinessType();
-    String getStatus();
+//    String getStatus();
 
+    Boolean getIsApproved();
 // for merchant details
     Long getBankId();
     Long getRecipientId();
@@ -20,5 +21,9 @@ public interface FmMerchantWithBankProjection {
     String getBankName();
     String getAccountHolderName();
     String getUserType();
+
+    String getAadhaarNumberUrl();
+
+    String getPanNumberUrl();
 }
 

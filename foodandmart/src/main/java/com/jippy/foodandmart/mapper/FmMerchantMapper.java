@@ -319,7 +319,8 @@ public final class FmMerchantMapper {
         dto.setMerchantEmail(data.getMerchantEmail());
         dto.setMerchantPhone(data.getMerchantPhone());
         dto.setBusinessType(data.getBusinessType());
-        dto.setStatus(data.getStatus());
+        dto.setIsApproved(data.getIsApproved());
+//        dto.setStatus(data.getStatus());
 
         // bank details from projection
         dto.setBankId(data.getBankId());
@@ -329,6 +330,12 @@ public final class FmMerchantMapper {
         dto.setBankName(data.getBankName());
         dto.setAccountHolderName(data.getAccountHolderName());
         dto.setUserType(data.getUserType());
+
+
+        // KYC details
+        dto.setAadhaarNumberUrl(data.getAadhaarNumberUrl());
+        dto.setPanNumberUrl(data.getPanNumberUrl());
+
 
         return dto;
     }
@@ -342,7 +349,7 @@ public final class FmMerchantMapper {
         merchant.setMerchantEmail(dto.getMerchantEmail());
         merchant.setMerchantPhone(dto.getMerchantPhone());
         merchant.setMerchantBusinessType(dto.getBusinessType());
-        merchant.setStatus(dto.getStatus());
+//        merchant.setStatus(dto.getStatus());
     }
 
     public static void updateMerchantKycEntity(FmUserKyc kyc, FmMerchantWithBankDto dto) {

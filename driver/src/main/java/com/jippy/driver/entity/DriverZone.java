@@ -44,4 +44,7 @@
         @Column(name = "updated_by")
         private Integer updatedBy;
 
+        // Zone active status
+        @Column(name = "status", length = 1)
+        private String status;
     }

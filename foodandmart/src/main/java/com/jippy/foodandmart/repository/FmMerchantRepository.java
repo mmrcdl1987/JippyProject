@@ -79,30 +79,37 @@ public interface FmMerchantRepository
     // ============================================================
 
     @Query(value = """
-            SELECT
-                m.merchant_id AS merchantId,
-                m.merchant_name AS merchantName,
-                m.merchant_email AS merchantEmail,
-                m.merchant_phone AS merchantPhone,
-                m.merchant_business_type AS businessType,
-                m.status AS status,
+        SELECT
+            m.merchant_id AS merchantId,
+            m.merchant_name AS merchantName,
+            m.merchant_email AS merchantEmail,
+            m.merchant_phone AS merchantPhone,
+            m.merchant_business_type AS businessType,
+            m.is_approved AS isApproved,
 
-                u.bank_id AS bankId,
-                u.recipient_id AS recipientId,
-                u.account_number AS accountNumber,
-                u.ifsc_code AS ifscCode,
-                u.bank_name AS bankName,
-                u.account_holder_name AS accountHolderName,
-                u.user_type AS userType
+            u.bank_id AS bankId,
+            u.recipient_id AS recipientId,
+            u.account_number AS accountNumber,
+            u.ifsc_code AS ifscCode,
+            u.bank_name AS bankName,
+            u.account_holder_name AS accountHolderName,
+            u.user_type AS userType,
 
-            FROM jippy_fm.merchants m
+            k.aadhaar_number_url AS aadhaarNumberUrl,
+            k.pan_number_url AS panNumberUrl
 
-            JOIN jippy_fm.user_bank_details u
-              ON u.recipient_id = m.merchant_id
-             AND u.user_type = 'MERCHANT'
+        FROM jippy_fm.merchants m
 
-            WHERE m.merchant_id = :merchantId
-            """,
+        JOIN jippy_fm.user_bank_details u
+          ON u.recipient_id = m.merchant_id
+         AND u.user_type = 'MERCHANT'
+
+        LEFT JOIN jippy_fm.user_kyc k
+          ON k.entity_id = m.merchant_id
+         AND UPPER(k.entity_type) = 'MERCHANT'
+
+        WHERE m.merchant_id = :merchantId
+        """,
             nativeQuery = true)
     FmMerchantWithBankProjection getMerchantWithBank(
             @Param("merchantId") Integer merchantId

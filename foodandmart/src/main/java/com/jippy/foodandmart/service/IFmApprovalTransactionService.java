@@ -15,7 +15,7 @@ public interface IFmApprovalTransactionService {
      *
      * @return List of rejected approval transactions
      */
-    List<FmApprovalTransactionResponseDTO> getRejectedApprovals();
+//    List<FmApprovalTransactionResponseDTO> getRejectedApprovals();
 
     /**
      * Fetches all PENDING approval requests from approval_request table.

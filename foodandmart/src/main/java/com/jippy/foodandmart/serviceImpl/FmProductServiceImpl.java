@@ -1158,8 +1158,8 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
 
         List<FmProductVariantOption> productOptions =
                 variantOptionRepository
-                        .findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(
-                                productId);
+                        .findByProductIdAndIsActiveOrderByProductVariantOptionsIdAsc(
+                                productId, FmAppConstants.FLAG_YES);
 
         int deletedCount = 0;
         for (FmProductVariantOption option : productOptions) {
@@ -1950,7 +1950,9 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
 
         log.info("[PRODUCT] Fetch product details initiated | productId={}", productId);
 
-        FmProduct product = productRepository.findByProductIdAndIsActive(productId, "Y").orElseThrow(() -> {
+        FmProduct product
+                = productRepository.findByProductIdAndIsActive(productId, "Y")
+                .orElseThrow(() -> {
 
             log.warn("[PRODUCT] Product not found | productId={}", productId);
 
@@ -1974,7 +1976,8 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
         /*
          * Product Timings
          */
-        List<FmProductAvailableTiming> timings = productAvailableTimingRepository.findByProductIdOrderByDayOfWeekIdAsc(productId);
+        List<FmProductAvailableTiming> timings
+                = productAvailableTimingRepository.findByProductIdOrderByDayOfWeekIdAsc(productId);
 
         List<FmProductTimingResponseDto> timingDtos = new ArrayList<>();
 
@@ -2004,7 +2007,10 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
         /*
          * Variant Groups
          */
-        List<FmProductVariantOption> variantOptions = variantOptionRepository.findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(productId);
+        List<FmProductVariantOption> variantOptions =
+                variantOptionRepository
+                        .findByProductIdAndIsActiveOrderByProductVariantOptionsIdAsc(
+                                productId, FmAppConstants.FLAG_YES);
 
         Map<Integer, FmProductEditVariantGroupDto> groupMap = new LinkedHashMap<>();
 
@@ -3104,7 +3110,9 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
              * 5. FETCH ACTIVE VARIANT OPTIONS
              * ============================================================
              */
-            List<FmProductVariantOption> options = variantOptionRepository.findByProductIdAndIsActiveTrueOrderByProductVariantOptionsIdAsc(productId);
+            List<FmProductVariantOption> options
+                    = variantOptionRepository.findByProductIdAndIsActiveOrderByProductVariantOptionsIdAsc(
+                    productId, FmAppConstants.FLAG_YES);
 
             /*
              * ============================================================

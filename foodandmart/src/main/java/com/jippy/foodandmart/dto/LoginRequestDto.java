@@ -8,12 +8,12 @@ import lombok.Data;
 public class LoginRequestDto {
 
     @Schema(description = "Username used to log in ",
-            example = "devadmin")
+            example = "superadmin")
     @NotBlank(message = "Username is required")
     private String username;
 
     @Schema(description = "Password used to log in ",
-            example = "*****")
+            example = "")
     @NotBlank(message = "Password is required")
     private String password;
 }

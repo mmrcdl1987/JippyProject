@@ -4,7 +4,6 @@ import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.FmApprovalRequestResponseDTO;
 import com.jippy.foodandmart.dto.FmApprovalTransactionResponseDTO;
 import com.jippy.foodandmart.entity.FmApprovalRequest;
-import com.jippy.foodandmart.entity.FmApprovalTransaction;
 import com.jippy.foodandmart.projections.FmApprovalTransactionProjection;
 import com.jippy.foodandmart.repository.FmApprovalRequestRepository;
 import com.jippy.foodandmart.repository.FmApprovalTransactionRepository;
@@ -31,22 +30,22 @@ public class FmApprovalTransactionServiceImpl implements IFmApprovalTransactionS
     /**
      * Fetches all REJECTED approval transactions.
      *
-     * @return List of rejected approval transactions
+     * @return List of rejected approval transactions  extra API
      */
-    @Override
-    public List<FmApprovalTransactionResponseDTO> getRejectedApprovals() {
-
-        log.info("Fetching all REJECTED approval transactions.");
-
-        List<FmApprovalTransaction> transactions =
-                transactionRepository.findByStatusIgnoreCaseOrderByApprovedAtDesc(FmAppConstants.APPROVAL_STATUS_REJECTED);
-
-        log.info("Found {} REJECTED approval transactions.", transactions.size());
-
-        return transactions.stream()
-                .map(FmApprovalTransactionMapper::toRejectedTransactionResponseDTO)
-                .collect(Collectors.toList());
-    }
+//    @Override
+//    public List<FmApprovalTransactionResponseDTO> getRejectedApprovals() {
+//
+//        log.info("Fetching all REJECTED approval transactions.");
+//
+//        List<FmApprovalTransaction> transactions =
+//                transactionRepository.findByStatusIgnoreCaseOrderByApprovedAtDesc(FmAppConstants.APPROVAL_STATUS_REJECTED);
+//
+//        log.info("Found {} REJECTED approval transactions.", transactions.size());
+//
+//        return transactions.stream()
+//                .map(FmApprovalTransactionMapper::toRejectedTransactionResponseDTO)
+//                .collect(Collectors.toList());
+//    }
 
     /**
      * Fetches all PENDING approval requests from approval_request table.
