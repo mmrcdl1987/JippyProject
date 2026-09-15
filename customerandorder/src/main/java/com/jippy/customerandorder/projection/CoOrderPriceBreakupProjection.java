@@ -38,7 +38,7 @@ public interface CoOrderPriceBreakupProjection {
 
     BigDecimal getTip();
 
-    BigDecimal getCouponDiscount();
+    BigDecimal getDiscount();
 
     BigDecimal getWalletAmount();
 
@@ -47,4 +47,6 @@ public interface CoOrderPriceBreakupProjection {
     BigDecimal getOrderTotalAmount();
 
     BigDecimal getCustomerDeliveryFeeTax();
+
+    String getDiscountType();
 }

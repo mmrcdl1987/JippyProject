@@ -121,7 +121,7 @@ public class COOrderService implements IOrderService {
         saveOrderItems(dto.getItems(), savedOrder);
 
         BigDecimal currentTotal = dto.getOrderTotalAmount() != null ? dto.getOrderTotalAmount() : BigDecimal.ZERO;
-        log.info("ORDER_AMOUNT_DISCOUNTED | orderId={} | itemAmount={} | couponDiscount={} | orderAmountDiscounted={}", orderId, dto.getOrderAmount(), dto.getCouponDiscount(), dto.getOrderAmountDiscounted());
+        log.info("ORDER_AMOUNT_DISCOUNTED | orderId={} | itemAmount={} | couponDiscount={} | orderAmountDiscounted={}", orderId, dto.getOrderAmount(), dto.getDiscount(), dto.getOrderAmountDiscounted());
         BigDecimal walletDeduction = processWalletDeduction(dto, orderId, currentTotal);
 
         BigDecimal finalOrderTotal = currentTotal.subtract(walletDeduction).setScale(2, RoundingMode.HALF_UP);
@@ -906,7 +906,7 @@ public class COOrderService implements IOrderService {
 
         dto.setOrderAmountDiscounted(breakup.getOrderAmountDiscounted());
 
-        dto.setCouponDiscount(breakup.getCouponDiscount());
+        dto.setCouponDiscount(breakup.getDiscount());
 
         // ================= DRIVER DELIVERY =================
 
@@ -1117,7 +1117,7 @@ public class COOrderService implements IOrderService {
             return;
         }
 
-        if (request.getCouponId() == null) {
+        if (request.getDiscountId() == null) {
             throw new CoValidationException(
                     "Coupon id is required for GLOBAL promotion"
             );
@@ -1125,7 +1125,7 @@ public class COOrderService implements IOrderService {
 
         saveGlobalCoupon(
                 request.getCustomerId(),
-                request.getCouponId(),
+                request.getDiscountId(),
                 order.getOrderId()
         );
     }

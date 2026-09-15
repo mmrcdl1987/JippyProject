@@ -114,7 +114,8 @@ public class CoOrderMapper {
         CoOrderPriceBreakup breakup = new CoOrderPriceBreakup();
 
         breakup.setOrder(order);
-        breakup.setCouponId(requestDto.getCouponId());
+        breakup.setDiscountId(requestDto.getDiscountId());
+        breakup.setDiscountType(requestDto.getDiscountType());
 
         // ================= ORDER =================
 
@@ -204,8 +205,8 @@ public class CoOrderMapper {
 
         // ================= PAYMENT =================
 
-        breakup.setCouponDiscount(
-                defaultValue(requestDto.getCouponDiscount())
+        breakup.setDiscount(
+                defaultValue(requestDto.getDiscount())
         );
 
         breakup.setWalletAmount(

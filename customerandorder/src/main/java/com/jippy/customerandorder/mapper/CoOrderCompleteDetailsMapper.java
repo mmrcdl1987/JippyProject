@@ -157,13 +157,15 @@ public class CoOrderCompleteDetailsMapper {
 
         dto.setTip(projection.getTip());
 
-        dto.setCouponDiscount(projection.getCouponDiscount());
+        dto.setCouponDiscount(projection.getDiscount());
 
         dto.setWalletAmount(projection.getWalletAmount());
 
         // ================= FINAL =================
 
         dto.setOrderTotalAmount(projection.getOrderTotalAmount());
+
+        dto.setDiscountType(projection.getDiscountType());
 
         return dto;
     }

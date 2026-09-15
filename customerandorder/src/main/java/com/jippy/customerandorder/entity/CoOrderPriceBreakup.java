@@ -25,8 +25,8 @@ public class CoOrderPriceBreakup {
     @JoinColumn(name = "order_id", nullable = false)
     private CoOrder order;
 
-    @Column(name = "coupon_id")
-    private Integer couponId;
+    @Column(name = "discount_id")
+    private Integer discountId;
 
     @Column(name = "order_amount", nullable = false)
     private BigDecimal orderAmount;
@@ -113,10 +113,13 @@ public class CoOrderPriceBreakup {
     private BigDecimal walletAmount;
 
     @Column(name = "coupon_discount")
-    private BigDecimal couponDiscount;
+    private BigDecimal discount;
 
     @Column(name = "tip")
     private BigDecimal tip;
+
+    @Column(name = "discount_type")
+    private String discountType;
 
     // ================= AUDIT =================
 

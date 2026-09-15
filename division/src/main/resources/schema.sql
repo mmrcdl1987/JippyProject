@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS jippy_division.coupon_mapping_outlets_products (
    promotion_date_id integer,
    max_selection integer NOT NULL DEFAULT -1, -- means unlimited
    promotion_message character varying(500),
+   is_active character varying(1) NOT NULL,
    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
    created_by integer,
    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
@@ -100,6 +101,7 @@ CREATE TABLE IF NOT EXISTS jippy_division.price_drop_mapping_outlets_products (
    price_model_id integer,
    max_selection integer NOT NULL DEFAULT -1, -- means unlimited
    promotion_message character varying(500) NOT NULL,
+   is_active character varying(1) NOT NULL,
    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
    created_by integer,
    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
@@ -160,6 +162,7 @@ CREATE TABLE IF NOT EXISTS jippy_division.outlet_weekly_settlement (
     promotion_amount NUMERIC(10, 2),
     subscription_amount NUMERIC(10, 2),
     net_settlement_amount NUMERIC(10, 2) NOT NULL,
+    email_status character varying(20) NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     created_by integer,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,

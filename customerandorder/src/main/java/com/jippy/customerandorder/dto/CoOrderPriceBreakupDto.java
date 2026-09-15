@@ -66,4 +66,6 @@ public class CoOrderPriceBreakupDto {
     // ================= FINAL =================
 
     private BigDecimal orderTotalAmount;
+
+    private String discountType;
 }

@@ -130,21 +130,6 @@ public class CoCustomerController {
     }
 
 
-    // Update Customer Profile Pic
-    @PutMapping(value = "/updateCustomerProfile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CoResponseDto> updateCustomerProfile(@RequestPart("customerData") String customerDataJson, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) throws Exception {
-
-        CoCustomerRequestDto requestDto = objectMapper.readValue(customerDataJson, CoCustomerRequestDto.class);
-
-        log.info("UPDATE_CUSTOMER_PROFILE_API_START | customerId={}", requestDto.getCustomerId());
-
-        String result = customerService.updateCustomerProfile(requestDto, profilePic);
-
-        log.info("UPDATE_CUSTOMER_PROFILE_API_SUCCESS | customerId={}", requestDto.getCustomerId());
-
-        return ResponseEntity.ok(new CoResponseDto(COConstants.STATUS_200, result));
-    }
-
     //    ----------------------------------------------------------------------------------------------
     //    to post customer delivery address with latitude and longitude
     @PostMapping("/saveCustomerDeliveryAddress")

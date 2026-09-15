@@ -755,6 +755,7 @@ CREATE TABLE IF NOT EXISTS jippy_fm.promotion_plans(
     minimum_order_value NUMERIC(10,2) NOT NULL,
     offer_amount NUMERIC(10,2) NOT NULL,
     offer_type character varying(20), --flat,percentage
+    is_active character varying(1) NOT NULL,
     created_by integer,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,

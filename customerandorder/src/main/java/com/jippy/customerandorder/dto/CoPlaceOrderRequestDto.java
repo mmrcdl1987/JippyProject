@@ -36,9 +36,9 @@ public class CoPlaceOrderRequestDto {
 
     private PromotionSourceType promotionSourceType;
 
-    private Integer couponId;
+    private Integer discountId;
 
-    private BigDecimal couponDiscount;
+    private BigDecimal discount;
 
     @NotNull(message = "Order total amount is required")
     private BigDecimal orderTotalAmount;
@@ -168,4 +168,6 @@ public class CoPlaceOrderRequestDto {
     private String cookingInstructions;
 
     private Boolean isCutleryRequired;
+
+    private String discountType;
 }
