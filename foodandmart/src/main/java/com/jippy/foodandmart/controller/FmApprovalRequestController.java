@@ -93,7 +93,6 @@ public class FmApprovalRequestController {
     @Operation(summary = "Fetch Level-1 Pending Approval Requests", description = "Returns all pending Level-1 approval requests assigned to the given approver.")
     @ApiResponse(responseCode = "200", description = "Pending Approval Requests fetched successfully.")
     @ApiResponse(responseCode = "400", description = "Invalid Approver Id.")
-    @ApiResponse(responseCode = "404", description = "Approval Settings or Pending Requests not found.")
     @ApiResponse(responseCode = "500", description = "Internal Server Error.")
     @GetMapping("/getPendingLevelApprovalRequestsByApproverId/{approverId}")
     public ResponseEntity<List<FmLevel1PendingApprovalResponseDTO>> getLevel1PendingApprovalRequests(@Parameter(description = "Approver User Id", example = "1", required = true) @PathVariable @Positive(message = "Approver Id must be greater than zero.") Integer approverId) {

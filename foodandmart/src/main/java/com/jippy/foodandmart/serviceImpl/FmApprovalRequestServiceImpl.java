@@ -166,9 +166,12 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
 
         List<FmApprovalSettings> approvalSettingsList = getApprovalSettings(approverId);
 
-        validateManagerAreas(approverId);
-
         List<FmLevel1PendingApprovalResponseDTO> responseList = new ArrayList<>();
+
+        if (approvalSettingsList.isEmpty() || !hasManagerAreas(approverId)) {
+            log.info("No approval configuration found for Approver Id : {}", approverId);
+            return responseList;
+        }
 
         for (FmApprovalSettings approvalSettings : approvalSettingsList) {
 
@@ -342,10 +345,7 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
 
         if (approvalSettingsList.isEmpty()) {
 
-            log.error("Approval Settings not found for Approver Id : {}", approverId);
-
-            throw new ResourceNotFoundException("Approval Settings not found for Approver Id : "
-                    + approverId);
+            log.info("No active Approval Settings found for Approver Id : {}", approverId);
         }
 
         log.info("Total Approval Settings Found : {}", approvalSettingsList.size());
@@ -355,7 +355,7 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
 
 
 // 3. HELPER METHOD
-    private void validateManagerAreas(Integer approverId) {
+    private boolean hasManagerAreas(Integer approverId) {
 
         log.info("Fetching Manager Areas for Approver Id : {}", approverId);
 
@@ -363,12 +363,12 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
 
         if (managerAreas.isEmpty()) {
 
-            log.error("No Manager Areas Assigned for Approver Id : {}", approverId);
-
-            throw new ResourceNotFoundException("No Areas Assigned for Approver Id : " + approverId);
+            log.info("No Manager Areas Assigned for Approver Id : {}", approverId);
+            return false;
         }
 
         log.info("Total Manager Areas Found : {}", managerAreas.size());
+        return true;
     }
 
 
@@ -830,5 +830,4 @@ public class FmApprovalRequestServiceImpl implements IFmApprovalRequestService {
         return responseList;
     }
 }
-
 
