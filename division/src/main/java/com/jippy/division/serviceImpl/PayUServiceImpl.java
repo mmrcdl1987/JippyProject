@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -38,18 +39,29 @@ public class PayUServiceImpl implements PayUService {
 
     @Override
     public Map<String, String> generatePaymentHash(PaymentHashRequestDto request) {
-        // Forward sequence: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT
-        String hashSequence = String.format("%s|%s|%s|%s|%s|%s|||||||||||%s",
-                merchantKey,
-                request.getTxnid(),
-                request.getAmount(),
-                request.getProductinfo(),
-                request.getCustomerName() != null ? request.getCustomerName() : "",
-                request.getEmail() != null ? request.getEmail() : "",
+        // Ensure amount is strictly formatted to 2 decimal places
+        String formattedAmount = String.format(Locale.US, "%.2f",
+                Double.parseDouble(request.getAmount().toString()));
+
+        String firstname = request.getCustomerName() != null ? request.getCustomerName().trim() : "";
+        String email = request.getEmail() != null ? request.getEmail().trim() : "";
+        String productinfo = request.getProductinfo() != null ? request.getProductinfo().trim() : "";
+        String txnid = request.getTxnid() != null ? request.getTxnid().trim() : "";
+
+        // 10 empty string elements for udf1 through udf10
+        // String.join inserts 11 pipes between email and salt automatically!
+        String hashSequence = String.join("|",
+                merchantKey, txnid, formattedAmount, productinfo, firstname, email,
+                "", "", "", "", "", "", "", "", "", "",
                 merchantSalt
         );
 
-        String paymentHash = hashSha512(hashSequence);
+        System.out.println("================"+hashSequence);
+
+        // Ensure hash is strictly lower-case
+        String paymentHash = hashSha512(hashSequence).toLowerCase();
+
+        System.out.println("================"+paymentHash);
 
         Map<String, String> result = new HashMap<>();
         result.put("paymentHash", paymentHash);

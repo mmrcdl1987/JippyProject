@@ -154,6 +154,8 @@ public interface DriverOrderRepository extends JpaRepository<DriverOrder, Intege
             """, nativeQuery = true)
     List<DriverOrderSettlementProjection> getDriverOrderSettlements
             (@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    Optional<DriverOrder> findByOrderId(String orderId);
 }
 
 

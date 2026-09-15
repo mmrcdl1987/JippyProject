@@ -25,4 +25,5 @@ public class CoCartUpdateRequestDto {
 
     @Valid
     private List<CoCartVariantDto> variants;
+
 }

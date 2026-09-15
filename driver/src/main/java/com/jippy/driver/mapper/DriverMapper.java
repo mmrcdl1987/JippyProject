@@ -355,7 +355,7 @@ public class DriverMapper {
 
         DriverOrder driverOrder = new DriverOrder();
         driverOrder.setOrderId(driverOrderDto.getOrderId());
-        driverOrder.setDriver(driver);
+        driverOrder.setDriverId(driverOrderDto.getDriverId());
         driverOrder.setDeliverCharges(driverOrderDto.getDeliverCharges());
         driverOrder.setTips(driverOrderDto.getTips());
         driverOrder.setDeliveryDistanceInKms(driverOrderDto.getDeliveryDistanceInKms());

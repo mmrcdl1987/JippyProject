@@ -79,7 +79,7 @@ public class COEventMapper {
         return event;
     }
 
-    public static CoNewOrderEvent mapToOrderNewOrderEvent(CoOrder order, CoCustomer customer, List<CoOrderItemsEvent> orderItemsEventList) {
+    public static CoNewOrderEvent mapToOrderNewOrderEvent(CoOrder order, CoCustomer customer, List<CoOrderSummaryDto> orderItemsEventList) {
 
         CoNewOrderEvent newOrderEvent = new CoNewOrderEvent();
 

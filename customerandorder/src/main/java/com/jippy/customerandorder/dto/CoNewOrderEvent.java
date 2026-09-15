@@ -13,7 +13,7 @@ public class CoNewOrderEvent {
     private String customerName;
     private String customerMobileNum;
     private String orderStatus;
-    private List<CoOrderItemsEvent> orderItemsList;
+    private List<CoOrderSummaryDto> orderItemsList;
     private String cookingInstructions;
     private Boolean cutleryRequired;
 

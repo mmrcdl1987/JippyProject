@@ -34,6 +34,8 @@ public class DivSecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/div/coupons/welcome").permitAll()
 
+                        //payu webhook
+                        .requestMatchers("/api/div/payment//webhook/payu").permitAll()
                         .requestMatchers("/api/div/**").authenticated()
                         .anyRequest().authenticated()
                 )

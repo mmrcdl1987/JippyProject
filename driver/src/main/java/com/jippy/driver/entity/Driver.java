@@ -83,8 +83,8 @@ public class Driver {
     @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL)
     private DriverKyc driverKyc;
 
-    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
-    private List<DriverOrder> driverOrders;
+//    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
+//    private List<DriverOrder> driverOrders;
 
     @Column(name = "profile_pic_url")
     private String profilePicUrl;

@@ -130,3 +130,20 @@ aws:
     region: ap-south-2
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
+
+
+jwt:
+  secret: ks93w6IjKBc8TckMt9xjYSj2rE8YHJvduMBJiXBytHk=
+  expiration: 86400000
+
+# Custom Uber Direct API Integration Properties
+uber:
+  direct:
+    # Use sandbox for testing, switch to https://api.uber.com/v1 for production
+    base-url: https://sandbox-api.uber.com/v1
+    auth-url: https://auth.uber.com/oauth/v2/token
+    customer-id: ${UBER_CUSTOMER_ID}
+    client-id: ${UBER_CLIENT_ID}
+    client-secret: ${UBER_CLIENT_SECRET}
+    scope: eats.deliveries
+

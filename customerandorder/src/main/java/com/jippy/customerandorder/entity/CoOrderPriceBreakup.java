@@ -112,7 +112,7 @@ public class CoOrderPriceBreakup {
     @Column(name = "wallet_amount")
     private BigDecimal walletAmount;
 
-    @Column(name = "coupon_discount")
+    @Column(name = "discount")
     private BigDecimal discount;
 
     @Column(name = "tip")

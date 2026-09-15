@@ -151,6 +151,13 @@ public final class DConstants {
     public static final String FROM_EMAIL =
             "accounts@jippymart.in";
 
+    public static final String DRIVER_ORDER_UBER_EXTERNAL_PROVIDER = "UBER";
+    public static final String DRIVER_ORDER_DRIVER_TYPE_UBER = "UBER_DRIVER";
+
+    public static final String DRIVER_ORDER_ASSIGNED_STATUS_PENDING = "PENDING";
+    public static final String DRIVER_ORDER_ASSIGNED_STATUS_ACCEPTED = "ACCEPTED";
+    public static final String DRIVER_ORDER_ASSIGNED_STATUS_PICKUP = "PICKUP";
+
 
     // ============================================================
     // EMAIL

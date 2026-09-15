@@ -1,6 +1,7 @@
 package com.jippy.customerandorder.iservice;
 
 import com.jippy.customerandorder.dto.*;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -19,4 +20,6 @@ public interface IOrderService {
     CoOrderPriceBreakupDto getOrderPriceBreakup(String orderId);
 
     String acceptOrRejectOrderByOutlet(AcceptOrRejectOrderByOutletDto acceptOrRejectOrderByOutletDto);
+
+    //ResponseEntity<List<CoOrderSummaryDto>> orderSummaryForOutlet(Integer outletId);
 }

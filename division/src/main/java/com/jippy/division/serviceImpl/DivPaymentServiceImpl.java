@@ -149,15 +149,15 @@ public class DivPaymentServiceImpl implements DivPaymentService {
 
           Map<String, String> hashData = payUService.generatePaymentHash(hashRequestDto);
 
-//          Map<String, String> payUParams = new HashMap<>();
-//          payUParams.put("email", customerResponseDto.getEmail());
-//          payUParams.put("firstname",customerResponseDto.getFirstName());
-//          payUParams.put("productinfo", "Food ordered #" + orderDto.getOrderId());
-//          payUParams.put("status","success");
-//          payUParams.put("amount", orderDto.getOrderTotalAmount().toString());
-//          payUParams.put("txnid",orderDto.getOrderId());
-//          payUParams.put("key", payUMerchantKey);
-//          System.out.println("=============================="+payUService.verifyResponseHash(payUParams));
+          Map<String, String> payUParams = new HashMap<>();
+          payUParams.put("email", customerResponseDto.getEmail());
+          payUParams.put("firstname",customerResponseDto.getFirstName());
+          payUParams.put("productinfo", "Food ordered #" + orderDto.getOrderId());
+          payUParams.put("status","success");
+          payUParams.put("amount", orderDto.getOrderTotalAmount().toString());
+          payUParams.put("txnid",orderDto.getOrderId());
+          payUParams.put("key", payUMerchantKey);
+          System.out.println("=============================="+payUService.verifyResponseHash(payUParams));
 
           log.info("Payment initiated successfully for order: {} with payU Hash {}", orderDto.getOrderId(), hashData.get("paymentHash"));
 
