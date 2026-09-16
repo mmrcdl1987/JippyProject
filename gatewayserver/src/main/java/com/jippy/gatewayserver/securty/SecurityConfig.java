@@ -63,7 +63,10 @@ public class SecurityConfig {
 
                                 //public api's for website
                                 "/api/fm/outlets/public/customer/nearby",
-                                "/api/fm/outlets/public/outlet-details"
+                                "/api/fm/outlets/public/outlet-details",
+
+                                //payu webhook url
+                                "/api/div/payment//webhook/payu"
                         ).permitAll()
                         .anyExchange().permitAll() // Allow EVERYTHING temporarily
                 )

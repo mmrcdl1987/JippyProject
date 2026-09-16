@@ -115,6 +115,7 @@ public class CoCartService implements ICartService {
                     if (existingCart != null) {
 
                         existingCart.setQuantity(quantity);
+                        existingCart.setUnitPrice(unitPrice);
                         existingCart.setTotalPrice(totalPrice);
                         existingCart.setUpdatedAt(LocalDateTime.now());
                         existingCart.setUpdatedBy(1);
@@ -135,6 +136,7 @@ public class CoCartService implements ICartService {
                         newCart.setTotalPrice(totalPrice);
                         newCart.setCreatedAt(LocalDateTime.now());
                         newCart.setCreatedBy(1);
+                        newCart.setUnitPrice(unitPrice);
 
                         cartRepository.save(newCart);
 

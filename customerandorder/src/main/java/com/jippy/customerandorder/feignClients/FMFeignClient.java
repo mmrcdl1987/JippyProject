@@ -103,7 +103,7 @@ public interface FMFeignClient {
     );
 
     @GetMapping("/api/fm/products/getOrderProductItemsForMerchant")
-    public ResponseEntity<List<CoOrderItemsEvent>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
+    public ResponseEntity<List<CoOrderSummaryDto>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
             @RequestParam List<Integer> productVariantIds);
 
     @PostMapping("/api/fm/pricing/current-online-prices")

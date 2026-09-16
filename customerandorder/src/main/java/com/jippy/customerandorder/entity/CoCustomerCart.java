@@ -31,6 +31,9 @@ public class CoCustomerCart {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    @Column(name = "unit_price", nullable = false)
+    private BigDecimal unitPrice;
+
     @Column(name = "total_price", nullable = false)
     private BigDecimal totalPrice;
 

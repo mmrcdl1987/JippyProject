@@ -25,4 +25,6 @@ public class DriverOrderDto {
     private String orderStatus;
     private Integer paymentModeId;
     private Integer outletId;
+    private String uberDeliveryId;
+    private String uberDriverId;
 }

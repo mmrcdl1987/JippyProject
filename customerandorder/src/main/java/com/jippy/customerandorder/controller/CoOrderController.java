@@ -178,4 +178,13 @@ public class CoOrderController {
         return ResponseEntity.ok(response);
     }
 
+    //@GetMapping("/orderSummaryForOutlet")
+//    public ResponseEntity<List<CoOrderSummaryDto>> orderSummaryForOutlet(
+//            @RequestParam Integer outletId) {
+//
+//        log.info("Fetching order summary for outletId={}", outletId);
+//
+//        return orderService.orderSummaryForOutlet(outletId);
+//    }
+
 }

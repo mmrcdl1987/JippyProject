@@ -84,10 +84,10 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             PromotionSourceType promotionSourceType = requestDto.getPromotionSourceType();
 
-            Integer couponId = requestDto.getCouponId();
+            Integer couponId = requestDto.getDiscountId();
 
             BigDecimal couponDiscount =
-                    defaultValue(requestDto.getCouponDiscount());
+                    defaultValue(requestDto.getDiscount());
 
             if (couponDiscount.compareTo(BigDecimal.ZERO) < 0) {
 

@@ -7,12 +7,14 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Data
-public class CoOrderItemsEvent {
+public class CoOrderSummaryDto {
 
+    private String orderStatus;
+    private String orderId;
     private  Integer productId;
     private String productName;
     private BigDecimal productPrice;
-    private List<CoOrderItemsEvent.VariantDto> variants;
+    private List<CoOrderSummaryDto.VariantDto> variants;
 
     @Data
     @NoArgsConstructor
@@ -22,6 +24,8 @@ public class CoOrderItemsEvent {
         private String variantName;
         private BigDecimal variantPrice;
         private String priceType;
+        private Integer quantity;
+
     }
 
 }

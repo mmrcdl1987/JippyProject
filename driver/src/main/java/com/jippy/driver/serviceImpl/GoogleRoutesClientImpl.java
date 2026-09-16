@@ -18,10 +18,10 @@ public class GoogleRoutesClientImpl implements GoogleRoutesClient {
 
     private final WebClient.Builder webClientBuilder;
 
-    @Value("${google.maps.routes.url}")
+    @Value("${GOOGLE_MAPS_ROUTES_URL}")
     private String routesUrl;
 
-    @Value("${google.maps.routes.api-key}")
+    @Value("${GOOGLE_MAPS_ROUTES_API_KEY}")
     private String apiKey;
 
     @Override

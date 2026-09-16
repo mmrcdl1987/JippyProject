@@ -796,8 +796,8 @@ public class COOrderService implements IOrderService {
             productVariantIds.add(item.getVariantOptionId());
         }
 
-        ResponseEntity<List<CoOrderItemsEvent>> orderItemsEventListResponse = fmFeignClient.getOrderProductItemsForMerchant(productIds, productVariantIds);
-        List<CoOrderItemsEvent> orderItemsEventList = orderItemsEventListResponse.getBody();
+        ResponseEntity<List<CoOrderSummaryDto>> orderItemsEventListResponse = fmFeignClient.getOrderProductItemsForMerchant(productIds, productVariantIds);
+        List<CoOrderSummaryDto> orderItemsEventList = orderItemsEventListResponse.getBody();
 
         CoNewOrderEvent event = COEventMapper.mapToOrderNewOrderEvent(order, customer, orderItemsEventList);
 

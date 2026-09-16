@@ -19,17 +19,22 @@ public class DriverOrder {
     @Column(name = "driver_order_id")
     private Integer driverOrderId;
 
-    // Driver id mapped from driver table
-   /* @Column(name = "driver_id", nullable = false)
-    private Integer driverId;*/
+    @Column(name = "driver_id", nullable = false)
+    private Integer driverId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "driver_id", nullable = false)
-    private Driver driver;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "driver_id", nullable = false)
+//    private Driver driver;
 
     // Order id mapped from orders table
     @Column(name = "order_id", nullable = false)
     private String orderId;
+
+    @Column(name = "driver_type", nullable = false, length = 30)
+    private String driverType = "JIPPY_DRIVER";
+
+    @Column(name = "status", nullable = false, length = 50)
+    private String status = "PENDING";
 
     // Pick up distance in kilometers
     @Column(name = "pick_up_distance_in_kms", precision = 10, scale = 2)
@@ -77,4 +82,10 @@ public class DriverOrder {
 
     @Column(columnDefinition = "geometry(LineStringM, 4326)")
     private LineString deliveryRoute;
+
+    // One-to-One bidirectional mapping with ExternalDriverOrder
+    @OneToOne(mappedBy = "driverOrder", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private ExternalDriverOrder externalDriverOrder;
+
+
 }

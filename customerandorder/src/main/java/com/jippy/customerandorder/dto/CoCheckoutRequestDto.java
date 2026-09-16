@@ -14,13 +14,13 @@ public class CoCheckoutRequestDto {
 
     private Integer outletId;
 
-    private Integer couponId;
+    private Integer discountId;
 
     private PromotionSourceType promotionSourceType;
 
     private BigDecimal walletAmount;
 
-    private BigDecimal couponDiscount;
+    private BigDecimal discount;
 
     private BigDecimal deliveryTip;
 }
