@@ -302,7 +302,7 @@ public class ActivePromotionServiceImpl implements ActivePromotionService {
 
         Set<Integer> promotionPlanIds = merchantPromotionSchedules.stream().map(PromotionSchedule::getSourceId).filter(Objects::nonNull).collect(Collectors.toSet());
 
-        Map<Integer, MerchantPromotionDetailsDto> promotionDetailsMap = promotionPlanIds.stream().map(this::fetchMerchantPromotionDetails).filter(Objects::nonNull).collect(Collectors.toMap(MerchantPromotionDetailsDto::getPromotionPlanId, details -> details));
+        Map<Integer, MerchantPromotionDetailsDto> promotionDetailsMap = promotionPlanIds.stream().map(this::fetchMerchantPromotionDetails).filter(Objects::nonNull).filter(details -> "Y".equalsIgnoreCase(details.getIsActive())).collect(Collectors.toMap(MerchantPromotionDetailsDto::getPromotionPlanId, details -> details));
 
         List<ActivePromotionDto> merchantPromotions = new ArrayList<>();
 
@@ -312,7 +312,7 @@ public class ActivePromotionServiceImpl implements ActivePromotionService {
 
             if (promotionDetails == null) {
 
-                log.warn("[ACTIVE-PROMOTION] Merchant promotion details not found | promotionPlanId={} | productId={}", schedule.getSourceId(), schedule.getProductId());
+                log.warn("[ACTIVE-PROMOTION] Merchant promotion details not found or inactive | promotionPlanId={} | productId={}", schedule.getSourceId(), schedule.getProductId());
 
                 continue;
             }

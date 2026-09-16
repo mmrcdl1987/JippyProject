@@ -2,7 +2,9 @@ package com.jippy.driver.service;
 
 
 import com.jippy.driver.dto.*;
+import com.jippy.driver.entity.Driver;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -77,6 +79,13 @@ public interface DriverService {
     DriverDto findByPhoneNumber(String phoneNumber);
 
 
-
+    AdminDriverPageResponseDto getAdminDrivers(
+            String search,
+            Integer areaId,
+            Boolean isApproved,
+            Boolean readyToAcceptOrders,
+            int page,
+            int size
+    );
 
 }

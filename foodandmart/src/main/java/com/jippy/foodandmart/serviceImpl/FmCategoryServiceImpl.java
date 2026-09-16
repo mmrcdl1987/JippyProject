@@ -1,9 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
-import com.jippy.foodandmart.dto.FmCreateCategoryRequestDto;
-import com.jippy.foodandmart.dto.FmCreateCategoryResponseDto;
-import com.jippy.foodandmart.dto.FmUpdateCategoryRequestDto;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ImageValidationException;
@@ -160,41 +158,103 @@ public class FmCategoryServiceImpl implements IFmCategoryService {
         return CategoryMapper.toResponseDto(savedCategory);
     }
 
-    //    ----------------------------------------------------------------------------
     @Override
-    public List<FmCreateCategoryResponseDto> getHomeOrAllCategories(String filter) {
+    public FmCategoryFilterResponseDto getHomeOrAllCategories(String filter) {
 
-        log.info("GET_HOME_OR_ALL_CATEGORIES_STARTED | filter={}", filter);
+        log.info("GET_CATEGORY_LIST_STARTED | filter={}", filter);
+
+        /*
+         * ============================================================
+         * 1. GET TOTAL CATEGORY COUNT
+         * ============================================================
+         */
+
+        long totalCount = categoryRepository.count();
+
+
+        /*
+         * ============================================================
+         * 2. GET CATEGORY TYPE COUNTS
+         * ============================================================
+         */
+
+        long allCount = categoryRepository.countByCategoryTypeIgnoreCase(FmAppConstants.CATEGORY_TYPE_ALL);
+
+        long homeCount = categoryRepository.countByCategoryTypeIgnoreCase(FmAppConstants.CATEGORY_TYPE_HOME);
+
+
+        List<FmCategoryTypeCountDto> categoryTypeCounts = List.of(
+
+                FmCategoryTypeCountDto.builder().categoryType(FmAppConstants.CATEGORY_TYPE_ALL).count(allCount).build(),
+
+                FmCategoryTypeCountDto.builder().categoryType(FmAppConstants.CATEGORY_TYPE_HOME).count(homeCount).build());
+
+
+        /*
+         * ============================================================
+         * 3. FETCH CATEGORY DATA
+         * ============================================================
+         */
 
         List<FmCategory> categoryList;
 
-        if (FmAppConstants.CATEGORY_TYPE_ALL.equalsIgnoreCase(filter)) {
+        String selectedCategoryType = null;
 
-            log.info("Fetching all categories");
+
+        /*
+         * No filter means fetch all categories.
+         */
+
+        if (filter == null || filter.isBlank()) {
+
+            log.info("FETCHING_ALL_CATEGORIES");
 
             categoryList = categoryRepository.findAll();
 
-        } else if (FmAppConstants.CATEGORY_TYPE_HOME.equalsIgnoreCase(filter)) {
-
-            log.info("Fetching HOME categories");
-
-            categoryList = categoryRepository.findByCategoryType(FmAppConstants.CATEGORY_TYPE_HOME);
-
         } else {
 
-            throw new IllegalArgumentException("Invalid filter. Allowed values are ALL or HOME.");
+            selectedCategoryType = filter.trim().toUpperCase();
+
+            log.info("FETCHING_CATEGORIES_BY_TYPE | categoryType={}", selectedCategoryType);
+
+            categoryList = categoryRepository.findByCategoryType(selectedCategoryType);
         }
 
-        List<FmCreateCategoryResponseDto> responseList = new ArrayList<>();
 
-        for (FmCategory category : categoryList) {
+        /*
+         * ============================================================
+         * 4. MAP ENTITY TO RESPONSE DTO
+         * ============================================================
+         */
 
-            responseList.add(CategoryMapper.toResponseDto(category));
-        }
+        List<FmCreateCategoryResponseDto> categories = categoryList.stream().map(CategoryMapper::toResponseDto).toList();
 
-        log.info("GET_HOME_OR_ALL_CATEGORIES_COMPLETED | totalCategories={}", responseList.size());
 
-        return responseList;
+        /*
+         * ============================================================
+         * 5. BUILD RESPONSE
+         * ============================================================
+         */
+
+        FmCategoryFilterResponseDto response = FmCategoryFilterResponseDto.builder()
+
+                .totalCount(totalCount)
+
+                .categoryTypeCounts(categoryTypeCounts)
+
+                .selectedCategoryType(selectedCategoryType)
+
+                .filteredCount(categories.size())
+
+                .categories(categories)
+
+                .build();
+
+
+        log.info("GET_CATEGORY_LIST_COMPLETED | totalCount={} | filteredCount={}", totalCount, categories.size());
+
+
+        return response;
     }
 
 

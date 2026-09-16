@@ -23,7 +23,8 @@ public interface DivCouponMappingRepository
             FROM jippy_division.coupon_mapping_outlets_products cmop
             JOIN jippy_division.promotion_date pd
               ON cmop.promotion_date_id = pd.promotion_date_id
-            WHERE CURRENT_DATE BETWEEN
+            WHERE cmop.is_active = 'Y'
+              AND CURRENT_DATE BETWEEN
                   CAST(pd.promotion_from_date AS DATE)
               AND CAST(pd.promotion_to_date AS DATE)
             """, nativeQuery = true)

@@ -1,9 +1,12 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmMerchant;
+import com.jippy.foodandmart.projections.FmAdminMerchantProjection;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 import com.jippy.foodandmart.projections.FmPendingMerchantApprovalProjection;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -187,4 +190,172 @@ public interface FmMerchantRepository
             @Param("merchantId")
             Integer merchantId
     );
+
+
+    @Query(
+            value = """
+        SELECT
+            m.merchant_id AS merchantId,
+            m.merchant_name AS merchantName,
+            m.merchant_email AS merchantEmail,
+            m.merchant_phone AS merchantPhone,
+            m.merchant_business_type AS merchantBusinessType,
+
+            m.status AS status,
+            m.is_active AS isActive,
+            m.is_approved AS isApproved,
+
+            m.created_at AS createdAt,
+            m.created_by AS createdBy,
+
+            m.updated_at AS updatedAt,
+            m.updated_by AS updatedBy,
+
+            m.profile_pic_url AS profilePicUrl,
+
+            a.area_id AS areaId,
+            ar.area_name AS areaName
+
+        FROM jippy_fm.merchants m
+
+        LEFT JOIN jippy_fm.address a
+            ON a.jippy_address_id = m.merchant_id
+            AND a.address_type = 'MERCHANT'
+
+        LEFT JOIN jippy_fm.area ar
+            ON ar.area_id = a.area_id
+
+        WHERE
+
+            (
+                :search IS NULL
+                OR :search = ''
+                OR LOWER(m.merchant_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(m.merchant_email)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+                OR m.merchant_phone
+                    LIKE CONCAT('%', :search, '%')
+            )
+
+            AND
+            (
+                :merchantBusinessType IS NULL
+                OR :merchantBusinessType = ''
+                OR LOWER(m.merchant_business_type)
+                    = LOWER(:merchantBusinessType)
+            )
+
+            AND
+            (
+                :areaId IS NULL
+                OR a.area_id = :areaId
+            )
+
+            AND
+            (
+                :isActive IS NULL
+                OR :isActive = ''
+                OR UPPER(m.is_active) = UPPER(:isActive)
+            )
+
+            AND
+            (
+                :isApproved IS NULL
+                OR m.is_approved = :isApproved
+            )
+
+            AND
+            (
+                :status IS NULL
+                OR :status = ''
+                OR LOWER(m.status) = LOWER(:status)
+            )
+
+        ORDER BY m.created_at DESC
+        """,
+
+            countQuery = """
+        SELECT COUNT(DISTINCT m.merchant_id)
+
+        FROM jippy_fm.merchants m
+
+        LEFT JOIN jippy_fm.address a
+            ON a.jippy_address_id = m.merchant_id
+            AND a.address_type = 'MERCHANT'
+
+        WHERE
+
+            (
+                :search IS NULL
+                OR :search = ''
+                OR LOWER(m.merchant_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(m.merchant_email)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+                OR m.merchant_phone
+                    LIKE CONCAT('%', :search, '%')
+            )
+
+            AND
+            (
+                :merchantBusinessType IS NULL
+                OR :merchantBusinessType = ''
+                OR LOWER(m.merchant_business_type)
+                    = LOWER(:merchantBusinessType)
+            )
+
+            AND
+            (
+                :areaId IS NULL
+                OR a.area_id = :areaId
+            )
+
+            AND
+            (
+                :isActive IS NULL
+                OR :isActive = ''
+                OR UPPER(m.is_active) = UPPER(:isActive)
+            )
+
+            AND
+            (
+                :isApproved IS NULL
+                OR m.is_approved = :isApproved
+            )
+
+            AND
+            (
+                :status IS NULL
+                OR :status = ''
+                OR LOWER(m.status) = LOWER(:status)
+            )
+        """,
+
+            nativeQuery = true
+    )
+    Page<FmAdminMerchantProjection> findAdminMerchants(
+
+            @Param("search")
+            String search,
+
+            @Param("merchantBusinessType")
+            String merchantBusinessType,
+
+            @Param("areaId")
+            Integer areaId,
+
+            @Param("isActive")
+            String isActive,
+
+            @Param("isApproved")
+            Boolean isApproved,
+
+            @Param("status")
+            String status,
+
+            Pageable pageable
+    );
+
+
 }

@@ -2,6 +2,7 @@ package com.jippy.foodandmart.service;
 
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmMerchant;
+import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -32,4 +33,11 @@ public interface IFmMerchantService {
     FmMerchantAddressDto getMerchantAddress(Integer merchantId);
 
     FmMerchant createMerchantBulkUpload(FmMerchantRequestDTO dto);
+
+    Page<FmMerchantDto> getAdminMerchants(
+            FmMerchantAdminFilterDto filter,
+            int page,
+            int size
+    );
+
 }

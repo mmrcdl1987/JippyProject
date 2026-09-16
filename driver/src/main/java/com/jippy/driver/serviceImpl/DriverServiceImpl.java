@@ -23,18 +23,22 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.*;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.jippy.driver.entity.Driver;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 
+import java.util.*;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -1360,4 +1364,102 @@ public class DriverServiceImpl implements DriverService {
 
             return driverDto;
         }
+    @Override
+    public AdminDriverPageResponseDto getAdminDrivers(
+            String search,
+            Integer areaId,
+            Boolean isApproved,
+            Boolean readyToAcceptOrders,
+            int page,
+            int size
+    ) {
+
+        page = Math.max(page, 0);
+
+        if (size <= 0) {
+            size = 10;
+        }
+
+        // Prevent excessively large page requests
+        size = Math.min(size, 100);
+
+        if (search != null) {
+
+            search = search.trim();
+
+            if (search.isEmpty()) {
+                search = null;
+            }
+        }
+        Pageable pageable = PageRequest.of(page, size);
+
+        // AREA FILTER
+        //
+        // Area and address data belong to FM Service.
+        // Driver Service only owns Driver data.
+
+        List<Integer> driverIds = Collections.emptyList();
+
+        boolean filterByDriverIds = false;
+
+
+        if (areaId != null) {
+
+            filterByDriverIds = true;
+
+            ResponseEntity<List<Integer>> response =
+                    fmFeignClient.getDriverIdsByArea(areaId);
+
+            driverIds = response.getBody();
+
+            // NO DRIVERS FOUND FOR SELECTED AREA
+
+            if (driverIds == null || driverIds.isEmpty()) {
+
+                return AdminDriverPageResponseDto.builder()
+                        .drivers(Collections.emptyList())
+                        .totalElements(0)
+                        .totalPages(0)
+                        .currentPage(page)
+                        .pageSize(size)
+                        .hasNext(false)
+                        .hasPrevious(false)
+                        .build();
+            }
+        }
+
+        // FETCH FILTERED DRIVERS
+
+        Page<Driver> driverPage =
+                driverRepository.findAdminDrivers(
+                        search,
+                        filterByDriverIds,
+                        driverIds,
+                        isApproved,
+                        readyToAcceptOrders,
+                        pageable
+                );
+
+        // ENTITY → DTO
+        //
+        // Reuse existing DriverMapper
+        List<AdminDriverDto> drivers =
+                driverPage.getContent()
+                        .stream()
+                        .map(DriverMapper::mapToAdminDriverDto)
+                        .toList();
+
+        // BUILD PAGINATED RESPONSE
+
+        return AdminDriverPageResponseDto.builder()
+                .drivers(drivers)
+                .totalElements(driverPage.getTotalElements())
+                .totalPages(driverPage.getTotalPages())
+                .currentPage(driverPage.getNumber())
+                .pageSize(driverPage.getSize())
+                .hasNext(driverPage.hasNext())
+                .hasPrevious(driverPage.hasPrevious())
+                .build();
+    }
+
 }

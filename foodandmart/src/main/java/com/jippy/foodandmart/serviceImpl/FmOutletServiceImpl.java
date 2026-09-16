@@ -23,6 +23,9 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -3623,7 +3626,6 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return response;
     }
     //==========================================================================================
-//==========================================================================================
     @Override
     public List<Integer> getOutletIdsByMerchantId(Integer merchantId) {
 
@@ -3642,6 +3644,59 @@ public class FmOutletServiceImpl implements IFmOutletService {
         );
 
         return outletIds;
+    }
+
+    @Override
+    public Page<FmAdminOutletDto> getAdminOutlets(String search, Integer areaId, String outletType, String isActive, Boolean isApproved, int page, int size) {
+
+        if (page < 0) {
+            page = 0;
+        }
+
+        if (size <= 0) {
+            size = 10;
+        }
+
+        final int MAX_PAGE_SIZE = 100;
+
+        if (size > MAX_PAGE_SIZE) {
+            size = MAX_PAGE_SIZE;
+        }
+
+        search = normalize(search);
+
+        outletType = normalize(outletType);
+
+        isActive = normalize(isActive);
+        if (isActive != null) {
+
+            isActive = isActive.toUpperCase();
+
+            if (!"Y".equals(isActive) && !"N".equals(isActive)) {
+
+                throw new IllegalArgumentException("isActive must be either Y or N");
+            }
+        }
+
+
+        Pageable pageable = PageRequest.of(page, size);
+
+
+        Page<FmAdminOutletProjection> outletPage = outletRepository.findAdminOutlets(search, areaId, outletType, isActive, isApproved, pageable);
+        return outletPage.map(FmOutletMapper::mapAdminOutletProjection);
+    }
+
+
+    /**
+     * Converts null, empty, and whitespace-only values to null.
+     */
+    private String normalize(String value) {
+
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
     }
 
 

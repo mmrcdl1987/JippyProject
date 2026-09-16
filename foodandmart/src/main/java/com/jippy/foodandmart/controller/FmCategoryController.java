@@ -1,8 +1,6 @@
 package com.jippy.foodandmart.controller;
 
 import com.jippy.foodandmart.dto.FmApiResponse;
-import com.jippy.foodandmart.dto.FmMasterProductResponseDto;
-import com.jippy.foodandmart.entity.FmCategory;
 import com.jippy.foodandmart.entity.FmOutletCategory;
 import com.jippy.foodandmart.repository.FmCategoryRepository;
 import com.jippy.foodandmart.repository.FmOutletCategoryRepository;
@@ -13,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.util.Map;
 
 /**

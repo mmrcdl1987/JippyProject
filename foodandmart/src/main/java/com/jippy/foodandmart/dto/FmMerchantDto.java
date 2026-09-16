@@ -1,5 +1,4 @@
 package com.jippy.foodandmart.dto;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,6 +7,7 @@ import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FmMerchantDto {
@@ -30,6 +30,22 @@ public class FmMerchantDto {
 
     private String status;
 
+    private String isActive;
+
+    private Boolean isApproved;
+
+    private String profilePicUrl;
+
+    /*
+     * Admin Merchant Listing Fields
+     */
+    private Integer areaId;
+
+    private String areaName;
+
+    /*
+     * Audit Fields
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
@@ -39,11 +55,5 @@ public class FmMerchantDto {
     private LocalDateTime updatedAt;
 
     private Integer updatedBy;
-
-    private String isActive;
-
-    private Boolean isApproved;
-
-    private String profilePicUrl;
 
 }

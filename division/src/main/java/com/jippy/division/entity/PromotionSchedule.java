@@ -8,7 +8,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
-
 @Getter
 @Setter
 @Entity
@@ -17,7 +16,7 @@ public class PromotionSchedule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "promotion_schedule_id")
+    @Column(name = "promotion_schedules_id")
     private Long promotionScheduleId;
 
     @Enumerated(EnumType.STRING)
@@ -34,10 +33,10 @@ public class PromotionSchedule {
     @Column(name = "location_id", nullable = false)
     private Integer locationId;
 
-    @Column(name = "outlet_id", nullable = false)
+    @Column(name = "outlet_id")
     private Integer outletId;
 
-    @Column(name = "product_id", nullable = false)
+    @Column(name = "product_id")
     private Integer productId;
 
     @Column(name = "start_date_time", nullable = false)

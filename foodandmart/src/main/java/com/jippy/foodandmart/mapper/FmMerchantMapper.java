@@ -92,6 +92,7 @@ package com.jippy.foodandmart.mapper;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.projections.FmAdminMerchantProjection;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 
 import java.time.LocalDateTime;
@@ -373,4 +374,51 @@ public final class FmMerchantMapper {
         bank.setAccountHolderName(dto.getAccountHolderName());
         bank.setUserType("MERCHANT");
     }
+
+
+    public static FmMerchantDto mapAdminMerchantProjection(
+            FmAdminMerchantProjection data
+    ) {
+
+        if (data == null) {
+            return null;
+        }
+
+        FmMerchantDto dto = new FmMerchantDto();
+
+        dto.setMerchantId(data.getMerchantId());
+
+        dto.setMerchantName(data.getMerchantName());
+
+        dto.setMerchantEmail(data.getMerchantEmail());
+
+        dto.setMerchantPhone(data.getMerchantPhone());
+
+        dto.setMerchantBusinessType(
+                data.getMerchantBusinessType()
+        );
+
+        dto.setStatus(data.getStatus());
+
+        dto.setIsActive(data.getIsActive());
+
+        dto.setIsApproved(data.getIsApproved());
+
+        dto.setProfilePicUrl(data.getProfilePicUrl());
+
+        dto.setAreaId(data.getAreaId());
+
+        dto.setAreaName(data.getAreaName());
+
+        dto.setCreatedAt(data.getCreatedAt());
+
+        dto.setCreatedBy(data.getCreatedBy());
+
+        dto.setUpdatedAt(data.getUpdatedAt());
+
+        dto.setUpdatedBy(data.getUpdatedBy());
+
+        return dto;
+    }
+
 }

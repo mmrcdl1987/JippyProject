@@ -4,6 +4,7 @@ import com.jippy.division.constants.DivAppConstants;
 import com.jippy.division.dto.*;
 import com.jippy.division.service.ActivePromotionService;
 import com.jippy.division.service.IDivCampaignService;
+import com.jippy.division.service.PromotionScheduleService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class DivCampaignController {
 
     private final IDivCampaignService divCampaignService;
     private final ActivePromotionService activePromotionService;
+    private final PromotionScheduleService promotionScheduleService;
 
 
     /**
@@ -35,6 +37,21 @@ public class DivCampaignController {
         String response = divCampaignService.createCampaign(dto);
 
         log.info("Campaign Create API Completed");
+
+        return ResponseEntity.ok(new DivResponseDto(DivAppConstants.STATUS_200, response));
+    }
+
+    /**
+     * Cancel Promotion (Common Cancellation API)
+     */
+    @PostMapping("/promotions/cancel")
+    public ResponseEntity<DivResponseDto> cancelPromotion(@Valid @RequestBody PromotionCancelRequestDto requestDto) {
+
+        log.info("Cancel Promotion API Started. sourceType={}, sourceId={}", requestDto.getSourceType(), requestDto.getSourceId());
+
+        String response = promotionScheduleService.cancelPromotion(requestDto);
+
+        log.info("Cancel Promotion API Completed");
 
         return ResponseEntity.ok(new DivResponseDto(DivAppConstants.STATUS_200, response));
     }

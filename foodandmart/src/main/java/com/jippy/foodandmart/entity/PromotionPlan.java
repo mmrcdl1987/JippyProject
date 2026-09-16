@@ -62,4 +62,7 @@ public class PromotionPlan {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "is_active")
+    private String isActive = "Y";
 }

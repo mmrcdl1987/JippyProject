@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -256,5 +257,56 @@ public class FmMerchantController {
         log.info("Successfully fetched merchant address for merchantId: {}", merchantId);
         return ResponseEntity.ok(FmApiResponse.success("Merchant address fetched successfully", response));
     }
+
+    @GetMapping("/admin")
+    @Operation(summary = "Get Admin Merchants", description = """
+            Get merchants with search, filters and pagination.
+            
+            Search supports:
+            - Merchant name
+            - Merchant email
+            - Merchant phone
+            
+            Filters:
+            - Merchant business type
+            - Area
+            - Active / Inactive
+            - Approved / Not Approved
+            - Merchant status
+            """)
+    public ResponseEntity<FmApiResponse<Page<FmMerchantDto>>> getAdminMerchants(
+
+            @RequestParam(required = false) String search,
+
+            @RequestParam(required = false) String merchantBusinessType,
+
+            @RequestParam(required = false) Integer areaId,
+
+            @RequestParam(required = false) String isActive,
+
+            @RequestParam(required = false) Boolean isApproved,
+
+            @RequestParam(required = false) String status,
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "10") int size) {
+
+        log.info("[ADMIN MERCHANT] Request received | search={} | businessType={} | areaId={} | isActive={} | isApproved={} | status={} | page={} | size={}", search, merchantBusinessType, areaId, isActive, isApproved, status, page, size);
+
+        FmMerchantAdminFilterDto filter = new FmMerchantAdminFilterDto();
+
+        filter.setSearch(search);
+        filter.setMerchantBusinessType(merchantBusinessType);
+        filter.setAreaId(areaId);
+        filter.setIsActive(isActive);
+        filter.setIsApproved(isApproved);
+        filter.setStatus(status);
+
+        Page<FmMerchantDto> merchants = merchantService.getAdminMerchants(filter, page, size);
+
+        return ResponseEntity.ok(FmApiResponse.success("Merchants fetched successfully", merchants));
+    }
+
 
 }

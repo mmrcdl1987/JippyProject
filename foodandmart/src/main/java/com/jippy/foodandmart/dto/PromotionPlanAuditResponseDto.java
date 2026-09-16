@@ -54,4 +54,6 @@ public class PromotionPlanAuditResponseDto {
     private Integer updatedBy;
 
     private LocalDateTime updatedAt;
+
+    private String isActive;
 }

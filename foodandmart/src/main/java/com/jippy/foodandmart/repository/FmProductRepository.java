@@ -238,18 +238,14 @@ public interface FmProductRepository
     // ============================================================
 
     @Query("""
-            SELECT CASE
-                WHEN COUNT(p) > 0
-                THEN TRUE
-                ELSE FALSE
-            END
+            SELECT COUNT(p)
             FROM FmProduct p
             JOIN FmOutletCategory oc
                 ON p.outletCategoryId = oc.outletCategoryId
             WHERE p.productId = :productId
               AND oc.outletId = :outletId
             """)
-    boolean existsByProductIdAndOutletId(
+    long countByProductIdAndOutletId(
             @Param("productId")
             Integer productId,
 
@@ -257,9 +253,13 @@ public interface FmProductRepository
             Integer outletId
     );
 
+    default boolean existsByProductIdAndOutletId(Integer productId, Integer outletId) {
+        return countByProductIdAndOutletId(productId, outletId) > 0;
+    }
+
 
     @Query("""
-            SELECT COUNT(p) > 0
+            SELECT COUNT(p)
             FROM FmProduct p
             JOIN FmOutletCategory oc
                 ON oc.outletCategoryId = p.outletCategoryId
@@ -268,13 +268,17 @@ public interface FmProductRepository
               AND p.isActive = 'Y'
               AND p.isToggle = true
             """)
-    boolean existsProductInOutlet(
+    long countProductInOutlet(
             @Param("outletId")
             Integer outletId,
 
             @Param("productId")
             Integer productId
     );
+
+    default boolean existsProductInOutlet(Integer outletId, Integer productId) {
+        return countProductInOutlet(outletId, productId) > 0;
+    }
 
 
     // ============================================================
@@ -404,7 +408,7 @@ public interface FmProductRepository
     // ============================================================
 
     @Query(value = """
-            SELECT
+            SELECT CASE WHEN
                 EXISTS (
                     SELECT 1
                     FROM jippy_fm.products p
@@ -427,6 +431,7 @@ public interface FmProductRepository
                           AND pvo.is_active = true
                     )
                 )
+            THEN true ELSE false END
             """,
             nativeQuery = true)
     boolean existsActiveProductAndVariantInOutlet(

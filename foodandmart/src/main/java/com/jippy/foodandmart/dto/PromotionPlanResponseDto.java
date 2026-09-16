@@ -42,4 +42,6 @@ public class PromotionPlanResponseDto {
     private Integer maxSelection;
 
     private PromotionStatus status;
+
+    private String isActive;
 }

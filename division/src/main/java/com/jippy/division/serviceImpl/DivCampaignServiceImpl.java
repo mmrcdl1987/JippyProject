@@ -19,10 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +34,7 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
     private final PromotionScheduleService promotionScheduleService;
     private final FMFeignClient fmClient;
     private final PromotionScheduleRepository promotionScheduleRepository;
-    private final  CacheInvalidateServiceImpl cacheInvalidateService;
+//    private final  CacheInvalidateServiceImpl cacheInvalidateService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -87,7 +84,7 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
                     saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
 
                     // Invalidate outlet details cache
-                    cacheInvalidateService.invalidateCache(outletId);
+//                    cacheInvalidateService.invalidateCache(outletId);
 
                 }
             }
@@ -160,79 +157,105 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
          */
         if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
 
-            /*
-             * Validate the new campaign before deleting
-             * the existing campaign.
-             */
             validateCouponCampaignForUpdate(campaignId, dto);
 
-            DivCouponMappingOutletProduct existingMapping = mappingRepository.findByCouponMappingId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Coupon Mapping not found with id : " + campaignId));
+            DivCouponMappingOutletProduct existingMapping = mappingRepository.findByCouponMappingId(campaignId)
+                    .orElseThrow(() -> new DivResourceNotFoundException("Coupon Mapping not found with id : " + campaignId));
 
-            Integer existingPromotionDateId = existingMapping.getPromotionDateId();
+            String existingIsActive = existingMapping.getIsActive() != null ? existingMapping.getIsActive() : "Y";
+            DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingMapping.getPromotionDateId())
+                    .orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingMapping.getPromotionDateId()));
 
-            DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingPromotionDateId).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingPromotionDateId));
+            LocalDateTime campaignCreatedAt = existingPromotionDate.getCreatedAt();
+            List<DivPromotionDate> existingPromotionDates = promotionDateRepository.findByCreatedAt(campaignCreatedAt);
 
-            /*
-             * All meal slots of the same campaign have
-             * the same createdAt.
-             */
-            List<DivPromotionDate> existingPromotionDates = promotionDateRepository.findByCreatedAt(existingPromotionDate.getCreatedAt());
+            Map<Integer, DivPromotionDate> existingDateBySlotMap = new HashMap<>();
+            Map<Integer, Integer> dateIdToSlotMap = new HashMap<>();
+            for (DivPromotionDate pd : existingPromotionDates) {
+                if (pd.getMealTypeSlotId() != null) {
+                    existingDateBySlotMap.put(pd.getMealTypeSlotId(), pd);
+                    dateIdToSlotMap.put(pd.getPromotionDateId(), pd.getMealTypeSlotId());
+                }
+            }
 
-            /*
-             * Collect mappings belonging to ALL meal slots.
-             */
             List<DivCouponMappingOutletProduct> existingMappings = new ArrayList<>();
-
-            for (DivPromotionDate promotionDate : existingPromotionDates) {
-
-                existingMappings.addAll(mappingRepository.findByPromotionDateId(promotionDate.getPromotionDateId()));
+            for (DivPromotionDate pd : existingPromotionDates) {
+                existingMappings.addAll(mappingRepository.findByPromotionDateId(pd.getPromotionDateId()));
             }
 
-            /*
-             * Delete schedules for all old mappings.
-             */
-            for (DivCouponMappingOutletProduct mapping : existingMappings) {
+            record CouponMappingKey(Integer outletId, Integer productId, Integer mealTypeSlotId) {}
 
-                promotionScheduleService.deleteCouponSchedule(mapping.getCouponMappingId());
+            Map<CouponMappingKey, DivCouponMappingOutletProduct> existingMappingMap = new HashMap<>();
+            for (DivCouponMappingOutletProduct m : existingMappings) {
+                Integer slotId = dateIdToSlotMap.get(m.getPromotionDateId());
+                if (slotId != null) {
+                    existingMappingMap.put(new CouponMappingKey(m.getOutletId(), m.getProductId(), slotId), m);
+                }
             }
 
-            /*
-             * Delete all old mappings.
-             */
-            mappingRepository.deleteAll(existingMappings);
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime fromDate = LocalDateTime.parse(dto.getPromotionFromDate());
+            LocalDateTime toDate = LocalDateTime.parse(dto.getPromotionToDate());
 
-            /*
-             * Delete all old promotion dates.
-             */
-            promotionDateRepository.deleteAll(existingPromotionDates);
-
-            /*
-             * CREATE UPDATED COUPON CAMPAIGN
-             */
-
-            LocalDateTime campaignCreatedAt = LocalDateTime.now();
+            Set<CouponMappingKey> requestedKeys = new HashSet<>();
 
             for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
-
-                DivPromotionDate promotionDate = DivCampaignMapper.mapToPromotionDateEntity(dto, mealTypeSlotId);
-
-                promotionDate.setCreatedAt(campaignCreatedAt);
-
-                promotionDate.setCreatedBy(dto.getCreatedBy());
-
-                promotionDate = promotionDateRepository.save(promotionDate);
+                DivPromotionDate pd = existingDateBySlotMap.get(mealTypeSlotId);
+                if (pd == null) {
+                    pd = DivCampaignMapper.mapToPromotionDateEntity(dto, mealTypeSlotId);
+                    pd.setCreatedAt(campaignCreatedAt);
+                    pd.setCreatedBy(dto.getCreatedBy());
+                    pd = promotionDateRepository.save(pd);
+                    existingDateBySlotMap.put(mealTypeSlotId, pd);
+                } else {
+                    pd.setPromotionFromDate(fromDate);
+                    pd.setPromotionToDate(toDate);
+                    pd.setUpdatedAt(now);
+                    pd.setUpdatedBy(dto.getCreatedBy());
+                    pd = promotionDateRepository.save(pd);
+                }
 
                 for (Integer outletId : dto.getOutletIds()) {
-
                     List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
-
                     for (Integer productId : campaignProducts) {
+                        CouponMappingKey key = new CouponMappingKey(outletId, productId, mealTypeSlotId);
+                        requestedKeys.add(key);
 
-                        saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
-
-                        // Invalidate outlet details cache
-                        cacheInvalidateService.invalidateCache(outletId);
+                        DivCouponMappingOutletProduct mapping = existingMappingMap.get(key);
+                        if (mapping != null) {
+                            mapping.setCouponId(dto.getCouponId());
+                            mapping.setOutletId(outletId);
+                            mapping.setProductId(productId);
+                            mapping.setLocationId(dto.getLocationId());
+                            mapping.setLocationType(dto.getLocationType());
+                            mapping.setPromotionDateId(pd.getPromotionDateId());
+                            mapping.setPromotionMessage(dto.getPromotionMessage());
+                            mapping.setMaxSelection(dto.getMaxSelection() != null ? dto.getMaxSelection() : -1);
+                            mapping.setUpdatedAt(now);
+                            mapping.setUpdatedBy(dto.getCreatedBy());
+                            mapping.setIsActive(existingIsActive);
+                            mappingRepository.save(mapping);
+                            promotionScheduleService.updateCouponSchedule(mapping.getCouponMappingId());
+                        } else {
+                            DivCouponMappingOutletProduct newMapping = DivCampaignMapper.mapToCouponMappingEntity(
+                                    dto.getCouponId(), outletId, productId, dto.getLocationId(), dto.getLocationType(),
+                                    pd.getPromotionDateId(), dto.getPromotionMessage(), dto.getMaxSelection(), dto.getCreatedBy());
+                            newMapping.setIsActive(existingIsActive);
+                            newMapping = mappingRepository.save(newMapping);
+                            promotionScheduleService.createCouponSchedule(newMapping.getCouponMappingId());
+                        }
                     }
+                }
+            }
+
+            for (Map.Entry<CouponMappingKey, DivCouponMappingOutletProduct> entry : existingMappingMap.entrySet()) {
+                if (!requestedKeys.contains(entry.getKey())) {
+                    DivCouponMappingOutletProduct removedMapping = entry.getValue();
+                    removedMapping.setIsActive("N");
+                    removedMapping.setUpdatedAt(now);
+                    removedMapping.setUpdatedBy(dto.getCreatedBy());
+                    mappingRepository.save(removedMapping);
+                    promotionScheduleService.updateCouponSchedule(removedMapping.getCouponMappingId());
                 }
             }
 
@@ -242,80 +265,107 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
         }
         if ("PRICE_DROP".equalsIgnoreCase(dto.getCampainType())) {
 
-            /*
-             * Validate the new campaign before deleting
-             * the existing campaign.
-             */
             validatePriceDropCampaignForUpdate(campaignId, dto);
 
-            DivPriceDropMappingOutletsProduct existingMapping = priceDropRepository.findByPriceDropMappingOutletsProductsId(campaignId).orElseThrow(() -> new DivResourceNotFoundException("Price Drop Mapping not found with id : " + campaignId));
+            DivPriceDropMappingOutletsProduct existingMapping = priceDropRepository.findByPriceDropMappingOutletsProductsId(campaignId)
+                    .orElseThrow(() -> new DivResourceNotFoundException("Price Drop Mapping not found with id : " + campaignId));
 
-            Integer existingPromotionDateId = existingMapping.getPromotionDateId();
+            String existingIsActive = existingMapping.getIsActive() != null ? existingMapping.getIsActive() : "Y";
+            DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingMapping.getPromotionDateId())
+                    .orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingMapping.getPromotionDateId()));
 
-            DivPromotionDate existingPromotionDate = promotionDateRepository.findById(existingPromotionDateId).orElseThrow(() -> new DivResourceNotFoundException("Promotion Date not found with id : " + existingPromotionDateId));
+            LocalDateTime campaignCreatedAt = existingPromotionDate.getCreatedAt();
+            List<DivPromotionDate> existingPromotionDates = promotionDateRepository.findByCreatedAt(campaignCreatedAt);
 
-            /*
-             * Find ALL promotion_date records belonging
-             * to this campaign.
-             */
-            List<DivPromotionDate> existingPromotionDates = promotionDateRepository.findByCreatedAt(existingPromotionDate.getCreatedAt());
+            Map<Integer, DivPromotionDate> existingDateBySlotMap = new HashMap<>();
+            Map<Integer, Integer> dateIdToSlotMap = new HashMap<>();
+            for (DivPromotionDate pd : existingPromotionDates) {
+                if (pd.getMealTypeSlotId() != null) {
+                    existingDateBySlotMap.put(pd.getMealTypeSlotId(), pd);
+                    dateIdToSlotMap.put(pd.getPromotionDateId(), pd.getMealTypeSlotId());
+                }
+            }
 
-            /*
-             * Collect Price Drop mappings from ALL
-             * meal slots.
-             */
             List<DivPriceDropMappingOutletsProduct> existingMappings = new ArrayList<>();
-
-            for (DivPromotionDate promotionDate : existingPromotionDates) {
-
-                existingMappings.addAll(priceDropRepository.findByPromotionDateId(promotionDate.getPromotionDateId()));
+            for (DivPromotionDate pd : existingPromotionDates) {
+                existingMappings.addAll(priceDropRepository.findByPromotionDateId(pd.getPromotionDateId()));
             }
 
-            /*
-             * Delete schedules for ALL old mappings.
-             */
-            for (DivPriceDropMappingOutletsProduct mapping : existingMappings) {
+            record PriceDropMappingKey(Integer outletId, Integer productId, Integer mealTypeSlotId) {}
 
-                promotionScheduleService.deletePriceDropSchedule(mapping.getPriceDropMappingOutletsProductsId());
+            Map<PriceDropMappingKey, DivPriceDropMappingOutletsProduct> existingMappingMap = new HashMap<>();
+            for (DivPriceDropMappingOutletsProduct m : existingMappings) {
+                Integer slotId = dateIdToSlotMap.get(m.getPromotionDateId());
+                if (slotId != null) {
+                    existingMappingMap.put(new PriceDropMappingKey(m.getOutletId(), m.getProductId(), slotId), m);
+                }
             }
 
-            /*
-             * Delete ALL old Price Drop mappings.
-             */
-            priceDropRepository.deleteAll(existingMappings);
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime fromDate = LocalDateTime.parse(dto.getPromotionFromDate());
+            LocalDateTime toDate = LocalDateTime.parse(dto.getPromotionToDate());
 
-            /*
-             * Delete ALL old promotion dates.
-             */
-            promotionDateRepository.deleteAll(existingPromotionDates);
-
-            /*
-             * CREATE UPDATED PRICE DROP CAMPAIGN
-             */
-
-            LocalDateTime campaignCreatedAt = LocalDateTime.now();
+            Set<PriceDropMappingKey> requestedKeys = new HashSet<>();
 
             for (Integer mealTypeSlotId : dto.getMealTypeSlotIds()) {
-
-                DivPromotionDate promotionDate = DivCampaignMapper.mapToPromotionDateEntity(dto, mealTypeSlotId);
-
-                promotionDate.setCreatedAt(campaignCreatedAt);
-
-                promotionDate.setCreatedBy(dto.getCreatedBy());
-
-                promotionDate = promotionDateRepository.save(promotionDate);
+                DivPromotionDate pd = existingDateBySlotMap.get(mealTypeSlotId);
+                if (pd == null) {
+                    pd = DivCampaignMapper.mapToPromotionDateEntity(dto, mealTypeSlotId);
+                    pd.setCreatedAt(campaignCreatedAt);
+                    pd.setCreatedBy(dto.getCreatedBy());
+                    pd = promotionDateRepository.save(pd);
+                    existingDateBySlotMap.put(mealTypeSlotId, pd);
+                } else {
+                    pd.setPromotionFromDate(fromDate);
+                    pd.setPromotionToDate(toDate);
+                    pd.setUpdatedAt(now);
+                    pd.setUpdatedBy(dto.getCreatedBy());
+                    pd = promotionDateRepository.save(pd);
+                }
 
                 for (Integer outletId : dto.getOutletIds()) {
-
                     List<Integer> campaignProducts = getCampaignProductIds(outletId, dto.getProductIds());
-
                     for (Integer productId : campaignProducts) {
+                        PriceDropMappingKey key = new PriceDropMappingKey(outletId, productId, mealTypeSlotId);
+                        requestedKeys.add(key);
 
-                        saveCampaign(dto, promotionDate.getPromotionDateId(), outletId, productId);
-
-                        // Invalidate outlet details cache
-                        cacheInvalidateService.invalidateCache(outletId);
+                        DivPriceDropMappingOutletsProduct mapping = existingMappingMap.get(key);
+                        if (mapping != null) {
+                            mapping.setPriceDropValue(dto.getPriceDropValue());
+                            mapping.setPriceModelId(dto.getPriceModelId());
+                            mapping.setOutletId(outletId);
+                            mapping.setProductId(productId);
+                            mapping.setLocationId(dto.getLocationId());
+                            mapping.setLocationType(dto.getLocationType());
+                            mapping.setPromotionDateId(pd.getPromotionDateId());
+                            mapping.setPromotionMessage(dto.getPromotionMessage());
+                            mapping.setMaxSelection(dto.getMaxSelection() != null ? dto.getMaxSelection() : -1);
+                            mapping.setUpdatedAt(now);
+                            mapping.setUpdatedBy(dto.getCreatedBy());
+                            mapping.setIsActive(existingIsActive);
+                            priceDropRepository.save(mapping);
+                            promotionScheduleService.updatePriceDropSchedule(mapping.getPriceDropMappingOutletsProductsId());
+                        } else {
+                            DivPriceDropMappingOutletsProduct newMapping = DivCampaignMapper.mapToPriceDropEntity(
+                                    outletId, productId, dto.getLocationId(), dto.getLocationType(),
+                                    pd.getPromotionDateId(), dto.getPriceModelId(), dto.getPriceDropValue(),
+                                    dto.getPromotionMessage(), dto.getMaxSelection(), dto.getCreatedBy());
+                            newMapping.setIsActive(existingIsActive);
+                            newMapping = priceDropRepository.save(newMapping);
+                            promotionScheduleService.createPriceDropSchedule(newMapping.getPriceDropMappingOutletsProductsId());
+                        }
                     }
+                }
+            }
+
+            for (Map.Entry<PriceDropMappingKey, DivPriceDropMappingOutletsProduct> entry : existingMappingMap.entrySet()) {
+                if (!requestedKeys.contains(entry.getKey())) {
+                    DivPriceDropMappingOutletsProduct removedMapping = entry.getValue();
+                    removedMapping.setIsActive("N");
+                    removedMapping.setUpdatedAt(now);
+                    removedMapping.setUpdatedBy(dto.getCreatedBy());
+                    priceDropRepository.save(removedMapping);
+                    promotionScheduleService.updatePriceDropSchedule(removedMapping.getPriceDropMappingOutletsProductsId());
                 }
             }
 
@@ -447,10 +497,17 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
     }
 
     private void saveCampaign(DivCampaignRequestDto dto, Integer promotionDateId, Integer outletId, Integer productId) {
+        saveCampaign(dto, promotionDateId, outletId, productId, null);
+    }
+
+    private void saveCampaign(DivCampaignRequestDto dto, Integer promotionDateId, Integer outletId, Integer productId, String isActive) {
 
         if ("COUPON".equalsIgnoreCase(dto.getCampainType())) {
 
             DivCouponMappingOutletProduct mapping = DivCampaignMapper.mapToCouponMappingEntity(dto.getCouponId(), outletId, productId, dto.getLocationId(), dto.getLocationType(), promotionDateId, dto.getPromotionMessage(), dto.getMaxSelection(), dto.getCreatedBy());
+            if (isActive != null) {
+                mapping.setIsActive(isActive);
+            }
             mapping = mappingRepository.save(mapping);
 
             promotionScheduleService.createCouponSchedule(mapping.getCouponMappingId());
@@ -461,6 +518,9 @@ public class DivCampaignServiceImpl implements IDivCampaignService {
         if ("PRICE_DROP".equalsIgnoreCase(dto.getCampainType())) {
 
             DivPriceDropMappingOutletsProduct entity = DivCampaignMapper.mapToPriceDropEntity(outletId, productId, dto.getLocationId(), dto.getLocationType(), promotionDateId, dto.getPriceModelId(), dto.getPriceDropValue(), dto.getPromotionMessage(), dto.getMaxSelection(), dto.getCreatedBy());
+            if (isActive != null) {
+                entity.setIsActive(isActive);
+            }
             entity = priceDropRepository.save(entity);
 
             promotionScheduleService.createPriceDropSchedule(entity.getPriceDropMappingOutletsProductsId());
