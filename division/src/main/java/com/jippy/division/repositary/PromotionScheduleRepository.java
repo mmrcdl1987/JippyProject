@@ -1,9 +1,11 @@
 package com.jippy.division.repositary;
 
 import com.jippy.division.entity.PromotionSchedule;
+import com.jippy.division.enums.PromotionScheduleStatus;
 import com.jippy.division.enums.PromotionSourceType;
 import com.jippy.division.projection.DivActiveDiscountsProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,79 +18,107 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
 
     void deleteBySourceTypeAndSourceId(PromotionSourceType sourceType, Integer sourceId);
 
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM PromotionSchedule ps WHERE ps.sourceType = :sourceType AND ps.sourceId = :sourceId AND ps.status IN :statuses")
+    int deleteBySourceTypeAndSourceIdAndStatusIn(
+            @Param("sourceType") PromotionSourceType sourceType,
+            @Param("sourceId") Integer sourceId,
+            @Param("statuses") List<PromotionScheduleStatus> statuses
+    );
+
+    boolean existsBySourceTypeAndSourceIdAndStatusIn(
+            PromotionSourceType sourceType,
+            Integer sourceId,
+            List<PromotionScheduleStatus> statuses
+    );
+
+    List<PromotionSchedule> findBySourceTypeAndSourceIdAndStatusIn(
+            PromotionSourceType sourceType,
+            Integer sourceId,
+            List<PromotionScheduleStatus> statuses
+    );
+
+    java.util.Optional<PromotionSchedule> findFirstBySourceTypeAndSourceIdAndStatusIn(
+            PromotionSourceType sourceType,
+            Integer sourceId,
+            List<PromotionScheduleStatus> statuses
+    );
+
     @Query(value = """
             SELECT
                 ps.outlet_id AS "outletId",
                 ps.product_id AS "productId",
                 ps.source_type AS "sourceType",
-            
+
                 MIN(ps.start_date_time) AS "startDateTime",
                 MAX(ps.end_date_time) AS "endDateTime",
-            
+
                 STRING_AGG(
                     DISTINCT CAST(pd.meal_type_slot_id AS text),
                     ','
                 ) AS "mealTypeSlotIdsStr",
-            
+
                 c.coupon_code AS "couponCode",
                 c.usage_limit_per_user AS "usageLimitPerUser",
                 COALESCE(c.min_order_value, 0.00) AS "minOrderValue",
-            
+
                 COALESCE(
                     pdm.price_drop_value,
                     c.discount_value,
                     0.00
                 ) AS "discountAmount",
-            
+
                 COALESCE(
                     c.price_model_id,
                     pdm.price_model_id
                 ) AS "priceModelId",
-            
+
                 pml.price_model_name AS "priceModelName",
-            
-                ps.promotion_schedule_id AS "promotionScheduleId",
+
+                ps.promotion_schedules_id AS "promotionScheduleId",
                 ps.source_id AS "sourceId",
-            
+
                 COALESCE(
                     cm.max_selection,
                     pdm.max_selection,
                     -1
                 ) AS "maxSelection",
                 cm.promotion_message
-            
+
             FROM jippy_division.promotion_schedules ps
-            
+
             LEFT JOIN jippy_division.coupon_mapping_outlets_products cm
                 ON cm.coupon_mapping_id = ps.source_id
                AND ps.source_type = 'COUPON'
-            
+
             LEFT JOIN jippy_division.coupons c
                 ON cm.coupon_id = c.coupon_id
-            
+
             LEFT JOIN jippy_division.price_drop_mapping_outlets_products pdm
                 ON ps.source_type = 'PRICE_DROP'
                AND ps.source_id =
                   pdm.price_drop_mapping_outlets_products_id
-            
+
             LEFT JOIN jippy_division.price_model pml
                 ON pml.price_model_id =
                    COALESCE(
                        c.price_model_id,
                        pdm.price_model_id
                    )
-            
+
             LEFT JOIN jippy_division.promotion_date pd
                 ON pd.promotion_date_id =
                    COALESCE(
                        cm.promotion_date_id,
                        pdm.promotion_date_id
                    )
-            
+
             WHERE ps.source_type IN ('COUPON', 'PRICE_DROP')
-              AND :now BETWEEN ps.start_date_time
-                           AND ps.end_date_time
-            
+              AND ps.status = 'ACTIVE'
+              AND COALESCE(cm.is_active, pdm.is_active, 'Y') = 'Y'
+              AND ps.start_date_time <= :now
+              AND ps.end_date_time > :now
+
             GROUP BY
                 ps.outlet_id,
                 ps.product_id,
@@ -102,18 +132,18 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
                 c.price_model_id,
                 pdm.price_model_id,
                 pml.price_model_name,
-                ps.promotion_schedule_id,
+                ps.promotion_schedules_id,
                 ps.source_id,
                 cm.max_selection,
                 pdm.max_selection,
                 cm.promotion_message
-            
+
             ORDER BY "startDateTime" DESC
             """, nativeQuery = true)
     List<DivActiveDiscountsProjection> getActiveDiscounts(@Param("now") LocalDateTime now);
     @Query(value = """
     SELECT
-        ps.promotion_schedule_id AS "promotionScheduleId",
+        ps.promotion_schedules_id AS "promotionScheduleId",
         ps.outlet_id AS "outletId",
         ps.product_id AS "productId",
         ps.source_type AS "sourceType",
@@ -182,13 +212,14 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
 
       AND ps.status = 'ACTIVE'
 
-      AND :now BETWEEN ps.start_date_time
-                   AND ps.end_date_time
+      AND COALESCE(cm.is_active, pdm.is_active, 'Y') = 'Y'
+
+      AND ps.start_date_time <= :now
+      AND ps.end_date_time > :now
 
       AND (
             pd.promotion_date_id IS NULL
-            OR :now BETWEEN pd.promotion_from_date
-                        AND pd.promotion_to_date
+            OR (pd.promotion_from_date <= :now AND pd.promotion_to_date > :now)
       )
 
       AND (
@@ -213,7 +244,7 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
       )
 
     GROUP BY
-        ps.promotion_schedule_id,
+        ps.promotion_schedules_id,
         ps.outlet_id,
         ps.product_id,
         ps.source_type,
@@ -244,18 +275,51 @@ public interface PromotionScheduleRepository extends JpaRepository<PromotionSche
     );
 
     @Query("""
-        SELECT ps
-        FROM PromotionSchedule ps
-        WHERE ps.sourceType = :sourceType
-          AND ps.outletId = :outletId
-          AND ps.productId IN :productIds
-          AND ps.startDateTime <= :now
-          AND ps.endDateTime >= :now
-        """)
+    SELECT ps
+    FROM PromotionSchedule ps
+    WHERE ps.sourceType = :sourceType
+      AND ps.outletId = :outletId
+      AND ps.productId IN :productIds
+      AND ps.status = com.jippy.division.enums.PromotionScheduleStatus.ACTIVE
+      AND ps.startDateTime <= :now
+      AND ps.endDateTime > :now
+    """)
     List<PromotionSchedule> findActiveMerchantPromotions(
             @Param("sourceType") PromotionSourceType sourceType,
             @Param("outletId") Integer outletId,
             @Param("productIds") List<Integer> productIds,
             @Param("now") LocalDateTime now
+    );
+
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+            UPDATE jippy_division.promotion_schedules
+            SET status = 'ACTIVE'
+            WHERE status = 'PENDING'
+              AND start_date_time <= :now
+              AND end_date_time > :now
+            """, nativeQuery = true)
+    int activatePendingSchedules(@Param("now") LocalDateTime now);
+
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+            UPDATE jippy_division.promotion_schedules
+            SET status = 'EXPIRED'
+            WHERE status IN ('PENDING', 'ACTIVE')
+              AND end_date_time <= :now
+            """, nativeQuery = true)
+    int expireActiveAndPendingSchedules(@Param("now") LocalDateTime now);
+
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+            UPDATE jippy_division.promotion_schedules
+            SET status = 'CANCELLED'
+            WHERE source_type = :sourceType
+              AND source_id = :sourceId
+              AND status IN ('PENDING', 'ACTIVE')
+            """, nativeQuery = true)
+    int cancelSchedulesBySourceTypeAndSourceId(
+            @Param("sourceType") String sourceType,
+            @Param("sourceId") Integer sourceId
     );
 }

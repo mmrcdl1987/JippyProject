@@ -1,5 +1,7 @@
 package com.jippy.division.service;
 
+import com.jippy.division.dto.PromotionCancelRequestDto;
+
 public interface PromotionScheduleService {
 
     /**
@@ -35,4 +37,8 @@ public interface PromotionScheduleService {
     void updateCouponSchedule(Integer couponMappingId);
 
     void deleteCouponSchedule(Integer couponMappingId);
+
+    void updateScheduleStatuses();
+
+    String cancelPromotion(PromotionCancelRequestDto request);
 }

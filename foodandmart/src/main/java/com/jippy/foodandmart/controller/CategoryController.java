@@ -1,17 +1,9 @@
 package com.jippy.foodandmart.controller;
-
-import com.jippy.foodandmart.dto.FmApiResponse;
-import com.jippy.foodandmart.dto.FmCreateCategoryRequestDto;
-import com.jippy.foodandmart.dto.FmCreateCategoryResponseDto;
-import com.jippy.foodandmart.dto.FmUpdateCategoryRequestDto;
-import com.jippy.foodandmart.entity.FmCategory;
-import com.jippy.foodandmart.repository.FmCategoryRepository;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.service.IFmCategoryService;
-import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +17,7 @@ import java.util.List;
 public class CategoryController {
 
     private final IFmCategoryService categoryService;
-    private final FmCategoryRepository categoryRepository;
+
 
 
     /**
@@ -64,16 +56,21 @@ public class CategoryController {
 //    If the filter is "HOME", it will fetch only the categories that are marked as home categories.
 
     @GetMapping("/getHomeOrAllCategories")
-    public ResponseEntity<FmApiResponse<List<FmCreateCategoryResponseDto>>> getHomeOrAllCategories(@Parameter(description = "Filter categories. Allowed values: ALL or HOME", example = "ALL") @RequestParam String filter) {
+    public ResponseEntity<FmApiResponse<FmCategoryFilterResponseDto>> getHomeOrAllCategories(
 
-        log.info("GET_HOME_OR_ALL_CATEGORIES_API_STARTED | filter={}", filter);
+            @RequestParam(required = false) String filter) {
 
-        List<FmCreateCategoryResponseDto> categories = categoryService.getHomeOrAllCategories(filter);
+        log.info("GET_CATEGORY_LIST_API_STARTED | filter={}", filter);
 
-        log.info("GET_HOME_OR_ALL_CATEGORIES_API_COMPLETED | totalCategories={}", categories.size());
+        FmCategoryFilterResponseDto response = categoryService.getHomeOrAllCategories(filter);
 
-        return ResponseEntity.ok(FmApiResponse.success("Categories fetched successfully", categories));
+        log.info("GET_CATEGORY_LIST_API_COMPLETED | totalCount={} | filteredCount={}", response.getTotalCount(), response.getFilteredCount());
+
+        return ResponseEntity.ok(FmApiResponse.success("Categories fetched successfully", response));
     }
+
+
+
 
     @PutMapping(
             value = "/updateCategory",

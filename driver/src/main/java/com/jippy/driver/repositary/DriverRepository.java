@@ -9,7 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
@@ -87,4 +88,125 @@ public interface DriverRepository extends JpaRepository<Driver, Integer> {
     List<DriverDetailsProjection> getDriverDetailsByIds(
             @Param("driverIds") List<Integer> driverIds
     );
+    @Query(
+            value = """
+        SELECT d.*
+        FROM jippy_driver.driver d
+        WHERE
+
+            (
+                CAST(:search AS TEXT) IS NULL
+                OR :search = ''
+                OR LOWER(d.first_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(d.last_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(
+                    CONCAT(
+                        COALESCE(d.first_name, ''),
+                        ' ',
+                        COALESCE(d.last_name, '')
+                    )
+                ) LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(COALESCE(d.email, ''))
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR d.phone_number
+                    LIKE CONCAT('%', :search, '%')
+            )
+
+            AND
+            (
+                CAST(:filterByDriverIds AS BOOLEAN) = false
+                OR d.driver_id IN (:driverIds)
+            )
+
+            AND
+            (
+                CAST(:isApproved AS BOOLEAN) IS NULL
+                OR d.is_approved = :isApproved
+            )
+
+            AND
+            (
+                CAST(:readyToAcceptOrders AS BOOLEAN) IS NULL
+                OR d.ready_to_accept_orders = :readyToAcceptOrders
+            )
+
+        ORDER BY d.created_at DESC NULLS LAST
+        """,
+
+            countQuery = """
+        SELECT COUNT(*)
+        FROM jippy_driver.driver d
+        WHERE
+
+            (
+                CAST(:search AS TEXT) IS NULL
+                OR :search = ''
+                OR LOWER(d.first_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(d.last_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(
+                    CONCAT(
+                        COALESCE(d.first_name, ''),
+                        ' ',
+                        COALESCE(d.last_name, '')
+                    )
+                ) LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(COALESCE(d.email, ''))
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR d.phone_number
+                    LIKE CONCAT('%', :search, '%')
+            )
+
+            AND
+            (
+                CAST(:filterByDriverIds AS BOOLEAN) = false
+                OR d.driver_id IN (:driverIds)
+            )
+
+            AND
+            (
+                CAST(:isApproved AS BOOLEAN) IS NULL
+                OR d.is_approved = :isApproved
+            )
+
+            AND
+            (
+                CAST(:readyToAcceptOrders AS BOOLEAN) IS NULL
+                OR d.ready_to_accept_orders = :readyToAcceptOrders
+            )
+        """,
+
+            nativeQuery = true
+    )
+    Page<Driver> findAdminDrivers(
+
+            @Param("search")
+            String search,
+
+            @Param("filterByDriverIds")
+            Boolean filterByDriverIds,
+
+            @Param("driverIds")
+            List<Integer> driverIds,
+
+            @Param("isApproved")
+            Boolean isApproved,
+
+            @Param("readyToAcceptOrders")
+            Boolean readyToAcceptOrders,
+
+            Pageable pageable
+    );
+
 }

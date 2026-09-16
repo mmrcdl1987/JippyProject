@@ -27,10 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +46,7 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
     private final PromotionPlanMapper promotionPlanMapper;
     private final PromotionEventProducer promotionEventProducer;
     private final FmOutletAddressRepository outletAddressRepository;
-    private final CacheInvalidateServiceImpl cacheInvalidateService;
+//    private final CacheInvalidateServiceImpl cacheInvalidateService;
 
     /**
      * Create Promotion Plan
@@ -113,7 +110,7 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
 
         log.info("[PROMOTION-PLAN] Promotion plan created successfully | promotionPlanId={} | outletId={} | products={} | categories={}", savedPromotionPlan.getPromotionPlanId(), savedPromotionPlan.getOutletId(), response.getProductIds().size(), response.getOutletCategoryIds().size());
 
-        cacheInvalidateService.invalidateCache(outlet.getOutletId());
+//        cacheInvalidateService.invalidateCache(outlet.getOutletId());
         return response;
     }
 
@@ -249,18 +246,11 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
         PromotionPlan updatedPromotionPlan = promotionPlanRepository.save(promotionPlan);
 
         /*
-         * Remove old product/category mappings.
+         * Update product/category mappings in place.
          */
-        log.debug("[PROMOTION-PLAN] Removing existing promotion mappings | promotionPlanId={}", promotionPlanId);
+        log.debug("[PROMOTION-PLAN] Updating promotion mappings | promotionPlanId={}", promotionPlanId);
 
-        promotionPlanProductRepository.deleteByPromotionPlanPromotionPlanId(promotionPlanId);
-
-        /*
-         * Save new product/category mappings.
-         */
-        log.debug("[PROMOTION-PLAN] Saving updated promotion mappings | promotionPlanId={}", promotionPlanId);
-
-        savePromotionPlanProducts(updatedPromotionPlan, requestDto);
+        updatePromotionPlanProducts(updatedPromotionPlan, requestDto);
 
         /*
          * Publish Kafka event.
@@ -284,7 +274,7 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
 
         log.info("[PROMOTION-PLAN] Promotion plan updated successfully | " + "promotionPlanId={} | outletId={} | products={} | categories={}", updatedPromotionPlan.getPromotionPlanId(), updatedPromotionPlan.getOutletId(), response.getProductIds().size(), response.getOutletCategoryIds().size());
 
-        cacheInvalidateService.invalidateCache(outlet.getOutletId());
+//        cacheInvalidateService.invalidateCache(outlet.getOutletId());
 
         return response;
     }
@@ -512,7 +502,28 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
                 promotionPlan.getMinimumOrderValue()
         );
 
+        dto.setIsActive(
+                promotionPlan.getIsActive()
+        );
+
         return dto;
+    }
+
+    @Override
+    @Transactional
+    public void deactivatePromotionPlan(Integer promotionPlanId) {
+
+        log.info("[PROMOTION-PLAN] Deactivating promotion plan | promotionPlanId={}", promotionPlanId);
+
+        PromotionPlan promotionPlan = promotionPlanRepository.findById(promotionPlanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Promotion Plan", promotionPlanId));
+
+        promotionPlan.setIsActive("N");
+        promotionPlanRepository.save(promotionPlan);
+
+//        cacheInvalidateService.invalidateCache(promotionPlan.getOutletId());
+
+        log.info("[PROMOTION-PLAN] Promotion plan deactivated successfully | promotionPlanId={}", promotionPlanId);
     }
 
     /**
@@ -573,6 +584,86 @@ public class PromotionPlanServiceImpl implements IPromotionPlanService {
         } else {
 
             log.debug("[PROMOTION-PLAN] Entire menu promotion. No mappings to persist.");
+        }
+    }
+
+    /**
+     * Update Promotion Products & Categories in place
+     */
+    private void updatePromotionPlanProducts(PromotionPlan promotionPlan, PromotionPlanRequestDto requestDto) {
+
+        log.debug("[PROMOTION-PLAN] Updating promotion mappings | promotionPlanId={}", promotionPlan.getPromotionPlanId());
+
+        List<PromotionPlanProduct> existingProducts = promotionPlanProductRepository.findByPromotionPlanPromotionPlanId(promotionPlan.getPromotionPlanId());
+
+        Map<Integer, PromotionPlanProduct> existingProductMap = new HashMap<>();
+        Map<Integer, PromotionPlanProduct> existingCategoryMap = new HashMap<>();
+
+        for (PromotionPlanProduct ppp : existingProducts) {
+            if (ppp.getProductId() != null) {
+                existingProductMap.put(ppp.getProductId(), ppp);
+            }
+            if (ppp.getOutletCategoryId() != null) {
+                existingCategoryMap.put(ppp.getOutletCategoryId(), ppp);
+            }
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Integer maxSelection = requestDto.getMaxSelection() == null ? -1 : requestDto.getMaxSelection();
+
+        Set<Integer> requestedProductIds = requestDto.getProductIds() == null ? new LinkedHashSet<>() : new LinkedHashSet<>(requestDto.getProductIds());
+        Set<Integer> requestedCategoryIds = requestDto.getOutletCategoryIds() == null ? new LinkedHashSet<>() : new LinkedHashSet<>(requestDto.getOutletCategoryIds());
+
+        List<PromotionPlanProduct> toSave = new ArrayList<>();
+        List<PromotionPlanProduct> toDelete = new ArrayList<>();
+
+        for (Integer productId : requestedProductIds) {
+            PromotionPlanProduct p = existingProductMap.remove(productId);
+            if (p != null) {
+                p.setMaxSelection(maxSelection);
+                p.setUpdatedBy(SYSTEM_USER);
+                p.setUpdatedAt(now);
+                toSave.add(p);
+            } else {
+                PromotionPlanProduct newProduct = new PromotionPlanProduct();
+                newProduct.setPromotionPlan(promotionPlan);
+                newProduct.setProductId(productId);
+                newProduct.setMaxSelection(maxSelection);
+                newProduct.setCreatedBy(SYSTEM_USER);
+                newProduct.setCreatedAt(now);
+                toSave.add(newProduct);
+            }
+        }
+
+        for (Integer categoryId : requestedCategoryIds) {
+            PromotionPlanProduct c = existingCategoryMap.remove(categoryId);
+            if (c != null) {
+                c.setMaxSelection(maxSelection);
+                c.setUpdatedBy(SYSTEM_USER);
+                c.setUpdatedAt(now);
+                toSave.add(c);
+            } else {
+                PromotionPlanProduct newCategory = new PromotionPlanProduct();
+                newCategory.setPromotionPlan(promotionPlan);
+                newCategory.setOutletCategoryId(categoryId);
+                newCategory.setMaxSelection(maxSelection);
+                newCategory.setCreatedBy(SYSTEM_USER);
+                newCategory.setCreatedAt(now);
+                toSave.add(newCategory);
+            }
+        }
+
+        toDelete.addAll(existingProductMap.values());
+        toDelete.addAll(existingCategoryMap.values());
+
+        if (!toDelete.isEmpty()) {
+            promotionPlanProductRepository.deleteAll(toDelete);
+            log.debug("[PROMOTION-PLAN] Deleted {} removed promotion mappings.", toDelete.size());
+        }
+
+        if (!toSave.isEmpty()) {
+            promotionPlanProductRepository.saveAll(toSave);
+            log.debug("[PROMOTION-PLAN] Updated/Saved {} promotion mappings.", toSave.size());
         }
     }
 

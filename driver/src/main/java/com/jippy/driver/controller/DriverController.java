@@ -21,7 +21,6 @@
     import org.springframework.http.ResponseEntity;
     import org.springframework.validation.annotation.Validated;
     import org.springframework.web.bind.annotation.*;
-    import org.springframework.web.multipart.MultipartFile;
 
     import java.time.LocalDate;
     import java.util.List;
@@ -361,6 +360,18 @@
                     driverService.findByPhoneNumber(phoneNumber);
 
             return ResponseEntity.ok(driverDto);
+        }
+
+
+        // ADMIN - GET ALL DRIVERS
+        @GetMapping("/admin/drivers")
+        public ResponseEntity<DriverFmApiResponse<AdminDriverPageResponseDto>> getAdminDrivers(@RequestParam(required = false) String search, @RequestParam(required = false) Integer areaId, @RequestParam(required = false) Boolean isApproved, @RequestParam(required = false) Boolean readyToAcceptOrders, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+            AdminDriverPageResponseDto drivers = driverService.getAdminDrivers(search, areaId, isApproved, readyToAcceptOrders, page, size);
+            DriverFmApiResponse<AdminDriverPageResponseDto> response = new DriverFmApiResponse<>();
+            response.setSuccess(true);
+            response.setMessage("Drivers fetched successfully");
+            response.setData(drivers);
+            return ResponseEntity.ok(response);
         }
 
 

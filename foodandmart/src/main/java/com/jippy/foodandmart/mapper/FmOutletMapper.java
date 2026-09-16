@@ -1207,7 +1207,7 @@ public final class FmOutletMapper {
         dto.setReview(toDouble(row[6]));
         dto.setSubscriptionStatus(row[7] != null ? row[7].toString() : null);
         dto.setPromotionStatus(row[8] != null ? row[8].toString() : null);
-        dto.setIsActive(row[9] != null && "Y".equalsIgnoreCase(row[9].toString()));
+        dto.setIsActive(String.valueOf(row[9] != null && "Y".equalsIgnoreCase(row[9].toString())));
         dto.setIsApproved(row[10] != null && (Boolean) row[10]);
         // distance_km only present in nearby query (index 16)
         if (row.length > 16 && row[16] != null) {
@@ -1703,4 +1703,49 @@ public final class FmOutletMapper {
         savUserKyc.setFssaiNumber(dto.getFssaiNumber());
         savUserKyc.setGstNumber(dto.getGstNumber());
     }
+
+
+    public static FmAdminOutletDto mapAdminOutletProjection(FmAdminOutletProjection data) {
+
+        if (data == null) {
+            return null;
+        }
+
+        FmAdminOutletDto dto = new FmAdminOutletDto();
+
+        dto.setOutletId(data.getOutletId());
+
+        dto.setOutletName(data.getOutletName());
+
+        dto.setOutletType(data.getOutletType());
+
+        dto.setOutletEmail(data.getOutletEmail());
+
+        dto.setOutletPhone(data.getOutletPhone());
+
+        dto.setAlternateOutletPhone(data.getAlternateOutletPhone());
+
+        dto.setOutletPicUrl(data.getOutletPicUrl());
+
+        dto.setMerchantId(data.getMerchantId());
+        dto.setMerchantName(data.getMerchantName());
+        dto.setAreaId(data.getAreaId());
+
+        dto.setAreaName(data.getAreaName());
+
+        dto.setTotalRating(data.getTotalRating());
+
+        dto.setTotalReviews(data.getTotalReviews());
+
+        dto.setIsActive(data.getIsActive());
+
+        dto.setIsApproved(data.getIsApproved());
+
+        dto.setCreatedAt(data.getCreatedAt());
+
+        dto.setUpdatedAt(data.getUpdatedAt());
+
+        return dto;
+    }
+
 }

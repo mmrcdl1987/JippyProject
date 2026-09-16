@@ -29,4 +29,6 @@ public class PromotionListResponseDto {
     private LocalTime planEndTime;
 
     private PromotionStatus status;
+
+    private String isActive;
 }

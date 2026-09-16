@@ -63,6 +63,8 @@ public class PromotionPlanMapper {
 
         dto.setStatus(getPromotionStatus(entity));
 
+        dto.setIsActive(entity.getIsActive());
+
         return dto;
     }
 
@@ -106,6 +108,8 @@ public class PromotionPlanMapper {
         dto.setUpdatedAt(entity.getUpdatedAt());
 
         dto.setStatus(getPromotionStatus(entity));
+
+        dto.setIsActive(entity.getIsActive());
 
         return dto;
     }
@@ -151,10 +155,16 @@ public class PromotionPlanMapper {
 
         dto.setStatus(getPromotionStatus(entity));
 
+        dto.setIsActive(entity.getIsActive());
+
         return dto;
     }
 
     private PromotionStatus getPromotionStatus(PromotionPlan entity) {
+
+        if ("N".equalsIgnoreCase(entity.getIsActive())) {
+            return PromotionStatus.ENDED;
+        }
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -171,7 +181,7 @@ public class PromotionPlanMapper {
             return PromotionStatus.SCHEDULED;
         }
 
-        if (now.isAfter(endDateTime)) {
+        if (!now.isBefore(endDateTime)) {
             return PromotionStatus.ENDED;
         }
 

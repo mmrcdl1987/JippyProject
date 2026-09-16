@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -1519,4 +1521,161 @@ Optional<FmOutletCompleteDetailsProjection> getOutletCompleteDetails(
     List<Integer> findOutletIdsByMerchantId(
             @Param("merchantId") Integer merchantId
     );
+
+
+    @Query(
+            value = """
+        SELECT DISTINCT
+            o.outlet_id AS outletId,
+            o.outlet_name AS outletName,
+            o.outlet_type AS outletType,
+            o.outlet_email AS outletEmail,
+            o.outlet_phone AS outletPhone,
+            o.alternate_outlet_phone AS alternateOutletPhone,
+            o.outlet_pic_url AS outletPicUrl,
+
+            o.merchant_id AS merchantId,
+            m.merchant_name AS merchantName,
+
+            a.area_id AS areaId,
+            ar.area_name AS areaName,
+
+            o.total_rating AS totalRating,
+            o.total_reviews AS totalReviews,
+
+            o.is_active AS isActive,
+            o.is_approved AS isApproved,
+
+            o.created_at AS createdAt,
+            o.updated_at AS updatedAt
+
+        FROM jippy_fm.outlets o
+
+        LEFT JOIN jippy_fm.merchants m
+            ON m.merchant_id = o.merchant_id
+
+        LEFT JOIN jippy_fm.address a
+            ON a.jippy_address_id = o.outlet_id
+            AND a.address_type = 'OUTLET'
+
+        LEFT JOIN jippy_fm.area ar
+            ON ar.area_id = a.area_id
+
+        WHERE
+
+            (
+                :search IS NULL
+                OR :search = ''
+                OR LOWER(o.outlet_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(o.outlet_email)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR o.outlet_phone
+                    LIKE CONCAT('%', :search, '%')
+            )
+
+            AND
+            (
+                :areaId IS NULL
+                OR a.area_id = :areaId
+            )
+
+            AND
+            (
+                :outletType IS NULL
+                OR :outletType = ''
+                OR LOWER(o.outlet_type) = LOWER(:outletType)
+            )
+
+            AND
+            (
+                :isActive IS NULL
+                OR :isActive = ''
+                OR UPPER(o.is_active) = UPPER(:isActive)
+            )
+
+            AND
+            (
+                :isApproved IS NULL
+                OR o.is_approved = :isApproved
+            )
+
+        ORDER BY o.created_at DESC
+        """,
+
+            countQuery = """
+        SELECT COUNT(DISTINCT o.outlet_id)
+
+        FROM jippy_fm.outlets o
+
+        LEFT JOIN jippy_fm.address a
+            ON a.jippy_address_id = o.outlet_id
+            AND a.address_type = 'OUTLET'
+
+        WHERE
+
+            (
+                :search IS NULL
+                OR :search = ''
+                OR LOWER(o.outlet_name)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR LOWER(o.outlet_email)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+
+                OR o.outlet_phone
+                    LIKE CONCAT('%', :search, '%')
+            )
+
+            AND
+            (
+                :areaId IS NULL
+                OR a.area_id = :areaId
+            )
+
+            AND
+            (
+                :outletType IS NULL
+                OR :outletType = ''
+                OR LOWER(o.outlet_type) = LOWER(:outletType)
+            )
+
+            AND
+            (
+                :isActive IS NULL
+                OR :isActive = ''
+                OR UPPER(o.is_active) = UPPER(:isActive)
+            )
+
+            AND
+            (
+                :isApproved IS NULL
+                OR o.is_approved = :isApproved
+            )
+        """,
+
+            nativeQuery = true
+    )
+    Page<FmAdminOutletProjection> findAdminOutlets(
+
+            @Param("search")
+            String search,
+
+            @Param("areaId")
+            Integer areaId,
+
+            @Param("outletType")
+            String outletType,
+
+            @Param("isActive")
+            String isActive,
+
+            @Param("isApproved")
+            Boolean isApproved,
+
+            Pageable pageable
+    );
+
 }

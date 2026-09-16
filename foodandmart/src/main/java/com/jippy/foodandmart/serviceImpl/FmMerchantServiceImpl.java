@@ -7,6 +7,7 @@ import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.MerchantAlreadyExistsException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
+import com.jippy.foodandmart.projections.FmAdminMerchantProjection;
 import com.jippy.foodandmart.projections.FmMerchantWithBankProjection;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.EmailService;
@@ -20,6 +21,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -44,28 +49,6 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final IFmApprovalRequestService approvalRequestService;
-    private final S3Service s3Service;
-
-    /*
-     * ================================================================
-     * BULK ADDRESS REPOSITORIES
-     * ================================================================
-     *
-     * Used ONLY by merchant bulk upload.
-     *
-     * CSV/Excel contains names:
-     *
-     * State = Telangana
-     * City  = Hyderabad
-     * Area  = Kukatpally
-     *
-     * These are converted into:
-     *
-     * state_id
-     * city_id
-     * area_id
-     */
-
     private final FmAddressRepository addressRepository;
     private final FmStateRepository stateRepository;
     private final FmCityRepository cityRepository;
@@ -320,6 +303,68 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
                 log.info("[BULK] Merchant registration email skipped: merchantId={}", merchant.getMerchantId());
 
                 return merchant;
+            }
+
+            @Override
+            @Transactional(readOnly = true)
+            public Page<FmMerchantDto> getAdminMerchants(FmMerchantAdminFilterDto filter, int page, int size) {
+
+                log.info("[ADMIN MERCHANT] Fetching merchants | search={} | businessType={} | areaId={} | isActive={} | isApproved={} | status={} | page={} | size={}", filter.getSearch(), filter.getMerchantBusinessType(), filter.getAreaId(), filter.getIsActive(), filter.getIsApproved(), filter.getStatus(), page, size);
+
+                if (page < 0) {
+                    page = 0;
+                }
+
+                if (size <= 0) {
+                    size = 10;
+                }
+                if (size > 100) {
+                    size = 100;
+                }
+
+                Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+                String search = normalize(filter.getSearch());
+
+                String merchantBusinessType = normalize(filter.getMerchantBusinessType());
+
+                Integer areaId = filter.getAreaId();
+
+                String isActive = normalizeActiveStatus(filter.getIsActive());
+
+                Boolean isApproved = filter.getIsApproved();
+
+                String status = normalize(filter.getStatus());
+
+                Page<FmAdminMerchantProjection> merchantPage = merchantRepository.findAdminMerchants(search, merchantBusinessType, areaId, isActive, isApproved, status, pageable);
+
+                return merchantPage.map(FmMerchantMapper::mapAdminMerchantProjection);
+            }
+
+            private String normalize(String value) {
+
+                if (value == null || value.isBlank()) {
+                    return null;
+                }
+
+                return value.trim();
+            }
+
+
+            private String normalizeActiveStatus(String isActive) {
+
+                if (isActive == null || isActive.isBlank()) {
+                    return null;
+                }
+
+                String normalizedValue = isActive.trim().toUpperCase();
+
+                if (!normalizedValue.equals("Y") && !normalizedValue.equals("N")) {
+
+                    throw new IllegalArgumentException("isActive must be either Y or N");
+                }
+
+                return normalizedValue;
             }
 
 

@@ -114,6 +114,17 @@ public interface FMFeignClient {
         );
 
 
-    }
+// =====================================================
+// GET DRIVER IDs BY AREA
+// Used for Admin Driver Area Filter
+// =====================================================
+
+    @GetMapping("/api/fm/address/driverIdsByArea")
+    ResponseEntity<List<Integer>> getDriverIdsByArea(
+            @RequestParam("areaId") Integer areaId
+    );
+
+
+}
 
 

@@ -16,4 +16,6 @@ public class MerchantPromotionDetailsDto {
     private String offerType;
 
     private BigDecimal minimumOrderValue;
+
+    private String isActive;
 }

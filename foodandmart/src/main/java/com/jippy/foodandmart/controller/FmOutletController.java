@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -1514,6 +1515,28 @@ public class FmOutletController {
         UploadDocumentsResponseDto updateDocumentsResponseDto = outletService.saveOrUpdateDocuments(uploadDocumentsDto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(updateDocumentsResponseDto);
+    }
+
+    @GetMapping("/admin")
+    public ResponseEntity<?> getAdminOutlets(
+
+            @RequestParam(required = false) String search,
+
+            @RequestParam(required = false) Integer areaId,
+
+            @RequestParam(required = false) String outletType,
+
+            @RequestParam(required = false) String isActive,
+
+            @RequestParam(required = false) Boolean isApproved,
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<FmAdminOutletDto> outlets = outletService.getAdminOutlets(search, areaId, outletType, isActive, isApproved, page, size);
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Outlets fetched successfully", "data", outlets));
     }
 
 }

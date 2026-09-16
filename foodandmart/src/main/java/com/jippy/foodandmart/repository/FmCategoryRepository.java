@@ -15,5 +15,7 @@ public interface FmCategoryRepository extends JpaRepository<FmCategory, Integer>
     //List<FmOutletCategory> findByOutletId(Integer outletId);
 
     List<FmCategory> findByCategoryType(String categoryType);
+
+    long countByCategoryTypeIgnoreCase(String categoryType);
 }
     

@@ -40,4 +40,15 @@ public class InternalPromotionController {
                 )
         );
     }
+
+    @PostMapping("/{promotionPlanId}/deactivate")
+    public ResponseEntity<Void> deactivateMerchantPromotion(
+            @PathVariable Integer promotionPlanId) {
+
+        log.info("[INTERNAL-PROMOTION] Deactivate promotion plan request received | promotionPlanId={}", promotionPlanId);
+
+        promotionPlanService.deactivatePromotionPlan(promotionPlanId);
+
+        return ResponseEntity.ok().build();
+    }
 }

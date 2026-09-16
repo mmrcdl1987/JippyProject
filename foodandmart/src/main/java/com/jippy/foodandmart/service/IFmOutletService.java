@@ -3,6 +3,7 @@ package com.jippy.foodandmart.service;
 import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
+import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -113,5 +114,16 @@ public interface IFmOutletService {
      * @return list of outlet IDs
      */
     List<Integer> getOutletIdsByMerchantId(Integer merchantId);
+
+
+    Page<FmAdminOutletDto> getAdminOutlets(
+            String search,
+            Integer areaId,
+            String outletType,
+            String isActive,
+            Boolean isApproved,
+            int page,
+            int size
+    );
 
 }

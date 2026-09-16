@@ -522,4 +522,39 @@ public class DriverMapper {
 
         return dto;
     }
+
+
+
+    public static AdminDriverDto mapToAdminDriverDto(Driver driver) {
+
+        AdminDriverDto dto = new AdminDriverDto();
+
+        dto.setDriverId(driver.getDriverId());
+
+        dto.setFirstName(driver.getFirstName());
+
+        dto.setLastName(driver.getLastName());
+
+        dto.setDriverName(
+                (driver.getFirstName() + " " + driver.getLastName()).trim()
+        );
+
+        dto.setPhoneNumber(driver.getPhoneNumber());
+
+        dto.setEmail(driver.getEmail());
+
+        dto.setIsApproved(driver.getIsApproved());
+
+        dto.setReadyToAcceptOrders(
+                driver.getReadyToAcceptOrders()
+        );
+
+        dto.setProfilePicUrl(driver.getProfilePicUrl());
+
+        dto.setCreatedAt(driver.getCreatedAt());
+
+        dto.setUpdatedAt(driver.getUpdatedAt());
+
+        return dto;
+    }
 }

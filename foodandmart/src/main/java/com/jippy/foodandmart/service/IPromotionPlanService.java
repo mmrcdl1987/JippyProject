@@ -60,4 +60,6 @@ public interface IPromotionPlanService {
     MerchantPromotionDetailsDto getMerchantPromotionDetails(
             Integer promotionPlanId
     );
+
+    void deactivatePromotionPlan(Integer promotionPlanId);
 }

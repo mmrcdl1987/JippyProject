@@ -22,7 +22,7 @@ public class FmOutletDto {
     private String subscriptionStatus;
     private String promotionStatus;
     private Double review;
-    private Boolean isActive;
+    private String isActive;
     private Boolean isApproved;
     private Double distanceKm;
 
