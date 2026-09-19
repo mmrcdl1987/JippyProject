@@ -24,8 +24,6 @@ public interface DriverService {
      */
     void approveDriver(Integer driverId);
 
-    String createZones(DriverZoneDto zoneDto);
-
     DriverDto updateDriverDetails(Integer driverId, DriverDto dto);
 
     DriverEarningsDto fetchEarnings(Integer driverId, LocalDate date);

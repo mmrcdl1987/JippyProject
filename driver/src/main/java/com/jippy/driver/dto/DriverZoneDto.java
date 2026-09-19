@@ -8,15 +8,22 @@ import java.util.List;
 public class DriverZoneDto {
 
     private Integer zoneId;
+
     private String zoneName;
-    //private List<CoordinateDTO> boundary;
-    // List 1: MultiPolygon -> List 2: Individual Polygons -> List 3: Rings -> CoordinateDTO
+
+    // Y = Active, N = Inactive
+    private String status;
+
+    // MultiPolygon -> Polygons -> Rings -> Coordinates
     private List<List<List<CoordinateDTO>>> boundary;
+
     private Integer createdBy;
 
     @Data
     public static class CoordinateDTO {
+
         private double longitude;
+
         private double latitude;
     }
 }

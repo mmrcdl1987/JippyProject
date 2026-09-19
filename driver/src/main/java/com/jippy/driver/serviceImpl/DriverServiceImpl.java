@@ -822,66 +822,6 @@ public class DriverServiceImpl implements DriverService {
         return response;
     }
 
-    @Transactional
-    @Override
-    public String createZones(DriverZoneDto zoneDto) {
-
-        Optional<DriverZone> existingZone = zoneRepository.findByZoneName(zoneDto.getZoneName());
-        MultiPolygon multiPolygon = convertToJtsPolygon(zoneDto.getBoundary());
-        //Polygon polygon = convertToJtsPolygon(zoneDto.getBoundary());
-        if (existingZone.isPresent()) {
-            if (zoneRepository.existsBySpatialBoundary(multiPolygon)) {
-                throw new DriverZoneException("A boundary with this exact shape already exists!");
-            } else {
-                log.info("Updating existing zone with id: {}", existingZone.get().getZoneId());
-                DriverZone zoneToUpdate = existingZone.get();
-                zoneToUpdate.setBoundary(multiPolygon);
-                zoneToUpdate.setUpdatedAt(LocalDateTime.now());
-                zoneToUpdate.setUpdatedBy(zoneDto.getCreatedBy());
-                zoneRepository.save(zoneToUpdate);
-                return "Zone:" + zoneToUpdate.getZoneName() + " updated successfully!";
-            }
-        }
-        DriverZone zone = DriverMapper.mapToZoneEntity(zoneDto, multiPolygon);
-        DriverZone savedZone = zoneRepository.save(zone);
-        log.info("New zone is created with id: {}", savedZone.getZoneId());
-
-        return "Zone:" + zone.getZoneName() + " created successfully!";
-    }
-
-    private MultiPolygon convertToJtsPolygon(List<List<List<DriverZoneDto.CoordinateDTO>>> boundary) {
-        List<Polygon> polygonsList = new ArrayList<>();
-
-        // Loop 1: Iterate through each independent Polygon shape
-        for (List<List<DriverZoneDto.CoordinateDTO>> rawPolygon : boundary) {
-
-            // In a standard geometry, index 0 is always the outer boundary ring
-            List<DriverZoneDto.CoordinateDTO> exteriorRingCoords = rawPolygon.get(0);
-
-            // Map CoordinateDTO to JTS Coordinate objects
-            Coordinate[] coordinates = exteriorRingCoords.stream()
-                    .map(c -> new Coordinate(c.getLongitude(), c.getLatitude()))
-                    .toArray(Coordinate[]::new);
-
-            // Create the closed linear ring for this polygon
-            LinearRing exteriorRing = geometryFactory.createLinearRing(coordinates);
-
-            // Create a polygon from the ring (passing null since we aren't handling internal holes right now)
-            Polygon polygon = geometryFactory.createPolygon(exteriorRing, null);
-            polygonsList.add(polygon);
-        }
-
-        // Convert our list of individual polygons into a native array
-        Polygon[] polygonArray = polygonsList.toArray(Polygon[]::new);
-
-        // Combine everything into a single MultiPolygon object
-        MultiPolygon multiPolygon = geometryFactory.createMultiPolygon(polygonArray);
-
-        // Match your database spatial SRID coordinate system reference alignment
-        multiPolygon.setSRID(4326);
-
-        return  multiPolygon;
-    }
 
 //    @Override
 //    public String driverDeliveredOrder(DriverOrderDto driverOrderDto) {
