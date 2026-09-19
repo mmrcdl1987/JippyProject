@@ -2,11 +2,13 @@ package com.jippy.customerandorder.feignClients;
 
 import com.jippy.customerandorder.config.FeignClientConfig;
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.dto.CoMerchantPricesResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @FeignClient(name = "foodandmart",configuration = FeignClientConfig.class)
@@ -102,9 +104,9 @@ public interface FMFeignClient {
             @PathVariable("outletId") Integer outletId
     );
 
-    @GetMapping("/api/fm/products/getOrderProductItemsForMerchant")
-    public ResponseEntity<List<CoOrderSummaryDto>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
-            @RequestParam List<Integer> productVariantIds);
+//    @GetMapping("/api/fm/products/getOrderProductItemsForMerchant")
+//    public ResponseEntity<List<CoOrderSummaryDto>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
+//            @RequestParam List<Integer> productVariantIds);
 
     @PostMapping("/api/fm/pricing/current-online-prices")
     List<CoCurrentOnlinePriceResponseDto> getCurrentOnlinePrices(
@@ -140,4 +142,17 @@ public interface FMFeignClient {
 //            @RequestParam("outletId") Integer outletId
 //    );
 
-}
+
+    @GetMapping("/api/fm/pricing/getProductMerchantPrices")
+    public ResponseEntity<List<CoMerchantPricesResponseDto>> getProductMerchantPrices(@RequestParam List<Integer> productIds,
+            @RequestParam List<Integer> productVariantOptionIds);
+
+    @GetMapping("/api/fm/products/getProductNameByIds")
+    public Map<String,String> getProductNameByIds(@RequestParam List<Integer> productIds);
+
+    @GetMapping("/api/fm/products/getVariantNameByIds")
+    public Map<String,String> getVariantNameByIds(@RequestParam List<Integer> productVariantsIds);
+
+
+
+    }

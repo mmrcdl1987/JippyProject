@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.repository;
 
 import com.jippy.foodandmart.entity.FmProductVariantOption;
+import com.jippy.foodandmart.projections.FmProductMerchantPriceProjection;
 import feign.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -72,4 +73,16 @@ public interface FmProductVariantOptionRepository
             Integer productVariantGroupValuesId
     );
 
+    @Query(value = """
+        SELECT product_variant_options_id as productOrProductVariantOptionId,variant_price as merchantPrice,
+        price_type as priceType FROM "jippy_fm"."product_variant_options" where product_variant_options_id in (:productVariantOptionIds)
+    """,nativeQuery = true)
+    List<FmProductMerchantPriceProjection> findByProductVariantOptionIds(@Param("productVariantOptionIds") List<Integer> productVariantOptionIds);
+
+    @Query(value = """
+            SELECT pvo.product_variant_options_id,pvgv.variant_name FROM "jippy_fm"."product_variant_options" pvo\s
+            join "jippy_fm"."product_variant_group_values" pvgv on pvo.product_variant_group_values_id = pvgv.product_variant_group_values_id
+            where product_variant_options_id in(:productVariantsIds)
+            """,nativeQuery = true)
+    List<Object[]> findVariantNamesByProductVariantIds(@Param("productVariantsIds") List<Integer> productVariantsIds);
 }

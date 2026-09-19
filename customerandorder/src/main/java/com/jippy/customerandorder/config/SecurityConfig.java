@@ -35,9 +35,11 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                        .requestMatchers("/ws-group-order","/ws-group-order/**").permitAll() // Allow initial TCP upgrade
 
+                        //update order status
+                        .requestMatchers("/api/co/updateOrderStatus").permitAll()
                         // 2. MUST cover all subpaths (/ws-group-order, /ws-group-order/info, /ws-group-order/topic/**)
                        // .requestMatchers("/ws-group-order/**").permitAll()
-
+                        .requestMatchers("/api/co/getOrderDetailsForDelivery").permitAll()
                         .requestMatchers("/api/co/**").authenticated()
                         .anyRequest().authenticated()
                 )

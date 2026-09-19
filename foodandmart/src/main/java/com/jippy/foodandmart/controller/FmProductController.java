@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -550,5 +551,27 @@ public class FmProductController {
         FmResponseDto response = productMappingService.inactiveProductOrProductVariant(productId,isActive);
 
         return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("/getProductNameByIds")
+    public Map<String,String> getProductNameByIds(@RequestParam List<Integer> productIds) {
+
+        log.info("Get product names by ids  | productIds:{}", productIds);
+
+        Map<String,String> products = productMappingService.getProductNameByIds(productIds);
+
+        return products;
+    }
+
+
+    @GetMapping("/getVariantNameByIds")
+    public Map<String,String> getVariantNameByIds(@RequestParam List<Integer> productVariantsIds) {
+
+        log.info("Get product variant names by ids  | productIds:{}", productVariantsIds);
+
+        Map<String,String> variants = productMappingService.getVariantNameByIds(productVariantsIds);
+
+        return variants;
     }
 }

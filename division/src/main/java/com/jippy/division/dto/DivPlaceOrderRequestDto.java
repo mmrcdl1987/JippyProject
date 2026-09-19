@@ -32,7 +32,9 @@ public class DivPlaceOrderRequestDto {
     @NotNull(message = "Payment mode id is required")
     private Integer paymentModeId;
 
-    private Integer couponId;
+    private Integer discountId;
+
+    private String promotionSourceType;
 
     @NotNull(message = "Order amount is required")
     private BigDecimal orderAmount;
@@ -43,9 +45,11 @@ public class DivPlaceOrderRequestDto {
 
     private Boolean platformFeeToggle;
 
-    private BigDecimal deliveryFee;
+    private BigDecimal customerDeliveryCharge;
 
-    private BigDecimal deliveryFeeTax;
+    private BigDecimal customerDeliveryTax;
+
+    private BigDecimal customerFreeDistanceBenefit;
 
     private BigDecimal surgeFee;
 
@@ -66,7 +70,7 @@ public class DivPlaceOrderRequestDto {
     @NotNull(message = "Order total amount is required")
     private BigDecimal orderTotalAmount;
 
-    private BigDecimal couponDiscount;
+    private BigDecimal discount;
 
     /*
      * WALLET USAGE
@@ -136,5 +140,12 @@ public class DivPlaceOrderRequestDto {
     private String cookingInstructions;
 
     private  Boolean isCutleryRequired;
+
+    private BigDecimal driverDeliveryCharge;
+
+    private BigDecimal tip;
+
+    private BigDecimal orderAmountDiscounted;
+
 
 }

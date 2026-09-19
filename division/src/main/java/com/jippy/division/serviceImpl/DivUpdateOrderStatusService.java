@@ -6,10 +6,12 @@ import com.jippy.division.dto.PaymentVerifyRequestDto;
 import com.jippy.division.feignClient.CoFeignClient;
 import com.sun.jdi.PrimitiveValue;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DivUpdateOrderStatusService {
 
     private final CoFeignClient coFeignClient;
@@ -25,6 +27,7 @@ public class DivUpdateOrderStatusService {
         }
 
         orderDto.setOrderId(orderId);
+        log.info("================================="+orderDto);
 
         coFeignClient.updateOrderStatus(orderDto);
     }

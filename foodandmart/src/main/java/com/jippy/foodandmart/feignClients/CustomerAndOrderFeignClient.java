@@ -2,7 +2,10 @@ package com.jippy.foodandmart.feignClients;
 
 import com.jippy.foodandmart.dto.CustomerResponseDto;
 import com.jippy.foodandmart.dto.DriverResponseDto;
+import com.jippy.foodandmart.dto.FmOrderSummaryDto;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,4 +29,8 @@ public interface CustomerAndOrderFeignClient {
 
     @GetMapping("/api/co/recent")
     Integer getRecentOutlet(@RequestParam Integer customerId);
+
+    @GetMapping("/api/co/orderSummaryForOutlet")
+    public ResponseEntity<List<FmOrderSummaryDto>> orderSummaryForOutlet(
+            @RequestParam Integer outletId, Pageable pageable);
 }

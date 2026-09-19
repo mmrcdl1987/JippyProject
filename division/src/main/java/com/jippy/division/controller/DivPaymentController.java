@@ -1,5 +1,6 @@
 package com.jippy.division.controller;
 
+import com.jippy.division.dto.DivOrderPaymentStatusDto;
 import com.jippy.division.dto.DivPaymentInitiateResponse;
 import com.jippy.division.dto.DivPlaceOrderRequestDto;
 import com.jippy.division.dto.PaymentVerifyRequestDto;
@@ -52,6 +53,13 @@ public class DivPaymentController {
 
         log.info("Received payment callback for orderId: {}", orderId);
         return paymentService.paytmPaymentCallback(orderId, request);
+    }
+
+    @GetMapping("/getOrderPaymentStatus")
+    public ResponseEntity<DivOrderPaymentStatusDto> getOrderPaymentStatus(@RequestParam String orderId) {
+
+        log.info("Get Order PaymentStatus {}", orderId);
+        return paymentService.getOrderPaymentStatus(orderId);
     }
 
 

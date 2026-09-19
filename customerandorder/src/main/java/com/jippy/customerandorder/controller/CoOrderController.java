@@ -2,6 +2,7 @@ package com.jippy.customerandorder.controller;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.dto.uber.CoUberDispatchRequestDto;
 import com.jippy.customerandorder.entity.CoOrder;
 import com.jippy.customerandorder.iservice.IOrderService;
 
@@ -13,6 +14,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -178,13 +180,22 @@ public class CoOrderController {
         return ResponseEntity.ok(response);
     }
 
-    //@GetMapping("/orderSummaryForOutlet")
-//    public ResponseEntity<List<CoOrderSummaryDto>> orderSummaryForOutlet(
-//            @RequestParam Integer outletId) {
-//
-//        log.info("Fetching order summary for outletId={}", outletId);
-//
-//        return orderService.orderSummaryForOutlet(outletId);
-//    }
+    @GetMapping("/orderSummaryForOutlet")
+    public ResponseEntity<List<CoOrderSummaryDto>> orderSummaryForOutlet(
+            @RequestParam Integer outletId, Pageable pageable) {
+
+        log.info("Fetching order summary for outletId={}", outletId);
+
+        return orderService.orderSummaryForOutlet(outletId,pageable);
+    }
+
+    @GetMapping("/getOrderDetailsForDelivery")
+    public CoUberDispatchRequestDto getOrderDetailsForDelivery(
+            @RequestParam String orderId) {
+
+        log.info("Get order details for delivery={}", orderId);
+
+        return orderService.getOrderDetailsForDelivery(orderId);
+    }
 
 }

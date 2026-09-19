@@ -66,7 +66,14 @@ public class SecurityConfig {
                                 "/api/fm/outlets/public/outlet-details",
 
                                 //payu webhook url
-                                "/api/div/payment//webhook/payu"
+                                "/api/div/payment//webhook/payu",
+
+                                //uber schedular calls this
+                                "/api/co/getOrderDetailsForDelivery",
+                                "/api/fm/products/getProductNameByIds",
+                                "/api/fm/products/getVariantNameByIds",
+                                "/api/fm/outlets/location/{outletId}"
+
                         ).permitAll()
                         .anyExchange().permitAll() // Allow EVERYTHING temporarily
                 )

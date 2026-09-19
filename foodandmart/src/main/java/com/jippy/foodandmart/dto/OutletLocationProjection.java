@@ -7,4 +7,14 @@ public interface OutletLocationProjection {
     Double getLatitude();
 
     Double getLongitude();
+
+    String getOutletName();
+
+    String getBuildingNumber();
+
+    String getRoad();
+
+    String getLandmark();
+
+    String getOutletPhone();
 }

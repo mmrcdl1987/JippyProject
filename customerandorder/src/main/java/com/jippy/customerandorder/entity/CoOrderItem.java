@@ -37,6 +37,12 @@ public class CoOrderItem {
     @Column(name = "online_price_total", nullable = false)
     private BigDecimal onlinePriceTotal;
 
+    @Column(name = "merchant_unit_price")
+    private BigDecimal merchantUnitPrice;
+
+    @Column(name = "merchant_total_price")
+    private BigDecimal merchantTotalPrice;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

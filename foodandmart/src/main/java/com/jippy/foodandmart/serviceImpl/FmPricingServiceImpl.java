@@ -13,6 +13,7 @@ import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
 import com.jippy.foodandmart.mapper.FmPricingMapper;
 import com.jippy.foodandmart.mapper.FmProductMapper;
+import com.jippy.foodandmart.projections.FmProductMerchantPriceProjection;
 import com.jippy.foodandmart.repository.FmOutletRepository;
 import com.jippy.foodandmart.repository.FmPricingRepository;
 import com.jippy.foodandmart.repository.FmProductPriceChangeHistoryRepository;
@@ -834,6 +835,7 @@ public class FmPricingServiceImpl implements IPricingService {
         return response;
     }
 
+
     private String buildPriceKey(Integer productId, Integer variantOptionId) {
 
         return productId + "_" + (variantOptionId == null ? "NULL" : variantOptionId);
@@ -1393,4 +1395,47 @@ public class FmPricingServiceImpl implements IPricingService {
 
     private record PricingKey(Integer productId, Integer outletCategoryId, Integer variantId) {
     }
+
+    @Override
+    public List<FmProductMerchantPriceResponseDto> getProductMerchantPrices(List<Integer> productIds,
+            List<Integer> productVariantOptionIds) {
+
+        List<FmProductMerchantPriceProjection> productMerchantPriceProjections =
+                productRepo.findByProductIds(productIds);
+
+        List<FmProductMerchantPriceProjection> productVariantMerchantPriceProjections =
+                variantOptionRepo.findByProductVariantOptionIds(productVariantOptionIds);
+
+        List<FmProductMerchantPriceResponseDto> productMerchantPriceResponseDtos = new ArrayList<>();
+
+        // 2. Map Product Projections (Set productId, keep productVariantOptionId null)
+        if (productMerchantPriceProjections != null) {
+            productMerchantPriceProjections.stream()
+                    .map(projection -> {
+                        FmProductMerchantPriceResponseDto dto = new FmProductMerchantPriceResponseDto();
+                        dto.setProductId(projection.getProductOrProductVariantOptionId());
+                        dto.setProductVariantOptionId(null);
+                        dto.setMerchantPrice(projection.getMerchantPrice());
+                        return dto;
+                    })
+                    .forEach(productMerchantPriceResponseDtos::add);
+        }
+
+        // 3. Map Variant Option Projections (Set productVariantOptionId, keep productId null)
+        if (productVariantMerchantPriceProjections != null) {
+            productVariantMerchantPriceProjections.stream()
+                    .map(projection -> {
+                        FmProductMerchantPriceResponseDto dto = new FmProductMerchantPriceResponseDto();
+                        dto.setProductId(null);
+                        dto.setProductVariantOptionId(projection.getProductOrProductVariantOptionId());
+                        dto.setMerchantPrice(projection.getMerchantPrice());
+                        dto.setPriceType(projection.getPriceType()); // Optional discriminator if needed
+                        return dto;
+                    })
+                    .forEach(productMerchantPriceResponseDtos::add);
+        }
+
+        return productMerchantPriceResponseDtos;
+    }
+
 }

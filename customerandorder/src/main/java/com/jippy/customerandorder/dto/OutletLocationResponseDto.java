@@ -12,4 +12,21 @@ public class OutletLocationResponseDto {
     private Double latitude;
 
     private Double longitude;
+
+    private Integer stateId;
+
+    private Integer cityId;
+
+    private Integer areaId;
+
+    private String outletName;
+
+    private String buildingNumber;
+
+    private String road;
+
+    private String landmark;
+
+    private String outletPhoneNumber;
+
 }

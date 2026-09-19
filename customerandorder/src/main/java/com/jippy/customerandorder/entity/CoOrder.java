@@ -92,4 +92,27 @@ public class CoOrder {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CoOrderPriceBreakup> priceBreakups = new ArrayList<>();
 
+    @Column(name = "merchant_accepted_time")
+    private LocalDateTime merchantAcceptedTime;
+
+    @Column(name = "delivery_request_at")
+    private LocalDateTime deliveryRequestAt;
+
+    @Column(name = "food_preparation_completed_time")
+    private LocalDateTime foodPreparationCompletedTime;
+
+    @Column(name = "driver_order_accepted_time")
+    private LocalDateTime driverOrderAcceptedTime;
+
+    @Column(name = "driver_outlet_reached_time")
+    private LocalDateTime driverOutletReachedTime;
+
+    @Column(name = "driver_food_pickup_time")
+    private LocalDateTime driverFoodPickupTime;
+
+    @Column(name = "driver_food_delivered_time")
+    private LocalDateTime driverFoodDeliveredTime;
+
+
+
 }

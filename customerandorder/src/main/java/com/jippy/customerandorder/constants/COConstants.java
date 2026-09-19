@@ -42,7 +42,7 @@ public class COConstants {
     public static final String OUTLET = "OUTLET";
     public static final String ORDER_STATUS_REJECTED = "ORDER_REJECTED";
     public static final String ORDER_STATUS_CANCELLED = "CANCELLED";
-    public static final String ORDER_STATUS_ACCEPTED = "ORDER ACCEPTED";
+    public static final String ORDER_STATUS_ACCEPTED = "ORDER_ACCEPTED";
     public static final String STATUS_201 = "201";
     // ── Delivery Charge Settings Messages ──────────────────────────────────────
     public static final String MSG_DELIVERY_CHARGE_CREATED = "Delivery charge setting created successfully";

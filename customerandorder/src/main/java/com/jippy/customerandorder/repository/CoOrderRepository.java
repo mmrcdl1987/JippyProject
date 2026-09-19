@@ -590,4 +590,30 @@ Optional<CoOrder> findByOrderIdAndDriverId(
                     Pageable pageable
             );
 // =========================================================================================
+
+    @Query(value = """
+                    SELECT order_item_id,oi.order_id,oi.product_id,oi.variant_option_id,oi.quantity,oi.merchant_unit_price,oi.merchant_total_price,
+                    o.order_status,o.cooking_instructions,o.is_cutlery_required,o.created_at 
+                    FROM "jippy_customer_and_order"."order_items" oi
+                    left join "jippy_customer_and_order"."orders"  o on o.order_id = oi.order_id where o.outlet_id =:outletId
+                    order by o.created_at desc """,
+                    countQuery = """
+                    SELECT COUNT(*) FROM "jippy_customer_and_order"."orders" o WHERE o.outlet_id = :outletId
+                    """,
+            nativeQuery = true)
+    List<OrderSummaryProjection> findAllOrdersByOutletId(@Param("outletId") Integer outletId, Pageable pageable);
+
+
+    @Query(value = """
+                    SELECT o.order_id,c.first_name,c.phone_number,cda.building_name as customer_address,ST_X(location::geometry) AS customer_longitude,
+                        ST_Y(location::geometry) AS customer_latitude,oi.product_id,oi.variant_option_id,oi.quantity,opb.order_total_amount,o.outlet_id
+                        FROM "jippy_customer_and_order"."orders" o
+                    join "jippy_customer_and_order"."order_items" oi on o.order_id = oi.order_id
+                    join "jippy_customer_and_order"."order_price_breakup" opb on opb.order_id = o.order_id
+                    join "jippy_customer_and_order"."customer" c on c.customer_id = o.customer_id
+                    join "jippy_customer_and_order"."customer_delivery_addresses" cda on cda.customer_address_id = o.customer_delivery_address_id\s
+                    where o.order_id = :orderId
+                    """,nativeQuery = true)
+    List<CoOrderDetailsForDeliveryProjection> getOrderDetailsForDelivery(@Param("orderId") String orderId);
+
 }

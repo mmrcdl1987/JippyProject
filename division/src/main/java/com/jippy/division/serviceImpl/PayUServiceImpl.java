@@ -72,24 +72,45 @@ public class PayUServiceImpl implements PayUService {
     @Override
     public boolean verifyResponseHash(Map<String, String> payuParams) {
         String receivedHash = payuParams.get("hash");
+        if (receivedHash == null) {
+            return false;
+        }
 
-        // Reverse sequence: SALT|status|udf1|udf2|udf3|udf4|udf5|email|firstname|productinfo|amount|txnid|key
-        String hashSequence = String.format("%s|%s||||||||||%s|%s|%s|%s|%s|%s",
-                merchantSalt,
-                payuParams.getOrDefault("status", ""),
-                payuParams.getOrDefault("email", ""),
-                payuParams.getOrDefault("firstname", ""),
-                payuParams.getOrDefault("productinfo", ""),
-                payuParams.getOrDefault("amount", ""),
-                payuParams.getOrDefault("txnid", ""),
-                payuParams.getOrDefault("key", merchantKey)
+        String status = payuParams.getOrDefault("status", "");
+        String email = payuParams.getOrDefault("email", "");
+        String firstname = payuParams.getOrDefault("firstname", "");
+        String productinfo = payuParams.getOrDefault("productinfo", "");
+        String amount = payuParams.getOrDefault("amount", "");
+        String txnid = payuParams.getOrDefault("txnid", "");
+        String key = payuParams.getOrDefault("key", merchantKey).trim();
+
+        // Reverse Hash Sequence:
+        // SALT|status|||||||||||email|firstname|productinfo|amount|txnid|key
+        // String.join inserts exactly 11 pipes between status and email for udf10 through udf1
+        String hashSequence = String.join("|",
+                merchantSalt.trim(),
+                status,
+                "", "", "", "", "", "", "", "", "", "", // 10 empty slots for udf10..udf1
+                email,
+                firstname,
+                productinfo,
+                amount,
+                txnid,
+                key
         );
 
+        // If additionalCharges exist (e.g., convenience fees), PayU prepends it to the reverse hash
+        if (payuParams.containsKey("additionalCharges")) {
+            hashSequence = payuParams.get("additionalCharges") + "|" + hashSequence;
+        }
+
         String calculatedHash = hashSha512(hashSequence);
-        System.out.println("==============calculatedHash=========="+calculatedHash);
+
+        System.out.println("====== Calculated Hash: " + calculatedHash);
+        System.out.println("====== Received Hash:   " + receivedHash);
+
         return calculatedHash.equalsIgnoreCase(receivedHash);
     }
-
     private String hashSha512(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-512");

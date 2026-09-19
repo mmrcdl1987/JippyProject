@@ -1,6 +1,5 @@
 package com.jippy.foodandmart.repository;
 
-import com.jippy.foodandmart.dto.DriverAddressLocationDto;
 import com.jippy.foodandmart.dto.FmMerchantAddressDto;
 import com.jippy.foodandmart.entity.FmAddress;
 import org.springframework.data.jpa.repository.JpaRepository;

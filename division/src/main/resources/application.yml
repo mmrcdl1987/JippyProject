@@ -113,5 +113,5 @@ paytm:
 payu:
   merchant-key: ${MERCHANT_KEY}
   merchant-salt: ${MERCHANT_SALT}
-  post-service-url: https://test.payu.in/merchant/postservice.php?form=1
+  post-service-url: https://eatable-marbles-outgoing.ngrok-free.dev/api/div/payments/response
 

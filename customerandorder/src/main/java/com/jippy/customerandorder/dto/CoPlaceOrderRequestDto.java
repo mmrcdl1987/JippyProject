@@ -29,53 +29,12 @@ public class CoPlaceOrderRequestDto {
     @NotNull(message = "Payment mode id is required")
     private Integer paymentModeId;
 
-    @NotNull(message = "Order amount is required")
-    private BigDecimal orderAmount;
-
-    private BigDecimal orderAmountDiscounted;
-
-    private PromotionSourceType promotionSourceType;
-
     private Integer discountId;
 
-    private BigDecimal discount;
+    private String promotionSourceType;
 
-    @NotNull(message = "Order total amount is required")
-    private BigDecimal orderTotalAmount;
-
-    // ================= DRIVER DELIVERY =================
-
-    private BigDecimal pickUpDistanceKms;
-
-    private BigDecimal deliveryDistanceKms;
-
-    private BigDecimal pickUpCharges;
-
-    /**
-     * Driver delivery charge.
-     * No GST is applied to this amount.
-     */
-    private BigDecimal driverDeliveryFee;
-
-    /**
-     * Total driver delivery fee.
-     * No driver delivery tax.
-     */
-    private BigDecimal totalDeliveryFee;
-
-    // ================= CUSTOMER DELIVERY =================
-
-    /**
-     * Customer delivery charge after free-distance benefit.
-     */
-    private BigDecimal customerDeliveryFee;
-
-    /**
-     * GST on customer delivery.
-     */
-    private BigDecimal customerDeliveryFeeTax;
-
-    // ================= PLATFORM FEE =================
+    @NotNull(message = "Order amount is required")
+    private BigDecimal orderAmount;
 
     private BigDecimal platformFee;
 
@@ -83,7 +42,11 @@ public class CoPlaceOrderRequestDto {
 
     private Boolean platformFeeToggle;
 
-    // ================= SURGE FEE =================
+    private BigDecimal customerDeliveryCharge;
+
+    private BigDecimal customerDeliveryTax;
+
+    private BigDecimal customerFreeDistanceBenefit;
 
     private BigDecimal surgeFee;
 
@@ -91,33 +54,35 @@ public class CoPlaceOrderRequestDto {
 
     private Boolean surgeFeeToggle;
 
-    // ================= PACKAGING FEE =================
-
     private BigDecimal packagingFee;
 
     private BigDecimal packagingFeeTax;
 
     private Boolean packagingFeeToggle;
 
-    // ================= FOOD TAX =================
-
     private BigDecimal foodTax;
 
     private BigDecimal totalTax;
 
-    // ================= WALLET =================
+    @NotNull(message = "Order total amount is required")
+    private BigDecimal orderTotalAmount;
 
+    private BigDecimal discount;
+
+    /*
+     * WALLET USAGE
+     */
     private Boolean useWallet;
 
     private BigDecimal walletAmount;
 
-    // ================= TIP =================
-
-    private BigDecimal tip;
-
-    // ================= ORDER TYPE =================
-
-    /**
+    /*
+     * DELIVERY DISTANCE
+     */
+    private BigDecimal pickUpDistanceKms;
+    private BigDecimal deliveryDistanceKms;
+    private BigDecimal pickUpCharges;
+    /*
      * NORMAL
      * SCHEDULED_RECURRING
      * SCHEDULED_CUSTOM_PLAN
@@ -125,49 +90,58 @@ public class CoPlaceOrderRequestDto {
     @NotNull(message = "Order type is required")
     private String orderType;
 
-    // ================= SCHEDULED =================
-
+    /*
+     * RECURRING ONLY
+     */
     private LocalDateTime scheduledDeliveryDateTime;
 
+    /*
+     * RECURRING ONLY
+     */
     private LocalDateTime subscriptionStartDate;
 
+    /*
+     * RECURRING ONLY
+     */
     private LocalDateTime subscriptionEndDate;
 
-    /**
+    /*
      * BREAKFAST
      * LUNCH
      * DINNER
      */
     private String mealPreference;
 
+    /*
+     * RECURRING
+     */
     private List<CoOrderItemDto> items;
 
-    // ================= CUSTOM PLAN =================
-
+    /*
+     * CUSTOM PLAN
+     */
     private List<CoScheduledOrderDto> scheduledOrders;
-
-    // ================= AUDIT =================
 
     private Integer createdBy;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
-    // ================= GROUP ORDER =================
-
+    // used only in group orders
     private Integer groupOrderInvitationId;
-
-    // ================= ORDER =================
 
     private String orderId;
 
     private String orderStatus;
 
-    // ================= INSTRUCTIONS =================
-
     private String cookingInstructions;
 
-    private Boolean isCutleryRequired;
+    private  Boolean isCutleryRequired;
 
-    private String discountType;
+    private BigDecimal driverDeliveryCharge;
+
+    private BigDecimal tip;
+
+    private BigDecimal orderAmountDiscounted;
+
 }

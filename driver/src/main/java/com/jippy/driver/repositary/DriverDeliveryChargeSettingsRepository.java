@@ -49,10 +49,10 @@ Optional<DriverDeliveryChargeSettings> findDeliverySlab(
         SELECT d.*
         FROM jippy_driver.driver_delivery_charge_settings d
         WHERE d.zone_id = :zoneId
-          AND :deliveryDistance >= d.kms_range_from
-          AND :deliveryDistance < d.kms_range_to
+          AND d.kms_range_from <= :deliveryDistance
+          AND d.kms_range_to > :deliveryDistance
           AND UPPER(d.delivery_type) = 'DELIVERY'
-          AND UPPER(d.status) = 'ACTIVE'
+          AND UPPER(d.status) = 'Y'
         ORDER BY d.kms_range_from ASC
         LIMIT 1
         """, nativeQuery = true)
