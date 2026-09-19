@@ -1,9 +1,9 @@
 package com.jippy.foodandmart.service;
 
+import com.jippy.foodandmart.dto.DriverAddressLocationDto;
 import com.jippy.foodandmart.dto.FmAreaDto;
 import com.jippy.foodandmart.dto.FmCityDto;
 import com.jippy.foodandmart.dto.FmStateDto;
-import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -16,4 +16,8 @@ public interface IFmLocationService {
     List<FmAreaDto> fetchAreaInCity(Integer cityId);
 
     String findAreaById(Integer areaId);
+
+    DriverAddressLocationDto getDriverAddressDetails(Integer driverId);
+
+    List<DriverAddressLocationDto> getBatchDriverAddresses(List<Integer> driverIds);
 }

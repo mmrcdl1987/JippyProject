@@ -1,4 +1,6 @@
 package com.jippy.foodandmart.controller;
+
+import com.jippy.foodandmart.dto.DriverAddressLocationDto;
 import com.jippy.foodandmart.dto.FmAreaDto;
 import com.jippy.foodandmart.dto.FmCityDto;
 import com.jippy.foodandmart.dto.FmStateDto;
@@ -9,10 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -77,5 +77,28 @@ public class FmLocationController {
 
     }
 
+    @Operation(summary = "Fetch driver address location details")
+    @GetMapping("/driverAddressDetails")
+    public ResponseEntity<DriverAddressLocationDto> getDriverAddressDetails(
+            @RequestParam Integer driverId) {
+
+        logger.info("API CALL: Fetch driver address location details for driverId={}", driverId);
+
+        DriverAddressLocationDto dto = locationService.getDriverAddressDetails(driverId);
+
+        return ResponseEntity.ok(dto);
+    }
+
+    @Operation(summary = "Fetch batch driver address location details")
+    @PostMapping("/batchDriverAddresses")
+    public ResponseEntity<List<DriverAddressLocationDto>> getBatchDriverAddresses(
+            @RequestBody List<Integer> driverIds) {
+
+        logger.info("API CALL: Fetch batch driver address location details for driverIds count={}", driverIds != null ? driverIds.size() : 0);
+
+        List<DriverAddressLocationDto> dtoList = locationService.getBatchDriverAddresses(driverIds);
+
+        return ResponseEntity.ok(dtoList);
+    }
 
 }

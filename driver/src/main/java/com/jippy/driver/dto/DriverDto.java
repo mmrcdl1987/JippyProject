@@ -1,5 +1,6 @@
 package com.jippy.driver.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -7,6 +8,7 @@ import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class DriverDto {
 
     @Schema(description = "Unique identifier of the Driver.", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
@@ -155,16 +157,24 @@ private MultipartFile rcCopyDocument;
     @Positive(message = "City ID must be greater than zero")
     private Integer cityId;
 
+    @Schema(description = "Name of the city.", example = "Hyderabad")
+    private String cityName;
+
     @Schema(description = "Unique identifier of the state.", example = "36")
 //    @NotNull(message = "State id is required")
     @Positive(message = "State ID must be greater than zero")
-
     private Integer stateId;
+
+    @Schema(description = "Name of the state.", example = "Telangana")
+    private String stateName;
 
     @Schema(description = "Unique identifier of the area.", example = "14")
 //    @NotNull(message = "Area id is required")
     @Positive(message = "Area ID must be greater than zero")
     private Integer areaId;
+
+    @Schema(description = "Name of the area.", example = "Madhapur")
+    private String areaName;
 
     @Schema(
             description = "Geographical latitude of the driver's location",
@@ -182,6 +192,7 @@ private MultipartFile rcCopyDocument;
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).{8,20}$", message = "Password must contain at least one uppercase letter," + " one lowercase letter, one number and one special character")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
 

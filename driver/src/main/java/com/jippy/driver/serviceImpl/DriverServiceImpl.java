@@ -331,17 +331,17 @@ public class DriverServiceImpl implements DriverService {
                 });
 
         // -----------------------------------------
-        // 2. Get Address from FM
+        // 2. Get Address & Location details from FM
         // -----------------------------------------
-        DriverAddressRequestDto address = null;
+        DriverAddressLocationDto addressLocation = null;
 
         try {
 
-            address = fmFeignClient.getAddressDetails(driverId).getBody();
+            addressLocation = fmFeignClient.getDriverAddressDetails(driverId).getBody();
 
         } catch (Exception e) {
 
-            log.error("Failed to fetch address from FM for driverId: {}",
+            log.error("Failed to fetch address location from FM for driverId: {}",
                     driverId,
                     e
             );
@@ -377,7 +377,7 @@ public class DriverServiceImpl implements DriverService {
         // -----------------------------------------
         // 4. Combine everything
         // -----------------------------------------
-        return DriverMapper.mapToDriverDto(driver, address ,user);
+        return DriverMapper.mapToDriverDto(driver, addressLocation, user);
     }
 
     @Override
@@ -393,35 +393,35 @@ public class DriverServiceImpl implements DriverService {
             return new ArrayList<>();
         }
 
+        List<Integer> driverIds = drivers.stream()
+                .map(Driver::getDriverId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Map<Integer, DriverAddressLocationDto> addressMap = new HashMap<>();
+
+        try {
+            log.info("FETCHING_BATCH_DRIVER_ADDRESSES | count={}", driverIds.size());
+
+            ResponseEntity<List<DriverAddressLocationDto>> batchResponse =
+                    fmFeignClient.getBatchDriverAddresses(driverIds);
+
+            if (batchResponse != null && batchResponse.getBody() != null) {
+                for (DriverAddressLocationDto addr : batchResponse.getBody()) {
+                    if (addr != null && addr.getDriverId() != null) {
+                        addressMap.put(addr.getDriverId(), addr);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("FAILED_TO_FETCH_BATCH_DRIVER_ADDRESSES", e);
+        }
+
         List<DriverDto> response = new ArrayList<>();
 
         for (Driver driver : drivers) {
-
-            DriverAddressRequestDto address = null;
-
-            try {
-
-                log.info(
-                        "FETCHING_DRIVER_ADDRESS | driverId={}",
-                        driver.getDriverId());
-
-                address = fmFeignClient
-                        .getAddressDetails(driver.getDriverId())
-                        .getBody();
-
-            } catch (Exception e) {
-
-                log.error(
-                        "FAILED_TO_FETCH_DRIVER_ADDRESS | driverId={}",
-                        driver.getDriverId(),
-                        e);
-            }
-
-            DriverDto dto = DriverMapper.mapToDriverListDto(
-                    driver,
-                    address
-            );
-
+            DriverAddressLocationDto addressLocation = addressMap.get(driver.getDriverId());
+            DriverDto dto = DriverMapper.mapToDriverListDto(driver, addressLocation);
             response.add(dto);
         }
 
@@ -1169,18 +1169,21 @@ public class DriverServiceImpl implements DriverService {
     @Override
     public DriverDto findByEmail(String email) {
 
+        log.info("DRIVER_SERVICE | FIND_BY_EMAIL | email={}", email);
+
         Driver driver = driverRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException( "Driver not found for the provided email."));
+                        new ResourceNotFoundException("Driver not found for the provided email."));
 
-        DriverDto dto = new DriverDto();
+        DriverAddressLocationDto addressLocation = null;
 
-//        dto.setDriverId(driver.getDriverId());
-        dto.setEmail(driver.getEmail());
-        dto.setFirstName(driver.getFirstName());
-        dto.setLastName(driver.getLastName());
+        try {
+            addressLocation = fmFeignClient.getDriverAddressDetails(driver.getDriverId()).getBody();
+        } catch (Exception e) {
+            log.error("Failed to fetch address location from FM for driverId: {}", driver.getDriverId(), e);
+        }
 
-        return dto;
+        return DriverMapper.mapToDriverDto(driver, addressLocation);
     }
     //    -----------------------------For Driver Approvals Level 1----------------------------------------------------------------
     @Override
@@ -1352,17 +1355,15 @@ public class DriverServiceImpl implements DriverService {
                             )
                     );
 
-            DriverDto driverDto = new DriverDto();
+            DriverAddressLocationDto addressLocation = null;
 
-            driverDto.setDriverId(driver.getDriverId());
-            driverDto.setFirstName(driver.getFirstName());
-            driverDto.setLastName(driver.getLastName());
-            driverDto.setPhoneNumber(driver.getPhoneNumber());
-            driverDto.setEmail(driver.getEmail());
-            driverDto.setIsApproved(driver.getIsApproved());
-            driverDto.setReadyToAcceptOrders(driver.getReadyToAcceptOrders());
+            try {
+                addressLocation = fmFeignClient.getDriverAddressDetails(driver.getDriverId()).getBody();
+            } catch (Exception e) {
+                log.error("Failed to fetch address location from FM for driverId: {}", driver.getDriverId(), e);
+            }
 
-            return driverDto;
+            return DriverMapper.mapToDriverDto(driver, addressLocation);
         }
     @Override
     public AdminDriverPageResponseDto getAdminDrivers(

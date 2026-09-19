@@ -5,6 +5,7 @@ import com.jippy.foodandmart.dto.FmResponseDto;
 import feign.FeignException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -58,6 +59,22 @@ public class GlobalExceptionHandler {
         List<String> errors = ex.getConstraintViolations().stream().map(violation -> violation.getMessage()).collect(Collectors.toList());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Validation failed", errors));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<FmApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+
+        String rootMsg = ex.getRootCause() != null ? ex.getRootCause().getMessage() : ex.getMessage();
+
+        if (rootMsg != null && rootMsg.contains("outlets_outlet_email_key")) {
+            log.error("Database constraint violation while creating outlet | constraint=outlets_outlet_email_key", ex);
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(FmApiResponse.error("An outlet with this email address already exists."));
+        }
+
+        log.error("Database constraint violation | constraint={}", rootMsg, ex);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(FmApiResponse.error("Database constraint violation occurred."));
     }
 
     // --- Specific Business Logic Exceptions ---

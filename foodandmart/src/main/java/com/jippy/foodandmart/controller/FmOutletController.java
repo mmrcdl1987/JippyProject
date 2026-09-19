@@ -82,11 +82,13 @@ public class FmOutletController {
             @Valid @RequestBody FmOutletRequestDTO dto
            ) {
 
-        log.info("Received request to create outlet: {}", dto.getOutletName());
+        log.info("[OUTLET-API] POST /api/fm/outlets/createOutlet | outletName={}, merchantId={}, outletPhone={}, areaId={}",
+                dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone(), dto.getAreaId());
 
         FmOutletCreateResponseDTO response = outletService.createOutlet(dto);
 
-        log.info("Outlet created successfully. outletId={}", response.getOutletId());
+        log.info("[OUTLET-API] Outlet created successfully | outletId={}, outletName={}, durationMs={}",
+                response.getOutletId(), response.getOutletName());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Outlet created successfully", response));
     }

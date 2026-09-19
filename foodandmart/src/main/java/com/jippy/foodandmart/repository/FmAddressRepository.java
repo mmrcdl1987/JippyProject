@@ -1,7 +1,8 @@
 package com.jippy.foodandmart.repository;
 
-import com.jippy.foodandmart.entity.FmAddress;
+import com.jippy.foodandmart.dto.DriverAddressLocationDto;
 import com.jippy.foodandmart.dto.FmMerchantAddressDto;
+import com.jippy.foodandmart.entity.FmAddress;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -63,5 +64,55 @@ public interface FmAddressRepository
         """)
     List<Integer> findDriverIdsByAreaId(
             @Param("areaId") Integer areaId
+    );
+
+    @Query("""
+            SELECT new com.jippy.foodandmart.dto.DriverAddressLocationDto(
+                a.addressId,
+                a.jippyAddressId,
+                a.buildingNumber,
+                a.road,
+                a.landmark,
+                a.stateId,
+                a.cityId,
+                a.areaId,
+                s.stateName,
+                c.cityName,
+                ar.areaName
+            )
+            FROM FmAddress a
+            LEFT JOIN FmState s ON s.stateId = a.stateId
+            LEFT JOIN FmCity c ON c.cityId = a.cityId
+            LEFT JOIN FmArea ar ON ar.areaId = a.areaId
+            WHERE a.jippyAddressId = :driverId
+              AND a.addressType = 'DRIVER'
+            """)
+    Optional<DriverAddressLocationDto> findDriverAddressLocationByDriverId(
+            @Param("driverId") Integer driverId
+    );
+
+    @Query("""
+            SELECT new com.jippy.foodandmart.dto.DriverAddressLocationDto(
+                a.addressId,
+                a.jippyAddressId,
+                a.buildingNumber,
+                a.road,
+                a.landmark,
+                a.stateId,
+                a.cityId,
+                a.areaId,
+                s.stateName,
+                c.cityName,
+                ar.areaName
+            )
+            FROM FmAddress a
+            LEFT JOIN FmState s ON s.stateId = a.stateId
+            LEFT JOIN FmCity c ON c.cityId = a.cityId
+            LEFT JOIN FmArea ar ON ar.areaId = a.areaId
+            WHERE a.jippyAddressId IN (:driverIds)
+              AND a.addressType = 'DRIVER'
+            """)
+    List<DriverAddressLocationDto> findDriverAddressLocationsByDriverIds(
+            @Param("driverIds") List<Integer> driverIds
     );
 }

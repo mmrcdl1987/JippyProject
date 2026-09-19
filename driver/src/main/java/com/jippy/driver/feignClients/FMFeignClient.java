@@ -72,6 +72,16 @@ public interface FMFeignClient {
             @RequestParam("areaId") Integer areaId
     );
 
+    @GetMapping("/api/fm/location/driverAddressDetails")
+    ResponseEntity<DriverAddressLocationDto> getDriverAddressDetails(
+            @RequestParam("driverId") Integer driverId
+    );
+
+    @PostMapping("/api/fm/location/batchDriverAddresses")
+    ResponseEntity<List<DriverAddressLocationDto>> getBatchDriverAddresses(
+            @RequestBody List<Integer> driverIds
+    );
+
 
         // ================================================================
         // GET MERCHANT

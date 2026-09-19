@@ -99,24 +99,44 @@ public class FmOutletServiceImpl implements IFmOutletService {
     @Transactional
     public FmOutletCreateResponseDTO createOutlet(FmOutletRequestDTO dto) {
 
-        log.info("Creating new outlet : {}", dto.getOutletName());
+        long startTime = System.currentTimeMillis();
+        log.info("[CREATE-OUTLET][START] Processing outlet creation | name={}, merchantId={}, phone={}, username={}, areaId={}",
+                dto.getOutletName(), dto.getMerchantId(), dto.getOutletPhone(), dto.getUsername(), dto.getAreaId());
 
         /*
          * Check Merchant Exists.
          */
         FmMerchant merchant = merchantRepository.findById(dto.getMerchantId()).orElseThrow(() -> {
 
-            log.error("Merchant not found : {}", dto.getMerchantId());
+            log.error("[CREATE-OUTLET][MERCHANT-NOT-FOUND] Merchant not found with id: {}", dto.getMerchantId());
 
             return new ResourceNotFoundException("Merchant not found with id : " + dto.getMerchantId());
         });
+
+        log.info("[CREATE-OUTLET][MERCHANT-VALIDATED] Merchant validated | merchantId={}, merchantName={}", merchant.getMerchantId(), merchant.getMerchantName());
+
+        /*
+         * Check Outlet Email.
+         */
+        String outletEmail = StringUtils.hasText(dto.getOutletEmail()) ? dto.getOutletEmail() : merchant.getMerchantEmail();
+
+        log.info("Checking duplicate outlet email | merchantId={} | outletEmail={}", dto.getMerchantId(), outletEmail);
+
+        if (outletRepository.existsByOutletEmail(outletEmail)) {
+
+            log.warn("Duplicate outlet email detected | merchantId={} | outletEmail={}", dto.getMerchantId(), outletEmail);
+
+            throw new DuplicateResourceException("An outlet with this email address already exists.");
+        }
 
         /*
          * Check Outlet Phone.
          */
         if (outletRepository.existsByOutletPhone(dto.getOutletPhone())) {
 
-            throw new IllegalArgumentException("Outlet phone No already exists.");
+            log.warn("[CREATE-OUTLET][DUPLICATE-PHONE] Outlet phone number already exists: {}", dto.getOutletPhone());
+
+            throw new DuplicateResourceException("Outlet phone No already exists.");
         }
 
         /*
@@ -124,7 +144,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
          */
         if (userRepository.findByUsernameAndUserType(dto.getUsername(), FmAppConstants.TYPE_OUTLET).isPresent()) {
 
-            throw new IllegalArgumentException("Username already exists.");
+            log.warn("[CREATE-OUTLET][DUPLICATE-USERNAME] Username already exists: {}", dto.getUsername());
+
+            throw new DuplicateResourceException("Username already exists.");
         }
 
         /*
@@ -136,10 +158,12 @@ public class FmOutletServiceImpl implements IFmOutletService {
          */
         if (outletRepository.existsByMerchantAndOutletNameAndArea(dto.getMerchantId(), dto.getOutletName(), dto.getAreaId())) {
 
-            log.error("Outlet '{}' already exists for merchantId {} in areaId {}", dto.getOutletName(), dto.getMerchantId(), dto.getAreaId());
+            log.warn("[CREATE-OUTLET][DUPLICATE-AREA-OUTLET] Outlet '{}' already exists for merchantId {} in areaId {}", dto.getOutletName(), dto.getMerchantId(), dto.getAreaId());
 
-            throw new IllegalArgumentException("Outlet already exists for this merchant in the selected area.");
+            throw new DuplicateResourceException("Outlet already exists for this merchant in the selected area.");
         }
+
+        log.info("[CREATE-OUTLET][UNIQUENESS-CHECK-PASSED] Unique phone, username, and merchant area checks cleared");
 
         /*
          * Convert DTO to Entity.
@@ -149,7 +173,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Outlet email should use the merchant email.
          */
-        outlet.setOutletEmail(merchant.getMerchantEmail());
+        outlet.setOutletEmail(outletEmail);
 
         /*
          * Save Outlet Location.
@@ -161,12 +185,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
          */
         outlet = outletRepository.save(outlet);
 
-        log.info("Outlet saved successfully with outletId : {}", outlet.getOutletId());
+        log.info("[CREATE-OUTLET][PRIMARY-SAVED] Outlet entity saved successfully | outletId={}", outlet.getOutletId());
 
         /*
          * Save Outlet KYC Details.
          */
         saveOutletKyc(dto, outlet.getOutletId());
+        log.info("[CREATE-OUTLET][KYC-SAVED] KYC details saved | outletId={}", outlet.getOutletId());
 
         /**
          * Create Approval Request for the newly created Outlet.
@@ -175,34 +200,42 @@ public class FmOutletServiceImpl implements IFmOutletService {
          * at Level 1 with PENDING status.
          */
         approvalRequestService.createApprovalRequest(FmAppConstants.TYPE_OUTLET, outlet.getOutletId(), outlet.getOutletId());
+        log.info("[CREATE-OUTLET][APPROVAL-REQUESTED] Level 1 approval request created | outletId={}", outlet.getOutletId());
 
         /*
          * Save Address.
          */
         saveAddressUsingIds(dto, outlet.getOutletId());
+        log.info("[CREATE-OUTLET][ADDRESS-SAVED] Outlet address saved | outletId={}", outlet.getOutletId());
 
         /*
          * Save Operating Days.
          */
         saveOperatingDays(dto, outlet.getOutletId());
+        log.info("[CREATE-OUTLET][OPERATING-DAYS-SAVED] Operating days saved | outletId={}", outlet.getOutletId());
 
         /*
          * Save Login User.
          */
         saveOutletUser(dto.getUsername(), dto.getPassword(), outlet.getOutletId());
+        log.info("[CREATE-OUTLET][USER-SAVED] Outlet user account created | username={}, outletId={}", dto.getUsername(), outlet.getOutletId());
 
         /*
          * Save Bank Details.
          */
         saveOutletBankDetails(dto, outlet.getOutletId());
-
-        log.info("Outlet '{}' created successfully for merchantId {}", outlet.getOutletName(), outlet.getMerchantId());
+        log.info("[CREATE-OUTLET][BANK-SAVED] Bank details saved | outletId={}", outlet.getOutletId());
 
         /*
          * Email #3:
          * Outlet Registration Successful
          */
-        emailService.sendOutletRegistrationEmail(outlet.getOutletEmail(), outlet.getOutletName(), merchant.getMerchantName());
+        try {
+            emailService.sendOutletRegistrationEmail(outlet.getOutletEmail(), outlet.getOutletName(), merchant.getMerchantName());
+            log.info("[CREATE-OUTLET][EMAIL-SENT] Outlet registration email sent | email={}, merchantName={}", outlet.getOutletEmail(), merchant.getMerchantName());
+        } catch (Exception e) {
+            log.error("[CREATE-OUTLET][EMAIL-FAILED] Failed to send registration email for outletId={}: {}", outlet.getOutletId(), e.getMessage(), e);
+        }
 
         /*
          * Create Response DTO.
@@ -216,6 +249,10 @@ public class FmOutletServiceImpl implements IFmOutletService {
             createOutlet.setFssaiNumberUrl(savedKyc.getFssaiNumberUrl());
             createOutlet.setGstNumberUrl(savedKyc.getGstNumberUrl());
         }
+
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("[CREATE-OUTLET][SUCCESS] Outlet creation workflow completed successfully | outletId={}, outletName={}, durationMs={}",
+                outlet.getOutletId(), outlet.getOutletName(), duration);
 
         return createOutlet;
     }

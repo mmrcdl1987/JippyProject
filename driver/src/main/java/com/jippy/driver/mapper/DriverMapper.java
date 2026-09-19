@@ -465,6 +465,76 @@ public class DriverMapper {
         return dto;
     }
 
+    public static DriverDto mapToDriverDto(Driver driver, DriverAddressLocationDto addressLocation, DriverUserDto user) {
+        if (driver == null) {
+            throw new DriverBadRequestException("Driver entity must not be null");
+        }
+
+        DriverDto dto = new DriverDto();
+        dto.setDriverId(driver.getDriverId());
+        dto.setFirstName(driver.getFirstName());
+        dto.setLastName(driver.getLastName());
+        dto.setPhoneNumber(driver.getPhoneNumber());
+        dto.setEmail(driver.getEmail());
+        dto.setProfilePicUrl(driver.getProfilePicUrl());
+        dto.setNomineeName(driver.getNomineeName());
+        dto.setNomineePhoneNumber(driver.getNomineePhoneNumber());
+        dto.setIsNomineeVerified(driver.getIsNomineeVerified());
+        dto.setFamilyMemberName(driver.getFamilyMemberName());
+        dto.setFamilyMemberPhoneNumber(driver.getFamilyMemberPhoneNumber());
+        dto.setIsFamilyMemberVerified(driver.getIsFamilyMemberVerified());
+
+        if (driver.getDriverKyc() != null) {
+            dto.setDriverKycId(driver.getDriverKyc().getDriverKycId());
+            dto.setAadharNumber(driver.getDriverKyc().getAadharNumber());
+            dto.setPanNumber(driver.getDriverKyc().getPanNumber());
+            dto.setDrivingLicenseNumber(driver.getDriverKyc().getDrivingLicenseNumber());
+            dto.setRcCopy(driver.getDriverKyc().getRcCopy());
+            dto.setAadharDocUrl(driver.getDriverKyc().getAadharDocUrl());
+            dto.setPanDocUrl(driver.getDriverKyc().getPanDocUrl());
+            dto.setDrivingLicenseDocUrl(driver.getDriverKyc().getDrivingLicenseDocUrl());
+            dto.setRcCopyDocUrl(driver.getDriverKyc().getRcCopyDocUrl());
+        }
+
+        mapLocationDetails(dto, addressLocation);
+
+        dto.setIsApproved(driver.getIsApproved());
+        dto.setReadyToAcceptOrders(driver.getReadyToAcceptOrders());
+
+        if (user != null) {
+            dto.setIsActive(user.getIsActive());
+        }
+
+        return dto;
+    }
+
+    public static DriverDto mapToDriverDto(Driver driver, DriverAddressLocationDto addressLocation) {
+        return mapToDriverDto(driver, addressLocation, null);
+    }
+
+    public static DriverDto mapToDriverListDto(Driver driver, DriverAddressLocationDto addressLocation) {
+        if (driver == null) {
+            throw new DriverBadRequestException("Driver entity must not be null");
+        }
+
+        DriverDto dto = mapToDriverDto(driver, addressLocation, null);
+        return dto;
+    }
+
+    public static void mapLocationDetails(DriverDto dto, DriverAddressLocationDto location) {
+        if (dto != null && location != null) {
+            dto.setBuildingNumber(location.getBuildingNumber());
+            dto.setRoad(location.getRoad());
+            dto.setLandmark(location.getLandmark());
+            dto.setStateId(location.getStateId());
+            dto.setStateName(location.getStateName());
+            dto.setCityId(location.getCityId());
+            dto.setCityName(location.getCityName());
+            dto.setAreaId(location.getAreaId());
+            dto.setAreaName(location.getAreaName());
+        }
+    }
+
     public static DriverDto mapToDriverListDto(Driver driver, DriverAddressRequestDto address) {
 
         if (driver == null) {

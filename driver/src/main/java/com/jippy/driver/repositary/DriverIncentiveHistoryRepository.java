@@ -66,21 +66,26 @@ public interface DriverIncentiveHistoryRepository extends JpaRepository<DriverIn
     (@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
     @Query("""
-        SELECT
-            h.driverIncentiveHistoryId AS driverIncentiveHistoryId,
-            h.driverId AS driverId,
-            CONCAT(d.firstName, ' ', d.lastName) AS driverName,
-            h.currDate AS currDate,
-            h.incentiveAmount AS incentiveAmount,
-            h.completedOrdersCount AS completedOrdersCount,
-            h.createdAt AS createdAt
-        FROM DriverIncentiveHistory h
-        LEFT JOIN Driver d
-            ON d.driverId = h.driverId
-        WHERE (:driverId IS NULL OR h.driverId = :driverId)
-          AND (:startDate IS NULL OR h.currDate >= :startDate)
-          AND (:endDate IS NULL OR h.currDate <= :endDate)
-        """)
+    SELECT
+        h.driverIncentiveHistoryId AS driverIncentiveHistoryId,
+        h.driverId AS driverId,
+        CONCAT(
+            COALESCE(d.firstName, ''),
+            ' ',
+            COALESCE(d.lastName, '')
+        ) AS driverName,
+        h.currDate AS currDate,
+        h.incentiveAmount AS incentiveAmount,
+        h.completedOrdersCount AS completedOrdersCount,
+        h.createdAt AS createdAt
+    FROM DriverIncentiveHistory h
+    LEFT JOIN Driver d
+        ON d.driverId = h.driverId
+    WHERE (:driverId IS NULL OR h.driverId = :driverId)
+      AND (:startDate IS NULL OR h.currDate >= :startDate)
+      AND (:endDate IS NULL OR h.currDate <= :endDate)
+    ORDER BY h.currDate DESC, h.driverIncentiveHistoryId DESC
+    """)
     Page<DriverIncentiveHistoryPageProjection> searchIncentiveHistory(
             @Param("driverId") Integer driverId,
             @Param("startDate") LocalDate startDate,

@@ -41,6 +41,25 @@ public interface DriverDeliveryChargeSettingsRepository
 Optional<DriverDeliveryChargeSettings> findDeliverySlab(
         @Param("deliveryDistance") BigDecimal deliveryDistance
 );
+
+
+// NEW: ZONE-BASED DELIVERY SLAB
+
+    @Query(value = """
+        SELECT d.*
+        FROM jippy_driver.driver_delivery_charge_settings d
+        WHERE d.zone_id = :zoneId
+          AND :deliveryDistance >= d.kms_range_from
+          AND :deliveryDistance < d.kms_range_to
+          AND UPPER(d.delivery_type) = 'DELIVERY'
+          AND UPPER(d.status) = 'ACTIVE'
+        ORDER BY d.kms_range_from ASC
+        LIMIT 1
+        """, nativeQuery = true)
+    Optional<DriverDeliveryChargeSettings> findDeliverySlabByZone(
+            @Param("zoneId") Integer zoneId,
+            @Param("deliveryDistance") BigDecimal deliveryDistance
+    );
     // GET DELIVERY CHARGE SETTINGS
     // SERVER-SIDE PAGINATION
 

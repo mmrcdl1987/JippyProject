@@ -3,6 +3,7 @@ package com.jippy.customerandorder.serviceImpl;
 import com.jippy.customerandorder.dto.CoWalletSettingsRequestDto;
 import com.jippy.customerandorder.dto.CoWalletSettingsResponseDto;
 import com.jippy.customerandorder.entity.CoWalletSettings;
+import com.jippy.customerandorder.exception.CoWalletNotFoundException;
 import com.jippy.customerandorder.iservice.CoWalletSettingsService;
 import com.jippy.customerandorder.mapper.CoWalletSettingsMapper;
 import com.jippy.customerandorder.repository.CoWalletSettingsRepository;
@@ -93,7 +94,7 @@ public class CoWalletSettingsServiceImpl
                         walletSettingsId
                 );
 
-                throw new IllegalArgumentException(
+                throw new CoWalletNotFoundException(
                         "Wallet settings not found with ID: "
                                 + walletSettingsId
                 );
@@ -244,7 +245,7 @@ public class CoWalletSettingsServiceImpl
 
         if (requestDto == null) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Wallet settings request cannot be null"
             );
         }
@@ -256,7 +257,7 @@ public class CoWalletSettingsServiceImpl
         if (requestDto.getWalletSettingsId() != null
                 && requestDto.getWalletSettingsId() <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Wallet settings ID must be greater than 0"
             );
         }
@@ -268,7 +269,7 @@ public class CoWalletSettingsServiceImpl
         if (requestDto.getSettingType() == null
                 || requestDto.getSettingType().trim().isEmpty()) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Setting type is required"
             );
         }
@@ -279,7 +280,7 @@ public class CoWalletSettingsServiceImpl
 
         if (requestDto.getSettingValue() == null) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Setting value is required"
             );
         }
@@ -290,7 +291,7 @@ public class CoWalletSettingsServiceImpl
 
         if (requestDto.getSettingValue() < 0) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Setting value cannot be negative"
             );
         }
@@ -305,7 +306,7 @@ public class CoWalletSettingsServiceImpl
             if (requestDto.getCreatedBy() == null
                     || requestDto.getCreatedBy() <= 0) {
 
-                throw new IllegalArgumentException(
+                throw new CoWalletNotFoundException(
                         "Created by is required and must be greater than 0"
                 );
             }
@@ -321,7 +322,7 @@ public class CoWalletSettingsServiceImpl
             if (requestDto.getUpdatedBy() == null
                     || requestDto.getUpdatedBy() <= 0) {
 
-                throw new IllegalArgumentException(
+                throw new CoWalletNotFoundException(
                         "Updated by is required and must be greater than 0"
                 );
             }
@@ -342,7 +343,7 @@ public class CoWalletSettingsServiceImpl
 
         if (page < 0) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Page number cannot be negative"
             );
         }
@@ -353,7 +354,7 @@ public class CoWalletSettingsServiceImpl
 
         if (size <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Page size must be greater than 0"
             );
         }
@@ -364,7 +365,7 @@ public class CoWalletSettingsServiceImpl
 
         if (size > MAX_PAGE_SIZE) {
 
-            throw new IllegalArgumentException(
+            throw new CoWalletNotFoundException(
                     "Page size cannot be greater than "
                             + MAX_PAGE_SIZE
             );

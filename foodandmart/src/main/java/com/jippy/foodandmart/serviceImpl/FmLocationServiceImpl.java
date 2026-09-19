@@ -1,6 +1,7 @@
 package com.jippy.foodandmart.serviceImpl;
 
 
+import com.jippy.foodandmart.dto.DriverAddressLocationDto;
 import com.jippy.foodandmart.dto.FmAreaDto;
 import com.jippy.foodandmart.dto.FmCityDto;
 import com.jippy.foodandmart.dto.FmStateDto;
@@ -9,6 +10,7 @@ import com.jippy.foodandmart.entity.FmCity;
 import com.jippy.foodandmart.entity.FmState;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmLocationMapper;
+import com.jippy.foodandmart.repository.FmAddressRepository;
 import com.jippy.foodandmart.repository.FmAreaRepository;
 import com.jippy.foodandmart.repository.FmCityRepository;
 import com.jippy.foodandmart.repository.FmStateRepository;
@@ -37,8 +39,8 @@ public class FmLocationServiceImpl implements IFmLocationService {
     @Autowired
     private FmAreaRepository areaRepository;
 
-//    @Autowired
-//    private DivisionFeignClient priceModelFeignClient;
+    @Autowired
+    private FmAddressRepository addressRepository;
 
     //  Fetch all states
     @Override
@@ -142,5 +144,22 @@ public class FmLocationServiceImpl implements IFmLocationService {
 
     }
 
+    @Override
+    public DriverAddressLocationDto getDriverAddressDetails(Integer driverId) {
+        logger.info("SERVICE: Fetching driver address details for driverId={}", driverId);
+        if (driverId == null) {
+            return null;
+        }
+        return addressRepository.findDriverAddressLocationByDriverId(driverId).orElse(null);
+    }
+
+    @Override
+    public List<DriverAddressLocationDto> getBatchDriverAddresses(List<Integer> driverIds) {
+        logger.info("SERVICE: Fetching batch driver address details for driverIds count={}", driverIds != null ? driverIds.size() : 0);
+        if (driverIds == null || driverIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return addressRepository.findDriverAddressLocationsByDriverIds(driverIds);
+    }
 
 }
