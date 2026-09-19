@@ -43,6 +43,8 @@ public class DivAppConstants {
 
     public static final String PAYMENT_MODE_PAYU = "PAYU";
 
+    public static final String PAYMENT_MODE_COD = "COD";
+
     public static final String TYPE_MERCHANT="MERCHANT";
 
     public static final String TYPE_CUSTOMER="CUSTOMER";

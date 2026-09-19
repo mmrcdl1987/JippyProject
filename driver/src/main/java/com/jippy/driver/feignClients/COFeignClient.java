@@ -2,6 +2,7 @@ package com.jippy.driver.feignClients;
 
 import com.jippy.driver.config.FeignClientConfig;
 import com.jippy.driver.dto.*;
+import com.jippy.driver.dto.uber.UberDispatchRequestDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -65,4 +66,8 @@ public interface COFeignClient {
     ResponseEntity<DriverCustomerProfilePicDto> getCustomerProfilePic(
             @PathVariable("customerId") Integer customerId
     );
+
+    @GetMapping("/api/co/getOrderDetailsForDelivery")
+    public UberDispatchRequestDto getOrderDetailsForDelivery(
+            @RequestParam String orderId);
 }

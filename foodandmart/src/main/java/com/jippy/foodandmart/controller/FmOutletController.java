@@ -1541,4 +1541,14 @@ public class FmOutletController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Outlets fetched successfully", "data", outlets));
     }
 
+    @GetMapping("/orderSummaryForOutlet")
+    public ResponseEntity<List<FmMerchantOrderSummaryDto>> orderSummaryForOutlet(
+            @RequestParam Integer outletId,@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        log.info("Fetching order summary for outletId={}, page={}, size={}", outletId, page, size);
+
+        return outletService.orderSummaryForOutlet(outletId,page,size);
+    }
+
 }

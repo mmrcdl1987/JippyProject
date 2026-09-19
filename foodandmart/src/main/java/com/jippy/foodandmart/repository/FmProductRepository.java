@@ -762,6 +762,16 @@ public interface FmProductRepository
             WHERE product_id = :productId
             """, nativeQuery = true)
     int updateProductOrVariantStatus(@Param("productId") Integer productId, @Param("isActive") String isActive);
+
+    @Query(value = """
+        SELECT product_id as productOrProductVariantOptionId,merchant_price as merchantPrice FROM "jippy_fm"."products" where product_id in (:productIds)
+    """,nativeQuery = true)
+    List<FmProductMerchantPriceProjection> findByProductIds(@Param("productIds") List<Integer> productIds);
+
+    @Query(value = """
+        SELECT product_id ,product_name FROM "jippy_fm"."products" where product_id in (:productIds)
+    """,nativeQuery = true)
+    List<Object[]> findProductNamesByProductIds(List<Integer> productIds);
 }
 
 

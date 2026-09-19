@@ -115,7 +115,7 @@ public class CoOrderMapper {
 
         breakup.setOrder(order);
         breakup.setDiscountId(requestDto.getDiscountId());
-        breakup.setDiscountType(requestDto.getDiscountType());
+        breakup.setDiscountType(requestDto.getPromotionSourceType());
 
         // ================= ORDER =================
 
@@ -185,22 +185,22 @@ public class CoOrderMapper {
 
         // Driver delivery fee
         breakup.setDriverDeliveryFee(
-                defaultValue(requestDto.getDriverDeliveryFee())
+                defaultValue(requestDto.getDriverDeliveryCharge())
         );
 
         // Customer delivery fee after free-distance benefit
         breakup.setCustomerDeliveryFee(
-                defaultValue(requestDto.getCustomerDeliveryFee())
+                defaultValue(requestDto.getCustomerDeliveryCharge())
         );
 
-        // Total delivery fee
-        breakup.setTotalDeliveryFee(
-                defaultValue(requestDto.getTotalDeliveryFee())
-        );
+//        // Total delivery fee
+//        breakup.setTotalDeliveryFee(
+//                defaultValue(requestDto.getTotalDeliveryFee())
+//        );
 
         // GST applicable only on customer delivery fee
         breakup.setCustomerDeliveryFeeTax(
-                defaultValue(requestDto.getCustomerDeliveryFeeTax())
+                defaultValue(requestDto.getCustomerDeliveryTax())
         );
 
         // ================= PAYMENT =================

@@ -3797,5 +3797,43 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
                 "Product type must be PRODUCT or MASTERPRODUCT"
         );
     }
+
+    @Override
+    public Map<String, String> getProductNameByIds(List<Integer> productIds) {
+
+       List<Object[]> productNamesList =  productRepository.findProductNamesByProductIds(productIds);
+
+        if (productNamesList == null || productNamesList.isEmpty()) {
+            return Map.of();
+        }
+
+        return productNamesList.stream()
+                .filter(row -> row != null && row.length >= 2 && row[0] != null && row[1] != null)
+                .collect(Collectors.toMap(
+                        row -> String.valueOf(row[0]),  // Key: productId converted to String
+                        row -> String.valueOf(row[1]),  // Value: productName converted to String
+                        (existing, replacement) -> existing // Merge function in case of duplicate keys
+                ));
+    }
+
+    @Override
+    public Map<String, String> getVariantNameByIds(List<Integer> productVariantsIds) {
+
+        List<Object[]> variantNames =  variantOptionRepository.findVariantNamesByProductVariantIds(productVariantsIds);
+
+        if (variantNames == null || variantNames.isEmpty()) {
+            return Map.of();
+        }
+
+        return variantNames.stream()
+                .filter(row -> row != null && row.length >= 2 && row[0] != null && row[1] != null)
+                .collect(Collectors.toMap(
+                        row -> String.valueOf(row[0]),  // Key: productId converted to String
+                        row -> String.valueOf(row[1]),  // Value: productName converted to String
+                        (existing, replacement) -> existing // Merge function in case of duplicate keys
+                ));
+    }
+
+
 }
 

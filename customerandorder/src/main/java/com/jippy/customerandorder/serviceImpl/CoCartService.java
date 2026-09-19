@@ -364,6 +364,8 @@ public class CoCartService implements ICartService {
 
                 item.setQuantity(cart.getQuantity());
 
+                item.setUnitPrice(latestUnitPrice);
+
                 item.setTotalPrice(calculateTotalPrice(latestUnitPrice, cart.getQuantity()));
                 items.add(item);
 

@@ -18,4 +18,6 @@ public class CoCartItemResponseDto {
     private Integer quantity;
 
     private BigDecimal totalPrice;
+
+    private BigDecimal unitPrice;
 }

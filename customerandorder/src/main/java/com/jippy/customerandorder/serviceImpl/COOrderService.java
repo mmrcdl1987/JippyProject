@@ -2,6 +2,11 @@ package com.jippy.customerandorder.serviceImpl;
 
 import com.jippy.customerandorder.constants.COConstants;
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.dto.CoMerchantPricesResponseDto;
+import com.jippy.customerandorder.dto.uber.CoAddressDto;
+import com.jippy.customerandorder.dto.uber.CoLocationDto;
+import com.jippy.customerandorder.dto.uber.CoManifestItemDto;
+import com.jippy.customerandorder.dto.uber.CoUberDispatchRequestDto;
 import com.jippy.customerandorder.entity.*;
 import com.jippy.customerandorder.enums.PromotionSourceType;
 import com.jippy.customerandorder.exception.CoBusinessException;
@@ -15,11 +20,14 @@ import com.jippy.customerandorder.iservice.ICoCustomerService;
 import com.jippy.customerandorder.mapper.COEventMapper;
 import com.jippy.customerandorder.mapper.CoOrderMapper;
 import com.jippy.customerandorder.mapper.CoOrderRejectionMapper;
+import com.jippy.customerandorder.projection.CoOrderDetailsForDeliveryProjection;
+import com.jippy.customerandorder.projection.OrderSummaryProjection;
 import com.jippy.customerandorder.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -29,9 +37,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.jippy.customerandorder.constants.COConstants.ORDER_TYPE_SCHEDULED_CUSTOM_PLAN;
 import static com.jippy.customerandorder.constants.COConstants.ORDER_TYPE_SCHEDULED_RECURRING;
@@ -758,11 +765,12 @@ public class COOrderService implements IOrderService {
             }
 
             //After Payment successful publish order event
-            publishNewOrderEvent(order, customer);
+            publishOrderEvent(order);
 
             //If customer uses wallet make those customer wallet changes and insert record in wallet transaction table
             customerPostOrderWalletTransactions(order);
 
+            updateMerchantPriceInOrderItems(order);
 
         }
 
@@ -784,28 +792,61 @@ public class COOrderService implements IOrderService {
         log.info("SERVICE_END | UPDATE_ORDER_STATUS_SUCCESS | orderId={} | newStatus={}", orderDto.getOrderId(), orderDto.getOrderStatus());
     }
 
+    private void updateMerchantPriceInOrderItems(CoOrder order) {
 
-    private void publishNewOrderEvent(CoOrder order, CoCustomer customer) {
-
-        List<Integer> productIds = new ArrayList<>();
-        List<Integer> productVariantIds = new ArrayList<>();
-
-        List<CoOrderItem> orderItems = order.getOrderItems();
-        for (CoOrderItem item : orderItems) {
-            productIds.add(item.getProductId());
-            productVariantIds.add(item.getVariantOptionId());
+        List<Integer> productIdsList = new ArrayList<>();
+        List<Integer> productVariantIdsList = new ArrayList<>();
+        List<CoOrderItem> orderItemList = orderItemRepository.findByOrder_OrderId(order.getOrderId());
+        if(orderItemList != null){
+            for(CoOrderItem orderItem: orderItemList){
+                productIdsList.add(orderItem.getProductId());
+                productVariantIdsList.add(orderItem.getVariantOptionId());
+            }
         }
 
-        ResponseEntity<List<CoOrderSummaryDto>> orderItemsEventListResponse = fmFeignClient.getOrderProductItemsForMerchant(productIds, productVariantIds);
-        List<CoOrderSummaryDto> orderItemsEventList = orderItemsEventListResponse.getBody();
+        ResponseEntity<List<CoMerchantPricesResponseDto>> productMerchantPrices = fmFeignClient
+                .getProductMerchantPrices(productIdsList,productVariantIdsList);
 
-        CoNewOrderEvent event = COEventMapper.mapToOrderNewOrderEvent(order, customer, orderItemsEventList);
+        if (productMerchantPrices != null && productMerchantPrices.getBody() != null) {
+            List<CoMerchantPricesResponseDto> merchantPricesResponseDtoList = productMerchantPrices.getBody();
 
-        kafkaTemplate.send("new-orders-for-outlet", order.getOrderId(), event);
+            // Create lookup maps for fast matching
+            Map<Integer, BigDecimal> productPriceMap = new HashMap<>();
+            Map<Integer, BigDecimal> variantPriceMap = new HashMap<>();
 
-        log.info("KAFKA_EVENT_PUBLISHED | orderId={} | orderType={}", order.getOrderId(), order.getOrderType());
+            for (CoMerchantPricesResponseDto priceDto : merchantPricesResponseDtoList) {
+                if (priceDto.getProductId() != null) {
+                    productPriceMap.put(priceDto.getProductId(), priceDto.getMerchantPrice());
+                }
+                if (priceDto.getProductVariantOptionId() != null) {
+                    variantPriceMap.put(priceDto.getProductVariantOptionId(), priceDto.getMerchantPrice());
+                }
+            }
+
+            // Update order items with matching prices
+            for (CoOrderItem orderItem : orderItemList) {
+                BigDecimal unitMerchantPrice = null;
+
+                // Priority: Variant Option Price -> Base Product Price
+                if (orderItem.getVariantOptionId() != null && variantPriceMap.containsKey(orderItem.getVariantOptionId())) {
+                    unitMerchantPrice = variantPriceMap.get(orderItem.getVariantOptionId());
+                } else if (orderItem.getProductId() != null && productPriceMap.containsKey(orderItem.getProductId())) {
+                    unitMerchantPrice = productPriceMap.get(orderItem.getProductId());
+                }
+
+                if (unitMerchantPrice != null) {
+                    orderItem.setMerchantUnitPrice(unitMerchantPrice);
+
+                    // Calculate total merchant price = unitMerchantPrice * quantity
+                    BigDecimal quantity = BigDecimal.valueOf(orderItem.getQuantity());
+                    orderItem.setMerchantTotalPrice(unitMerchantPrice.multiply(quantity));
+                }
+            }
+
+            // Save updated items back to repository
+            orderItemRepository.saveAll(orderItemList);
+        }
     }
-
 
     private void validateCartOutlet(CoPlaceOrderRequestDto dto) {
 
@@ -1051,11 +1092,44 @@ public class COOrderService implements IOrderService {
         if("ACCEPT".equalsIgnoreCase(acceptOrRejectOrderByOutletDto.getOrderStatus())) {
             // Update order status
             order.setOrderStatus(COConstants.ORDER_STATUS_ACCEPTED);
-            if(acceptOrRejectOrderByOutletDto.getPreparationTimeInMins() > 15){
+
+            if (acceptOrRejectOrderByOutletDto.getPreparationTimeInMins() == null) {
+                return "Preparation time is required when accepting an order";
+            }
+
+            if (acceptOrRejectOrderByOutletDto.getPreparationTimeInMins() > 15) {
                 return "Preparation time cannot exceed 15 minutes";
             }
+
+            if (acceptOrRejectOrderByOutletDto.getPreparationTimeInMins() <= 0) {
+                return "Preparation time must be greater than 0 minutes";
+            }
             order.setPreparationTime(acceptOrRejectOrderByOutletDto.getPreparationTimeInMins());
+            LocalDateTime merchantAcceptedTime = LocalDateTime.now();
+
+            long halfPreparationTimeInSeconds =
+                    acceptOrRejectOrderByOutletDto.getPreparationTimeInMins() * 60L / 2;
+
+            LocalDateTime driverNotificationAt =
+                    merchantAcceptedTime.plusSeconds(
+                            halfPreparationTimeInSeconds
+                    );
+
+            order.setMerchantAcceptedTime(LocalDateTime.now());
+            order.setDeliveryRequestAt(driverNotificationAt);
+
+            log.info(
+                    "ORDER_ACCEPTED | orderId={} | preparationTimeInMins={} | " +
+                            "merchantAcceptedTime={} | driverNotificationAt={}",
+                    order.getOrderId(),
+                    acceptOrRejectOrderByOutletDto.getPreparationTimeInMins(),
+                    merchantAcceptedTime,
+                    driverNotificationAt
+            );
+
+            publishOrderAcceptedEvent(order);
         }
+
 
         order.setUpdatedAt(LocalDateTime.now());
         order.setUpdatedBy(acceptOrRejectOrderByOutletDto.getOutletId());
@@ -1069,6 +1143,25 @@ public class COOrderService implements IOrderService {
         return "Order status updated successfully";
     }
 
+    private void publishOrderAcceptedEvent(CoOrder order) {
+
+        OrderAcceptedEvent event = new OrderAcceptedEvent();
+
+        event.setOrderId(order.getOrderId());
+        event.setOutletId(order.getOutletId());
+        event.setMerchantAcceptedTime(order.getMerchantAcceptedTime());
+        event.setPreparationTimeInMins(order.getPreparationTime());
+        event.setDeliveryRequestAt(order.getDeliveryRequestAt());
+
+        kafkaTemplate.send("accepted-orders", order.getOrderId(), event);
+
+        log.info(
+                "ORDER_ACCEPTED_EVENT_PUBLISHED | orderId={} | " +
+                        "deliveryRequestAt={}",
+                order.getOrderId(),
+                order.getDeliveryRequestAt()
+        );
+    }
 
     private void saveGlobalCoupon(
             Integer customerId,
@@ -1128,6 +1221,125 @@ public class COOrderService implements IOrderService {
                 request.getDiscountId(),
                 order.getOrderId()
         );
+    }
+
+    @Override
+    public ResponseEntity<List<CoOrderSummaryDto>> orderSummaryForOutlet(Integer outletId, Pageable pageable) {
+
+        List<OrderSummaryProjection> orderSummaryProjectionList = orderRepository.findAllOrdersByOutletId(outletId,pageable);
+
+        List<CoOrderSummaryDto> orderSummaryDtoList = new ArrayList<>();
+
+        if (orderSummaryProjectionList != null && !orderSummaryProjectionList.isEmpty()) {
+            orderSummaryDtoList = orderSummaryProjectionList.stream()
+                    .map(projection -> {
+                        CoOrderSummaryDto dto = new CoOrderSummaryDto();
+                        dto.setOrderStatus(projection.getOrderStatus());
+                        dto.setOrderId(projection.getOrderId());
+                        dto.setProductId(projection.getProductId());
+                        dto.setVariantOptionsId(projection.getVariantOptionId());
+                        dto.setMerchantUnitPrice(projection.getMerchantUnitPrice());
+                        dto.setMerchantTotalPrice(projection.getMerchantTotalPrice());
+                        dto.setQuantity(projection.getQuantity());
+                        dto.setCookingInstructions(projection.getCookingInstructions());
+                        dto.setIsCutleryRequired(projection.getIsCutleryRequired());
+                        dto.setOrderCreatedAt(projection.getCreatedAt());
+
+                        log.info("order summary dto : {} ",dto);
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+        }
+        return ResponseEntity.ok(orderSummaryDtoList);
+    }
+
+    @Override
+    public CoUberDispatchRequestDto getOrderDetailsForDelivery(String orderId) {
+
+        List<CoOrderDetailsForDeliveryProjection> orderDetailsForDeliveryProjection = orderRepository.getOrderDetailsForDelivery(orderId);
+        CoUberDispatchRequestDto uberDispatchDto = new CoUberDispatchRequestDto();
+
+        if (orderDetailsForDeliveryProjection == null || orderDetailsForDeliveryProjection.isEmpty()) {
+            return uberDispatchDto;
+        }
+
+        // 1. Get common order-level info from the first projection item
+        CoOrderDetailsForDeliveryProjection first = orderDetailsForDeliveryProjection.get(0);
+
+        // 2. Extract unique lists/IDs for external API calls
+        List<Integer> productIds = orderDetailsForDeliveryProjection.stream()
+                .map(CoOrderDetailsForDeliveryProjection::getProductId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<Integer> variantOptionIds = orderDetailsForDeliveryProjection.stream()
+                .map(CoOrderDetailsForDeliveryProjection::getVariantOptionId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Integer outletId = first.getOutletId();
+
+        // 3. Call Food and Mart Service (e.g., via FeignClient or RestTemplate)
+
+        Map<String, String> productNamesMap = fmFeignClient.getProductNameByIds(productIds);
+        Map<String, String> variantNamesMap = fmFeignClient.getVariantNameByIds(variantOptionIds);
+
+        OutletLocationResponseDto outletLocation   = fmFeignClient.getOutletLocation(outletId);
+
+        // 4. Construct Manifest Items (Products/Items list)
+        List<CoManifestItemDto> manifestItems = orderDetailsForDeliveryProjection.stream().map(p -> {
+            CoManifestItemDto item = new CoManifestItemDto();
+            item.setName(productNamesMap.getOrDefault(p.getProductId(), "Product"));
+            item.setQuantity(p.getQuantity());
+            // item.setVariantName(variantNamesMap.get(p.getVariantOptionId()));
+            return item;
+        }).collect(Collectors.toList());
+
+        // 5. Build Drop-off (Customer) Address DTO
+        CoAddressDto dropOffAddress = new CoAddressDto();
+        dropOffAddress.setFormattedAddress(first.getCustomerAddress());
+
+        CoLocationDto dropOffLocation = new CoLocationDto();
+        dropOffLocation.setLatitude(first.getCustomerLatitude());
+        dropOffLocation.setLongitude(first.getCustomerLongitude());
+        dropOffAddress.setLocation(dropOffLocation);
+
+        // 6. Build Pickup (Outlet) Address DTO
+        CoAddressDto pickupAddress = new CoAddressDto();
+
+        String outletAddress = (outletLocation.getBuildingNumber() != null ? outletLocation.getBuildingNumber() : "")
+                + (outletLocation.getRoad() != null ? ", " + outletLocation.getRoad() : "")
+                + (outletLocation.getLandmark() != null ? ", " + outletLocation.getLandmark() : "");
+
+            pickupAddress.setFormattedAddress(outletAddress);
+            CoLocationDto pickupLocation = new CoLocationDto(outletLocation.getLatitude(),outletLocation.getLongitude());
+            pickupAddress.setLocation(pickupLocation);
+
+        // 7. Assemble final Uber Dispatch DTO
+
+        uberDispatchDto.setExternalOrderId(first.getOrderId());
+
+        // Pickup Details (Outlet)
+        uberDispatchDto.setPickupName(outletLocation.getOutletName());
+        uberDispatchDto.setPickupPhoneNumber(outletLocation.getOutletPhoneNumber());
+        uberDispatchDto.setPickupAddress(pickupAddress);
+
+        log.info("============================================={},{},{}",outletLocation.getOutletName(),outletLocation.getOutletPhoneNumber(),pickupAddress);
+
+        // Dropoff Details (Customer)
+        uberDispatchDto.setDropOffName(first.getFirstName());
+        uberDispatchDto.setDropOffPhoneNumber(first.getPhoneNumber());
+        uberDispatchDto.setDropOffAddress(dropOffAddress);
+
+        log.info("============================================={},{},{}",first.getFirstName(),first.getPhoneNumber(),dropOffAddress);
+
+
+        // Items
+        uberDispatchDto.setManifestItems(manifestItems);
+
+        return uberDispatchDto;
     }
 
 

@@ -18,7 +18,7 @@ public class CoProfileIncompleteScheduler {
     private final ICoCustomerService customerService;
     private final CoProfileIncompleteKafkaProducer kafkaProducer;
 
-    @Scheduled(fixedRate = 60000) // every 1 minute for testing
+    //@Scheduled(fixedRate = 60000) // every 1 minute for testing
     public void sendProfileIncompleteNotifications() {
 
         log.info("PROFILE_INCOMPLETE_SCHEDULER_STARTED");

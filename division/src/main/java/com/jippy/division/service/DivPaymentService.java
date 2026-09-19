@@ -1,5 +1,6 @@
 package com.jippy.division.service;
 
+import com.jippy.division.dto.DivOrderPaymentStatusDto;
 import com.jippy.division.dto.DivPaymentInitiateResponse;
 import com.jippy.division.dto.DivPlaceOrderRequestDto;
 import com.jippy.division.dto.PaymentVerifyRequestDto;
@@ -14,4 +15,6 @@ public interface DivPaymentService {
     boolean verifyAndCompletePayment(PaymentVerifyRequestDto request);
 
     ResponseEntity<String> paytmPaymentCallback(String orderId, HttpServletRequest request);
+
+    ResponseEntity<DivOrderPaymentStatusDto> getOrderPaymentStatus(String orderId);
 }

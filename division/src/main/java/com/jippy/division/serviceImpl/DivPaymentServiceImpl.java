@@ -21,10 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 @Service
@@ -67,6 +65,9 @@ public class DivPaymentServiceImpl implements DivPaymentService {
     @Value("${payu.merchant-key}")
     private String payUMerchantKey;
 
+    @Value("${payu.post-service-url}")
+    private String postServiceUrl;
+
     private final PayUService payUService;
 
     @Override
@@ -95,10 +96,30 @@ public class DivPaymentServiceImpl implements DivPaymentService {
             response = initiatePayuPayment(placeOrderRequestDto);
             return response;
         }
+        if(paymentModesDto.getPaymentMode().equalsIgnoreCase(DivAppConstants.PAYMENT_MODE_COD)){
+            response = initiateCODPayment(placeOrderRequestDto);
+            return response;
+        }
         return response;
     }
 
-      private DivPaymentInitiateResponse initiatePayuPayment(DivPlaceOrderRequestDto placeOrderRequestDto) {
+    private DivPaymentInitiateResponse initiateCODPayment(DivPlaceOrderRequestDto placeOrderRequestDto) {
+
+        placeOrderRequestDto.setOrderStatus(DivAppConstants.ORDER_PLACED);
+
+        ResponseEntity<DivOrderDto> placeOrderRequestDtoResponseEntity =
+                coFeignClient.placeOrder(placeOrderRequestDto);
+
+        DivOrderDto orderDto = placeOrderRequestDtoResponseEntity.getBody();
+        DivPaymentInitiateResponse divPaymentInitiateResponse = new DivPaymentInitiateResponse();
+
+        divPaymentInitiateResponse.setOrderId(orderDto.getOrderId());
+        divPaymentInitiateResponse.setToPayAmount(orderDto.getOrderTotalAmount());
+
+        return divPaymentInitiateResponse;
+    }
+
+    private DivPaymentInitiateResponse initiatePayuPayment(DivPlaceOrderRequestDto placeOrderRequestDto) {
 
           ResponseEntity<DivOrderDto> placeOrderRequestDtoResponseEntity =
                   coFeignClient.placeOrder(placeOrderRequestDto);
@@ -164,8 +185,9 @@ public class DivPaymentServiceImpl implements DivPaymentService {
           DivPaymentInitiateResponse response = new DivPaymentInitiateResponse();
           response.setOrderId(orderDto.getOrderId());
           response.setToPayAmount(orderDto.getOrderTotalAmount());
-          //response.setPayUHash(hashData.get("paymentHash"));
-          //response.setPayUMerchantKey(hashData.get("merchantKey"));
+          response.setPayUHash(hashData.get("paymentHash"));
+          response.setPayUParams(payUParams);
+          response.setPayuUrl(postServiceUrl);
 
           return  response;
 
@@ -520,7 +542,34 @@ public class DivPaymentServiceImpl implements DivPaymentService {
         return ResponseEntity.status(500).body("Internal Server Error");
     }
 
+    @Override
+    public ResponseEntity<DivOrderPaymentStatusDto> getOrderPaymentStatus(String orderId) {
 
+        Optional<PaymentTransaction> paymentTransactionOptional = transactionRepository.findByApplicationOrderId(orderId);
+        PaymentTransaction paymentTransaction = new PaymentTransaction();
+
+        DivOrderPaymentStatusDto divOrderPaymentStatusDto = new DivOrderPaymentStatusDto();
+
+        if(paymentTransactionOptional.isPresent()){
+            paymentTransaction = paymentTransactionOptional.get();
+
+            divOrderPaymentStatusDto.setOrderId(orderId);
+            divOrderPaymentStatusDto.setTransactionId(paymentTransaction.getGatewayPaymentId());
+
+            if(paymentTransaction.getPaymentStatus().equals(DivAppConstants.PAYMENT_STATUS_SUCCESS)){
+                divOrderPaymentStatusDto.setMessage("Order placed successfully :  "+orderId);
+                divOrderPaymentStatusDto.setPaymentStatus(paymentTransaction.getPaymentStatus());
+
+                return ResponseEntity.ok(divOrderPaymentStatusDto);
+            }else{
+                divOrderPaymentStatusDto.setMessage("Order failed : "+orderId);
+                divOrderPaymentStatusDto.setPaymentStatus(paymentTransaction.getPaymentStatus());
+
+                return ResponseEntity.ok(divOrderPaymentStatusDto);
+            }
+        }
+        return null;
+    }
 
 
 }

@@ -58,7 +58,7 @@ public class DivPayuWebhookServiceImpl implements DivPayuWebhookService {
 
         // 4. Update transaction status and gateway metadata
         if ("success".equalsIgnoreCase(status)) {
-            transaction.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_CAPTURED);
+            transaction.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_SUCCESS);
             if (!wasAlreadySuccess) {
                 log.info("Transitioning TxnID: {} status to SUCCESS via Webhook", txnid);
             }
@@ -90,7 +90,7 @@ public class DivPayuWebhookServiceImpl implements DivPayuWebhookService {
             log.warn("Failed to serialize raw PayU webhook params to JSON for TxnID: {}", txnid, e);
         }
 
-        transactionRepository.save(transaction);
+        transactionRepository.saveAndFlush(transaction);
         log.info("Successfully persisted PayU Webhook updates & bank reference metadata for TxnID: {} in DB.", txnid);
 
         // 6. Trigger Order Status Update (Downstream / Feign Service) ONLY IF NOT ALREADY PROCESSED

@@ -4,6 +4,7 @@ import com.jippy.foodandmart.dto.FmCustomerNearbyResponseDto;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmOutlet;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -125,5 +126,7 @@ public interface IFmOutletService {
             int page,
             int size
     );
+
+    ResponseEntity<List<FmMerchantOrderSummaryDto>> orderSummaryForOutlet(Integer outletId,int page,int size);
 
 }

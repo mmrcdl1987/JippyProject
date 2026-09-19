@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 public interface FmProductService {
 
@@ -277,4 +278,8 @@ public interface FmProductService {
     );
 
     FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive);
+
+    Map<String, String> getProductNameByIds(List<Integer> productIds);
+
+    Map<String, String> getVariantNameByIds(List<Integer> productVariantsIds);
 }

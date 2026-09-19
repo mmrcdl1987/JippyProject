@@ -150,4 +150,16 @@ public class FmPricingController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/getProductMerchantPrices")
+    public ResponseEntity<List<FmProductMerchantPriceResponseDto>> getProductMerchantPrices(@RequestParam List<Integer> productIds, @RequestParam List<Integer> productVariantOptionIds) {
+
+        log.info("API START: GET Product Merchant prices for products:  {}, product variants : {} ", productIds, productVariantOptionIds);
+
+        List<FmProductMerchantPriceResponseDto> response = pricingService.getProductMerchantPrices(productIds, productVariantOptionIds);
+
+        log.info("API END: GET /products | count={}", response.size());
+
+        return ResponseEntity.ok(response);
+    }
 }

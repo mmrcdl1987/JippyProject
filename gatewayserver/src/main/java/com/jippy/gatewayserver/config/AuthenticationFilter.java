@@ -66,7 +66,19 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
             //public api's for website
             "/api/fm/outlets/public/customer/nearby",
-            "/api/fm/outlets/public/outlet-details"
+            "/api/fm/outlets/public/outlet-details",
+
+            //payu webhook url
+            "/api/div/payments/webhook/payu",
+            "/api/div/payments/response",
+            "/api/co/updateOrderStatus",
+            "/api/fm/pricing/getProductMerchantPrices",
+
+            //Uber schedular calls this,
+            "/api/co/getOrderDetailsForDelivery",
+            "/api/fm/products/getProductNameByIds",
+            "/api/fm/products/getVariantNameByIds",
+            "/api/fm/outlets/location/{outletId}"
 
     );
 

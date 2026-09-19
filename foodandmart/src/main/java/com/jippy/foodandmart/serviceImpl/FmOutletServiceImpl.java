@@ -9,6 +9,7 @@ import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.ImageValidationException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
+import com.jippy.foodandmart.feignClients.CustomerAndOrderFeignClient;
 import com.jippy.foodandmart.feignClients.DivisionFeignClient;
 import com.jippy.foodandmart.feignClients.DriverFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -88,6 +90,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
     private final CacheInvalidateServiceImpl cacheInvalidateService;
     private final IFmApprovalRequestService approvalRequestService;
     private final DriverFeignClient driverFeignClient;
+    private final CustomerAndOrderFeignClient coFeignClient;
 
 //    @Override
 //    @Transactional
@@ -2640,6 +2643,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
         response.setOutletId(projection.getOutletId());
         response.setLatitude(projection.getLatitude());
         response.setLongitude(projection.getLongitude());
+        response.setOutletName(projection.getOutletName());
+        response.setOutletPhoneNumber(projection.getOutletPhone());
 
         log.info("Successfully mapped location data for outletId: {}", outletId);
         return response;
@@ -3734,6 +3739,340 @@ public class FmOutletServiceImpl implements IFmOutletService {
         }
 
         return value.trim();
+    }
+
+
+    @Override
+    public ResponseEntity<List<FmMerchantOrderSummaryDto>> orderSummaryForOutlet(Integer outletId,int page,int size) {
+
+        log.info("Get order summary for outlet id : {}", outletId);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        ResponseEntity<List<FmOrderSummaryDto>> orderSummaryDtoListResponse =
+                coFeignClient.orderSummaryForOutlet(outletId,pageable);
+
+        if (orderSummaryDtoListResponse == null ||
+                orderSummaryDtoListResponse.getBody() == null) {
+
+            log.warn("No order summary found for outlet id : {}", outletId);
+
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        List<FmOrderSummaryDto> orderSummaryDtoList =
+                orderSummaryDtoListResponse.getBody();
+
+        log.info("Received {} order item rows for outlet id : {}",
+                orderSummaryDtoList.size(), outletId);
+
+
+        // ---------------------------------------------------------
+        // 1. Collect product and variant IDs
+        // ---------------------------------------------------------
+
+        Set<Integer> productIds = orderSummaryDtoList.stream()
+                .map(FmOrderSummaryDto::getProductId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Set<Integer> variantIds = orderSummaryDtoList.stream()
+                .map(FmOrderSummaryDto::getVariantOptionsId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        log.info("Product IDs found: {}", productIds);
+        log.info("Variant option IDs found: {}", variantIds);
+
+
+        // ---------------------------------------------------------
+        // 2. Fetch products
+        // ---------------------------------------------------------
+
+        Map<Integer, FmProduct> productMap =
+                productRepository.findAllById(productIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                FmProduct::getProductId,
+                                p -> p
+                        ));
+
+        log.info("Fetched {} products from database",
+                productMap.size());
+
+
+        // ---------------------------------------------------------
+        // 3. Fetch variant names
+        // ---------------------------------------------------------
+
+        Map<Integer, String> variantNameMap =
+                productVariantRepository
+                        .findVariantNamesByOptionIds(
+                                new ArrayList<>(variantIds)
+                        )
+                        .stream()
+                        .collect(Collectors.toMap(
+                                row -> (Integer) row[0],
+                                row -> row[1] != null
+                                        ? (String) row[1]
+                                        : "",
+                                (existing, replacement) -> existing
+                        ));
+
+        log.info("Fetched {} variant names from database",
+                variantNameMap.size());
+
+
+        // ---------------------------------------------------------
+        // 4. Group original rows by orderId
+        // ---------------------------------------------------------
+
+        Map<String, List<FmOrderSummaryDto>> groupedOrders =
+                orderSummaryDtoList.stream()
+                        .collect(Collectors.groupingBy(
+                                FmOrderSummaryDto::getOrderId,
+                                LinkedHashMap::new,
+                                Collectors.toList()
+                        ));
+
+        log.info("Grouped {} item rows into {} unique orders",
+                orderSummaryDtoList.size(),
+                groupedOrders.size());
+
+
+        // ---------------------------------------------------------
+        // 5. Create final response
+        // ---------------------------------------------------------
+
+        List<FmMerchantOrderSummaryDto> resultList =
+                groupedOrders.values()
+                        .stream()
+                        .map(orderRows -> {
+
+                            // First row contains order-level information
+                            FmOrderSummaryDto firstRow = orderRows.get(0);
+
+                            String orderId = firstRow.getOrderId();
+
+                            log.info(
+                                    "Processing orderId: {} with {} product rows",
+                                    orderId,
+                                    orderRows.size()
+                            );
+
+
+                            // -------------------------------------------------
+                            // Create Order DTO
+                            // -------------------------------------------------
+
+                            FmMerchantOrderSummaryDto orderDto =
+                                    new FmMerchantOrderSummaryDto();
+
+                            orderDto.setOrderId(orderId);
+
+                            orderDto.setOrderStatus(
+                                    firstRow.getOrderStatus()
+                            );
+
+                            orderDto.setCookingInstructions(
+                                    firstRow.getCookingInstructions()
+                            );
+
+                            orderDto.setIsCutleryRequired(
+                                    firstRow.getIsCutleryRequired()
+                            );
+
+                            orderDto.setOrderCreatedAt(
+                                    firstRow.getOrderCreatedAt()
+                            );
+
+
+                            // -------------------------------------------------
+                            // Create Product List
+                            // -------------------------------------------------
+
+                            List<FmMerchantOrderProductDto> productList =
+                                    orderRows.stream()
+                                            .map(dto -> {
+
+                                                FmMerchantOrderProductDto productDto =
+                                                        new FmMerchantOrderProductDto();
+
+
+                                                // ---------------------------------
+                                                // Product ID
+                                                // ---------------------------------
+
+                                                productDto.setProductId(
+                                                        dto.getProductId()
+                                                );
+
+
+                                                // ---------------------------------
+                                                // Variant ID
+                                                // ---------------------------------
+
+                                                productDto.setVariantOptionsId(
+                                                        dto.getVariantOptionsId()
+                                                );
+
+
+                                                // ---------------------------------
+                                                // Unit Price
+                                                // ---------------------------------
+
+                                                productDto.setMerchantUnitPrice(
+                                                        dto.getMerchantUnitPrice()
+                                                );
+
+
+                                                // ---------------------------------
+                                                // Quantity
+                                                // ---------------------------------
+
+                                                productDto.setQuantity(
+                                                        dto.getQuantity()
+                                                );
+
+
+                                                // ---------------------------------
+                                                // Product Name & Image
+                                                // ---------------------------------
+
+                                                if (dto.getProductId() != null) {
+
+                                                    FmProduct product =
+                                                            productMap.get(
+                                                                    dto.getProductId()
+                                                            );
+
+                                                    if (product != null) {
+
+                                                        productDto.setProductName(
+                                                                product.getProductName()
+                                                        );
+
+                                                        productDto.setProductPicUrl(
+                                                                product.getImageLink()
+                                                        );
+
+                                                    } else {
+
+                                                        log.warn(
+                                                                "Product not found for productId: {}",
+                                                                dto.getProductId()
+                                                        );
+                                                    }
+                                                }
+
+
+                                                // ---------------------------------
+                                                // Variant Name
+                                                // ---------------------------------
+
+                                                if (dto.getVariantOptionsId() != null) {
+
+                                                    String variantName =
+                                                            variantNameMap.get(
+                                                                    dto.getVariantOptionsId()
+                                                            );
+
+                                                    productDto.setVariantOptionName(
+                                                            variantName
+                                                    );
+
+                                                }
+
+                                                if (dto.getMerchantUnitPrice() != null &&
+                                                        dto.getQuantity() != null) {
+
+                                                    productDto.setMerchantTotalPrice(
+                                                            dto.getMerchantTotalPrice()
+                                                    );
+
+                                                    log.info(
+                                                            "OrderId: {}, ProductId: {}, VariantId: {}, UnitPrice: {}, Quantity: {}, MerchantTotalPrice: {}",
+                                                            orderId,
+                                                            dto.getProductId(),
+                                                            dto.getVariantOptionsId(),
+                                                            dto.getMerchantUnitPrice(),
+                                                            dto.getQuantity(),
+                                                            dto.getMerchantTotalPrice()
+                                                    );
+
+                                                } else {
+
+                                                    log.warn(
+                                                            "Cannot calculate merchantTotalPrice. OrderId: {}, ProductId: {}, UnitPrice: {}, Quantity: {}",
+                                                            orderId,
+                                                            dto.getProductId(),
+                                                            dto.getMerchantUnitPrice(),
+                                                            dto.getQuantity()
+                                                    );
+
+                                                    productDto.setMerchantTotalPrice(
+                                                            BigDecimal.ZERO
+                                                    );
+                                                }
+
+
+                                                return productDto;
+
+                                            })
+                                            .collect(Collectors.toList());
+
+
+                            // -------------------------------------------------
+                            // Set product list into order
+                            // -------------------------------------------------
+
+                            orderDto.setMerchantOrderProductDtoList(
+                                    productList
+                            );
+
+
+                            // -------------------------------------------------
+                            // Calculate ORDER total
+                            //
+                            // SUM(all merchantTotalPrice)
+                            // -------------------------------------------------
+
+                            BigDecimal orderTotal =
+                                    productList.stream()
+                                            .map(
+                                                    FmMerchantOrderProductDto
+                                                            ::getMerchantTotalPrice
+                                            )
+                                            .filter(Objects::nonNull)
+                                            .reduce(
+                                                    BigDecimal.ZERO,
+                                                    BigDecimal::add
+                                            );
+
+
+                            orderDto.setTotalPrice(orderTotal);
+
+
+                            log.info(
+                                    "OrderId: {} completed. Product count: {}, Order Total: {}",
+                                    orderId,
+                                    productList.size(),
+                                    orderTotal
+                            );
+
+
+                            return orderDto;
+
+                        })
+                        .collect(Collectors.toList());
+
+        log.info(
+                "Successfully created order summary for outlet id: {}. Total orders: {}",
+                outletId,
+                resultList.size()
+        );
+
+        return ResponseEntity.ok(resultList);
     }
 
 

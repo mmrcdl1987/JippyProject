@@ -67,9 +67,15 @@ public class FmSecurityConfig {
                                 "/api/fm/updateForgotPassword",
 
                                 // Terms and Conditions / Privacy Policy
-                                "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType"
+                                "/api/fm/terms-and-conditions/getTermsAndConditionsForAppType",
 
+                                //update merchant price in order items after order placed
+                                "/api/fm/pricing/getProductMerchantPrices",
 
+                                //Uber schedular calls these apis
+                                "/api/fm/products/getProductNameByIds",
+                                "/api/fm/products/getVariantNameByIds",
+                                "/api/fm/outlets/location/{outletId}"
                         ).permitAll()
 
                         // 2. ADD THIS: Allow Health Checks

@@ -29,5 +29,8 @@ public interface IPricingService {
     List<FmCurrentOnlinePriceResponse> getCurrentOnlinePrices(
             FmCurrentOnlinePriceRequest request
     );
+
+    List<FmProductMerchantPriceResponseDto> getProductMerchantPrices(List<Integer> productIds,
+            List<Integer> productVariantOptionIds);
 }
 

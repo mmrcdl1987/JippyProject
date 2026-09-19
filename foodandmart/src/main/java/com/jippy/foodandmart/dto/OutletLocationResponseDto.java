@@ -18,4 +18,15 @@ public class OutletLocationResponseDto {
     private Integer cityId;
 
     private Integer areaId;
+
+    private String outletName;
+
+    private String buildingNumber;
+
+    private String road;
+
+    private String landmark;
+
+    private String outletPhoneNumber;
+
 }

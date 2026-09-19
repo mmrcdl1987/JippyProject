@@ -1,9 +1,11 @@
 package com.jippy.customerandorder.dto;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -11,21 +13,15 @@ public class CoOrderSummaryDto {
 
     private String orderStatus;
     private String orderId;
-    private  Integer productId;
-    private String productName;
-    private BigDecimal productPrice;
-    private List<CoOrderSummaryDto.VariantDto> variants;
+    private Integer productId;
+    private Integer variantOptionsId;
+    private BigDecimal merchantUnitPrice;
+    private BigDecimal merchantTotalPrice;
+    private Integer quantity;
+    private String cookingInstructions;
+    private Boolean isCutleryRequired;
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class VariantDto {
-        private Integer productVariantOptionsId;
-        private String variantName;
-        private BigDecimal variantPrice;
-        private String priceType;
-        private Integer quantity;
-
-    }
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime orderCreatedAt;
 
 }

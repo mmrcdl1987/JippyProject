@@ -40,6 +40,25 @@ public class PayuWebhookController {
         }
     }
 
+
+
+    @PostMapping(value = "/response", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<String> handleResponse(@RequestParam Map<String, String> payuParams) {
+        try {
+            boolean isProcessed = payuWebhookService.processPayUWebhook(payuParams);
+
+            if (isProcessed) {
+                // Return 200 OK so PayU acknowledges delivery and stops retrying
+                return ResponseEntity.ok("Payu response Processed Successfully");
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid Signature/Hash Mismatch");
+            }
+        } catch (Exception e) {
+            // Log error internally and return HTTP 500 so PayU can retry later
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Processing Error");
+        }
+    }
+
     @PostMapping(value = "/webhook/payu-refund", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<String> handlePayURefundWebhook(@RequestParam Map<String, String> params) {
         boolean processed = payuWebhookService.processRefundWebhook(params);

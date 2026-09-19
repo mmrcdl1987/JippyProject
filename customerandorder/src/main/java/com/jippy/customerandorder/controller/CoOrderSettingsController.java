@@ -4,7 +4,7 @@ import com.jippy.customerandorder.dto.CoOrderSettingsRequestDto;
 import com.jippy.customerandorder.dto.CoOrderSettingsResponseDto;
 import com.jippy.customerandorder.dto.CoPaymentModeResponse;
 import com.jippy.customerandorder.dto.CoPaymentRequest;
-import com.jippy.customerandorder.iservice.IOrderSettingsService;
+import com.jippy.customerandorder.iservice.OrderSettingsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ import java.util.List;
 @Slf4j
 public class CoOrderSettingsController {
 
-    private final IOrderSettingsService orderSettingsService;
+    private final OrderSettingsService orderSettingsService;
 
     @PostMapping
     public ResponseEntity<CoOrderSettingsResponseDto> saveOrUpdate(@Valid @RequestBody CoOrderSettingsRequestDto requestDto) {

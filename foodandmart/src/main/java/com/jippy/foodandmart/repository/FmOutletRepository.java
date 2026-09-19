@@ -870,16 +870,17 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             @Param("customerLng") double customerLng);
 
 
-
     @Query(value = """
             SELECT
-                outlet_id AS outletId,
+                o.outlet_id AS outletId,o.outlet_name,o.outlet_phone ,
                 ST_Y(outlet_location::geometry) AS latitude,
-                ST_X(outlet_location::geometry) AS longitude
-            FROM jippy_fm.outlets
+                ST_X(outlet_location::geometry) AS longitude,a.building_number,a.road,a.landmark
+            FROM jippy_fm.outlets o
+            join "jippy_fm"."address" a on a.jippy_address_id = o.outlet_id and address_type = 'OUTLET'
             WHERE outlet_id = :outletId
             """, nativeQuery = true)
     OutletLocationProjection getOutletLocation(@Param("outletId") Integer outletId);
+
 
     boolean existsByOutletId(Integer outletId);
 

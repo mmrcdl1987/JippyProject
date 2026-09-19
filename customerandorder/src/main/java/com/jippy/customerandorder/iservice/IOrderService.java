@@ -1,6 +1,8 @@
 package com.jippy.customerandorder.iservice;
 
 import com.jippy.customerandorder.dto.*;
+import com.jippy.customerandorder.dto.uber.CoUberDispatchRequestDto;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -21,5 +23,7 @@ public interface IOrderService {
 
     String acceptOrRejectOrderByOutlet(AcceptOrRejectOrderByOutletDto acceptOrRejectOrderByOutletDto);
 
-    //ResponseEntity<List<CoOrderSummaryDto>> orderSummaryForOutlet(Integer outletId);
+    ResponseEntity<List<CoOrderSummaryDto>> orderSummaryForOutlet(Integer outletId, Pageable pageable);
+
+    CoUberDispatchRequestDto getOrderDetailsForDelivery(String orderId);
 }
