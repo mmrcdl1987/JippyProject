@@ -123,8 +123,33 @@ public class CheckoutServiceImpl implements ICheckoutService {
             log.info("DRIVER_DELIVERY_CHARGE | distance={} | driverDeliveryCharge={}", deliveryDistanceKm, driverDeliveryCharge);
             // CUSTOMER DELIVERY CHARGE
 
-            CustomerDeliveryChargeCalculationResponseDto customerDeliveryResponse = customerDeliveryChargeSettingsService.calculateCustomerDeliveryCharge(customerCityId, orderAmountDiscounted, deliveryDistanceKm);
+            log.info(
+                    "CUSTOMER_DELIVERY_CHARGE_START | cityId={} | orderAmount={} | distanceKm={}",
+                    customerCityId,
+                    orderAmountDiscounted,
+                    deliveryDistanceKm
+            );
 
+            CustomerDeliveryChargeCalculationResponseDto customerDeliveryResponse =
+                    customerDeliveryChargeSettingsService.calculateCustomerDeliveryCharge(
+                            customerCityId,
+                            orderAmountDiscounted,
+                            deliveryDistanceKm
+                    );
+
+            if (customerDeliveryResponse == null) {
+                log.error("CUSTOMER_DELIVERY_RESPONSE_NULL");
+                throw new CoBadRequestException(
+                        "Customer delivery charge response is null"
+                );
+            }
+
+            log.info(
+                    "CUSTOMER_DELIVERY_CHARGE_RESPONSE | gross={} | freeBenefit={} | payable={}",
+                    customerDeliveryResponse.getGrossDeliveryCharge(),
+                    customerDeliveryResponse.getFreeDistanceBenefit(),
+                    customerDeliveryResponse.getDeliveryCharge()
+            );
             BigDecimal customerGrossDeliveryCharge = defaultValue(customerDeliveryResponse.getGrossDeliveryCharge());
 
             BigDecimal customerFreeDistanceBenefit = defaultValue(customerDeliveryResponse.getFreeDistanceBenefit());

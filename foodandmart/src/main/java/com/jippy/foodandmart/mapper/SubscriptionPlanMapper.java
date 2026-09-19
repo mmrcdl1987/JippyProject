@@ -3,6 +3,9 @@ package com.jippy.foodandmart.mapper;
 import com.jippy.foodandmart.dto.FmSubscriptionPlanRequestDto;
 import com.jippy.foodandmart.dto.FmSubscriptionPlanResponseDto;
 import com.jippy.foodandmart.dto.SubscriptionPlanResponseDto;
+import com.jippy.foodandmart.entity.FmArea;
+import com.jippy.foodandmart.entity.FmCity;
+import com.jippy.foodandmart.entity.FmState;
 import com.jippy.foodandmart.entity.FmSubscriptionPlan;
 
 import java.time.LocalDateTime;
@@ -27,8 +30,6 @@ public final class SubscriptionPlanMapper {
         entity.setDealsSlot(request.getDealsSlot());
         entity.setWhatsappBroadcast(request.getWhatsappBroadcast());
         entity.setVideoCredits(request.getVideoCredits());
-       /* entity.setStateId(request.getStateId());
-        entity.setCityId(request.getCityId());*/
         entity.setAreaId(request.getAreaId());
 
         entity.setCreatedAt(LocalDateTime.now());
@@ -51,8 +52,6 @@ public final class SubscriptionPlanMapper {
         entity.setDealsSlot(request.getDealsSlot());
         entity.setWhatsappBroadcast(request.getWhatsappBroadcast());
         entity.setVideoCredits(request.getVideoCredits());
-      /*  entity.setStateId(request.getStateId());
-        entity.setCityId(request.getCityId());*/
         entity.setAreaId(request.getAreaId());
 
         entity.setUpdatedAt(LocalDateTime.now());
@@ -61,6 +60,14 @@ public final class SubscriptionPlanMapper {
 
     public static SubscriptionPlanResponseDto toDto(
             FmSubscriptionPlan entity) {
+        return toDto(entity, null, null, null);
+    }
+
+    public static SubscriptionPlanResponseDto toDto(
+            FmSubscriptionPlan entity,
+            FmArea area,
+            FmCity city,
+            FmState state) {
 
         SubscriptionPlanResponseDto dto =
                 new SubscriptionPlanResponseDto();
@@ -76,15 +83,34 @@ public final class SubscriptionPlanMapper {
         dto.setDealsSlot(entity.getDealsSlot());
         dto.setWhatsappBroadcast(entity.getWhatsappBroadcast());
         dto.setVideoCredits(entity.getVideoCredits());
-       /* dto.setStateId(entity.getStateId());
-        dto.setCityId(entity.getCityId());*/
-//        dto.setStateId(entity.getStateId());
-//        dto.setCityId(entity.getCityId());
         dto.setAreaId(entity.getAreaId());
+
+        if (area != null) {
+            dto.setAreaName(area.getAreaName());
+            dto.setCityId(area.getCityId());
+        }
+
+        if (city != null) {
+            dto.setCityName(city.getCityName());
+            dto.setStateId(city.getStateId());
+        }
+
+        if (state != null) {
+            dto.setStateName(state.getStateName());
+        }
 
         return dto;
     }
+
     public static FmSubscriptionPlanResponseDto toFmDto(FmSubscriptionPlan entity) {
+        return toFmDto(entity, null, null, null);
+    }
+
+    public static FmSubscriptionPlanResponseDto toFmDto(
+            FmSubscriptionPlan entity,
+            FmArea area,
+            FmCity city,
+            FmState state) {
 
         FmSubscriptionPlanResponseDto dto = new FmSubscriptionPlanResponseDto();
 
@@ -100,6 +126,20 @@ public final class SubscriptionPlanMapper {
         dto.setWhatsappBroadcast(entity.getWhatsappBroadcast());
         dto.setVideoCredits(entity.getVideoCredits());
         dto.setAreaId(entity.getAreaId());
+
+        if (area != null) {
+            dto.setAreaName(area.getAreaName());
+            dto.setCityId(area.getCityId());
+        }
+
+        if (city != null) {
+            dto.setCityName(city.getCityName());
+            dto.setStateId(city.getStateId());
+        }
+
+        if (state != null) {
+            dto.setStateName(state.getStateName());
+        }
 
         return dto;
     }

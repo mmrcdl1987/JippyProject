@@ -22,6 +22,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
 
     boolean existsByOutletPhone(String phone);
 
+    boolean existsByOutletEmail(String outletEmail);
+
     Optional<FmOutlet> findByOutletIdAndIsActive(
             Integer outletId,
             String isActive

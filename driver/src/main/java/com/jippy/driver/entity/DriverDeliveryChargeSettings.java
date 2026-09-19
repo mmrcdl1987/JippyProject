@@ -52,8 +52,13 @@ public class DriverDeliveryChargeSettings {
     @Column(name = "fuel_type", nullable = false, length = 30)
     private String fuelType;
 
-    @Column(name = "zone_id", nullable = false)
+    @Column(name = "zone_id")
     private Integer zoneId;
+
+
+//    @ManyToOne
+//    @JoinColumn(name = "zone_id")
+//    private DriverZone zone;
 
     @Column(name = "currency_code", nullable = false, length = 30)
     private String currencyCode;

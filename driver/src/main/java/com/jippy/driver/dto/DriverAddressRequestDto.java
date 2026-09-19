@@ -31,11 +31,17 @@ public class DriverAddressRequestDto {
     @NotNull(message = "City id is required")
     private Integer cityId;
 
+    private String cityName;
+
     @NotNull(message = "State id is required")
     private Integer stateId;
 
+    private String stateName;
+
     @NotNull(message = "Area id is required")
     private Integer areaId;
+
+    private String areaName;
 
     @Schema(
             description = "Geographical latitude of the driver location",

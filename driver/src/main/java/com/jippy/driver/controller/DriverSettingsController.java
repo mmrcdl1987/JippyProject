@@ -1,14 +1,10 @@
 package com.jippy.driver.controller;
-
-
 import com.jippy.driver.dto.*;
 import com.jippy.driver.service.DriverIncentiveSettingsService;
 import com.jippy.driver.service.DriverDeliveryChargeSettingsService;
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,36 +35,4 @@ public class DriverSettingsController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-
-//    @Operation(summary = "Create or Update Incentive", description = "If ID is null → create, else update existing incentive")
-//    @PostMapping("/CreateOrUpdateIncentives")
-//    public ResponseEntity<DriverIncentiveSettingsDto> saveOrUpdate(@Valid @RequestBody DriverIncentiveSettingsDto dto) {
-//
-//        log.info("Save/Update Incentives request: {}", dto);
-//
-//        DriverIncentiveSettingsDto response = incentiveSettingsService.saveOrUpdateIncentives(dto);
-//
-//        return ResponseEntity.ok(response);
-//    }
-
-    @GetMapping("/getDriverIncentiveHistory")
-    @Operation(summary = "Get Driver Incentive History", description = "Get incentive history for a driver based on filter" + " (currentMonth, ALL) filter value can be monthly or " + "ALL ex:filter=all/currentMonth")
-    public Page<DriverIncentiveHistoryResponseDto> getDriverIncentiveHistory(@RequestParam Integer driverId, @RequestParam String filter, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "2") int size) {
-        log.info("Get Driver Incentive History request | driverId={}, filter={}", driverId, filter);
-
-        log.info("to get incentive details filter value can be monthly or ALL");
-        return incentiveSettingsService.getDriverIncentiveHistory(driverId, filter, page, size);
-    }
-
-//    @GetMapping("/incentive-settings")
-//    public ResponseEntity<Page<DriverIncentiveSettingsResponseDto>> getAllIncentiveSettings(@RequestParam(defaultValue = "0") Integer page, @RequestParam(defaultValue = "20") Integer size) {
-//
-//        log.info("API START: GET /api/driver/incentive-settings | page={} | size={}", page, size);
-//
-//        Page<DriverIncentiveSettingsResponseDto> response = incentiveSettingsService.getAllIncentiveSettings(page, size);
-//
-//        log.info("API END: GET /api/driver/incentive-settings | totalElements={} | totalPages={} | currentPage={}", response.getTotalElements(), response.getTotalPages(), response.getNumber());
-//
-//        return ResponseEntity.ok(response);
-//    }
 }

@@ -57,4 +57,26 @@
 //            Optional<DriverZone> checkCustomerAddressWithCommunity(
 //                    @Param("latitude") Double latitude, @Param("longitude") Double longitude,
 //                    @Param("communityId") Integer communityId);
+
+
+
+            @Query(value = """
+        SELECT *
+        FROM jippy_driver.zones z
+        WHERE ST_Covers(
+            z.boundary::geometry,
+            ST_SetSRID(
+                ST_MakePoint(:longitude, :latitude),
+                4326
+            )
+        )
+        AND (z.status IS NULL OR UPPER(z.status) = 'ACTIVE')
+        LIMIT 1
+        """, nativeQuery = true)
+            Optional<DriverZone> findActiveZoneByCoordinates(
+                    @Param("latitude") Double latitude,
+                    @Param("longitude") Double longitude
+            );
+
+
         }

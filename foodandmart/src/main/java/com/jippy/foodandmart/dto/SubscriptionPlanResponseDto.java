@@ -21,6 +21,9 @@ public class SubscriptionPlanResponseDto {
     private String videoCredits;
 
     private Integer stateId;
+    private String stateName;
     private Integer cityId;
+    private String cityName;
     private Integer areaId;
+    private String areaName;
 }

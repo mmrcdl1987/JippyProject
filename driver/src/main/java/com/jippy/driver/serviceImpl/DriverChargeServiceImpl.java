@@ -4,6 +4,7 @@ import com.jippy.driver.constants.DConstants;
 import com.jippy.driver.dto.*;
 import com.jippy.driver.dto.routing.RouteResult;
 import com.jippy.driver.entity.DriverDeliveryChargeSettings;
+import com.jippy.driver.entity.DriverZone;
 import com.jippy.driver.exception.DriverBadRequestException;
 import com.jippy.driver.exception.GoogleRouteException;
 import com.jippy.driver.feignClients.COFeignClient;
@@ -11,6 +12,7 @@ import com.jippy.driver.feignClients.FMFeignClient;
 import com.jippy.driver.mapper.DriverDeliveryChargeSettingsMapper;
 import com.jippy.driver.repositary.DriverDeliveryChargeSettingsRepository;
 import com.jippy.driver.service.DriverChargeService;
+import com.jippy.driver.service.DriverZoneService;
 import com.jippy.driver.service.RoutingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
     private final DriverDeliveryChargeSettingsRepository chargeSettingsRepository;
     private final DriverDeliveryChargeSettingsMapper driverChargeMapper;
     private final RoutingService routingService;
+    private final DriverZoneService driverZoneService;
 
     // DRIVER PAYOUT CALCULATION
     @Override
@@ -52,7 +55,7 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
             DriverDeliveryChargeSettings pickupSlab = getPickupSlab(pickupDistanceKm);
 
-            DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(deliveryDistanceKm);
+            DriverDeliveryChargeSettings deliverySlab = getPickupSlab(deliveryDistanceKm);
 
 //            BigDecimal pickupCharge = calculateCharge(pickupDistanceKm, pickupSlab.getUnitPricePerPickKm());
 //
@@ -151,37 +154,53 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
         try {
 
-
             // STEP 1: GET OUTLET LOCATION
 
             OutletLocationResponseDto outletLocation = getOutletLocation(requestDto.getOutletId());
 
-            // STEP 2: GET CUSTOMER LOCATION
+            validateOutletCoordinates(outletLocation);
+
+            // STEP 2: FIND OUTLET ZONE
+
+            Integer zoneId = getZoneId(outletLocation.getLatitude(), outletLocation.getLongitude());
+
+            log.info("OUTLET_ZONE_IDENTIFIED | outletId={} | zoneId={}", requestDto.getOutletId(), zoneId);
+
+            // STEP 3: GET CUSTOMER LOCATION
 
             DriveCustomerLocationDto customerLocation = getCustomerLocation(requestDto.getCustomerAddressId());
-            // STEP 3: CALCULATE DELIVERY DISTANCE
+
+            validateCustomerCoordinates(customerLocation);
+
+            // STEP 4: CALCULATE DELIVERY DISTANCE
 
             BigDecimal deliveryDistanceKm = calculateDistance(outletLocation.getLatitude().doubleValue(), outletLocation.getLongitude().doubleValue(), customerLocation.getLatitude(), customerLocation.getLongitude());
 
-            log.info("DELIVERY_DISTANCE_KM = {} | outletId={} | customerAddressId={}", deliveryDistanceKm, requestDto.getOutletId(), requestDto.getCustomerAddressId());
+            validateCalculatedDistance(deliveryDistanceKm);
 
-            // STEP 4: FIND DELIVERY SLAB
+            log.info("DELIVERY_DISTANCE_KM={} | outletId={} | customerAddressId={} | zoneId={}", deliveryDistanceKm, requestDto.getOutletId(), requestDto.getCustomerAddressId(), zoneId);
 
-            DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(deliveryDistanceKm);
+            // STEP 5: FIND DELIVERY SLAB USING ZONE + DISTANCE
 
-            // STEP 5: CALCULATE DELIVERY CHARGE
+            DriverDeliveryChargeSettings deliverySlab = getDeliverySlab(zoneId, deliveryDistanceKm);
+
+            // STEP 6: CALCULATE DELIVERY CHARGE
 
             BigDecimal deliveryCharge = calculateCharge(deliveryDistanceKm, deliverySlab.getUnitPricePerKm());
-            // STEP 6: CALCULATE TAX
+
+            // STEP 7: CALCULATE TAX
 
             BigDecimal taxAmount = calculateTax(deliveryCharge);
-            // STEP 7: TOTAL DELIVERY CHARGE
+
+            // STEP 8: TOTAL DELIVERY CHARGE
+
             BigDecimal totalDeliveryCharge = deliveryCharge.add(taxAmount).setScale(2, RoundingMode.HALF_UP);
 
-            // STEP 8: BUILD RESPONSE
+            // STEP 9: BUILD RESPONSE
+
             DeliveryChargeCalculationResponseDto response = driverChargeMapper.mapToDeliveryChargeResponse(deliveryDistanceKm, deliveryCharge, taxAmount, totalDeliveryCharge, isCodAvailable(requestDto.getOrderAmount()));
 
-            log.info("SERVICE_END | CALCULATE_DELIVERY_CHARGE_SUCCESS | " + "distanceKm={} | deliveryCharge={} | taxAmount={} | totalDeliveryCharge={}", deliveryDistanceKm, deliveryCharge, taxAmount, totalDeliveryCharge);
+            log.info("SERVICE_END | CALCULATE_DELIVERY_CHARGE_SUCCESS | " + "zoneId={} | distanceKm={} | deliveryCharge={} | " + "taxAmount={} | totalDeliveryCharge={}", zoneId, deliveryDistanceKm, deliveryCharge, taxAmount, totalDeliveryCharge);
 
             return response;
 
@@ -198,7 +217,6 @@ public class DriverChargeServiceImpl implements DriverChargeService {
             throw new DriverBadRequestException(DConstants.MSG_DISTANCE_CALCULATION_FAILED);
         }
     }
-
     // VALIDATIONS
 
     private void validateDriverChargeRequest(DriverChargeCalculationRequestDto requestDto) {
@@ -233,6 +251,15 @@ public class DriverChargeServiceImpl implements DriverChargeService {
         validateCommonRequest(requestDto.getOutletId(), requestDto.getCustomerAddressId(), requestDto.getOrderAmount());
     }
 
+    private void validateCalculatedDistance(BigDecimal distanceKm) {
+
+        if (distanceKm == null || distanceKm.compareTo(BigDecimal.ZERO) < 0) {
+
+            log.error("VALIDATION_FAILED | INVALID_DISTANCE | distanceKm={}", distanceKm);
+
+            throw new DriverBadRequestException("Unable to calculate a valid delivery distance");
+        }
+    }
 
     private void validateCommonRequest(Integer outletId, Integer customerAddressId, BigDecimal orderAmount) {
 
@@ -295,9 +322,52 @@ public class DriverChargeServiceImpl implements DriverChargeService {
 
     private BigDecimal calculateDistance(double sourceLatitude, double sourceLongitude, double destinationLatitude, double destinationLongitude) {
 
+        log.info("CALCULATE_ROUTE_DISTANCE | sourceLat={} | sourceLng={} | destinationLat={} | destinationLng={}", sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude);
+
         RouteResult routeResult = routingService.calculateRoute(sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude);
 
+        if (routeResult == null || routeResult.getDistanceKm() == null) {
+
+            log.error("ROUTE_DISTANCE_NOT_FOUND | sourceLat={} | sourceLng={} | destinationLat={} | destinationLng={}", sourceLatitude, sourceLongitude, destinationLatitude, destinationLongitude);
+
+            throw new DriverBadRequestException("Unable to calculate delivery distance");
+        }
+
         return routeResult.getDistanceKm();
+    }
+
+    private void validateOutletCoordinates(OutletLocationResponseDto outletLocation) {
+
+        if (outletLocation == null || outletLocation.getLatitude() == null || outletLocation.getLongitude() == null) {
+
+            log.error("VALIDATION_FAILED | OUTLET_COORDINATES_MISSING");
+
+            throw new DriverBadRequestException("Valid outlet coordinates are required");
+        }
+
+        validateCoordinateRange(outletLocation.getLatitude().doubleValue(), outletLocation.getLongitude().doubleValue(), "OUTLET");
+    }
+
+    private void validateCustomerCoordinates(DriveCustomerLocationDto customerLocation) {
+
+        if (customerLocation == null || customerLocation.getLatitude() == null || customerLocation.getLongitude() == null) {
+
+            log.error("VALIDATION_FAILED | CUSTOMER_COORDINATES_MISSING");
+
+            throw new DriverBadRequestException("Valid customer coordinates are required");
+        }
+
+        validateCoordinateRange(customerLocation.getLatitude(), customerLocation.getLongitude(), "CUSTOMER");
+    }
+
+    private void validateCoordinateRange(double latitude, double longitude, String locationType) {
+
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+
+            log.error("INVALID_COORDINATES | locationType={} | latitude={} | longitude={}", locationType, latitude, longitude);
+
+            throw new DriverBadRequestException("Invalid " + locationType.toLowerCase() + " latitude or longitude");
+        }
     }
 
 
@@ -312,16 +382,39 @@ public class DriverChargeServiceImpl implements DriverChargeService {
     }
 
 
-    private DriverDeliveryChargeSettings getDeliverySlab(BigDecimal deliveryDistanceKm) {
+    private DriverDeliveryChargeSettings getPickupSlab(Integer zoneId, BigDecimal deliveryDistanceKm) {
 
-        log.info("Finding delivery slab for distance: {} KM", deliveryDistanceKm);
+        log.info("FIND_DELIVERY_SLAB | zoneId={} | distanceKm={}", zoneId, deliveryDistanceKm);
 
-        return chargeSettingsRepository.findDeliverySlab(deliveryDistanceKm).orElseThrow(() -> {
+        return chargeSettingsRepository.findDeliverySlabByZone(zoneId, deliveryDistanceKm).orElseThrow(() -> {
 
-            log.error("DELIVERY_SLAB_NOT_FOUND | deliveryDistanceKm={}", deliveryDistanceKm);
+            log.error("DELIVERY_SLAB_NOT_FOUND | zoneId={} | distanceKm={}", zoneId, deliveryDistanceKm);
 
             return new DriverBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
         });
+    }
+
+
+    private DriverDeliveryChargeSettings getDeliverySlab(Integer zoneId, BigDecimal deliveryDistanceKm) {
+        log.info("FIND_DELIVERY_SLAB | zoneId={} | distanceKm={}", zoneId, deliveryDistanceKm);
+
+        return chargeSettingsRepository.findDeliverySlabByZone(zoneId, deliveryDistanceKm).orElseThrow(() -> {
+            log.error("DELIVERY_SLAB_NOT_FOUND | zoneId={} | distanceKm={}", zoneId, deliveryDistanceKm);
+
+            return new DriverBadRequestException(DConstants.MSG_DELIVERY_SLAB_NOT_FOUND);
+        });
+    }
+
+    private Integer getZoneId(Double latitude, Double longitude) {
+        DriverZone driverZone = driverZoneService.findActiveZoneByCoordinates(latitude, longitude).orElseThrow(() -> {
+            log.error("ZONE_NOT_FOUND | latitude={} | longitude={}", latitude, longitude);
+
+            return new DriverBadRequestException("Outlet does not belong to any delivery zone");
+        });
+
+        log.info("ZONE_FOUND | zoneId={} | zoneName={}", driverZone.getZoneId(), driverZone.getZoneName());
+
+        return driverZone.getZoneId();
     }
 
 

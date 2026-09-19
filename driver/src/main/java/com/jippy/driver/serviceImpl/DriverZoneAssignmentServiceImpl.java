@@ -7,6 +7,7 @@ import com.jippy.driver.dto.ZoneStatusToggleRequestDto;
 import com.jippy.driver.entity.Driver;
 import com.jippy.driver.entity.DriverZone;
 import com.jippy.driver.entity.DriverZoneAssignment;
+import com.jippy.driver.exception.DriverBadRequestException;
 import com.jippy.driver.mapper.DriverZoneAssignmentMapper;
 import com.jippy.driver.repositary.DriverRepository;
 import com.jippy.driver.repositary.DriverZoneAssignmentRepository;
@@ -18,7 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -200,4 +203,5 @@ public class DriverZoneAssignmentServiceImpl implements DriverZoneAssignmentServ
                     + ",to Status: N";
         }
     }
+
 }
