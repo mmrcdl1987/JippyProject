@@ -1,6 +1,4 @@
     package com.jippy.driver.controller;
-
-
     import com.jippy.driver.constants.DConstants;
     import com.jippy.driver.dto.*;
     import com.jippy.driver.service.DriverService;
@@ -101,16 +99,6 @@
 
             return ResponseEntity.ok(driverService.updateDriverDetails(
                     driverId, dto));
-        }
-
-        @PostMapping("/createZones")
-        @Operation(summary = "Create Zones", description = "Create Zones")
-        public ResponseEntity<DriverResponseDto> createZones(@Valid @RequestBody DriverZoneDto zoneDto) {
-
-            log.info("POST API called for created zones:");
-            String message = driverService.createZones(zoneDto);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_201, message));
         }
 
         @GetMapping("/fetchEarnings")
