@@ -214,4 +214,6 @@ public class COConstants {
     public static final String[] REFERRAL_STATUS = {"PENDING","QUALIFIED","REWARDED"};
 
     public static  final String PAYMENT_TYPE_COD = "COD";
+
+    public static  final String CURRENCY_CODE_INR = "INR";
 }

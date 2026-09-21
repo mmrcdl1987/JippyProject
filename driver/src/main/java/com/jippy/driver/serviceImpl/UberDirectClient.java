@@ -19,9 +19,11 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @RequiredArgsConstructor
@@ -34,26 +36,57 @@ public class UberDirectClient {
     private final DriverOrderRepository driverOrderRepository;
     private final ExternalDriverOrderRepository externalDriverOrderRepository;
 
+    private String cachedAccessToken;
+    private Instant tokenExpiryTime = Instant.MIN;
+    private final ReentrantLock tokenLock = new ReentrantLock();
+
     /**
      * Dynamically generates OAuth access_token using Client ID and Client Secret
      */
     public String getAccessToken() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("client_id", uberConfigProperties.getClientId());
-        body.add("client_secret", uberConfigProperties.getClientSecret());
-        body.add("grant_type", "client_credentials");
-        body.add("scope", uberConfigProperties.getScope());
-
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(uberConfigProperties.getAuthUrl(), request, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            return (String) response.getBody().get("access_token");
+        // 1. Return cached token if valid (using a 60-second buffer before true expiration)
+        if (cachedAccessToken != null && Instant.now().isBefore(tokenExpiryTime.minusSeconds(60))) {
+            return cachedAccessToken;
         }
-        throw new RuntimeException("Failed to generate Uber OAuth token");
+
+        // 2. Lock to ensure only one thread requests a new token when expired
+        tokenLock.lock();
+        try {
+            // Double-check inside lock for concurrent scheduled execution
+            if (cachedAccessToken != null && Instant.now().isBefore(tokenExpiryTime.minusSeconds(60))) {
+                return cachedAccessToken;
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("client_id", uberConfigProperties.getClientId());
+            body.add("client_secret", uberConfigProperties.getClientSecret());
+            body.add("grant_type", "client_credentials");
+            body.add("scope", uberConfigProperties.getScope());
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            ResponseEntity<Map> response = restTemplate.postForEntity(uberConfigProperties.getAuthUrl(), request, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+
+                // Extract and update cached token
+                this.cachedAccessToken = (String) responseBody.get("access_token");
+
+                // Extract "expires_in" (seconds) and compute target expiry time
+                Number expiresIn = (Number) responseBody.get("expires_in");
+                long secondsToLive = (expiresIn != null) ? expiresIn.longValue() : 3600;
+                this.tokenExpiryTime = Instant.now().plusSeconds(secondsToLive);
+
+                return this.cachedAccessToken;
+            }
+
+            throw new RuntimeException("Failed to generate Uber OAuth token");
+        } finally {
+            tokenLock.unlock();
+        }
     }
 
     /**

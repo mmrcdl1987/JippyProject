@@ -13,7 +13,7 @@ public class CoManifestItemDto {
 
     private String name;
     private Integer quantity;
-    private Integer price;
+    private Double price;
 
    @JsonProperty("currency_code")
     private String currencyCode;
