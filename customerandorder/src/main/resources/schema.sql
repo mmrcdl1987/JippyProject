@@ -736,6 +736,30 @@ CREATE TABLE jippy_customer_and_order.event_members (
               ON DELETE NO ACTION
 );
 
+CREATE TABLE "jippy_customer_and_order"."customer_delivery_charge_settings"
+(
+    customer_delivery_charge_settings_id SERIAL PRIMARY KEY,
+
+    area_id INTEGER NOT NULL,
+
+    plan_name VARCHAR(30) NOT NULL,
+
+    order_value_threshold NUMERIC(10,2) NOT NULL,
+
+    free_distance_kms NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+
+    charge_per_km NUMERIC(10,2) NOT NULL,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER,
+
+    updated_at TIMESTAMP,
+    updated_by INTEGER
+);
+
+
 
 INSERT INTO "jippy_customer_and_order"."customer_status" ( "status_name", "created_at")
  VALUES ('NEW', now());

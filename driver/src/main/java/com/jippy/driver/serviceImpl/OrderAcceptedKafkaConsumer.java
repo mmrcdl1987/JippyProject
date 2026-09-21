@@ -8,6 +8,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 @Component
@@ -22,16 +23,24 @@ public class OrderAcceptedKafkaConsumer {
     @KafkaListener(topics = "accepted-orders", groupId = "driver-service-group")
     public void handleOrderAccepted(OrderAcceptedEvent event) {
 
-        double targetEpochMillis = (double) event.getDeliveryRequestAt()
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli();
+        log.info("consumer called ===========================");
 
-        redisTemplate.opsForZSet().add(DISPATCH_QUEUE_KEY, event.getOrderId(), targetEpochMillis);
+        long targetEpochMillis;
 
-        log.info("Scheduled delivery dispatch for order {} at {}", event.getOrderId(), event.getDeliveryRequestAt());
+        // FIX: Pull directly from 'event'
+        if (event.getDeliveryRequestAt() != null) {
+//            targetEpochMillis = event.getDeliveryRequestAt()
+//                    .atZone(ZoneId.of("Asia/Kolkata"))
+//                    .toInstant()
+//                    .toEpochMilli();
+            targetEpochMillis = System.currentTimeMillis();
 
-        //ack.acknowledge();
+            log.info("===================================targetEpochMillis" + targetEpochMillis);
+        } else {
+            targetEpochMillis = System.currentTimeMillis();
+        }
+
+        redisTemplate.opsForZSet().add("delivery:dispatch:queue", event.getOrderId(), (double) targetEpochMillis);
     }
 
 }

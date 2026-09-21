@@ -2645,6 +2645,9 @@ public class FmOutletServiceImpl implements IFmOutletService {
         response.setLongitude(projection.getLongitude());
         response.setOutletName(projection.getOutletName());
         response.setOutletPhoneNumber(projection.getOutletPhone());
+        response.setBuildingNumber(projection.getBuildingNumber());
+        response.setRoad(projection.getRoad());
+        response.setLandmark(projection.getLandmark());
 
         log.info("Successfully mapped location data for outletId: {}", outletId);
         return response;

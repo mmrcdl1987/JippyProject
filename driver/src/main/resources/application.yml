@@ -68,12 +68,17 @@ spring:
     consumer:
       # Starts reading from the beginning of the topic if no offset is found
       auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
+        # Delegate deserializers used by ErrorHandlingDeserializer
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+
         # CRITICAL: Tell Spring which Java packages are safe to deserialize
         spring.json.trusted.packages: "*"
         spring.json.use.type.headers: false
+
         # Explicitly state the target class to deserialize into
         spring.json.value.default.type: "com.jippy.driver.dto.OrderAcceptedEvent"
 
@@ -149,4 +154,6 @@ uber:
     client-id: ${UBER_CLIENT_ID}
     client-secret: ${UBER_CLIENT_SECRET}
     scope: eats.deliveries
+
+    
 

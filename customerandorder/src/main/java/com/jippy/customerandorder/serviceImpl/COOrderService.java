@@ -1293,6 +1293,8 @@ public class COOrderService implements IOrderService {
             CoManifestItemDto item = new CoManifestItemDto();
             item.setName(productNamesMap.getOrDefault(p.getProductId(), "Product"));
             item.setQuantity(p.getQuantity());
+            item.setPrice(p.getOrderTotalAmount());
+            item.setCurrencyCode(COConstants.CURRENCY_CODE_INR);
             // item.setVariantName(variantNamesMap.get(p.getVariantOptionId()));
             return item;
         }).collect(Collectors.toList());
