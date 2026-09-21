@@ -15,29 +15,52 @@ public class AddressDtoDeserializer extends JsonDeserializer<AddressDto> {
     @Override
     public AddressDto deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonNode node = p.getCodec().readTree(p);
-
         AddressDto addressDto = new AddressDto();
 
-        // Handle string or object payloads safely
+        if (node == null) {
+            return addressDto;
+        }
+
+        // 1. If node is a raw text string, check whether it is a stringified JSON object
         if (node.isTextual()) {
-            addressDto.setFormattedAddress(node.asText());
+            String text = node.asText();
+            if (text.startsWith("{")) {
+                try {
+                    ObjectMapper mapper = (ObjectMapper) p.getCodec();
+                    JsonNode innerNode = mapper.readTree(text);
+                    parseJsonNodeIntoDto(innerNode, addressDto);
+                    return addressDto;
+                } catch (Exception ignored) {
+                    // If parsing fails, treat it as a pure string address
+                }
+            }
+            addressDto.setFormattedAddress(text);
         } else if (node.isObject()) {
-            if (node.has("formatted_address")) {
-                addressDto.setFormattedAddress(node.get("formatted_address").asText());
-            }
-            if (node.has("location")) {
-                JsonNode locNode = node.get("location");
-                LocationDto locationDto = new LocationDto();
-                if (locNode.has("latitude")) {
-                    locationDto.setLatitude(locNode.get("latitude").asDouble());
-                }
-                if (locNode.has("longitude")) {
-                    locationDto.setLongitude(locNode.get("longitude").asDouble());
-                }
-                addressDto.setLocation(locationDto);
-            }
+            // 2. Standard JSON Object processing
+            parseJsonNodeIntoDto(node, addressDto);
         }
 
         return addressDto;
     }
+
+    private void parseJsonNodeIntoDto(JsonNode node, AddressDto addressDto) {
+        if (node.has("formatted_address")) {
+            addressDto.setFormattedAddress(node.get("formatted_address").asText());
+        }
+
+        if (node.has("location") && !node.get("location").isNull()) {
+            JsonNode locNode = node.get("location");
+            LocationDto locationDto = new LocationDto();
+
+            if (locNode.has("latitude")) {
+                locationDto.setLatitude(locNode.get("latitude").asDouble());
+            }
+            if (locNode.has("longitude")) {
+                locationDto.setLongitude(locNode.get("longitude").asDouble());
+            }
+
+            addressDto.setLocation(locationDto);
+        }
+    }
+
 }

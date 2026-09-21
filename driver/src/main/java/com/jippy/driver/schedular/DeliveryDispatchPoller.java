@@ -25,7 +25,7 @@ public class DeliveryDispatchPoller {
     public void pollAndDispatchDeliveries() {
         long currentEpochMillis = System.currentTimeMillis();
 
-        log.info("======================Uber delivery called");
+        //log.info("======================Uber delivery called");
 
         Set<String> readyOrderIds = redisTemplate.opsForZSet().rangeByScore(
                 OrderAcceptedKafkaConsumer.DISPATCH_QUEUE_KEY,
@@ -33,7 +33,7 @@ public class DeliveryDispatchPoller {
                 currentEpochMillis
         );
 
-        log.info("======================================readyOrderIds"+readyOrderIds);
+        //log.info("======================================readyOrderIds"+readyOrderIds);
 
         if (readyOrderIds == null || readyOrderIds.isEmpty()) {
             return;

@@ -1,5 +1,7 @@
 package com.jippy.driver.serviceImpl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jippy.driver.dto.OrderAcceptedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,27 +22,35 @@ public class OrderAcceptedKafkaConsumer {
 
     private final StringRedisTemplate redisTemplate;
 
-    @KafkaListener(topics = "accepted-orders", groupId = "driver-service-group")
-    public void handleOrderAccepted(OrderAcceptedEvent event) {
+    @KafkaListener(topics = "accepted-orders", groupId = "driver-service-group-v3")
+    public void handleOrderAccepted(String eventJson) {
 
         log.info("consumer called ===========================");
+        log.info("Received payload: {}", eventJson);
 
-        long targetEpochMillis;
+        // Use ObjectMapper to convert manually
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule()); // Needed for LocalDateTime parsing
 
-        // FIX: Pull directly from 'event'
-        if (event.getDeliveryRequestAt() != null) {
-//            targetEpochMillis = event.getDeliveryRequestAt()
-//                    .atZone(ZoneId.of("Asia/Kolkata"))
-//                    .toInstant()
-//                    .toEpochMilli();
-            targetEpochMillis = System.currentTimeMillis();
+        try {
+            OrderAcceptedEvent orderAcceptedEvent = objectMapper.readValue(eventJson, OrderAcceptedEvent.class);
 
-            log.info("===================================targetEpochMillis" + targetEpochMillis);
-        } else {
-            targetEpochMillis = System.currentTimeMillis();
+            long targetEpochMillis;
+
+            // Parse deliveryRequestAt to Epoch Milliseconds (Asia/Kolkata timezone)
+            if (orderAcceptedEvent.getDeliveryRequestAt() != null) {
+                targetEpochMillis = orderAcceptedEvent.getDeliveryRequestAt()
+                        .atZone(ZoneId.of("Asia/Kolkata"))
+                        .toInstant()
+                        .toEpochMilli();
+                log.info("Scheduled delivery dispatch for order {} at epoch millis: {}", orderAcceptedEvent.getOrderId(), targetEpochMillis);
+            } else {
+                targetEpochMillis = System.currentTimeMillis(); // Fallback to immediate dispatch
+            }
+            redisTemplate.opsForZSet().add(DISPATCH_QUEUE_KEY, orderAcceptedEvent.getOrderId(), (double) targetEpochMillis);
+        } catch (Exception e) {
+            log.error("Failed to deserialize event payload", e);
         }
-
-        redisTemplate.opsForZSet().add("delivery:dispatch:queue", event.getOrderId(), (double) targetEpochMillis);
     }
 
 }

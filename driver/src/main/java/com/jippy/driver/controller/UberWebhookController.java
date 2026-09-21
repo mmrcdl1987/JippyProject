@@ -27,21 +27,21 @@ public class UberWebhookController {
     private final UberConfigProperties uberConfigProperties;
     private final ObjectMapper objectMapper;
 
-    @PostMapping
+    @PostMapping("/handleUberWebhook")
     public ResponseEntity<Void> handleUberWebhook(@RequestHeader(value = "X-Uber-Signature", required = false) String uberSignature,
             @RequestBody String rawJsonPayload) {
 
-       // log.info("Received Uber Webhook event: {} for delivery: {}", payload.getEventType(), payload.getDeliveryId());
+       log.info("Received Uber Webhook raw json: {} ", rawJsonPayload);
 
-//        // 1. Validate signature using HMAC-SHA256 with your Client Secret
-//        boolean isValid = isValidUberSignature(rawJsonPayload, uberSignature);
-//        log.info("Received signature status isValid: {} ",isValid);
-//
-//
-//        if (!isValid) {
-//            log.warn("Invalid webhook signature received!");
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
+        // 1. Validate signature using HMAC-SHA256 with your Client Secret
+        boolean isValid = isValidUberSignature(rawJsonPayload, uberSignature);
+        log.info("Received signature status isValid: {} ",isValid);
+
+
+        if (!isValid) {
+            log.warn("Invalid webhook signature received!");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
         try{
             // 2. Deserialize JSON payload manually after verification
