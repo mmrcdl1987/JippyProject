@@ -146,6 +146,7 @@ uber:
     client-id: ${UBER_CLIENT_ID}
     client-secret: ${UBER_CLIENT_SECRET}
     scope: eats.deliveries
+    webhook-url: https://eatable-marbles-outgoing.ngrok-free.dev/api/driver/webhooks/uber/handleUberWebhook
 
 
 

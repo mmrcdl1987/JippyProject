@@ -6,6 +6,7 @@ import com.jippy.driver.serviceImpl.OrderAcceptedKafkaConsumer;
 import com.jippy.driver.serviceImpl.UberDirectClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,9 @@ public class DeliveryDispatchPoller {
     private final StringRedisTemplate redisTemplate;
     private final UberDirectClient uberDirectClient;
     private final COFeignClient coFeignClient;
+
+    @Value("${uber.direct.webhook-url}")
+    private String uberWebhookUrl;
 
     @Scheduled(fixedDelay = 5000)
     public void pollAndDispatchDeliveries() {
@@ -47,6 +51,7 @@ public class DeliveryDispatchPoller {
                 try {
                     // Pass orderId to createDelivery method
                     UberDispatchRequestDto uberDispatchRequestDto = coFeignClient.getOrderDetailsForDelivery(orderId);
+                    uberDispatchRequestDto.setUberWebhookUrl(uberWebhookUrl);
                     uberDirectClient.createDelivery(uberDispatchRequestDto);
                 } catch (Exception e) {
                     log.error("Failed to create Uber delivery for orderId: {}. Re-queueing job.", orderId, e);

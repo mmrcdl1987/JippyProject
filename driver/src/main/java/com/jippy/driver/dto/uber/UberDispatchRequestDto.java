@@ -41,4 +41,6 @@ public class UberDispatchRequestDto {
 
     @JsonProperty("manifest_items")
     private List<ManifestItemDto> manifestItems;
+
+    private String uberWebhookUrl;
 }
