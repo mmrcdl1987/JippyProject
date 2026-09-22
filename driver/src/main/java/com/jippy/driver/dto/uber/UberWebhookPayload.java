@@ -24,6 +24,8 @@ public class UberWebhookPayload {
         private Courier courier;
         private Location location;
         private String status;
+        private Fee fee;
+        private Fee tip;
     }
 
     @Data
@@ -46,5 +48,12 @@ public class UberWebhookPayload {
         private double lat;
         private double lng;
         private double bearing;
+    }
+
+    @Data
+    public static class Fee {
+        private Integer fee;    // Value in lowest currency unit (e.g., cents/paise)
+        private Integer amount; // Alternative field name for tip
+        private String currency;
     }
 }

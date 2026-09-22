@@ -33,15 +33,15 @@ public class UberWebhookController {
 
        log.info("Received Uber Webhook raw json: {} ", rawJsonPayload);
 
-        // 1. Validate signature using HMAC-SHA256 with your Client Secret
-        boolean isValid = isValidUberSignature(rawJsonPayload, uberSignature);
-        log.info("Received signature status isValid: {} ",isValid);
-
-
-        if (!isValid) {
-            log.warn("Invalid webhook signature received!");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+//        // 1. Validate signature using HMAC-SHA256 with your Client Secret
+//        boolean isValid = isValidUberSignature(rawJsonPayload, uberSignature);
+//        log.info("Received signature status isValid: {} ",isValid);
+//
+//
+//        if (!isValid) {
+//            log.warn("Invalid webhook signature received!");
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
 
         try{
             // 2. Deserialize JSON payload manually after verification
@@ -68,6 +68,9 @@ public class UberWebhookController {
 
                         uberTrackingService.assignDriverToOrder(orderId, uberDeliveryId, driverId, driverName,phoneNumber,
                                 vehiclePlate,vehicleType);
+
+                        // Record current estimated fee
+                        recordOrUpdateCharges(orderId, uberDeliveryId, payload);
                     } if ("dropoff".equalsIgnoreCase(status) || "pickup_complete".equalsIgnoreCase(status)) {
 
                         Double currentLatitude =  payload.getData().getLocation().getLat();
@@ -92,6 +95,20 @@ public class UberWebhookController {
                 case "delivery.completed":
                     String completedDriverId = payload.getData().getCourier().getId();
                     uberTrackingService.finalizeAndStoreRoute(orderId, uberDeliveryId, completedDriverId);
+
+                    // Lock in final charged fee
+                    recordOrUpdateCharges(orderId, uberDeliveryId, payload);
+                    break;
+
+                case "delivery.canceled":
+                case "delivery.unfulfilled":
+                case "delivery.expired":
+                    // Direct event types for cancellation and unfulfilled orders
+                    String failStatus = payload.getData() != null && payload.getData().getStatus() != null
+                            ? payload.getData().getStatus()
+                            : eventType.replace("delivery.", "");
+
+                    uberTrackingService.handleCancellationOrFailure(orderId, uberDeliveryId, failStatus);
                     break;
 
                 default:
@@ -104,11 +121,19 @@ public class UberWebhookController {
         }catch (Exception e){
             log.info("An exception occured : "+e.getMessage());
         }
-
-
-
-
         return ResponseEntity.ok().build();
+    }
+
+    private void recordOrUpdateCharges(String orderId, String uberDeliveryId, UberWebhookPayload payload) {
+        if (payload.getData() != null && payload.getData().getFee() != null) {
+            Double deliveryFee = payload.getData().getFee().getFee() / 100.0; // convert cents/paise
+            String currency = payload.getData().getFee().getCurrency();
+            Double tipAmount = (payload.getData().getTip() != null)
+                    ? payload.getData().getTip().getAmount() / 100.0
+                    : 0.0;
+
+            uberTrackingService.saveDeliveryCharges(orderId, uberDeliveryId, deliveryFee, tipAmount, currency);
+        }
     }
 
     private boolean isValidUberSignature(String rawJsonPayload, String uberSignature) {

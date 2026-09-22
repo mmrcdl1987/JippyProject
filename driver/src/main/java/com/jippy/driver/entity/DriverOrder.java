@@ -3,6 +3,7 @@ package com.jippy.driver.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import org.locationtech.jts.geom.LineString;
 
 import java.math.BigDecimal;
@@ -84,6 +85,7 @@ public class DriverOrder {
     private LineString deliveryRoute;
 
     // One-to-One bidirectional mapping with ExternalDriverOrder
+    @ToString.Exclude // <--- Add this annotation on the relational field
     @OneToOne(mappedBy = "driverOrder", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ExternalDriverOrder externalDriverOrder;
 
