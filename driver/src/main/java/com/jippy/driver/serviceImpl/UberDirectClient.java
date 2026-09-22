@@ -20,6 +20,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -122,18 +123,50 @@ public class UberDirectClient {
         ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+
+            Map<String, Object> body = response.getBody();
+
             String uberDeliveryId = (String) response.getBody().get("id");
             log.info("===================={}",uberDeliveryId);
 
+            String trackingUrl = (String) body.get("tracking_url");
+            String quoteId = (String) body.get("quote_id");
+
+            // 2. Extract and parse Fee & Currency
+            Double feeAmount = 0.0;
+            String currency = "INR";
+
+            // Direct top-level 'fee' field
+            if (body.get("fee") != null) {
+                Number feeNumber = (Number) body.get("fee");
+                feeAmount = feeNumber.doubleValue() / 100.0; // convert minor unit to major unit (paise -> rupees)
+            }
+
+            if (body.get("currency") != null) {
+                currency = (String) body.get("currency");
+            }
+            // Fallback check if Uber returns nested 'full_fee' object
+            else if (body.get("full_fee") instanceof Map) {
+                Map<String, Object> fullFee = (Map<String, Object>) body.get("full_fee");
+                if (fullFee.get("total") != null) {
+                    feeAmount = ((Number) fullFee.get("total")).doubleValue() / 100.0;
+                }
+                if (fullFee.get("currency_code") != null) {
+                    currency = (String) fullFee.get("currency_code");
+                }
+            }
+
+            log.info("Successfully created delivery ID: {}, Fee: {} {}", uberDeliveryId, feeAmount, currency);
+
             // save uber driver Id to database
-            saveUberdetails(uberDispatchRequestDto.getExternalOrderId(),uberDeliveryId);
+            saveUberdetails(uberDispatchRequestDto.getExternalOrderId(),uberDeliveryId,trackingUrl,feeAmount,quoteId);
 
             return (String) response.getBody().get("id"); // Returns Uber Delivery ID
         }
         throw new RuntimeException("Failed to dispatch order to Uber Direct");
     }
 
-    private void saveUberdetails(String orderId, String uberDeliveryId) {
+    private void saveUberdetails(String orderId, String uberDeliveryId,String trackingUrl, Double feeAmount, String quoteId) {
 
         DriverOrder driverOrder = new DriverOrder();
 
@@ -149,6 +182,9 @@ public class UberDirectClient {
         externalDriverOrder.setDriverOrder(driverOrder);
         externalDriverOrder.setExternalDeliveryId(uberDeliveryId);
         externalDriverOrder.setProviderName(DConstants.DRIVER_ORDER_UBER_EXTERNAL_PROVIDER);
+        externalDriverOrder.setTrackingUrl(trackingUrl);
+        externalDriverOrder.setUber_delivery_charges(BigDecimal.valueOf(feeAmount));
+        externalDriverOrder.setExternalQuoteId(quoteId);
         externalDriverOrder.setCreatedAt(LocalDateTime.now());
 
         externalDriverOrderRepository.save(externalDriverOrder);

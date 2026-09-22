@@ -161,6 +161,8 @@ CREATE TABLE "jippy_driver"."external_driver_orders" (
     uber_delivery_charges NUMERIC(10, 2),
     uber_base_fare NUMERIC(10, 2),
     uber_rain_surge NUMERIC(10, 2),
+    uber_tip NUMERIC(10, 2),
+    retry_count integer NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITHOUT TIME ZONE,
 

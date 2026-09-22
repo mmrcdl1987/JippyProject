@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -25,6 +26,7 @@ public class ExternalDriverOrder {
     @Column(name = "driver_order_id", nullable = false, insertable = false, updatable = false)
     private Integer driverOrderId;
 
+    @ToString.Exclude // <--- Add this annotation on the relational field
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_order_id", referencedColumnName = "driver_order_id", nullable = false)
     private DriverOrder driverOrder;
@@ -88,6 +90,12 @@ public class ExternalDriverOrder {
 
     @Column(name = "uber_rain_surge", precision = 10, scale = 2)
     private BigDecimal uber_rain_surge;
+
+    @Column(name = "uber_tip", precision = 10, scale = 2)
+    private BigDecimal uberTip;
+
+    @Column(name = "retry_count", nullable = false)
+    private Integer retryCount = 0;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
