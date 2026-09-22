@@ -3,6 +3,7 @@ package com.jippy.foodandmart.serviceImpl;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
+import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.MerchantAlreadyExistsException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
@@ -33,7 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.security.SecureRandom;
 import java.util.*;
 
-        @Service
+@Service
 @Slf4j
 @RequiredArgsConstructor
 public class FmMerchantServiceImpl implements IFmMerchantService {
@@ -1257,41 +1258,41 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
             // GET MERCHANT + BANK
             // ================================================================
 
-            @Override
-            public FmMerchantWithBankDto getMerchantWithBank(Integer merchantId) {
+                @Override
+                public FmMerchantWithBankDto getMerchantWithBank(Integer merchantId) {
 
-                log.info("Fetching merchant with bank details " + "for merchantId: {}", merchantId);
-
-
-                FmMerchantWithBankProjection data = merchantRepository.getMerchantWithBank(merchantId);
+                    log.info("Fetching merchant with bank details " + "for merchantId: {}", merchantId);
 
 
-                if (data == null) {
+                    FmMerchantWithBankProjection data = merchantRepository.getMerchantWithBank(merchantId);
 
-                    log.error("Merchant with bank details not found " + "for merchantId: {}", merchantId);
 
-                    throw new ResourceNotFoundException("Merchant not found with :" + merchantId);
+                    if (data == null) {
+
+                        log.error("Merchant with bank details not found " + "for merchantId: {}", merchantId);
+
+                        throw new ResourceNotFoundException("Merchant not found with :" + merchantId);
+                    }
+
+
+                    log.info("Successfully fetched merchant + bank details " + "for merchantId: {}", merchantId);
+
+                    FmMerchantWithBankDto response = FmMerchantMapper.mapToMerchantWithBankDto(data);
+
+    //                FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(
+    //                        merchantId,
+    //                        FmAppConstants.TYPE_MERCHANT
+    //                ).orElse(null);
+
+    //                if (kyc != null) {
+    //                    response.setAadharNumber(kyc.getAadhaarNumber());
+    //                    response.setPanNumber(kyc.getPanNumber());
+    //            response.setAadhaarNumberUrl(kyc.getAadhaarNumberUrl());
+    //            response.setPanNumberUrl(kyc.getPanNumberUrl());
+    //                }
+
+                    return response;
                 }
-
-
-                log.info("Successfully fetched merchant + bank details " + "for merchantId: {}", merchantId);
-
-                FmMerchantWithBankDto response = FmMerchantMapper.mapToMerchantWithBankDto(data);
-
-//                FmUserKyc kyc = userKycRepository.findByEntityIdAndEntityType(
-//                        merchantId,
-//                        FmAppConstants.TYPE_MERCHANT
-//                ).orElse(null);
-
-//                if (kyc != null) {
-//                    response.setAadharNumber(kyc.getAadhaarNumber());
-//                    response.setPanNumber(kyc.getPanNumber());
-//            response.setAadhaarNumberUrl(kyc.getAadhaarNumberUrl());
-//            response.setPanNumberUrl(kyc.getPanNumberUrl());
-//                }
-
-                return response;
-            }
 
 
             // ================================================================
@@ -1508,5 +1509,55 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
                         merchantId,
                         address.getAddressId()
                 );
+            }
+
+//            ==========================================================================
+//            ==========================================================================
+            /**
+             * Searches merchants by merchant name.
+             */
+            @Override
+            @Transactional(readOnly = true)
+            public List<FmMerchantSearchResponseDto> searchByMerchantName(
+                    String merchantName) {
+
+                log.info("Searching merchant by name: {}", merchantName);
+
+                // Validate search input
+                if (merchantName == null || merchantName.trim().isEmpty()) {
+
+                    log.warn("Merchant name is empty");
+
+                    throw new BadRequestException(
+                            "Merchant name cannot be empty"
+                    );
+                }
+
+                // Remove unnecessary spaces
+                merchantName = merchantName.trim();
+
+                // Fetch matching merchants from database
+                List<FmMerchant> merchants =
+                        merchantRepository.searchByMerchantName(merchantName);
+
+                log.info(
+                        "Found {} merchants for search: {}",
+                        merchants.size(),
+                        merchantName
+                );
+
+                // Convert entity list into DTO list
+                List<FmMerchantSearchResponseDto> response =
+                        new ArrayList<>();
+
+                for (FmMerchant merchant : merchants) {
+
+                    FmMerchantSearchResponseDto dto =
+                            FmMerchantMapper.mapToSearchDto(merchant);
+
+                    response.add(dto);
+                }
+
+                return response;
             }
 }

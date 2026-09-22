@@ -19,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -97,7 +96,7 @@ public class FmCategoryServiceImpl implements IFmCategoryService {
             /*
              * Validate image
              */
-            validateCategoryImage(categoryImage);
+//            validateCategoryImage(categoryImage);
 
 
             /*
@@ -386,7 +385,7 @@ public class FmCategoryServiceImpl implements IFmCategoryService {
             /*
              * Validate category image
              */
-            validateCategoryImage(categoryImage);
+//            validateCategoryImage(categoryImage);
 
 
             /*
@@ -586,10 +585,10 @@ public class FmCategoryServiceImpl implements IFmCategoryService {
         String contentType = file.getContentType();
 
 
-        if (!isAllowedImageContentType(contentType)) {
-
-            throw new ImageValidationException("Only JPG, JPEG, PNG and WEBP images are allowed");
-        }
+//        if (!isAllowedImageContentType(contentType)) {
+//
+//            throw new ImageValidationException("Only JPG, JPEG, PNG and WEBP images are allowed");
+//        }
 
 
         /*
@@ -686,14 +685,14 @@ public class FmCategoryServiceImpl implements IFmCategoryService {
     /*
      * Validate allowed image MIME types.
      */
-    private boolean isAllowedImageContentType(String contentType) {
-
-        if (contentType == null) {
-            return false;
-        }
-
-        return contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_JPEG) || contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_PNG) || contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_WEBP);
-    }
+//    private boolean isAllowedImageContentType(String contentType) {
+//
+//        if (contentType == null) {
+//            return false;
+//        }
+//
+//        return contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_JPEG) || contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_PNG) || contentType.equalsIgnoreCase(FmAppConstants.IMAGE_CONTENT_TYPE_WEBP);
+//    }
 
 
     //    ----------------------------------------------------------------------------

@@ -211,7 +211,7 @@ public class S3ServiceImpl implements S3Service {
          *
          * is already handled by FmCategoryServiceImpl.
          */
-        validateCategoryImage(image);
+//        validateCategoryImage(image);
 
 
         String contentType = image.getContentType().toLowerCase();
@@ -224,10 +224,10 @@ public class S3ServiceImpl implements S3Service {
          * This should never happen because MIME type is already
          * validated, but keep this check for production safety.
          */
-        if (extension == null) {
-
-            throw new BadRequestException("Unsupported category image type.");
-        }
+//        if (extension == null) {
+//
+//            throw new BadRequestException("Unsupported category image type.");
+//        }
 
         /*
          * ========================================================

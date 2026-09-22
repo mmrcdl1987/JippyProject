@@ -9,6 +9,8 @@ public interface FmAdminOutletMenuProjection {
     // OUTLET
     // =========================================================
 
+    Integer getProductAvailableTimingId();
+
     Integer getOutletId();
 
     String getOutletName();

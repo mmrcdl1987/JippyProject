@@ -726,14 +726,22 @@ public class FmApprovalRequestUpdateServiceImpl
         // ----------------------- DRIVER APPROVAL -----------------------
         if (FmAppConstants.TYPE_DRIVER.equalsIgnoreCase(approvalRequest.getEntityType())) {
 
-            log.info("Calling Driver Service to Approve Driver. Driver Id : {}",
-                    approvalRequest.getEntityId());
+            log.info(
+                    "Calling Driver Service to Approve Driver | Driver Id : {} | Approval Level : {}",
+                    approvalRequest.getEntityId(),
+                    approvalRequest.getCurrentLevel()
+            );
 
             driverFeignClient.approveDriver(
-                    approvalRequest.getEntityId());
+                    approvalRequest.getEntityId(),
+                    approvalRequest.getCurrentLevel()
+            );
 
-            log.info("Driver Approved Successfully in Driver Service. Driver Id : {}",
-                    approvalRequest.getEntityId());
+            log.info(
+                    "Driver Approved Successfully in Driver Service | Driver Id : {} | Approval Level : {}",
+                    approvalRequest.getEntityId(),
+                    approvalRequest.getCurrentLevel()
+            );
             return;
         }
 

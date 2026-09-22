@@ -2,6 +2,7 @@ package com.jippy.foodandmart.mapper;
 
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmProduct;
+import com.jippy.foodandmart.entity.FmProductAvailableTiming;
 import com.jippy.foodandmart.entity.FmProductVariant;
 import com.jippy.foodandmart.projections.FmMasterProductCategoryProjection;
 import com.jippy.foodandmart.projections.FmProductCategoryProjection;
@@ -21,6 +22,44 @@ public class FmProductMapper {
     // CATEGORY UPDATE RESPONSE MAPPER
     // ============================================================
 
+    /**
+     * Maps product name -> merchant price.
+     */
+    public static Map<String, Double> priceMapper = new HashMap<String, Double>();
+
+    // ============================================================
+    // PRODUCT CATEGORY PROJECTION -> RESPONSE DTO
+    // ============================================================
+    /**
+     * Maps product name -> day-of-week name.
+     * <p>
+     * Example:
+     * Chicken Biryani -> Monday
+     */
+    public static Map<String, String> dayOfWeekMapper = new HashMap<String, String>();
+
+    // ============================================================
+    // MASTER PRODUCT CATEGORY PROJECTION -> RESPONSE DTO
+    // ============================================================
+    /**
+     * Maps product name -> raw CSV timing string.
+     * <p>
+     * Example:
+     * Chicken Biryani -> 9:00-22:00
+     */
+    public static Map<String, String> timingMapper = new HashMap<String, String>();
+
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
+
+    private FmProductMapper() {
+    }
+
+    // ============================================================
+    // BULK UPLOAD MAPPERS
+    // ============================================================
+
     public static FmProductCategoryUpdateResponseDto mapCategoryUpdateResponse(String productType, String productName, Integer updatedCategoryId, Integer updatedRecords) {
 
         FmProductCategoryUpdateResponseDto dto = new FmProductCategoryUpdateResponseDto();
@@ -33,10 +72,6 @@ public class FmProductMapper {
 
         return dto;
     }
-
-    // ============================================================
-    // PRODUCT CATEGORY PROJECTION -> RESPONSE DTO
-    // ============================================================
 
     public static FmProductCategoryResponseDto mapProductCategoryProjectionToDto(FmProductCategoryProjection projection) {
 
@@ -53,10 +88,6 @@ public class FmProductMapper {
         return dto;
     }
 
-    // ============================================================
-    // MASTER PRODUCT CATEGORY PROJECTION -> RESPONSE DTO
-    // ============================================================
-
     public static FmMasterProductCategoryResponseDto mapMasterProductCategoryProjectionToDto(FmMasterProductCategoryProjection projection) {
 
         FmMasterProductCategoryResponseDto dto = new FmMasterProductCategoryResponseDto();
@@ -71,38 +102,6 @@ public class FmProductMapper {
 
         return dto;
     }
-
-    // ============================================================
-    // CONSTRUCTOR
-    // ============================================================
-
-    private FmProductMapper() {
-    }
-
-    // ============================================================
-    // BULK UPLOAD MAPPERS
-    // ============================================================
-
-    /**
-     * Maps product name -> merchant price.
-     */
-    public static Map<String, Double> priceMapper = new HashMap<String, Double>();
-
-    /**
-     * Maps product name -> day-of-week name.
-     * <p>
-     * Example:
-     * Chicken Biryani -> Monday
-     */
-    public static Map<String, String> dayOfWeekMapper = new HashMap<String, String>();
-
-    /**
-     * Maps product name -> raw CSV timing string.
-     * <p>
-     * Example:
-     * Chicken Biryani -> 9:00-22:00
-     */
-    public static Map<String, String> timingMapper = new HashMap<String, String>();
 
     // ============================================================
     // PRODUCT DTO -> ENTITY
@@ -265,6 +264,82 @@ public class FmProductMapper {
     // ============================================================
     // PRODUCT DETAIL RESPONSE
     // ============================================================
+
+    //    =======================================================================================
+//    =======================================================================================
+    public static FmProductTimingUpdateDto mapProductTimingUpdate(FmProductAvailableTiming timing) {
+
+        FmProductTimingUpdateDto dto = new FmProductTimingUpdateDto();
+
+        dto.setProductAvailableTimingId(timing.getProductAvailableTimingId());
+
+        dto.setStartTime(timing.getStartTime());
+
+        dto.setEndTime(timing.getEndTime());
+
+        return dto;
+    }
+
+    /**
+     * Converts FmProduct entity into
+     * FmProductSearchResponseDto.
+     * <p>
+     * This method is static because the mapper
+     * does not require any injected dependencies.
+     *
+     * @param product FmProduct entity
+     * @return FmProductSearchResponseDto
+     */
+    public static FmProductSearchResponseDto mapToSearchDto(FmProduct product) {
+
+        FmProductSearchResponseDto dto = new FmProductSearchResponseDto();
+
+        // Product identification
+        dto.setProductId(product.getProductId());
+
+        dto.setOutletCategoryId(product.getOutletCategoryId());
+
+        // Product information
+        dto.setProductName(product.getProductName());
+
+        dto.setDescription(product.getDescription());
+
+        // Pricing
+        dto.setMerchantPrice(product.getMerchantPrice());
+
+        // Product configuration
+        dto.setIsVeg(product.getIsVeg());
+
+        dto.setHasProductVariants(product.getHasProductVariants());
+
+        dto.setImageLink(product.getImageLink());
+
+        dto.setIsToggle(product.getIsToggle());
+
+        dto.setIsActive(product.getIsActive());
+
+        // Rating
+        dto.setRating(product.getRating());
+
+        // Image and description status
+        dto.setIsImageDescUpdated(product.getIsImageDescUpdated());
+
+        // Product type
+        dto.setProductType(product.getProductType());
+
+        // Audit information
+        dto.setCreatedAt(product.getCreatedAt());
+
+        dto.setCreatedBy(product.getCreatedBy());
+
+        dto.setUpdatedAt(product.getUpdatedAt());
+
+        dto.setUpdatedBy(product.getUpdatedBy());
+
+        return dto;
+    }
+
+//    =================================================================================
 
     public FmProductDetailResponseDto toDto(FmProduct product) {
 

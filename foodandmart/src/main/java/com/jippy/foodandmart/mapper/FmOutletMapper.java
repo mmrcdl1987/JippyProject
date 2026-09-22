@@ -5,7 +5,7 @@
 //import com.jippy.foodandmart.entity.FmOutlet;
 //import com.jippy.foodandmart.entity.FmOutletAddress;
 //
-///**
+/// **
 // * Static utility class for converting between {@link FmOutletRequestDTO} /
 // * {@link FmOutletCreatedDTO} and the {@link FmOutlet} / {@link FmOutletAddress} entities.
 // *
@@ -141,7 +141,6 @@ import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.projections.*;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.dialect.function.array.JsonArrayViaElementArgumentReturnTypeResolver;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -232,9 +231,7 @@ public final class FmOutletMapper {
         dto.setRadius(outlet.getRadius());
         dto.setIsActive(outlet.getIsActive());
         dto.setIsApproved(outlet.getIsApproved());
-     dto.setIsGstApplied(
-                Boolean.TRUE.equals(outlet.getIsGstApplied())
-        );
+        dto.setIsGstApplied(Boolean.TRUE.equals(outlet.getIsGstApplied()));
         dto.setOutletPicUrl(outlet.getOutletPicUrl());
         // Outlet Location
         //
@@ -284,18 +281,13 @@ public final class FmOutletMapper {
         // PostGIS Point -> latitude / longitude
         if (fmOutletAddress.getLocation() != null) {
 
-            fmAddressRequestDto.setLongitude(
-                    fmOutletAddress.getLocation().getX()
-            );
+            fmAddressRequestDto.setLongitude(fmOutletAddress.getLocation().getX());
 
-            fmAddressRequestDto.setLatitude(
-                    fmOutletAddress.getLocation().getY()
-            );
+            fmAddressRequestDto.setLatitude(fmOutletAddress.getLocation().getY());
         }
 
         return fmAddressRequestDto;
     }
-
 
 
     // ADDRESS -> OUTLET RESPONSE DTO
@@ -382,12 +374,9 @@ public final class FmOutletMapper {
 
             GeometryFactory geometryFactory = new GeometryFactory();
 
-            Point point = geometryFactory.createPoint
-                    (new Coordinate(
-                            dto.getLongitude(),   // X = Longitude
-                            dto.getLatitude()     // Y = Latitude
-                    )
-            );
+            Point point = geometryFactory.createPoint(new Coordinate(dto.getLongitude(),   // X = Longitude
+                    dto.getLatitude()     // Y = Latitude
+            ));
 
             point.setSRID(4326);
 
@@ -396,7 +385,6 @@ public final class FmOutletMapper {
 
         return address;
     }
-
 
 
     // ── Entity → DTO ──────────────────────────────────────────────────────────
@@ -492,10 +480,7 @@ public final class FmOutletMapper {
 
                 if (day != null) {
 
-                    String timingKey =
-                            day + "_"
-                                    + row.getOpeningTime() + "_"
-                                    + row.getClosingTime();
+                    String timingKey = day + "_" + row.getOpeningTime() + "_" + row.getClosingTime();
 
                     if (!outletTimingMap.containsKey(timingKey)) {
 
@@ -1144,9 +1129,18 @@ public final class FmOutletMapper {
         address.setRoad(dto.getRoad());
         address.setLandmark(dto.getLandmark());
 
-        address.setStateId(dto.getStateId());
-        address.setCityId(dto.getCityId());
-        address.setAreaId(dto.getAreaId());
+        // Update only when provided in request
+        if (dto.getStateId() != null) {
+            address.setStateId(dto.getStateId());
+        }
+
+        if (dto.getCityId() != null) {
+            address.setCityId(dto.getCityId());
+        }
+
+        if (dto.getAreaId() != null) {
+            address.setAreaId(dto.getAreaId());
+        }
     }
 
     /**
@@ -1274,9 +1268,7 @@ public final class FmOutletMapper {
         response.setPanNumber(request.getPanNumber());
         response.setFssaiNumber(request.getFssaiNumber());
         response.setGstNumber(request.getGstNumber());
-        response.setIsGstApplied(
-                Boolean.TRUE.equals(outlet.getIsGstApplied())
-        );
+        response.setIsGstApplied(Boolean.TRUE.equals(outlet.getIsGstApplied()));
         response.setUsername(request.getUsername());
         response.setUpdatedBy(request.getUpdatedBy());
 
@@ -1625,7 +1617,7 @@ public final class FmOutletMapper {
                 if (!exists) {
 
                     FmProductTimingDto timing = new FmProductTimingDto();
-
+                    timing.setProductAvailableTimingId(row.getProductAvailableTimingId());
                     timing.setDay(row.getProductDay());
                     timing.setStartTime(row.getStartTime());
                     timing.setEndTime(row.getEndTime());
@@ -1683,11 +1675,11 @@ public final class FmOutletMapper {
     }
 //    =======================================================================================
 //    =======================================================================================
+
     /**
      * Converts outlet projection into response DTO.
      */
-    public static FmOutletCompleteDetailsDto mapToCompleteDetailsDto(
-            FmOutletCompleteDetailsProjection projection) {
+    public static FmOutletCompleteDetailsDto mapToCompleteDetailsDto(FmOutletCompleteDetailsProjection projection) {
 
         FmOutletCompleteDetailsDto dto = new FmOutletCompleteDetailsDto();
 
@@ -1704,6 +1696,100 @@ public final class FmOutletMapper {
 
         savUserKyc.setFssaiNumber(dto.getFssaiNumber());
         savUserKyc.setGstNumber(dto.getGstNumber());
+    }
+
+//    ================================================================================
+//    ================================================================================
+
+    /**
+     * Converts FmOutlet entity into FmOutletSearchResponseDto.
+     *
+     * Converts JTS Point into simple latitude and longitude values
+     * so that the API does not return the complete JTS object structure.
+     */
+    public static FmOutletSearchResponseDto mapToSearchDto(
+            FmOutlet outlet) {
+
+        FmOutletSearchResponseDto dto =
+                new FmOutletSearchResponseDto();
+
+        // Basic outlet details
+        dto.setOutletId(outlet.getOutletId());
+        dto.setOutletName(outlet.getOutletName());
+        dto.setOutletPicUrl(outlet.getOutletPicUrl());
+        dto.setOutletEmail(outlet.getOutletEmail());
+
+        // Contact details
+        dto.setAlternateOutletPhone(
+                outlet.getAlternateOutletPhone()
+        );
+
+        dto.setOutletPhone(
+                outlet.getOutletPhone()
+        );
+
+        // Outlet details
+        dto.setOutletType(outlet.getOutletType());
+        dto.setMerchantId(outlet.getMerchantId());
+        dto.setCuisineType(outlet.getCuisineType());
+
+        // Radius
+        dto.setRadius(outlet.getRadius());
+
+        // Convert Point into latitude and longitude
+        if (outlet.getOutletLocation() != null) {
+
+            dto.setLongitude(
+                    outlet.getOutletLocation().getX()
+            );
+
+            dto.setLatitude(
+                    outlet.getOutletLocation().getY()
+            );
+        }
+
+        // Rating details
+        dto.setTotalRating(outlet.getTotalRating());
+        dto.setTotalReviews(outlet.getTotalReviews());
+
+        // Subscription and promotion
+        dto.setSubscriptionStatus(
+                outlet.getSubscriptionStatus()
+        );
+
+        dto.setPromotionStatus(
+                outlet.getPromotionStatus()
+        );
+
+        // Audit details
+        dto.setCreatedAt(outlet.getCreatedAt());
+        dto.setCreatedBy(outlet.getCreatedBy());
+        dto.setUpdatedAt(outlet.getUpdatedAt());
+        dto.setUpdatedBy(outlet.getUpdatedBy());
+
+        // Status details
+        dto.setIsActive(outlet.getIsActive());
+        dto.setEmployeeId(outlet.getEmployeeId());
+        dto.setIsApproved(outlet.getIsApproved());
+
+        // Outlet configuration
+        dto.setAcceptsScheduledOrders(
+                outlet.getAcceptsScheduledOrders()
+        );
+
+        dto.setIsVegOutlet(
+                outlet.getIsVegOutlet()
+        );
+
+        dto.setIsGstApplied(
+                outlet.getIsGstApplied()
+        );
+
+        dto.setIsToggle(
+                outlet.getIsToggle()
+        );
+
+        return dto;
     }
 
 

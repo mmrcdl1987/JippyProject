@@ -108,6 +108,8 @@ public interface FmMerchantRepository
             u.account_holder_name AS accountHolderName,
             u.user_type AS userType,
 
+            k.aadhaar_number AS aadhaarNumber,
+            k.pan_number AS panNumber,
             k.aadhaar_number AS aadharNumber,
             k.pan_number AS panNumber,
             k.aadhaar_number_url AS aadhaarNumberUrl,
@@ -215,6 +217,30 @@ public interface FmMerchantRepository
     int approveMerchant(
             @Param("merchantId")
             Integer merchantId
+    );
+
+//    ===================================================================================
+//    ===================================================================================
+    /**
+     * Searches merchants by merchant name using a partial,
+     * case-insensitive match.
+     *
+     * Example:
+     * Input "ro" -> Rohan Vadluri
+     * Input "PON" -> merchants containing "pon"
+     *
+     * ILIKE is PostgreSQL-specific and provides case-insensitive
+     * searching without requiring the input to match the
+     * complete merchant name.
+     */
+    @Query("""
+            SELECT m
+            FROM FmMerchant m
+            WHERE LOWER(m.merchantName) LIKE LOWER(CONCAT('%', :merchantName, '%'))
+            ORDER BY m.merchantName ASC
+            """)
+    List<FmMerchant> searchByMerchantName(
+            @Param("merchantName") String merchantName
     );
 
 

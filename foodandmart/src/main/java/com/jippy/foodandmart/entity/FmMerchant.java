@@ -28,6 +28,8 @@ public class FmMerchant {
     private String merchantEmail;
     @Column(name = "merchant_phone", length = 20, unique = true)
     private String merchantPhone;
+    @Column(name = "date_of_birth")
+    private LocalDateTime dateOfBirth;
     @Column(name = "merchant_business_type", length = 50)
     private String merchantBusinessType;
     @Column(name = "status", length = 30)

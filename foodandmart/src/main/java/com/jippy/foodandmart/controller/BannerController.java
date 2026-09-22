@@ -1,13 +1,11 @@
 package com.jippy.foodandmart.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jippy.foodandmart.dto.BannerSlotDayResponseDto;
-import com.jippy.foodandmart.dto.CustomerBannerDto;
-import com.jippy.foodandmart.dto.GroupedBannerResponseDto;
-import com.jippy.foodandmart.dto.SettlementWeekResponseDto;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.service.BannerCacheService;
 import com.jippy.foodandmart.service.BannerSlotDayService;
 import com.jippy.foodandmart.service.MealTimeService;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.geo.*;
@@ -144,5 +142,37 @@ public class BannerController {
 
         return ResponseEntity.ok(bannerSlotDayService.getSettlementWeeks(year));
     }
+
+//    ==================================================================================
+//    ==================================================================================
+@GetMapping("/getSettlementWeekSlot")
+@Operation(
+        summary = "Get settlement week slot",
+        description = "Fetches settlement week slot details using weekSlotDaysId"
+)
+public ResponseEntity<FmSettlementWeekSlotDto> getSettlementWeekSlot(
+        @RequestParam Integer weekSlotDaysId) {
+
+    log.info(
+            "Received request to get settlement week slot for weekSlotDaysId: {}",
+            weekSlotDaysId
+    );
+
+    Optional<FmSettlementWeekSlotDto> result =
+            bannerSlotDayService.findSettlementWeekSlot(
+                    weekSlotDaysId
+            );
+
+    if (result.isEmpty()) {
+        return ResponseEntity.notFound().build();
+    }
+
+    log.info(
+            "Successfully fetched settlement week slot for weekSlotDaysId: {}",
+            weekSlotDaysId
+    );
+
+    return ResponseEntity.ok(result.get());
+}
 
 }

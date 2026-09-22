@@ -47,6 +47,9 @@ public class FmOutlet {
     @Column(name = "outlet_phone", length = 20, nullable = false)
     private String outletPhone;
 
+    @Column(name = "accepts_scheduled_orders")
+    private Boolean acceptsScheduledOrders;
+
     @Column(name = "radius", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal radius = new BigDecimal("3.00");

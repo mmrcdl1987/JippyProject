@@ -52,8 +52,8 @@ public interface CoOrderPriceBreakupRepository
                 opb.order_amount_discounted AS "orderAmountDiscounted",
                 opb.order_total_amount AS "orderTotalAmount",
 
-                opb.customer_delivery_fee_tax AS "customerDeliveryFeeTax"
-                opd.discount_type as "discountType"
+                opb.customer_delivery_fee_tax AS "customerDeliveryFeeTax",
+                opb.discount_type as "discountType"
 
             FROM jippy_customer_and_order.order_price_breakup opb
 

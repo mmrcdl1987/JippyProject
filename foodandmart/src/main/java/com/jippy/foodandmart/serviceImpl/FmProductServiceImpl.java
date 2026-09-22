@@ -4,6 +4,7 @@ import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.enums.FmVariantBulkUploadStatus;
+import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.FileProcessingException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmProductMapper;
@@ -3785,6 +3786,196 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
         throw new IllegalArgumentException(
                 "Product type must be PRODUCT or MASTERPRODUCT"
         );
+    }
+//    ==================================================================================
+//    ==================================================================================
+@Override
+@Transactional
+public FmProductTimingUpdateDto updateProductTimingsByAdminOrMerchant(
+        FmProductTimingUpdateDto dto) {
+
+    log.info(
+            "SERVICE_UPDATE_PRODUCT_TIMING_START | timingId={}",
+            dto.getProductAvailableTimingId()
+    );
+
+    // =========================================================
+    // VALIDATE REQUEST
+    // =========================================================
+
+    if (dto == null) {
+
+        log.warn("SERVICE_UPDATE_PRODUCT_TIMING_INVALID_REQUEST");
+
+        throw new IllegalArgumentException(
+                "Product timing request cannot be null"
+        );
+    }
+
+    if (dto.getProductAvailableTimingId() == null ||
+            dto.getProductAvailableTimingId() <= 0) {
+
+        log.warn(
+                "SERVICE_UPDATE_PRODUCT_TIMING_INVALID_ID | timingId={}",
+                dto.getProductAvailableTimingId()
+        );
+
+        throw new IllegalArgumentException(
+                "Valid productAvailableTimingId is required"
+        );
+    }
+
+    if (dto.getStartTime() == null) {
+
+        log.warn(
+                "SERVICE_UPDATE_PRODUCT_TIMING_START_TIME_MISSING | timingId={}",
+                dto.getProductAvailableTimingId()
+        );
+
+        throw new IllegalArgumentException(
+                "Start time is required"
+        );
+    }
+
+    if (dto.getEndTime() == null) {
+
+        log.warn(
+                "SERVICE_UPDATE_PRODUCT_TIMING_END_TIME_MISSING | timingId={}",
+                dto.getProductAvailableTimingId()
+        );
+
+        throw new IllegalArgumentException(
+                "End time is required"
+        );
+    }
+
+    // =========================================================
+    // FETCH EXISTING TIMING
+    // =========================================================
+
+    FmProductAvailableTiming timing =
+            productAvailableTimingRepository
+                    .findById(dto.getProductAvailableTimingId())
+                    .orElseThrow(() -> {
+
+                        log.warn(
+                                "PRODUCT_TIMING_NOT_FOUND | timingId={}",
+                                dto.getProductAvailableTimingId()
+                        );
+
+                        return new ResourceNotFoundException(
+                                "Product timing not found with id: "
+                                        + dto.getProductAvailableTimingId()
+                        );
+                    });
+
+    // =========================================================
+    // UPDATE START TIME
+    // =========================================================
+
+    timing.setStartTime(dto.getStartTime());
+
+    // =========================================================
+    // UPDATE END TIME
+    // =========================================================
+
+    timing.setEndTime(dto.getEndTime());
+
+    // =========================================================
+    // SAVE
+    // =========================================================
+
+    productAvailableTimingRepository.save(timing);
+
+    log.info(
+            "PRODUCT_TIMING_UPDATED_SUCCESSFULLY | timingId={} | productId={} | startTime={} | endTime={}",
+            timing.getProductAvailableTimingId(),
+            timing.getProductId(),
+            timing.getStartTime(),
+            timing.getEndTime()
+    );
+
+    // =========================================================
+    // RETURN RESPONSE
+    // =========================================================
+
+    return FmProductMapper.mapProductTimingUpdate(timing);
+}
+
+//=======================================================================================
+//=======================================================================================
+    /**
+     * Searches products by product name.
+     *
+     * Supports:
+     * - Partial product name
+     * - Case-insensitive search
+     * - Single-character search
+     *
+     * Example:
+     *
+     * "chi" -> Chicken Biryani
+     *         Chicken Fried Rice
+     *
+     * "bir" -> Chicken Biryani
+     *         Veg Biryani
+     *         Chandana Veg Biryani
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<FmProductSearchResponseDto> searchByProductName(String productName) {
+
+        log.info(
+                "Searching products by name: {}",
+                productName
+        );
+
+        // Validate input
+        if (productName == null || productName.trim().isEmpty()) {
+
+            log.warn(
+                    "Product name search input is empty"
+            );
+
+            throw new BadRequestException(
+                    "Product name cannot be empty"
+            );
+        }
+
+        // Remove unnecessary spaces
+        productName = productName.trim();
+
+        log.debug(
+                "Searching products with name: {}",
+                productName
+        );
+
+        // Fetch matching products from database
+        List<FmProduct> products =
+                productRepository.searchByProductName(
+                        productName
+                );
+
+        log.info(
+                "Found {} products for search: {}",
+                products.size(),
+                productName
+        );
+
+        // Create response list
+        List<FmProductSearchResponseDto> response =
+                new ArrayList<>();
+
+        // Convert entities into response DTOs
+        for (FmProduct product : products) {
+
+            FmProductSearchResponseDto dto =
+                    FmProductMapper.mapToSearchDto(product);
+
+            response.add(dto);
+        }
+
+        return response;
     }
 
     @Override

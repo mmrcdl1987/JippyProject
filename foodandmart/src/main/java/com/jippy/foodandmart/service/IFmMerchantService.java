@@ -34,6 +34,16 @@ public interface IFmMerchantService {
 
     FmMerchant createMerchantBulkUpload(FmMerchantRequestDTO dto);
 
+    /**
+     * Searches merchants using merchant name.
+     *
+     * @param merchantName partial merchant name
+     * @return matching merchants
+     */
+    List<FmMerchantSearchResponseDto> searchByMerchantName(
+            String merchantName
+    );
+
     Page<FmMerchantDto> getAdminMerchants(
             FmMerchantAdminFilterDto filter,
             int page,

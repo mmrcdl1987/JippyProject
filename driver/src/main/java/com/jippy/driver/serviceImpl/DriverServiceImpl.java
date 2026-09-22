@@ -436,38 +436,37 @@ public class DriverServiceImpl implements DriverService {
      * Approves the driver.
      */
     @Override
-    public void approveDriver(Integer driverId) {
+    public void approveDriver(Integer driverId, String approvalLevel) {
 
-        log.info("Started Driver Approval. Driver Id : {}", driverId);
+        log.info(
+                "Started Driver Approval | driverId={} | approvalLevel={}",
+                driverId,
+                approvalLevel
+        );
 
-        // Validate and fetch Driver
         Driver driver = driverRepository.findById(driverId)
-                .orElseThrow(() -> {
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Driver Not Found : " + driverId
+                ));
 
-                    log.error("Driver Not Found. Driver Id : {}", driverId);
-
-                    return new ResourceNotFoundException(
-                            "Driver Not Found : " + driverId);
-                });
-
-        // Update approval status
         driverRepository.approveDriver(driverId);
 
         log.info(
-                "Driver Approval Completed Successfully. Driver Id : {}",
-                driverId
+                "Driver Approval Completed | driverId={} | approvalLevel={}",
+                driverId,
+                approvalLevel
         );
 
-        // Send Driver Approval Email
         emailService.sendDriverApprovedEmail(
                 driver.getEmail(),
-                driver.getFirstName() + " " + driver.getLastName()
+                driver.getFirstName() + " " + driver.getLastName(),
+                approvalLevel
         );
 
         log.info(
-                "Driver Approval Email Sent Successfully. Driver Id : {}, Email : {}",
+                "Driver Approval Email Sent | driverId={} | approvalLevel={}",
                 driverId,
-                driver.getEmail()
+                approvalLevel
         );
     }
 

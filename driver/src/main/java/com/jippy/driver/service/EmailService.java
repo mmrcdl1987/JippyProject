@@ -1,7 +1,5 @@
 package com.jippy.driver.service;
 
-import java.io.File;
-
 /**
  * Common Email Service interface.
  *
@@ -18,7 +16,8 @@ public interface EmailService {
 
     void sendDriverApprovedEmail(
             String driverEmail,
-            String driverName
+            String driverName,
+            String approvalLevel
     );
 
 }

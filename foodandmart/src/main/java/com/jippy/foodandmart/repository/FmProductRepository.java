@@ -104,7 +104,7 @@ public interface FmProductRepository
 
     /**
      * Gets outlet category ID only from product ID.
-     *
+     * <p>
      * Kept for existing functionality that only supplies productId.
      */
     @Query(value = """
@@ -124,7 +124,7 @@ public interface FmProductRepository
     /**
      * Gets outlet category ID after validating the product
      * belongs to the requested outlet.
-     *
+     * <p>
      * Used by pricing functionality.
      */
     @Query(value = """
@@ -303,7 +303,7 @@ public interface FmProductRepository
 
     /**
      * Gets all active products for an outlet.
-     *
+     * <p>
      * Used by variant bulk-upload functionality.
      */
     @Query("""
@@ -369,9 +369,9 @@ public interface FmProductRepository
 
     /**
      * Fetch all active products for multiple outlets.
-     *
+     * <p>
      * Returned Object[] order:
-     *
+     * <p>
      * Fetch all products for multiple outlets in a single query.
      * <p>
      * Returns:
@@ -541,11 +541,11 @@ public interface FmProductRepository
 
     /**
      * Products
-     *      ↓
+     * ↓
      * outlet_categories
-     *      ↓
+     * ↓
      * outlets
-     *      ↓
+     * ↓
      * categories
      */
     @Query(value = """
@@ -727,30 +727,30 @@ public interface FmProductRepository
     List<FmOutletProductProjection> findProductsByOutletIds(@Param("outletId") Integer outletId);
 
     @Query(value = """
-            SELECT 
-                p.product_id,
-                p.product_name,
-                -- Main pricing logic based on variant presence
-                CASE 
-                    WHEN pvo.product_variant_options_id IS NULL THEN p.merchant_price
-                    WHEN UPPER(pvo.price_type) = 'MAIN' THEN pvo.variant_price
-                    ELSE p.merchant_price
-                END AS product_price,
+                    SELECT 
+                        p.product_id,
+                        p.product_name,
+                        -- Main pricing logic based on variant presence
+                        CASE 
+                            WHEN pvo.product_variant_options_id IS NULL THEN p.merchant_price
+                            WHEN UPPER(pvo.price_type) = 'MAIN' THEN pvo.variant_price
+                            ELSE p.merchant_price
+                        END AS product_price,
             
-                -- Variant Details (if available)
-                pvo.product_variant_options_id,
-                pvo.price_type,
-                pvo.variant_price,
-                pvgv.variant_name
+                        -- Variant Details (if available)
+                        pvo.product_variant_options_id,
+                        pvo.price_type,
+                        pvo.variant_price,
+                        pvgv.variant_name
             
-            FROM jippy_fm.products p 
-             JOIN jippy_fm.product_variant_options pvo 
-                ON pvo.product_id = p.product_id
-             JOIN jippy_fm.product_variant_group_values pvgv 
-                ON pvgv.product_variant_group_values_id = pvo.product_variant_group_values_id
+                    FROM jippy_fm.products p 
+                     JOIN jippy_fm.product_variant_options pvo 
+                        ON pvo.product_id = p.product_id
+                     JOIN jippy_fm.product_variant_group_values pvgv 
+                        ON pvgv.product_variant_group_values_id = pvo.product_variant_group_values_id
             
-                where p.product_id IN (:productIds)  and pvo.product_variant_options_id in (:productVariantIds)
-    """,nativeQuery = true)
+                        where p.product_id IN (:productIds)  and pvo.product_variant_options_id in (:productVariantIds)
+            """, nativeQuery = true)
     List<FmOrderProductItemsForMerchantProjection> getOrderProductItemsForMerchant(
             @Param("productIds") List<Integer> productIds,
             @Param("productVariantIds") List<Integer> productVariantIds);
@@ -763,15 +763,105 @@ public interface FmProductRepository
             """, nativeQuery = true)
     int updateProductOrVariantStatus(@Param("productId") Integer productId, @Param("isActive") String isActive);
 
+//    ========================================================================================
+//    ========================================================================================
+
+    /**
+     * Searches products by product name.
+     * <p>
+     * The search is:
+     * - Case-insensitive
+     * - Partial
+     * - Able to search using even one character
+     * <p>
+     * Example:
+     * <p>
+     * "chi"  -> Chicken Biryani
+     * Chicken Fried Rice
+     * <p>
+     * "bir"  -> Chicken Biryani
+     * Veg Biryani
+     * Chandana Veg Biryani
+     * <p>
+     * "pane" -> Paneer Butter Masala
+     */
+    @Query("""
+            SELECT p
+            FROM FmProduct p
+            WHERE LOWER(p.productName)
+                  LIKE LOWER(CONCAT('%', :productName, '%'))
+            ORDER BY p.productName ASC
+            """)
+    List<FmProduct> searchByProductName(
+            @Param("productName") String productName
+    );
+
     @Query(value = """
-        SELECT product_id as productOrProductVariantOptionId,merchant_price as merchantPrice FROM "jippy_fm"."products" where product_id in (:productIds)
-    """,nativeQuery = true)
+                SELECT product_id as productOrProductVariantOptionId,merchant_price as merchantPrice FROM "jippy_fm"."products" where product_id in (:productIds)
+            """, nativeQuery = true)
     List<FmProductMerchantPriceProjection> findByProductIds(@Param("productIds") List<Integer> productIds);
 
     @Query(value = """
-        SELECT product_id ,product_name FROM "jippy_fm"."products" where product_id in (:productIds)
-    """,nativeQuery = true)
+                SELECT product_id ,product_name FROM "jippy_fm"."products" where product_id in (:productIds)
+            """, nativeQuery = true)
     List<Object[]> findProductNamesByProductIds(List<Integer> productIds);
+//    =============================================================================
+//    =============================================================================
+
+    /**
+     * Fetches product, variant and GST information required
+     * for merchant settlement.
+     * <p>
+     * FM handles only FM-owned data here.
+     * <p>
+     * The query fetches:
+     * <p>
+     * - Product ID
+     * - Variant option ID
+     * - Product name
+     * - Variant name
+     * - GST applicability
+     * - GST percentage
+     * <p>
+     * Product and variant information are matched using
+     * the productId and variantOptionId received from CO.
+     *
+     * @param outletId        outlet for which GST configuration is required
+     * @param productId       product IDs received from CO
+     * @param variantOptionId variant option IDs received from CO
+     * @return FM product, variant and GST information
+     */
+    @Query(value = """
+            SELECT
+                p.product_id AS "productId",
+                p.product_name AS "productName",
+                pvo.product_variant_options_id AS "variantOptionId",
+                pvgv.variant_name AS "variantName",
+                o.is_gst_applied AS "gstApplied"
+            FROM jippy_fm.products p
+            
+            LEFT JOIN jippy_fm.product_variant_options pvo
+                ON p.product_id = pvo.product_id
+            
+            LEFT JOIN jippy_fm.product_variant_group_values pvgv
+                ON pvo.product_variant_group_values_id =
+                   pvgv.product_variant_group_values_id
+            
+            INNER JOIN jippy_fm.outlets o
+                ON o.outlet_id = :outletId
+            
+            WHERE p.product_id = :productId
+            
+              AND (
+                  pvo.product_variant_options_id = :variantOptionId
+                  OR pvo.product_variant_options_id IS NULL
+              )
+            """, nativeQuery = true)
+    FmMerchantSettlementProductProjection getMerchantSettlementProductDetails(
+            @Param("outletId") Integer outletId,
+            @Param("productId") Integer productId,
+            @Param("variantOptionId") Integer variantOptionId
+    );
 }
 
 
