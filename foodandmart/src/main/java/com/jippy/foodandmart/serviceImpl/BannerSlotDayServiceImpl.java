@@ -1,9 +1,12 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.dto.BannerSlotDayResponseDto;
+import com.jippy.foodandmart.dto.FmSettlementWeekSlotDto;
 import com.jippy.foodandmart.dto.SettlementWeekResponseDto;
 import com.jippy.foodandmart.entity.BannerSlotDay;
+import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.BannerSlotDayMapper;
+import com.jippy.foodandmart.projections.FmSettlementWeekSlotProjection;
 import com.jippy.foodandmart.repository.BannerSlotDayRepository;
 import com.jippy.foodandmart.service.BannerSlotDayService;
 import lombok.RequiredArgsConstructor;
@@ -338,5 +341,32 @@ public class BannerSlotDayServiceImpl implements BannerSlotDayService {
         slot.setUpdatedBy(1);
 
         return slot;
+    }
+//    ====================================================================================
+//    ====================================================================================
+    @Override
+    public Optional<FmSettlementWeekSlotDto> findSettlementWeekSlot(
+            Integer weekSlotDaysId) {
+
+        Optional<FmSettlementWeekSlotProjection> projection =
+                repository.findSettlementWeekSlot(weekSlotDaysId);
+
+        if (projection.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Settlement week slot not found for weekSlotDaysId: "
+                            + weekSlotDaysId
+            );
+        }
+
+        FmSettlementWeekSlotProjection result = projection.get();
+
+        FmSettlementWeekSlotDto dto = new FmSettlementWeekSlotDto();
+
+        dto.setWeekSlotDaysId(weekSlotDaysId);
+        dto.setSlotStartDate(result.getSlotStartDate());
+        dto.setSlotEndDate(result.getSlotEndDate());
+        dto.setSlotType(result.getSlotType());
+
+        return Optional.of(dto);
     }
 }

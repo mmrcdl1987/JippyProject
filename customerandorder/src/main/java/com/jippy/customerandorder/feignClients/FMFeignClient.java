@@ -154,5 +154,37 @@ public interface FMFeignClient {
     public Map<String,String> getVariantNameByIds(@RequestParam List<Integer> productVariantsIds);
 
 
+    /**
+     * Fetches settlement week slot details from Food & Mart service.
+     *
+     * @param weekSlotDaysId settlement week slot ID
+     * @return slot start date, slot end date and slot type
+     */
+    @GetMapping("/api/fm/banners/getSettlementWeekSlot")
+    CoSettlementWeekSlotResponseDto getSettlementWeekSlot(
+            @RequestParam("weekSlotDaysId") Integer weekSlotDaysId
+    );
 
-    }
+//    =======================================================================================
+//    =======================================================================================
+//    @GetMapping("/api/co/settlements/getMerchantSettlementForOutletBetweenDates")
+//    CoMerchantSettlementSummaryDto getMerchantSettlementForOutletBetweenDates(
+//            @RequestParam("outletId") Integer outletId,
+//
+//            @RequestParam("startDate")
+//            LocalDate startDate,
+//
+//            @RequestParam("endDate")
+//            LocalDate endDate
+//    );
+    /**
+     * Fetches merchant settlement calculation details
+     * from Customer and Order microservice.
+     */
+//    @PostMapping("/api/co/customers/getMerchantSettlement")
+//    List<CoMerchantSettlementSummaryDto> getMerchantSettlement(
+//            @RequestBody CoMerchantSettlementBetweenDatesRequestDto requestDto
+//    );
+
+
+}

@@ -255,16 +255,19 @@
          * @param driverId Driver Id
          */
         @PutMapping("/approve/{driverId}")
-        public ResponseEntity<Void> approveDriver(
-                @PathVariable Integer driverId) {
+        public ResponseEntity<String> approveDriver(
+                @PathVariable Integer driverId,
+                @RequestParam String approvalLevel) {
 
-            log.info("Received request to approve Driver. Driver Id : {}", driverId);
+            log.info(
+                    "Driver approval request received | driverId={} | approvalLevel={}",
+                    driverId,
+                    approvalLevel
+            );
 
-            driverService.approveDriver(driverId);
+            driverService.approveDriver(driverId, approvalLevel);
 
-            log.info("Driver approved successfully. Driver Id : {}", driverId);
-
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Driver approved successfully.");
         }
 
         @PutMapping("/updateDriverDocuments")

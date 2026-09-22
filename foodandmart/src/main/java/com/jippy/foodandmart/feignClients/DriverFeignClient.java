@@ -22,7 +22,10 @@ public interface DriverFeignClient {
          * Calls Driver Service and approves the driver.
          */
         @PutMapping("/api/driver/approve/{driverId}")
-        void approveDriver(@PathVariable Integer driverId);
+        void approveDriver(
+                @PathVariable("driverId") Integer driverId,
+                @RequestParam("approvalLevel") String approvalLevel
+        );
 
     @PutMapping("/api/driver/updateDriverDocuments")
     public String updateDriverDocuments(@RequestBody DriverDocumentUpdateDTO driverDocumentUpdateDTO);

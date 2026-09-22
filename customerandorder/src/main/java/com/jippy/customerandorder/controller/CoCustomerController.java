@@ -21,11 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -301,7 +299,7 @@ public class CoCustomerController {
                                         getCompleteOrdersDetailsByOrderStatus(
             @Parameter(
                     name = "orderStatus",
-                    description = "Order status filter. Supported values: ORDER_PLACED, ORDER_CONFIRMED, ORDER_SHIPPED, ORDER_COMPLETED.",
+                    description = "Order status filter. Supported values: ORDER_PLACED, ORDER_CONFIRMED, ORDER_SHIPPED, ORDER_COMPLETED, ORDER_REJECTED",
                     example = "ORDER_SHIPPED",
                     required = true
             )
@@ -371,7 +369,8 @@ public class CoCustomerController {
             Division microservice.
             """)
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Complete order details fetched successfully"), @ApiResponse(responseCode = "400", description = "Invalid order ID"), @ApiResponse(responseCode = "404", description = "Order not found"), @ApiResponse(responseCode = "500", description = "Internal server error")})
-    public ResponseEntity<CoOrderCompleteDetailsResponseDto> getOrderCompleteDetails(@RequestParam String orderId) {
+    public ResponseEntity<CoOrderCompleteDetailsResponseDto> getOrderCompleteDetails
+    (@RequestParam String orderId) {
 
         log.info("GET /getOrderCompleteDetails request received. " + "orderId={}", orderId);
 

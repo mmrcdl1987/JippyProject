@@ -6,7 +6,6 @@ import com.jippy.driver.service.EmailService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -35,17 +34,36 @@ public class SesEmailService implements EmailService {
     }
 
     @Override
-    public void sendDriverApprovedEmail(String driverEmail, String driverName) {
+    public void sendDriverApprovedEmail(
+            String driverEmail,
+            String driverName,
+            String approvalLevel) {
 
-        log.info("DRIVER_APPROVED_EMAIL_START | email={}, driverName={}", driverEmail, driverName);
+        log.info(
+                "DRIVER_APPROVED_EMAIL_START | email={} | driverName={} | approvalLevel={}",
+                driverEmail,
+                driverName,
+                approvalLevel
+        );
 
-        String subject = "Congratulations! Your Driver Account is Approved - Jippy Food Delivery";
+        String subject =
+                "Congratulations! Your Driver Account is Approved - Jippy Food Delivery";
 
-        String htmlBody = buildDriverApprovedTemplate(driverName, driverEmail);
+        String htmlBody =
+                buildDriverApprovedTemplate(
+                        driverName,
+                        driverEmail,
+                        approvalLevel
+                );
 
         sendEmail(driverEmail, subject, htmlBody);
 
-        log.info("DRIVER_APPROVED_EMAIL_SUCCESS | email={}, driverName={}", driverEmail, driverName);
+        log.info(
+                "DRIVER_APPROVED_EMAIL_SUCCESS | email={} | driverName={} | approvalLevel={}",
+                driverEmail,
+                driverName,
+                approvalLevel
+        );
     }
 
     /**
@@ -730,8 +748,10 @@ public class SesEmailService implements EmailService {
                 """.formatted(driverName, driverName, driverEmail);
     }
 
-    private String buildDriverApprovedTemplate(String driverName, String driverEmail) {
-
+    private String buildDriverApprovedTemplate(
+            String driverName,
+            String driverEmail,
+            String approvalLevel) {
         return """
                 <!DOCTYPE html>
                 <html>
@@ -873,8 +893,9 @@ public class SesEmailService implements EmailService {
                                                         color:#333333;
                                                     ">
                 
-                                                        Your driver account has been
-                                                        successfully approved.
+                                                        Congratulations! Your driver account
+                                                        has completed <b>%s</b> approval
+                                                        with <b>Jippy Food Delivery</b>.
                 
                                                     </p>
                 
@@ -1332,7 +1353,7 @@ public class SesEmailService implements EmailService {
                 
                 </body>
                 </html>
-                """.formatted(driverName, driverName, driverEmail);
+                """.formatted( approvalLevel,driverName,driverName, driverEmail);
     }
 
 }

@@ -1,9 +1,16 @@
 package com.jippy.foodandmart.constants;
 
+import java.math.BigDecimal;
+
 public final class FmAppConstants {
 
     private FmAppConstants() {
     }
+
+    /**
+     * GST rate applicable for merchant settlement calculation.
+     */
+    public static final BigDecimal GST_RATE = new BigDecimal("0.05");
 
     // ============================================================
     // COMMON STATUS

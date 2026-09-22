@@ -386,7 +386,33 @@ public final class FmMerchantMapper {
         bank.setIfscCode(dto.getIfscCode());
         bank.setBankName(dto.getBankName());
         bank.setAccountHolderName(dto.getAccountHolderName());
-        bank.setUserType("MERCHANT");
+        bank.setUserType(FmAppConstants.TYPE_MERCHANT);
+    }
+
+//    ===============================================================================
+    /**
+     * Converts merchant entity into merchant search response DTO.
+     */
+    public static FmMerchantSearchResponseDto mapToSearchDto(FmMerchant merchant) {
+
+        FmMerchantSearchResponseDto dto = new FmMerchantSearchResponseDto();
+
+        dto.setMerchantId(merchant.getMerchantId());
+        dto.setMerchantName(merchant.getMerchantName());
+        dto.setMerchantEmail(merchant.getMerchantEmail());
+        dto.setMerchantPhone(merchant.getMerchantPhone());
+        dto.setMerchantBusinessType(merchant.getMerchantBusinessType());
+        dto.setStatus(merchant.getStatus());
+        dto.setDateOfBirth(merchant.getDateOfBirth());
+        dto.setCreatedAt(merchant.getCreatedAt());
+        dto.setCreatedBy(merchant.getCreatedBy());
+        dto.setUpdatedAt(merchant.getUpdatedAt());
+        dto.setUpdatedBy(merchant.getUpdatedBy());
+        dto.setIsActive(merchant.getIsActive());
+        dto.setIsApproved(merchant.getIsApproved());
+        dto.setProfilePicUrl(merchant.getProfilePicUrl());
+
+        return dto;
     }
 
 

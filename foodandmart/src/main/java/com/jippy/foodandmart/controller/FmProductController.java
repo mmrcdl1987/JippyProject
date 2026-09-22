@@ -48,14 +48,12 @@ public class FmProductController {
 
     /**
      * PUT /api/fm/products/merchant-edit/{productId}
-     *
+     * <p>
      * Merchant edit — basic fields + merchant price, and edit/add
      * timings & variants (incl. new groups). Never deletes existing records.
      */
     @PutMapping("/updateproduct/{productId}")
-    public ResponseEntity<FmProductUpdateResponseDto> merchantEditProduct(
-            @PathVariable Integer productId,
-            @Valid @RequestBody FmProductUpdateRequestDto request) {
+    public ResponseEntity<FmProductUpdateResponseDto> merchantEditProduct(@PathVariable Integer productId, @Valid @RequestBody FmProductUpdateRequestDto request) {
 
         log.info("[PRODUCT] MERCHANT_EDIT Product. ProductId={}", productId);
 
@@ -64,56 +62,46 @@ public class FmProductController {
 
     /**
      * DELETE /api/fm/products/updateproduct/{productId}/variant-options/{optionId}
-     *
+     * <p>
      * Removes one variant option from this product without deleting shared
      * variant group/value catalogue records.
      */
     @DeleteMapping("/updateproduct/{productId}/variant-options/{optionId}")
-    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantOption(
-            @PathVariable Integer productId,
-            @PathVariable Integer optionId) {
+    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantOption(@PathVariable Integer productId, @PathVariable Integer optionId) {
 
-        log.info("[PRODUCT] DELETE variant option. ProductId={}, OptionId={}",
-                productId, optionId);
+        log.info("[PRODUCT] DELETE variant option. ProductId={}, OptionId={}", productId, optionId);
 
         productMappingService.deleteProductVariantOption(productId, optionId);
 
-        return ResponseEntity.ok(FmApiResponse.success(
-                "Product Variant Option deleted successfully.", null));
+        return ResponseEntity.ok(FmApiResponse.success("Product Variant Option deleted successfully.", null));
     }
 
     /**
      * DELETE /api/fm/products/updateproduct/{productId}/variant-groups/{groupId}
-     *
+     * <p>
      * Removes every variant option in the group from this product. The shared
      * variant group and group values are not deleted.
      */
     @DeleteMapping("/updateproduct/{productId}/variant-groups/{groupId}")
-    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantGroup(
-            @PathVariable Integer productId,
-            @PathVariable Integer groupId) {
+    public ResponseEntity<FmApiResponse<Void>> deleteProductVariantGroup(@PathVariable Integer productId, @PathVariable Integer groupId) {
 
-        log.info("[PRODUCT] DELETE variant group. ProductId={}, GroupId={}",
-                productId, groupId);
+        log.info("[PRODUCT] DELETE variant group. ProductId={}, GroupId={}", productId, groupId);
 
         productMappingService.deleteProductVariantGroup(productId, groupId);
 
-        return ResponseEntity.ok(FmApiResponse.success(
-                "Product Variant Group deleted successfully.", null));
+        return ResponseEntity.ok(FmApiResponse.success("Product Variant Group deleted successfully.", null));
     }
-
-
 
 
     /**
      * POST /api/fm/products/map-from-master-category/{outletCategoryId}
-     *
+     * <p>
      * At outlet-mapping time:
      * - Looks up the category already linked to outletCategoryId.
      * - Fetches all published master products for that category.
      * - Inserts products into jippy_fm.products.
      * - Inserts variants into jippy_fm.product_variants.
-     *
+     * <p>
      * Existing products are skipped.
      */
     // @PostMapping("/map-from-master-category/{outletCategoryId}")
@@ -132,20 +120,12 @@ public class FmProductController {
     //             )
     //     );
     // }
-
     @GetMapping("/outlet/{outletId}")
-    public ResponseEntity<List<FmOutletProductResponseDto>> getProductsByOutletId(
-            @PathVariable
-            @NotNull(message = "Outlet id is required")
-            Integer outletId) {
+    public ResponseEntity<List<FmOutletProductResponseDto>> getProductsByOutletId(@PathVariable @NotNull(message = "Outlet id is required") Integer outletId) {
 
-        log.info(
-                "CONTROLLER_START | GET_PRODUCTS_BY_OUTLET | outletId={}",
-                outletId
-        );
+        log.info("CONTROLLER_START | GET_PRODUCTS_BY_OUTLET | outletId={}", outletId);
 
-        List<FmOutletProductResponseDto> response =
-                productMappingService.getProductsByOutletId(outletId);
+        List<FmOutletProductResponseDto> response = productMappingService.getProductsByOutletId(outletId);
 
         return ResponseEntity.ok(response);
     }
@@ -404,6 +384,7 @@ public class FmProductController {
 
         return ResponseEntity.ok(response);
     }
+
     // ================================= MERCHANT PRICE UPDATE =========================================
     @PutMapping("/{productId}/merchant-price")
     @Operation(summary = "Update merchant price", description = """
@@ -432,122 +413,109 @@ public class FmProductController {
     }
 
     @GetMapping("/getOrderProductItemsForMerchant")
-    public ResponseEntity<List<FmOrderItemsEvent>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds,
-            @RequestParam List<Integer> productVariantIds) {
+    public ResponseEntity<List<FmOrderItemsEvent>> getOrderProductItemsForMerchant(@RequestParam List<Integer> productIds, @RequestParam List<Integer> productVariantIds) {
 
-        log.info("Get order product items for merchant  | productIds:{} , product variant ids:{} ", productIds,productVariantIds);
+        log.info("Get order product items for merchant  | productIds:{} , product variant ids:{} ", productIds, productVariantIds);
 
-        List<FmOrderItemsEvent> products = productMappingService.getOrderProductItemsForMerchant(productIds,productVariantIds);
+        List<FmOrderItemsEvent> products = productMappingService.getOrderProductItemsForMerchant(productIds, productVariantIds);
 
         return ResponseEntity.ok(products);
     }
 //    =====================================================================================
+//    =====================================================================================
+
     /**
      * Activates or deactivates a PRODUCT or MASTERPRODUCT.
-     *
+     * <p>
      * PRODUCT       -> updates products.is_active
      * MASTERPRODUCT -> updates master_products.is_active
-     *
+     * <p>
      * Supported productType:
      * PRODUCT, MASTERPRODUCT
-     *
+     * <p>
      * Supported isActive:
      * Y, N
      */
     @PutMapping("/productIsActiveToggleByProductType")
-    @Operation(
-            summary = "Update product active status by product type",
-            description =
-                    "Updates the active status of a PRODUCT or MASTERPRODUCT. "
-                            + "Supported productType values are PRODUCT and MASTERPRODUCT. "
-                            + "Supported isActive values are Y and N. "
-                            + "Y enables the product and N disables the product. "
-                            + "For PRODUCT, the products table is updated. "
-                            + "For MASTERPRODUCT, the master_products table is updated."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Product active status updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid product ID, product type or active status"),
-            @ApiResponse(responseCode = "404", description = "Product or master product not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Operation(summary = "Update product active status by product type", description = "Updates the active status of a PRODUCT or MASTERPRODUCT. " + "Supported productType values are PRODUCT and MASTERPRODUCT. " + "Supported isActive values are Y and N. " + "Y enables the product and N disables the product. " + "For PRODUCT, the products table is updated. " + "For MASTERPRODUCT, the master_products table is updated.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Product active status updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid product ID, product type or active status"), @ApiResponse(responseCode = "404", description = "Product or master product not found"), @ApiResponse(responseCode = "500", description = "Internal server error")})
     public ResponseEntity<String> productIsActiveToggleByProductType(
 
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description =
-                            "Provide productId, productType and isActive. "
-                                    + "productType supports PRODUCT or MASTERPRODUCT. "
-                                    + "isActive supports Y or N.",
-                    required = true,
-                    content = @Content(
-                            schema = @Schema(
-                                    implementation =
-                                            FmProductIsActiveToggleRequestDto.class
-                            ),
-                            examples = {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Provide productId, productType and isActive. " + "productType supports PRODUCT or MASTERPRODUCT. " + "isActive supports Y or N.", required = true, content = @Content(schema = @Schema(implementation = FmProductIsActiveToggleRequestDto.class), examples = {
 
-                                    @ExampleObject(
-                                            name = "PRODUCT",
-                                            summary = "Enable or disable PRODUCT",
-                                            value =
-                                                    """
-                                                    {
-                                                      "productId": 39,
-                                                      "productType": "PRODUCT",
-                                                      "isActive": "N"
-                                                    }
-                                                    """
-                                    ),
-
-                                    @ExampleObject(
-                                            name = "MASTERPRODUCT",
-                                            summary = "Enable or disable MASTERPRODUCT",
-                                            value =
-                                                    """
-                                                    {
-                                                      "productId": 8,
-                                                      "productType": "MASTERPRODUCT",
-                                                      "isActive": "Y"
-                                                    }
-                                                    """
-                                    )
+                    @ExampleObject(name = "PRODUCT", summary = "Enable or disable PRODUCT", value = """
+                            {
+                              "productId": 39,
+                              "productType": "PRODUCT",
+                              "isActive": "N"
                             }
-                    )
-            )
-            @Valid
-            @RequestBody FmProductIsActiveToggleRequestDto request) {
+                            """),
 
-        log.info(
-                "Received request to update product active status. " +
-                        "productId={}, productType={}, isActive={}",
-                request.getProductId(),
-                request.getProductType(),
-                request.getIsActive()
-        );
+                    @ExampleObject(name = "MASTERPRODUCT", summary = "Enable or disable MASTERPRODUCT", value = """
+                            {
+                              "productId": 8,
+                              "productType": "MASTERPRODUCT",
+                              "isActive": "Y"
+                            }
+                            """)})) @Valid @RequestBody FmProductIsActiveToggleRequestDto request) {
 
-        String response =
-                productMappingService.productIsActiveToggleByProductType(request);
+        log.info("Received request to update product active status. " + "productId={}, productType={}, isActive={}", request.getProductId(), request.getProductType(), request.getIsActive());
 
-        log.info(
-                "Product active status update completed successfully. " +
-                        "productId={}, productType={}, isActive={}",
-                request.getProductId(),
-                request.getProductType(),
-                request.getIsActive()
-        );
+        String response = productMappingService.productIsActiveToggleByProductType(request);
+
+        log.info("Product active status update completed successfully. " + "productId={}, productType={}, isActive={}", request.getProductId(), request.getProductType(), request.getIsActive());
 
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/inactiveProductOrProductVariant")
-    @Operation(summary = "Inactive Product or Product Variant",
-            description = "Variants also added as products, use this API to off such kind of products. If you want off the product send Y else N")
-    public ResponseEntity<FmResponseDto> inactiveProductOrProductVariant
-            (@RequestParam  Integer productId,@RequestParam String isActive) {
+    @Operation(summary = "Inactive Product or Product Variant", description = "Variants also added as products, use this API to off such kind of products. If you want off the product send Y else N")
+    public ResponseEntity<FmResponseDto> inactiveProductOrProductVariant(@RequestParam Integer productId, @RequestParam String isActive) {
 
-        log.info("[Product in active] toggleForProduct API called. " + "outletId={}, isActive={}", productId , isActive);
+        log.info("[Product in active] toggleForProduct API called. " + "outletId={}, isActive={}", productId, isActive);
 
-        FmResponseDto response = productMappingService.inactiveProductOrProductVariant(productId,isActive);
+        FmResponseDto response = productMappingService.inactiveProductOrProductVariant(productId, isActive);
+
+        return ResponseEntity.ok(response);
+    }
+
+    //    ======================================================================================
+//    ======================================================================================
+    @PutMapping("/updateProductTimingsByAdminOrMerchant")
+    @Operation(summary = "Update product timing", description = "Updates the start time and end time of a product timing using productAvailableTimingId.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Product timing updated successfully"), @ApiResponse(responseCode = "400", description = "Invalid request"), @ApiResponse(responseCode = "404", description = "Product timing not found")})
+    public ResponseEntity<FmProductTimingUpdateDto> updateProductTimingsByAdminOrMerchant(@RequestBody FmProductTimingUpdateDto dto) {
+
+        log.info("UPDATE_PRODUCT_TIMING_REQUEST | timingId={} | startTime={} | endTime={}", dto.getProductAvailableTimingId(), dto.getStartTime(), dto.getEndTime());
+
+        FmProductTimingUpdateDto response = productMappingService.updateProductTimingsByAdminOrMerchant(dto);
+
+        log.info("UPDATE_PRODUCT_TIMING_SUCCESS | timingId={}", dto.getProductAvailableTimingId());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Searches products using a partial product name.
+     * <p>
+     * The search is case-insensitive and supports
+     * searching with even a single character.
+     */
+    @GetMapping("/searchByProductName")
+    @Operation(summary = "Search product by name", description = "Searches products using a partial product name. " +
+            "The search is case-insensitive and matches " + "the entered text anywhere in the product name.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Products fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Product name cannot be empty"), @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<List<FmProductSearchResponseDto>> searchByProductName(
+
+            @Parameter(description = "Partial product name to search", example = "bir", required = true) @RequestParam String productName) {
+
+        log.info("Received request to search product by name: {}", productName);
+
+        List<FmProductSearchResponseDto> response
+                = productMappingService.searchByProductName(productName);
+
+        log.info("Product search completed. Result count: {}", response.size());
 
         return ResponseEntity.ok(response);
     }

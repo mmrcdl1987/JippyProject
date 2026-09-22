@@ -8,6 +8,8 @@ import java.time.LocalTime;
 @Data
 public class FmProductTimingDto {
 
+    private Integer productAvailableTimingId;
+
     @Schema(example = "Monday", description = "Day of the week for the product timing.")
     private String day;
     @Schema(example = "true", description = "Indicates whether the product is available on this day.")

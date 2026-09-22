@@ -176,7 +176,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*
          * Outlet email should use the merchant email.
          */
-        outlet.setOutletEmail(outletEmail);
+        outlet.setOutletEmail(outlet.getOutletEmail());
 
         /*
          * Save Outlet Location.
@@ -340,17 +340,17 @@ public class FmOutletServiceImpl implements IFmOutletService {
         /*  comment during live
          * Validate State.
          */
-        stateRepository.findById(dto.getStateId()).orElseThrow(() -> new ResourceNotFoundException("State not found with id : " + dto.getStateId()));
+//        stateRepository.findById(dto.getStateId()).orElseThrow(() -> new ResourceNotFoundException("State not found with id : " + dto.getStateId()));
 
         /* comment during live
          * Validate City.
          */
-        cityRepository.findById(dto.getCityId()).orElseThrow(() -> new ResourceNotFoundException("City not found with id : " + dto.getCityId()));
+//        cityRepository.findById(dto.getCityId()).orElseThrow(() -> new ResourceNotFoundException("City not found with id : " + dto.getCityId()));
 
         /* comment during live
          * Validate Area.
          */
-        areaRepository.findById(dto.getAreaId()).orElseThrow(() -> new ResourceNotFoundException("Area not found with id : " + dto.getAreaId()));
+//        areaRepository.findById(dto.getAreaId()).orElseThrow(() -> new ResourceNotFoundException("Area not found with id : " + dto.getAreaId()));
 
         /*
          * Validate Address.
@@ -693,7 +693,13 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
         for (FmOutlet outlet : outlets) {
 
-            FmOutletAddress address = addressRepository.findByJippyAddressId(outlet.getOutletId()).orElse(null);
+            FmOutletAddress address =
+                    addressRepository
+                            .findByJippyAddressIdAndAddressType(
+                                    outlet.getOutletId(),
+                                    FmAppConstants.TYPE_OUTLET
+                            )
+                            .orElse(null);
 
             result.add(FmOutletSummaryDTO.from(outlet, 0, address));
         }
@@ -2397,6 +2403,7 @@ public class FmOutletServiceImpl implements IFmOutletService {
         return FmOutletMapper.mapToOutletByMerchantDto(rows);
     }
 
+//    tables changed
     //    for update outlet details by outlet id service implementation
     @Transactional
     @Override
@@ -3689,6 +3696,77 @@ public class FmOutletServiceImpl implements IFmOutletService {
         );
 
         return outletIds;
+    }
+
+//    ===================================================================================
+//    ===================================================================================
+
+    /**
+     * Searches outlets by outlet name.
+     *
+     * Supports:
+     * - Partial outlet name
+     * - Case-insensitive search
+     *
+     * Example:
+     * "cha" -> Chandana_Outlet
+     * "vil" -> vilas
+     * "MEH" -> Mehfil Restaurant Updated
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<FmOutletSearchResponseDto> searchByOutletName(
+            String outletName) {
+
+        log.info(
+                "Searching outlets by name: {}",
+                outletName
+        );
+
+        // Validate input
+        if (outletName == null || outletName.trim().isEmpty()) {
+
+            log.warn(
+                    "Outlet name search input is empty"
+            );
+
+            throw new BadRequestException(
+                    "Outlet name cannot be empty"
+            );
+        }
+
+        // Remove leading and trailing spaces
+        outletName = outletName.trim();
+
+        log.debug(
+                "Searching outlets with name: {}",
+                outletName
+        );
+
+        // Fetch matching outlets from database
+        List<FmOutlet> outlets =
+                outletRepository.searchByOutletName(outletName);
+
+        log.info(
+                "Found {} outlets for search: {}",
+                outlets.size(),
+                outletName
+        );
+
+        // Create response list
+        List<FmOutletSearchResponseDto> response =
+                new ArrayList<>();
+
+        // Convert each entity into DTO
+        for (FmOutlet outlet : outlets) {
+
+            FmOutletSearchResponseDto dto =
+                    FmOutletMapper.mapToSearchDto(outlet);
+
+            response.add(dto);
+        }
+
+        return response;
     }
 
     @Override

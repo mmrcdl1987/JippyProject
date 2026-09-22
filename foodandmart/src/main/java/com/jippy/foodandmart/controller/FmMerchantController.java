@@ -4,6 +4,7 @@ import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.FmMerchant;
 import com.jippy.foodandmart.service.IFmMerchantService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,100 +29,55 @@ public class FmMerchantController {
 
     private final IFmMerchantService merchantService;
 
-    /** POST /api/merchants — create a single merchant */
-    @Operation(
-            summary = "Create Single Merchant",
-            description = "Creates a new merchant with merchant details, KYC details, bank details, address details, and merchant login credentials."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "201",
-                    description = "Merchant created successfully"
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid merchant details or validation failed"
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "Merchant already exists with the provided email, phone, PAN, Aadhaar, FSSAI, or account number"
-            ),
-            @ApiResponse(
-                    responseCode = "500",
-                    description = "Internal server error"
-            )
-    })
-    @PostMapping(
-            value = "/createMerchant",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
+    /**
+     * POST /api/merchants — create a single merchant
+     */
+    @Operation(summary = "Create Single Merchant", description = "Creates a new merchant with merchant details, KYC details, bank details, address details, and merchant login credentials.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Merchant created successfully"), @ApiResponse(responseCode = "400", description = "Invalid merchant details or validation failed"), @ApiResponse(responseCode = "409", description = "Merchant already exists with the provided email, phone, PAN, Aadhaar, FSSAI, or account number"), @ApiResponse(responseCode = "500", description = "Internal server error")})
+    @PostMapping(value = "/createMerchant", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<FmApiResponse<FmMerchant>> createMerchant(
 
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Single merchant creation request containing merchant, KYC, bank, and address details. State, city, and area are selected using dropdowns and their IDs are provided.",
-                    required = true,
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            examples = @ExampleObject(
-                                    name = "Single Merchant Create Request",
-                                    summary = "Create merchant with dropdown-based address IDs",
-                                    value = """
-                                        {
-                                          "firstName": "Rohan",
-                                          "lastName": "Vadluri",
-                                          "email": "rohan@gmail.com",
-                                          "phone": "9876543210",
-                                          "username": "rohan123",
-                                          "password": "Rohan@123",
-                                          "outletType": "Restaurant",
-                                          "uploadedBy": "Admin",
-                                          "pan": "ABCDE1234F",
-                                          "adhar": "987654321012",
-                                          "accountNumber": "1234567890123456",
-                                          "ifscCode": "SBIN0001234",
-                                          "bankLocation": "Kukatpally Branch",
-                                          "nameInBankAccount": "Rohan Vadluri",
-                                          "dob": "2002-08-15",
-                                          "fssai": "12345678901234 (Optional)",
-                                          "gstNumber": "36ABCDE1234F1Z5 (Optional)",
-                                          "buildingNumber": "12-34 [complete ADDRESS]",
-                                          "road": "Main Road - optional",
-                                          "landmark": "Near Metro Station - optional",
-                                          "stateId": 36,
-                                          "cityId": 101,
-                                          "areaId": 1001,
-                                     
-                                        }
-                                        """
-                            )
-                    )
-            )
-            @Valid @RequestBody FmMerchantRequestDTO dto) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Single merchant creation request containing merchant, KYC, bank, and address details. State, city, and area are selected using dropdowns and their IDs are provided.", required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(name = "Single Merchant Create Request", summary = "Create merchant with dropdown-based address IDs", value = """
+                    {
+                      "firstName": "Rohan",
+                      "lastName": "Vadluri",
+                      "email": "rohan@gmail.com",
+                      "phone": "9876543210",
+                      "username": "rohan123",
+                      "password": "Rohan@123",
+                      "outletType": "Restaurant",
+                      "uploadedBy": "Admin",
+                      "pan": "ABCDE1234F",
+                      "adhar": "987654321012",
+                      "accountNumber": "1234567890123456",
+                      "ifscCode": "SBIN0001234",
+                      "bankLocation": "Kukatpally Branch",
+                      "nameInBankAccount": "Rohan Vadluri",
+                      "dob": "2002-08-15",
+                      "fssai": "12345678901234 (Optional)",
+                      "gstNumber": "36ABCDE1234F1Z5 (Optional)",
+                      "buildingNumber": "12-34 [complete ADDRESS]",
+                      "road": "Main Road - optional",
+                      "landmark": "Near Metro Station - optional",
+                      "stateId": 36,
+                      "cityId": 101,
+                      "areaId": 1001,
+                    
+                    }
+                    """))) @Valid @RequestBody FmMerchantRequestDTO dto) {
 
-        log.info(
-                "[MERCHANT] Creating merchant: email={}, phone={}",
-                dto.getEmail(),
-                dto.getPhone()
-        );
+        log.info("[MERCHANT] Creating merchant: email={}, phone={}", dto.getEmail(), dto.getPhone());
 
         FmMerchant merchant = merchantService.createMerchant(dto);
 
-        log.info(
-                "[MERCHANT] Merchant created successfully: merchantId={}",
-                merchant.getMerchantId()
-        );
+        log.info("[MERCHANT] Merchant created successfully: merchantId={}", merchant.getMerchantId());
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(
-                        FmApiResponse.success(
-                                "Merchant created successfully",
-                                merchant
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.CREATED).body(FmApiResponse.success("Merchant created successfully", merchant));
     }
-    /** GET /api/merchants — list all */
+
+    /**
+     * GET /api/merchants — list all
+     */
     @GetMapping
     public ResponseEntity<FmApiResponse<List<FmMerchant>>> getAllMerchants() {
         log.info("[MERCHANT] GET /api/merchants");
@@ -129,54 +85,52 @@ public class FmMerchantController {
     }
 
 //    ------------------------------------------------------------
-    /** GET /api/merchants/{id} */
+
+    /**
+     * GET /api/merchants/{id}
+     */
     @GetMapping("/{id}")
     public ResponseEntity<FmApiResponse<FmMerchantDto>> getMerchantById(@PathVariable Integer id) {
         log.info("[MERCHANT] GET /api/merchants/{}", id);
         return ResponseEntity.ok(FmApiResponse.success("Merchant fetched", merchantService.getMerchantById(id)));
     }
 
-    /** GET /api/merchants/count */
+    /**
+     * GET /api/merchants/count
+     */
     @GetMapping("/count")
     public ResponseEntity<FmApiResponse<Long>> getCount() {
         return ResponseEntity.ok(FmApiResponse.success("Count fetched", merchantService.countMerchants()));
     }
 
-    /** POST /api/merchants/upload — bulk upload via .xlsx or .csv */
+    /**
+     * POST /api/merchants/upload — bulk upload via .xlsx or .csv
+     */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FmApiResponse<FmBulkUploadResultDTO>> uploadFile(
-            @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<FmApiResponse<FmBulkUploadResultDTO>> uploadFile(@RequestParam("file") MultipartFile file) {
 
-        log.info("[BULK] POST /api/merchants/upload file={}, size={} bytes",
-                file.getOriginalFilename(), file.getSize());
+        log.info("[BULK] POST /api/merchants/upload file={}, size={} bytes", file.getOriginalFilename(), file.getSize());
 
         if (file.isEmpty())
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(FmApiResponse.error("Uploaded file is empty"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(FmApiResponse.error("Uploaded file is empty"));
 
         FmBulkUploadResultDTO result = merchantService.bulkUpload(file);
-        String message = String.format("Upload complete: %d success, %d failed out of %d rows",
-                result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
+        String message = String.format("Upload complete: %d success, %d failed out of %d rows", result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
 
-        HttpStatus status = result.getFailureCount() == 0 ? HttpStatus.OK
-                : (result.getSuccessCount() == 0 ? HttpStatus.BAD_REQUEST : HttpStatus.MULTI_STATUS);
+        HttpStatus status = result.getFailureCount() == 0 ? HttpStatus.OK : (result.getSuccessCount() == 0 ? HttpStatus.BAD_REQUEST : HttpStatus.MULTI_STATUS);
 
         return ResponseEntity.status(status).body(FmApiResponse.success(message, result));
     }
 
     // update merchant with bank details
-    @Operation(summary = "Update Merchant Profile",
-            description = "Update merchant and bank details"
-    )
+    @Operation(summary = "Update Merchant Profile", description = "Update merchant and bank details")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant updated successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Merchant or bank not found")
     @PutMapping("/updateMerchantProfile")
-    public ResponseEntity<FmMerchantWithBankDto> updateMerchantProfile(
-            @Valid @RequestBody FmMerchantWithBankDto dto) {
+    public ResponseEntity<FmMerchantWithBankDto> updateMerchantProfile(@Valid @RequestBody FmMerchantWithBankDto dto) {
         log.info("Updating merchant profile with data: {}", dto);
 
-        FmMerchantWithBankDto updated =
-                merchantService.updateMerchantProfile(dto);
+        FmMerchantWithBankDto updated = merchantService.updateMerchantProfile(dto);
         log.info("Successfully updated merchant profile for merchantId: {}", dto.getMerchantId());
 
         return ResponseEntity.ok(updated);
@@ -184,17 +138,13 @@ public class FmMerchantController {
 
     //    --------------------------------------------------------------------------
     //    get merchant details with bank details
-    @Operation(summary = "Get Merchant Profile with Bank Details",
-            description = "Fetch merchant details along with bank information using merchant ID"
-    )
+    @Operation(summary = "Get Merchant Profile with Bank Details", description = "Fetch merchant details along with bank information using merchant ID")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant fetched successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Merchant not found")
     @GetMapping("/getMerchantProfile")
-    public ResponseEntity<FmMerchantWithBankDto> getMerchantProfile(
-            @RequestParam Integer merchantId) {
+    public ResponseEntity<FmMerchantWithBankDto> getMerchantProfile(@RequestParam Integer merchantId) {
         log.info("Fetching merchant profile for merchantId: {}", merchantId);
-        FmMerchantWithBankDto response =
-                merchantService.getMerchantWithBank(merchantId);
+        FmMerchantWithBankDto response = merchantService.getMerchantWithBank(merchantId);
         log.info("Successfully fetched merchant profile for merchantId: {}", merchantId);
         return ResponseEntity.ok(response);
     }
@@ -208,56 +158,70 @@ public class FmMerchantController {
     }
 
     @PutMapping("/updateMerchantProfilePic")
-    public ResponseEntity<FmResponseDto> updateMerchantProfilePic(
-            @RequestBody FmMerchantDto merchantDto) {
+    public ResponseEntity<FmResponseDto> updateMerchantProfilePic(@RequestBody FmMerchantDto merchantDto) {
 
-        log.info(
-                "Updating merchant profile picture for merchantId: {}",
-                merchantDto.getMerchantId()
-        );
+        log.info("Updating merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
 
-        FmResponseDto response =
-                merchantService.updateMerchantProfilePic(merchantDto);
+        FmResponseDto response = merchantService.updateMerchantProfilePic(merchantDto);
 
-        log.info(
-                "Successfully updated merchant profile picture for merchantId: {}",
-                merchantDto.getMerchantId()
-        );
+        log.info("Successfully updated merchant profile picture for merchantId: {}", merchantDto.getMerchantId());
 
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/toggleMerchant")
-    @Operation(summary = "Toggle Merchant Active Status",
-            description = "Activates or deactivates a merchant")
-    public ResponseEntity<FmResponseDto> toggleMerchant(
-            @RequestBody FmToggleMerchantRequestDto requestDto) {
-        log.info("[MERCHANT TOGGLE] merchantId={}, isActive={}",
-                requestDto != null ? requestDto.getMerchantId() : null,
-                requestDto != null ? requestDto.getIsActive() : null);
+    @Operation(summary = "Toggle Merchant Active Status", description = "Activates or deactivates a merchant")
+    public ResponseEntity<FmResponseDto> toggleMerchant(@RequestBody FmToggleMerchantRequestDto requestDto) {
+        log.info("[MERCHANT TOGGLE] merchantId={}, isActive={}", requestDto != null ? requestDto.getMerchantId() : null, requestDto != null ? requestDto.getIsActive() : null);
         return ResponseEntity.ok(merchantService.toggleMerchant(requestDto));
     }
 
 
-
     @GetMapping("/getMerchantAddress")
-    @Operation(summary = "Get Merchant Address",
-            description = "Fetch merchant address details with state, city, and area information"
-    )
+    @Operation(summary = "Get Merchant Address", description = "Fetch merchant address details with state, city, and area information")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant address fetched successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Merchant or address not found")
-    public ResponseEntity<FmApiResponse<FmMerchantAddressDto>> getMerchantAddress(
-            @RequestParam Integer merchantId) {
+    public ResponseEntity<FmApiResponse<FmMerchantAddressDto>> getMerchantAddress(@RequestParam Integer merchantId) {
         log.info("Fetching merchant address for merchantId: {}", merchantId);
         FmMerchantAddressDto response = merchantService.getMerchantAddress(merchantId);
         if (response == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(FmApiResponse.error("No address found for merchantId: " + merchantId));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(FmApiResponse.error("No address found for merchantId: " + merchantId));
         }
         log.info("Successfully fetched merchant address for merchantId: {}", merchantId);
         return ResponseEntity.ok(FmApiResponse.success("Merchant address fetched successfully", response));
     }
 
+//    ========================================================================================
+//    ========================================================================================
+
+    /**
+     * Search merchants by merchant name.
+     * <p>
+     * Supports partial and case-insensitive search.
+     * <p>
+     * Example:
+     * merchantName = ro
+     * merchantName = R
+     * merchantName = pon
+     */
+    @GetMapping("/searchByMerchantName")
+    @Operation(summary = "Search merchant by name", description = "Searches merchants using a partial merchant name. " + "The search is case-insensitive.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Merchants fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Merchant name cannot be empty"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")})
+    public ResponseEntity<List<FmMerchantSearchResponseDto>> searchByMerchantName(
+
+            @Parameter(description = "Partial merchant name", example = "ro", required = true)
+            @RequestParam String merchantName) {
+
+        log.info("Received merchant search request: {}", merchantName);
+
+        List<FmMerchantSearchResponseDto> response = merchantService.searchByMerchantName(merchantName);
+
+        log.info("Merchant search completed. Result count: {}", response.size());
+
+        return ResponseEntity.ok(response);
+    }
     @GetMapping("/admin")
     @Operation(summary = "Get Admin Merchants", description = """
             Get merchants with search, filters and pagination.

@@ -278,6 +278,22 @@ public interface FmProductService {
     );
 
     FmResponseDto inactiveProductOrProductVariant(Integer productId, String isActive);
+//    ============================================================================
+FmProductTimingUpdateDto updateProductTimingsByAdminOrMerchant(
+        FmProductTimingUpdateDto dto
+);
+
+//=======================================================================================
+//=======================================================================================
+    /**
+     * Searches products using a partial product name.
+     *
+     * @param productName partial product name
+     * @return list of matching products
+     */
+    List<FmProductSearchResponseDto> searchByProductName(
+            String productName
+    );
 
     Map<String, String> getProductNameByIds(List<Integer> productIds);
 

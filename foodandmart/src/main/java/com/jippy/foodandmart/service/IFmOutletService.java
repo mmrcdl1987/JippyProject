@@ -116,6 +116,16 @@ public interface IFmOutletService {
      */
     List<Integer> getOutletIdsByMerchantId(Integer merchantId);
 
+//    ======================================================================================
+    /**
+     * Searches outlets by outlet name.
+     *
+     * @param outletName partial outlet name
+     * @return list of matching outlets
+     */
+    List<FmOutletSearchResponseDto> searchByOutletName(
+            String outletName
+    );
 
     Page<FmAdminOutletDto> getAdminOutlets(
             String search,
