@@ -13,6 +13,10 @@ public interface FmAdminOutletMenuProjection {
 
     String getOutletName();
 
+    Integer getMerchantId();
+
+    String getMerchantName();
+
     String getOutletEmail();
 
     String getOutletPhone();

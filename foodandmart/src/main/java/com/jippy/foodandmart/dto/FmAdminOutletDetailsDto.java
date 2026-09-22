@@ -17,6 +17,12 @@ public class FmAdminOutletDetailsDto {
     @Schema(example = "Friends Restaurant")
     private String outletName;
 
+    @Schema(example = "12")
+    private Integer merchantId;
+
+    @Schema(example = "Sri Krishna Enterprises")
+    private String merchantName;
+
     @Schema(example = "friendsrestaurant@gmail.com")
     private String outletEmail;
 

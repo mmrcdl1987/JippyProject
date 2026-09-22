@@ -40,16 +40,16 @@ public class CustomerDeliveryChargeSettingsController {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    @GetMapping("/city/{cityId}")
-    public ResponseEntity<List<CustomerDeliveryChargeSettingsDTO>> getByCityId(@PathVariable Integer cityId) {
+    @GetMapping("/area/{areaId}")
+    public ResponseEntity<List<CustomerDeliveryChargeSettingsDTO>> getByAreaId(@PathVariable Integer areaId) {
 
-        return ResponseEntity.ok(service.getByCityId(cityId));
+        return ResponseEntity.ok(service.getByAreaId(areaId));
     }
 
     @GetMapping("/applicable")
-    public ResponseEntity<CustomerDeliveryChargeSettingsDTO> getApplicablePlan(@RequestParam @NotNull Integer cityId, @RequestParam @NotNull @DecimalMin(value = "0.00", message = "Order value cannot be negative") BigDecimal orderValue) {
+    public ResponseEntity<CustomerDeliveryChargeSettingsDTO> getApplicablePlan(@RequestParam @NotNull Integer areaId, @RequestParam @NotNull @DecimalMin(value = "0.00", message = "Order value cannot be negative") BigDecimal orderValue) {
 
-        return ResponseEntity.ok(service.getApplicablePlan(cityId, orderValue));
+        return ResponseEntity.ok(service.getApplicablePlan(areaId, orderValue));
     }
 
     @PutMapping("/{id}")

@@ -14,27 +14,27 @@ import java.util.Optional;
 public interface CustomerDeliveryChargeSettingsRepository
         extends JpaRepository<CustomerDeliveryChargeSettings, Integer> {
 
-    List<CustomerDeliveryChargeSettings> findByCityIdOrderByOrderValueThresholdAsc(
-            Integer cityId
+    List<CustomerDeliveryChargeSettings> findByAreaIdOrderByOrderValueThresholdAsc(
+            Integer areaId
     );
 
-    List<CustomerDeliveryChargeSettings> findByCityIdAndIsActiveTrueOrderByOrderValueThresholdAsc(
-            Integer cityId
+    List<CustomerDeliveryChargeSettings> findByAreaIdAndIsActiveTrueOrderByOrderValueThresholdAsc(
+            Integer areaId
     );
 
     Optional<CustomerDeliveryChargeSettings>
-    findFirstByCityIdAndIsActiveTrueAndOrderValueThresholdLessThanEqualOrderByOrderValueThresholdDesc(
-            Integer cityId,
+    findFirstByAreaIdAndIsActiveTrueAndOrderValueThresholdLessThanEqualOrderByOrderValueThresholdDesc(
+            Integer areaId,
             BigDecimal orderValue
     );
 
-    boolean existsByCityIdAndOrderValueThreshold(
-            Integer cityId,
+    boolean existsByAreaIdAndOrderValueThreshold(
+            Integer areaId,
             BigDecimal orderValueThreshold
     );
 
-    boolean existsByCityIdAndOrderValueThresholdAndCustomerDeliveryChargeSettingsIdNot(
-            Integer cityId,
+    boolean existsByAreaIdAndOrderValueThresholdAndCustomerDeliveryChargeSettingsIdNot(
+            Integer areaId,
             BigDecimal orderValueThreshold,
             Integer id
     );
@@ -42,13 +42,13 @@ public interface CustomerDeliveryChargeSettingsRepository
     @Query("""
         SELECT c
         FROM CustomerDeliveryChargeSettings c
-        WHERE c.cityId = :cityId
+        WHERE c.areaId = :areaId
           AND c.isActive = true
           AND c.orderValueThreshold <= :orderAmount
         ORDER BY c.orderValueThreshold DESC
         """)
     List<CustomerDeliveryChargeSettings> findApplicablePlans(
-            @Param("cityId") Integer cityId,
+            @Param("areaId") Integer areaId,
             @Param("orderAmount") BigDecimal orderAmount
     );
 }

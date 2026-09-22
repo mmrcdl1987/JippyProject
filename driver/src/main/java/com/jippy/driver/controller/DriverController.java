@@ -34,25 +34,17 @@
         private final DriverService driverService;
         private final DriverLocationService driverLocationService;
 
-        @PostMapping(path = "/postDriverDetails")
-        @Operation(
-                summary = "Create Driver",
-                description = "Creates a new Driver along with Driver KYC, Address, User Account, "
-                        + "Wallet and Approval Request. "
-                        + "The Driver is saved in the Driver Microservice, while the Address, "
-                        + "User Account and Approval Request are created in the Food & Mart "
-                        + "Microservice through Feign Client integration."
-                        + "Supports document uploads for KYC verification.")
-        @ApiResponse(responseCode = "200", description = "Driver created successfully.")
-        @ApiResponse(responseCode = "400", description = "Invalid Driver request.")
-        @ApiResponse(responseCode = "404", description = "Referenced resource not found.")
-        @ApiResponse(responseCode = "500", description = "Internal Server Error.")
+        @PostMapping("/postDriverDetails")
         public ResponseEntity<DriverDto> postDriverDetails(
                 @Valid @RequestBody DriverDto dto) {
 
-            log.info("POST API called that created driver:");
+            log.info("API_START: postDriverDetails");
 
-            return ResponseEntity.ok(driverService.postDriverDetails(dto));
+            DriverDto response = driverService.postDriverDetails(dto);
+
+            log.info("API_SUCCESS: postDriverDetails");
+
+            return ResponseEntity.ok(response);
         }
 
         //    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)

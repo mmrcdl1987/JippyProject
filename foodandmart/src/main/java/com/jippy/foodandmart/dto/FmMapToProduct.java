@@ -36,6 +36,9 @@ public class FmMapToProduct {
      */
     private Integer categoryId;
 
+
+    private Boolean isToggle = true;
+
     /**
      * One or many master products.
      */

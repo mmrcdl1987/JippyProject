@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -7,6 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FmAddressRequestDto {
 
     private Integer addressId;
@@ -21,13 +23,8 @@ public class FmAddressRequestDto {
     )
     private String addressType;
 
-    @NotBlank(message = "Building number is required")
+//    @NotBlank(message = "Building number is required")
 //    @Size(max = 50, message = "Building number must not exceed 50 characters")
-//    @Pattern(
-//            regexp = "^(?!null$).+",
-//            flags = Pattern.Flag.CASE_INSENSITIVE,
-//            message = "Building number cannot be 'null'"
-//    )
     private String buildingNumber;
 
 //    @NotBlank(message = "Road is required")

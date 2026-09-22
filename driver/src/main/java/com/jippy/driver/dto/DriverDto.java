@@ -116,25 +116,25 @@ private String drivingLicenseDocUrl;
 @Schema(description = "RC copy document URL.", accessMode = Schema.AccessMode.READ_ONLY)
 private String rcCopyDocUrl;
 
-@Schema(description = "Aadhar document file (PDF, JPG, PNG)",
-        accessMode = Schema.AccessMode.WRITE_ONLY)
-@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-private MultipartFile aadharDocument;
-
-@Schema(description = "PAN document file (PDF, JPG, PNG)",
-        accessMode = Schema.AccessMode.WRITE_ONLY)
-@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-private MultipartFile panDocument;
-
-@Schema(description = "Driving license document file (PDF, JPG, PNG)",
-        accessMode = Schema.AccessMode.WRITE_ONLY)
-@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-private MultipartFile drivingLicenseDocument;
-
-@Schema(description = "RC copy document file (PDF, JPG, PNG)",
-        accessMode = Schema.AccessMode.WRITE_ONLY)
-@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-private MultipartFile rcCopyDocument;
+// @Schema(description = "Aadhar document file (PDF, JPG, PNG)",
+//         accessMode = Schema.AccessMode.WRITE_ONLY)
+// @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+// private MultipartFile aadharDocument;
+// 
+// @Schema(description = "PAN document file (PDF, JPG, PNG)",
+//         accessMode = Schema.AccessMode.WRITE_ONLY)
+// @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+// private MultipartFile panDocument;
+// 
+// @Schema(description = "Driving license document file (PDF, JPG, PNG)",
+//         accessMode = Schema.AccessMode.WRITE_ONLY)
+// @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+// private MultipartFile drivingLicenseDocument;
+// 
+// @Schema(description = "RC copy document file (PDF, JPG, PNG)",
+//         accessMode = Schema.AccessMode.WRITE_ONLY)
+// @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+// private MultipartFile rcCopyDocument;
 
     // Address fields in FM
     @Schema(description = "Building or house number.", example = "10-2-15")

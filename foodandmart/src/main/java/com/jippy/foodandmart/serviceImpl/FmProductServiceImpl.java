@@ -889,22 +889,6 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
         String masterPhoto =
                 masterProduct.getPhoto();
 
-        if (masterPhoto == null
-                || masterPhoto.isBlank()) {
-
-            log.warn(
-                    "[PRODUCT-MAP] Skipping product because image is missing | masterProductId={} | productName={}",
-                    masterProduct.getMasterProductId(),
-                    productName
-            );
-
-            skippedNames.add(
-                    productName + " (Image Missing)"
-            );
-
-            continue;
-        }
-
         product.setImageLink(
                 masterPhoto
         );
@@ -980,6 +964,11 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
                 "Y"
         );
 
+        Boolean productToggle = request.getIsToggle() != null
+                ? request.getIsToggle()
+                : Boolean.TRUE;
+
+        product.setIsToggle(productToggle);
         // ========================================================
         // 12. SAVE PRODUCT
         // ========================================================

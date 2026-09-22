@@ -442,7 +442,6 @@ public class FmProductController {
         return ResponseEntity.ok(products);
     }
 //    =====================================================================================
-//    =====================================================================================
     /**
      * Activates or deactivates a PRODUCT or MASTERPRODUCT.
      *

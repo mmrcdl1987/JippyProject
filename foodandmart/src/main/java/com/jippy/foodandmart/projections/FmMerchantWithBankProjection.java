@@ -1,7 +1,7 @@
 package com.jippy.foodandmart.projections;
 
 //gets data from DB
-//To hold data coming from JOIN query (Merchant + Bank)
+//To hold data coming from JOIN query (Merchant + Bank + Address + KYC)
 public interface FmMerchantWithBankProjection {
 
     //    for merchant basic details to fetch
@@ -13,7 +13,19 @@ public interface FmMerchantWithBankProjection {
 //    String getStatus();
 
     Boolean getIsApproved();
-// for merchant details
+
+    // for merchant address details
+    String getBuildingNumber();
+    String getRoad();
+    String getLandmark();
+    Integer getStateId();
+    String getStateName();
+    Integer getCityId();
+    String getCityName();
+    Integer getAreaId();
+    String getAreaName();
+
+    // for merchant bank details
     Long getBankId();
     Long getRecipientId();
     String getAccountNumber();
@@ -22,8 +34,11 @@ public interface FmMerchantWithBankProjection {
     String getAccountHolderName();
     String getUserType();
 
-    String getAadhaarNumberUrl();
+    // for KYC numbers
+    String getAadharNumber();
+    String getPanNumber();
 
+    // for KYC document URLs
+    String getAadhaarNumberUrl();
     String getPanNumberUrl();
 }
-

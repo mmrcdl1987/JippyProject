@@ -14,15 +14,15 @@ public interface CustomerDeliveryChargeSettingsService {
 
     CustomerDeliveryChargeSettingsDTO getById(Integer id);
 
-    List<CustomerDeliveryChargeSettingsDTO> getByCityId(Integer cityId);
+    List<CustomerDeliveryChargeSettingsDTO> getByAreaId(Integer areaId);
 
     CustomerDeliveryChargeSettingsDTO update(Integer id, CustomerDeliveryChargeSettingsDTO dto, Integer userId);
 
     void delete(Integer id);
 
-    CustomerDeliveryChargeSettingsDTO getApplicablePlan(Integer cityId, BigDecimal orderValue);
+    CustomerDeliveryChargeSettingsDTO getApplicablePlan(Integer areaId, BigDecimal orderValue);
     CustomerDeliveryChargeCalculationResponseDto calculateCustomerDeliveryCharge(
-            Integer cityId,
+            Integer areaId,
             BigDecimal orderAmountDiscounted,
             BigDecimal deliveryDistanceKm
     );

@@ -1466,6 +1466,8 @@ public final class FmOutletMapper {
 
         outlet.setOutletId(firstRow.getOutletId());
         outlet.setOutletName(firstRow.getOutletName());
+        outlet.setMerchantId(firstRow.getMerchantId());
+        outlet.setMerchantName(firstRow.getMerchantName());
         outlet.setOutletEmail(firstRow.getOutletEmail());
         outlet.setOutletPhone(firstRow.getOutletPhone());
         outlet.setAlternateOutletPhone(firstRow.getAlternateOutletPhone());
