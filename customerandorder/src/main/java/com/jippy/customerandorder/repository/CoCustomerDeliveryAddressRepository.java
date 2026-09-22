@@ -62,4 +62,15 @@ public interface CoCustomerDeliveryAddressRepository extends JpaRepository<CoCus
             @Param("customerAddressId") Integer customerAddressId,
             @Param("customerId") Integer customerId
     );
+
+    @Query("""
+        SELECT a.area
+        FROM CoCustomerDeliveryAddress a
+        WHERE a.customerAddressId = :customerAddressId
+        AND a.customerId = :customerId
+        """)
+    Integer findAreaByCustomerAddressId(
+            @Param("customerAddressId") Integer customerAddressId,
+            @Param("customerId") Integer customerId
+    );
 }

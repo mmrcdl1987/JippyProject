@@ -27,9 +27,9 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
     @Override
     public CustomerDeliveryChargeSettingsDTO create(CustomerDeliveryChargeSettingsDTO dto, Integer userId) {
 
-        log.info("Creating delivery charge setting for cityId={}, threshold={}", dto.getCityId(), dto.getOrderValueThreshold());
+        log.info("Creating delivery charge setting for areaId={}, threshold={}", dto.getAreaId(), dto.getOrderValueThreshold());
 
-        validateDuplicateThreshold(dto.getCityId(), dto.getOrderValueThreshold());
+        validateDuplicateThreshold(dto.getAreaId(), dto.getOrderValueThreshold());
 
         CustomerDeliveryChargeSettings entity = new CustomerDeliveryChargeSettings();
 
@@ -71,11 +71,11 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
     @Override
     @Transactional(readOnly = true)
-    public List<CustomerDeliveryChargeSettingsDTO> getByCityId(Integer cityId) {
+    public List<CustomerDeliveryChargeSettingsDTO> getByAreaId(Integer areaId) {
 
-        log.info("Fetching delivery charge settings for cityId={}", cityId);
+        log.info("Fetching delivery charge settings for areaId={}", areaId);
 
-        return repository.findByCityIdOrderByOrderValueThresholdAsc(cityId).stream().map(this::mapEntityToDto).toList();
+        return repository.findByAreaIdOrderByOrderValueThresholdAsc(areaId).stream().map(this::mapEntityToDto).toList();
     }
 
     @Override
@@ -85,10 +85,10 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
         CustomerDeliveryChargeSettings entity = repository.findById(id).orElseThrow(() -> new CoResourceNotFoundException("Delivery charge setting not found with id: " + id));
 
-        boolean duplicateExists = repository.existsByCityIdAndOrderValueThresholdAndCustomerDeliveryChargeSettingsIdNot(dto.getCityId(), dto.getOrderValueThreshold(), id);
+        boolean duplicateExists = repository.existsByAreaIdAndOrderValueThresholdAndCustomerDeliveryChargeSettingsIdNot(dto.getAreaId(), dto.getOrderValueThreshold(), id);
 
         if (duplicateExists) {
-            throw new DuplicateResourceException("A delivery charge setting already exists for cityId " + dto.getCityId() + " and order value threshold " + dto.getOrderValueThreshold());
+            throw new DuplicateResourceException("A delivery charge setting already exists for areaId " + dto.getAreaId() + " and order value threshold " + dto.getOrderValueThreshold());
         }
 
         mapDtoToEntity(dto, entity);
@@ -117,11 +117,11 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
     @Override
     @Transactional(readOnly = true)
-    public CustomerDeliveryChargeSettingsDTO getApplicablePlan(Integer cityId, BigDecimal orderValue) {
+    public CustomerDeliveryChargeSettingsDTO getApplicablePlan(Integer areaId, BigDecimal orderValue) {
 
-        log.info("Finding applicable delivery plan for cityId={}, orderValue={}", cityId, orderValue);
+        log.info("Finding applicable delivery plan for areaId={}, orderValue={}", areaId, orderValue);
 
-        CustomerDeliveryChargeSettings entity = repository.findFirstByCityIdAndIsActiveTrueAndOrderValueThresholdLessThanEqualOrderByOrderValueThresholdDesc(cityId, orderValue).orElseThrow(() -> new CoResourceNotFoundException("No active delivery charge plan found for cityId: " + cityId + " and order value: " + orderValue));
+        CustomerDeliveryChargeSettings entity = repository.findFirstByAreaIdAndIsActiveTrueAndOrderValueThresholdLessThanEqualOrderByOrderValueThresholdDesc(areaId, orderValue).orElseThrow(() -> new CoResourceNotFoundException("No active delivery charge plan found for areaId: " + areaId + " and order value: " + orderValue));
 
         return mapEntityToDto(entity);
     }
@@ -129,20 +129,20 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
     @Override
     @Transactional(readOnly = true)
     public CustomerDeliveryChargeCalculationResponseDto calculateCustomerDeliveryCharge(
-            Integer cityId,
+            Integer areaId,
             BigDecimal orderAmountDiscounted,
             BigDecimal deliveryDistanceKm
     ) {
 
         log.info(
-                "CALCULATE_CUSTOMER_DELIVERY_CHARGE | cityId={} | orderAmountDiscounted={} | deliveryDistanceKm={}",
-                cityId,
+                "CALCULATE_CUSTOMER_DELIVERY_CHARGE | areaId={} | orderAmountDiscounted={} | deliveryDistanceKm={}",
+                areaId,
                 orderAmountDiscounted,
                 deliveryDistanceKm
         );
 
-        if (cityId == null) {
-            throw new IllegalArgumentException("City id is required");
+        if (areaId == null) {
+            throw new IllegalArgumentException("Area id is required");
         }
 
         if (orderAmountDiscounted == null) {
@@ -167,7 +167,7 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
         CustomerDeliveryChargeSettingsDTO plan =
                 getApplicablePlan(
-                        cityId,
+                        areaId,
                         orderAmountDiscounted
                 );
 
@@ -247,8 +247,8 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
         );
 
         log.info(
-                "CUSTOMER_DELIVERY_CHARGE_CALCULATED | cityId={} | plan={} | distance={} | chargePerKm={} | grossCharge={} | freeBenefit={} | payableCharge={}",
-                cityId,
+                "CUSTOMER_DELIVERY_CHARGE_CALCULATED | areaId={} | plan={} | distance={} | chargePerKm={} | grossCharge={} | freeBenefit={} | payableCharge={}",
+                areaId,
                 plan.getPlanName(),
                 deliveryDistanceKm,
                 chargePerKm,
@@ -260,18 +260,18 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
         return response;
     }
 
-    private void validateDuplicateThreshold(Integer cityId, BigDecimal orderValueThreshold) {
+    private void validateDuplicateThreshold(Integer areaId, BigDecimal orderValueThreshold) {
 
-        boolean exists = repository.existsByCityIdAndOrderValueThreshold(cityId, orderValueThreshold);
+        boolean exists = repository.existsByAreaIdAndOrderValueThreshold(areaId, orderValueThreshold);
 
         if (exists) {
-            throw new DuplicateResourceException("A delivery charge setting already exists for cityId " + cityId + " and order value threshold " + orderValueThreshold);
+            throw new DuplicateResourceException("A delivery charge setting already exists for areaId " + areaId + " and order value threshold " + orderValueThreshold);
         }
     }
 
     private void mapDtoToEntity(CustomerDeliveryChargeSettingsDTO dto, CustomerDeliveryChargeSettings entity) {
 
-        entity.setCityId(dto.getCityId());
+        entity.setAreaId(dto.getAreaId());
         entity.setPlanName(dto.getPlanName());
         entity.setOrderValueThreshold(dto.getOrderValueThreshold());
         entity.setFreeDistanceKms(dto.getFreeDistanceKms());
@@ -288,7 +288,7 @@ public class CustomerDeliveryChargeSettingsServiceImpl implements CustomerDelive
 
         dto.setCustomerDeliveryChargeSettingsId(entity.getCustomerDeliveryChargeSettingsId());
 
-        dto.setCityId(entity.getCityId());
+        dto.setAreaId(entity.getAreaId());
         dto.setPlanName(entity.getPlanName());
 
         dto.setOrderValueThreshold(entity.getOrderValueThreshold());

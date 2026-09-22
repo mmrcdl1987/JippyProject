@@ -22,8 +22,8 @@ public class CustomerDeliveryChargeSettings {
     @Column(name = "customer_delivery_charge_settings_id")
     private Integer customerDeliveryChargeSettingsId;
 
-    @Column(name = "city_id", nullable = false)
-    private Integer cityId;
+    @Column(name = "area_id", nullable = false)
+    private Integer areaId;
 
     @Column(name = "plan_name", nullable = false, length = 30)
     private String planName;

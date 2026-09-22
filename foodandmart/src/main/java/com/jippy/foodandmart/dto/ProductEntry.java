@@ -99,4 +99,7 @@ public class ProductEntry {
      */
     @Valid
     private List<FmProductVariantOptionGroupDto> variantGroups;
+
+
+
 }

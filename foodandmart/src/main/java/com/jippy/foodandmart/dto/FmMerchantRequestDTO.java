@@ -95,61 +95,40 @@ public class FmMerchantRequestDTO {
     // BUSINESS DETAILS
     // ============================================================
 
-    @Schema(description = "Business or outlet type", example = "Restaurant")
-    @NotBlank(message = "Outlet type is required")
-    @Size(max = 50, message = "Outlet type must not exceed 50 characters")
     private String outletType;
 
-
-    @Schema(description = "Name of the user who uploaded the merchant details", example = "Admin")
-    @Size(max = 100, message = "UploadedBy must not exceed 100 characters")
     private String uploadedBy;
 
     // ============================================================
     // KYC DETAILS
     // ============================================================
 
-    @Schema(description = "Merchant PAN number", example = "ABCDE1234F")
-    @NotBlank(message = "PAN number is required")
-    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "PAN must be in format: AAAAA9999A")
+
     private String pan;
 
 
-    @Schema(description = "Merchant Aadhaar number", example = "987654321012")
-    @NotBlank(message = "Aadhaar number is required")
-    @Pattern(regexp = "^[2-9]{1}[0-9]{11}$", message = "Aadhaar must be a valid 12-digit number")
     private String adhar;
 
     // ============================================================
     // BANK DETAILS
     // ============================================================
 
-    @Schema(description = "Merchant bank account number", example = "1234567890123456")
-    @Pattern(regexp = "^$|^[0-9]{9,18}$", message = "Account number must be 9–18 digits")
+
     private String accountNumber;
 
 
-    @Schema(description = "Bank IFSC code", example = "SBIN0001234")
-    @Pattern(regexp = "^$|^[A-Z]{4}0[A-Z0-9]{6}$", message = "IFSC must be in format: ABCD0123456")
     private String ifscCode;
 
 
-    @Schema(description = "Branch or bank location", example = "Kukatpally Branch")
-    @Size(max = 100, message = "Bank location must not exceed 100 characters")
     private String bankLocation;
 
-
-    @Schema(description = "Account holder name as per bank records", example = "Rohan Vadluri")
-    @Size(max = 150, message = "Name in bank account must not exceed 150 characters")
     private String nameInBankAccount;
 
     // ============================================================
     // DATE OF BIRTH
     // ============================================================
 
-    @Schema(description = "Merchant's date of birth", example = "2002-08-15")
-    @NotBlank(message = "Date of birth is required")
-    @Pattern(regexp = "^(\\d{4}-\\d{2}-\\d{2}|\\d{2}-\\d{2}-\\d{2})$", message = "DOB must be in YYYY-MM-DD or MM-DD-YY format")
+
     private String dob;
 
     // ============================================================
@@ -184,19 +163,10 @@ public class FmMerchantRequestDTO {
     // Kukatpally -> areaId
     // ============================================================
 
-    @NotBlank(message = "Building No ( Total-Address ) is Required")
-    @Schema(description = "Merchant building / door number", example = "12-34")
-    @Size(max = 500, message = "Building number must not exceed 500 characters")
     private String buildingNumber;
 
-
-    @Schema(description = "Merchant road", example = "Main Road")
-    @Size(max = 100, message = "Road must not exceed 100 characters")
     private String road;
 
-
-    @Schema(description = "Merchant address landmark", example = "Near Metro")
-    @Size(max = 150, message = "Landmark must not exceed 150 characters")
     private String landmark;
 
 //    =====================================================================================

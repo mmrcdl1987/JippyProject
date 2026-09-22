@@ -90,6 +90,16 @@ public interface FmMerchantRepository
             m.merchant_business_type AS businessType,
             m.is_approved AS isApproved,
 
+            addr.building_number AS buildingNumber,
+            addr.road AS road,
+            addr.landmark AS landmark,
+            addr.state_id AS stateId,
+            st.state_name AS stateName,
+            addr.city_id AS cityId,
+            ci.city_name AS cityName,
+            addr.area_id AS areaId,
+            ar.area_name AS areaName,
+
             u.bank_id AS bankId,
             u.recipient_id AS recipientId,
             u.account_number AS accountNumber,
@@ -98,6 +108,8 @@ public interface FmMerchantRepository
             u.account_holder_name AS accountHolderName,
             u.user_type AS userType,
 
+            k.aadhaar_number AS aadharNumber,
+            k.pan_number AS panNumber,
             k.aadhaar_number_url AS aadhaarNumberUrl,
             k.pan_number_url AS panNumberUrl
 
@@ -106,6 +118,19 @@ public interface FmMerchantRepository
         JOIN jippy_fm.user_bank_details u
           ON u.recipient_id = m.merchant_id
          AND u.user_type = 'MERCHANT'
+
+        LEFT JOIN jippy_fm.address addr
+          ON addr.jippy_address_id = m.merchant_id
+         AND addr.address_type = 'MERCHANT'
+
+        LEFT JOIN jippy_fm.state st
+          ON st.state_id = addr.state_id
+
+        LEFT JOIN jippy_fm.city ci
+          ON ci.city_id = addr.city_id
+
+        LEFT JOIN jippy_fm.area ar
+          ON ar.area_id = addr.area_id
 
         LEFT JOIN jippy_fm.user_kyc k
           ON k.entity_id = m.merchant_id
@@ -117,6 +142,7 @@ public interface FmMerchantRepository
     FmMerchantWithBankProjection getMerchantWithBank(
             @Param("merchantId") Integer merchantId
     );
+
 
 
     // ============================================================

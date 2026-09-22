@@ -1,5 +1,6 @@
 package com.jippy.foodandmart.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FmMerchantWithBankDto {
 
         // for merchant
@@ -45,8 +46,11 @@ public class FmMerchantWithBankDto {
         private String road;
         private String landmark;
         private Integer stateId;
+        private String stateName;
         private Integer cityId;
+        private String cityName;
         private Integer areaId;
+        private String areaName;
 
 
         // for merchant bank details

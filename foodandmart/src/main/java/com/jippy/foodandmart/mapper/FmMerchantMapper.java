@@ -323,6 +323,17 @@ public final class FmMerchantMapper {
         dto.setIsApproved(data.getIsApproved());
 //        dto.setStatus(data.getStatus());
 
+        // address details from projection
+        dto.setBuildingNumber(data.getBuildingNumber());
+        dto.setRoad(data.getRoad());
+        dto.setLandmark(data.getLandmark());
+        dto.setStateId(data.getStateId());
+        dto.setStateName(data.getStateName());
+        dto.setCityId(data.getCityId());
+        dto.setCityName(data.getCityName());
+        dto.setAreaId(data.getAreaId());
+        dto.setAreaName(data.getAreaName());
+
         // bank details from projection
         dto.setBankId(data.getBankId());
         dto.setRecipientId(data.getRecipientId());
@@ -332,8 +343,11 @@ public final class FmMerchantMapper {
         dto.setAccountHolderName(data.getAccountHolderName());
         dto.setUserType(data.getUserType());
 
+        // KYC numbers
+        dto.setAadharNumber(data.getAadharNumber());
+        dto.setPanNumber(data.getPanNumber());
 
-        // KYC details
+        // KYC document URLs
         dto.setAadhaarNumberUrl(data.getAadhaarNumberUrl());
         dto.setPanNumberUrl(data.getPanNumberUrl());
 

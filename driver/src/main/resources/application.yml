@@ -71,10 +71,8 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest
       properties:
-        # Ignore type headers sent by external producers
-        spring.json.use.type.headers: false
-        # Allow deserialization of classes in all packages
-        spring.json.trusted.packages: "*"
+        # CRITICAL: Tell Spring which Java packages are safe to deserialize
+        spring.json.trusted.packages: "com.jippy.driver.dto"
 
 
   #data:
@@ -149,5 +147,5 @@ uber:
     client-secret: ${UBER_CLIENT_SECRET}
     scope: eats.deliveries
 
-    
+
 

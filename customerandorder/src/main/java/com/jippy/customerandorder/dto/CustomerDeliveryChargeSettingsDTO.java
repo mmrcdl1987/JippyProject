@@ -19,8 +19,8 @@ public class CustomerDeliveryChargeSettingsDTO {
 
     private Integer customerDeliveryChargeSettingsId;
 
-    @NotNull(message = "City ID is required")
-    private Integer cityId;
+    @NotNull(message = "Area ID is required")
+    private Integer areaId;
 
     @NotBlank(message = "Plan name is required")
     @Size(max = 30, message = "Plan name must not exceed 30 characters")

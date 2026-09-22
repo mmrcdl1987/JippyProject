@@ -29,7 +29,7 @@ public class CoOrderSettingsRequestDto {
     @DecimalMax(value = "100.0", inclusive = true,
             message = "Food total amount tax cannot be greater than 100")
     private BigDecimal foodTotalAmountTax;
-    
+
     private Integer createdBy;
 
     private Integer updatedBy;

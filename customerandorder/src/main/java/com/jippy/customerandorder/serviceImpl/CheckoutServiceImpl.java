@@ -11,7 +11,6 @@ import com.jippy.customerandorder.feignClients.FMFeignClient;
 import com.jippy.customerandorder.iservice.CustomerDeliveryChargeSettingsService;
 import com.jippy.customerandorder.iservice.ICartService;
 import com.jippy.customerandorder.iservice.ICheckoutService;
-import com.jippy.customerandorder.repository.CoCustomerDeliveryAddressRepository;
 import com.jippy.customerandorder.repository.CoOrderCheckoutFeeRepository;
 import com.jippy.customerandorder.repository.CoOrderCheckoutTaxRepository;
 import feign.FeignException;
@@ -41,8 +40,6 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
     private final CoOrderCheckoutTaxRepository taxRepository;
 
-    private final CoCustomerDeliveryAddressRepository customerDeliveryAddressRepository;
-
     @Override
     public CoCheckoutResponseDto checkout(CoCheckoutRequestDto requestDto) {
 
@@ -65,12 +62,11 @@ public class CheckoutServiceImpl implements ICheckoutService {
             log.info("ITEM_TOTAL_CALCULATED | customerId={} | itemTotal={}", requestDto.getCustomerId(), itemTotal);
 
             // AREA / FEE CONFIGURATION
+            Integer outletAreaId = getAreaId(requestDto.getOutletId());
 
-            Integer areaId = getAreaId(requestDto.getOutletId());
+            log.info("OUTLET_AREA_ID_RESOLVED | outletId={} | outletAreaId={}", requestDto.getOutletId(), outletAreaId);
 
-            log.info("AREA_ID_RESOLVED | outletId={} | areaId={}", requestDto.getOutletId(), areaId);
-
-            CoOrderCheckoutFee feeConfig = getFeeConfiguration(areaId);
+            CoOrderCheckoutFee feeConfig = getFeeConfiguration(outletAreaId);
 
             // GST CONFIGURATION
 
@@ -109,8 +105,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
             BigDecimal orderAmountDiscounted = itemTotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
 
             log.info("PROMOTION_APPLIED | customerId={} | sourceType={} | couponId={} | discount={}", requestDto.getCustomerId(), promotionSourceType, couponId, couponDiscount);
-            // CUSTOMER CITY
-            Integer customerCityId = getCustomerCityId(requestDto.getCustomerId(), requestDto.getCustomerAddressId());
+
             // DRIVER DELIVERY CHARGE
             // KEEP EXISTING DRIVER CALCULATION
 
@@ -121,18 +116,19 @@ public class CheckoutServiceImpl implements ICheckoutService {
             BigDecimal deliveryDistanceKm = defaultValue(deliveryResponse.getDeliveryDistanceKm());
 
             log.info("DRIVER_DELIVERY_CHARGE | distance={} | driverDeliveryCharge={}", deliveryDistanceKm, driverDeliveryCharge);
-            // CUSTOMER DELIVERY CHARGE
+
+            // CUSTOMER DELIVERY CHARGE (SCOPED TO OUTLET AREA ID)
 
             log.info(
-                    "CUSTOMER_DELIVERY_CHARGE_START | cityId={} | orderAmount={} | distanceKm={}",
-                    customerCityId,
+                    "CUSTOMER_DELIVERY_CHARGE_START | outletAreaId={} | orderAmount={} | distanceKm={}",
+                    outletAreaId,
                     orderAmountDiscounted,
                     deliveryDistanceKm
             );
 
             CustomerDeliveryChargeCalculationResponseDto customerDeliveryResponse =
                     customerDeliveryChargeSettingsService.calculateCustomerDeliveryCharge(
-                            customerCityId,
+                            outletAreaId,
                             orderAmountDiscounted,
                             deliveryDistanceKm
                     );
@@ -156,7 +152,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
             BigDecimal customerDeliveryCharge = defaultValue(customerDeliveryResponse.getDeliveryCharge());
 
-            log.info("CUSTOMER_DELIVERY_CHARGE | cityId={} | discountedAmount={} | distance={} | gross={} | freeBenefit={} | payable={}", customerCityId, orderAmountDiscounted, deliveryDistanceKm, customerGrossDeliveryCharge, customerFreeDistanceBenefit, customerDeliveryCharge);
+            log.info("CUSTOMER_DELIVERY_CHARGE | outletAreaId={} | discountedAmount={} | distance={} | gross={} | freeBenefit={} | payable={}", outletAreaId, orderAmountDiscounted, deliveryDistanceKm, customerGrossDeliveryCharge, customerFreeDistanceBenefit, customerDeliveryCharge);
 
             // CUSTOMER DELIVERY GST
             //
@@ -258,7 +254,7 @@ public class CheckoutServiceImpl implements ICheckoutService {
 
                     deliveryResponse.getCodAvailable());
 
-            log.info("SERVICE_END | CHECKOUT_SUCCESS | customerId={} | areaId={} | driverDeliveryCharge={} | customerDeliveryCharge={} | toPay={}", requestDto.getCustomerId(), areaId, driverDeliveryCharge, customerDeliveryCharge, toPay);
+            log.info("SERVICE_END | CHECKOUT_SUCCESS | customerId={} | outletAreaId={} | driverDeliveryCharge={} | customerDeliveryCharge={} | toPay={}", requestDto.getCustomerId(), outletAreaId, driverDeliveryCharge, customerDeliveryCharge, toPay);
 
             return response;
 
@@ -587,24 +583,6 @@ public class CheckoutServiceImpl implements ICheckoutService {
         response.setCodAvailable(codAvailable);
 
         return response;
-    }
-
-    private Integer getCustomerCityId(Integer customerId, Integer customerAddressId) {
-
-        log.info("GET_CUSTOMER_CITY | customerId={} | customerAddressId={}", customerId, customerAddressId);
-
-        Integer cityId = customerDeliveryAddressRepository.findCityByCustomerAddressId(customerAddressId, customerId);
-
-        if (cityId == null) {
-
-            log.error("CUSTOMER_CITY_NOT_FOUND | customerId={} | customerAddressId={}", customerId, customerAddressId);
-
-            throw new CoBadRequestException("City not found for customer address");
-        }
-
-        log.info("CUSTOMER_CITY_RESOLVED | customerId={} | customerAddressId={} | cityId={}", customerId, customerAddressId, cityId);
-
-        return cityId;
     }
 
     // COMMON

@@ -1081,6 +1081,8 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
         -- =========================================================
         o.outlet_id,
         o.outlet_name,
+        o.merchant_id,
+        m.merchant_name,
         o.outlet_email,
         o.outlet_phone,
         o.alternate_outlet_phone,
@@ -1212,6 +1214,12 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
         d2.day_name AS product_day
 
     FROM jippy_fm.outlets o
+
+    -- =========================================================
+    -- MERCHANT
+    -- =========================================================
+    LEFT JOIN jippy_fm.merchants m
+           ON m.merchant_id = o.merchant_id
 
     -- =========================================================
     -- BANK

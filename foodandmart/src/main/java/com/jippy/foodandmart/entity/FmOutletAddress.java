@@ -30,11 +30,11 @@ public class FmOutletAddress {
 
     @Column(name = "jippy_address_id", nullable = false)
     private Integer jippyAddressId;
-    @Column(name = "building_number", nullable = false)
+    @Column(name = "building_number", nullable = true)
     private String buildingNumber;
-    @Column(name = "road", length = 100, nullable = false)
+    @Column(name = "road", length = 100, nullable = true)
     private String road;
-    @Column(name = "landmark", length = 150, nullable = false)
+    @Column(name = "landmark", length = 150, nullable = true)
     private String landmark;
     @Column(name = "city_id", nullable = false)
     private Integer cityId;
