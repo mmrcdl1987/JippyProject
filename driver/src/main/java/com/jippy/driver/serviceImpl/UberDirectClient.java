@@ -15,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -66,8 +67,12 @@ public class UberDirectClient {
             body.add("grant_type", "client_credentials");
             body.add("scope", uberConfigProperties.getScope());
 
+            log.info("======================================"+body);
+
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
             ResponseEntity<Map> response = restTemplate.postForEntity(uberConfigProperties.getAuthUrl(), request, Map.class);
+
+            log.info("=======================response==============="+response);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
@@ -92,6 +97,7 @@ public class UberDirectClient {
     /**
      * 2. Creates Delivery Order in Uber Direct API
      */
+    @Transactional
     public String createDelivery(UberDispatchRequestDto uberDispatchRequestDto) {
         // Automatically fetch token here before calling Uber
         String token = getAccessToken();
@@ -104,6 +110,9 @@ public class UberDirectClient {
                 uberConfigProperties.getBaseUrl(),
                 uberConfigProperties.getCustomerId()
         );
+
+        // Wrap in java.net.URI to prevent RestTemplate from parsing template variables
+        java.net.URI uri = java.net.URI.create(url);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

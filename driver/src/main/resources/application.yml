@@ -60,27 +60,21 @@ spring:
       # Serializes the Message Key (Order ID) as a String
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       # Serializes the OrderEvent object into a JSON string
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     properties:
       # Ensures the message is acknowledged by Kafka brokers
       acks: all
 
     consumer:
-      # Starts reading from the beginning of the topic if no offset is found
+      group-id: driver-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest
-      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
-        # Delegate deserializers used by ErrorHandlingDeserializer
-        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-
-        # CRITICAL: Tell Spring which Java packages are safe to deserialize
-        spring.json.trusted.packages: "*"
+        # Ignore type headers sent by external producers
         spring.json.use.type.headers: false
-
-        # Explicitly state the target class to deserialize into
-        spring.json.value.default.type: "com.jippy.driver.dto.OrderAcceptedEvent"
+        # Allow deserialization of classes in all packages
+        spring.json.trusted.packages: "*"
 
 
   #data:
