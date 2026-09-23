@@ -22,10 +22,7 @@ public interface DriverService {
      *
      * @param driverId Driver Id
      */
-    void approveDriver(Integer driverId);
-
     void approveDriver(Integer driverId, String approvalLevel);
-    String createZones(DriverZoneDto zoneDto);
 
     DriverDto updateDriverDetails(Integer driverId, DriverDto dto);
 

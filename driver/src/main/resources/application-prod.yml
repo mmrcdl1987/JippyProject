@@ -6,19 +6,34 @@ spring:
     name: driver
 
     #     gMail SMTP Configuration -- gmail integration
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: jippyfooddelivery2026@gmail.com
-    password: cgbh eipp hner gdap
+#  mail:
+#    host: smtp.gmail.com
+#    port: 587
+#    username: jippyfooddelivery2026@gmail.com
+#    password: cgbh eipp hner gdap
+#
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          starttls:
+#            enable: true
+#  # --------------------------------------------------------
 
+  mail:
+    host: email-smtp.ap-south-1.amazonaws.com # Replace with your specific SES region endpoint
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
+        transport:
+          protocol: smtp
         smtp:
           auth: true
           starttls:
             enable: true
-  # --------------------------------------------------------
+            required: true
 
   servlet:
     multipart:
@@ -51,10 +66,10 @@ spring:
       acks: all
 
     consumer:
-      # Starts reading from the beginning of the topic if no offset is found
-      auto-offset-reset: earliest
+      group-id: driver-service-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
       properties:
         # CRITICAL: Tell Spring which Java packages are safe to deserialize
         spring.json.trusted.packages: "com.jippy.driver.dto"
@@ -71,6 +86,12 @@ spring:
       port: ${REDIS_PORT:6379}
       password: "${REDIS_PASSWORD:jippy-redis@574}"
       timeout: 6000ms
+
+google:
+  maps:
+    routes:
+      url: ${GOOGLE_MAPS_ROUTES_URL}
+      api-key: ${GOOGLE_MAPS_API_KEY}
 
 management:
   endpoints:
@@ -109,3 +130,20 @@ aws:
     region: ap-south-2
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
+
+jwt:
+  secret: ks93w6IjKBc8TckMt9xjYSj2rE8YHJvduMBJiXBytHk=
+  expiration: 86400000
+
+# Custom Uber Direct API Integration Properties
+uber:
+  direct:
+    # Use sandbox for testing, switch to https://api.uber.com/v1 for production
+    base-url: https://sandbox-api.uber.com/v1
+    auth-url: https://auth.uber.com/oauth/v2/token
+    customer-id: ${UBER_CUSTOMER_ID}
+    client-id: ${UBER_CLIENT_ID}
+    client-secret: ${UBER_CLIENT_SECRET}
+    scope: eats.deliveries
+    webhook-url: https://eatable-marbles-outgoing.ngrok-free.dev/api/driver/webhooks/uber/handleUberWebhook
+    max-retries: 2
