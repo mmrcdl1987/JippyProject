@@ -114,5 +114,8 @@ paytm:
 payu:
   merchant-key: ${MERCHANT_KEY}
   merchant-salt: ${MERCHANT_SALT}
-  post-service-url: https://eatable-marbles-outgoing.ngrok-free.dev/api/div/payments/response
+  surl: http://srv1617582.hstgr.cloud:8084/api/div/payments/payu/success
+  furl: http://srv1617582.hstgr.cloud:8084/api/div/payments/payu/failure
+  payment-url : https://secure.payu.in/_payment
+  refund-url : https://test.payu.in/merchant/postservice.php?form=2
 

@@ -31,8 +31,8 @@ public class PayUServiceImpl implements PayUService {
     @Value("${payu.merchant-salt}")
     private String merchantSalt;
 
-    @Value("${payu.post-service-url}")
-    private String payuPostServiceUrl;
+    @Value("${payu.refund-url}")
+    private String refundUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -151,7 +151,7 @@ public class PayUServiceImpl implements PayUService {
 
         try {
             log.info("Initiating PayU refund for PayUID: {} | RefundTxnID: {} | Amount: {}", payuPaymentId, refundTransactionId, amountStr);
-            ResponseEntity<String> response = restTemplate.exchange(payuPostServiceUrl, HttpMethod.POST, requestEntity, String.class);
+            ResponseEntity<String> response = restTemplate.exchange(refundUrl, HttpMethod.POST, requestEntity, String.class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
 

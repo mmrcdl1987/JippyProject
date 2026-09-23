@@ -148,4 +148,69 @@ public class DivPayuWebhookServiceImpl implements DivPayuWebhookService {
         return true;
     }
 
+    @Override
+    public boolean handleFailureResponse(Map<String, String> payuParams) {
+        String txnid = payuParams.get("txnid");
+        String status = payuParams.get("status");
+        String mihpayid = payuParams.get("mihpayid");
+        String bankRefNum = payuParams.get("bank_ref_num");
+
+        log.info("Received PayU Webhook for TxnID: {} | PayUID: {} | Status: {}", txnid, mihpayid, status);
+
+        // 1. Verify response signature
+        boolean isValidHash = payUService.verifyResponseHash(payuParams);
+        if (!isValidHash) {
+            log.error("PayU Webhook signature verification FAILED for TxnID: {}. Possible tampering detected!", txnid);
+            return false;
+        }
+        log.info("PayU Webhook signature verified successfully for TxnID: {}", txnid);
+
+        // 2. Fetch existing transaction record by txnid
+        PaymentTransaction transaction = transactionRepository.findByApplicationOrderId(txnid)
+                .orElseThrow(() -> {
+                    log.error("PayU Webhook processing failed: Transaction record not found in DB for TxnID: {}", txnid);
+                    return new RuntimeException("Transaction not found for ID: " + txnid);
+                });
+
+        // 3. Track prior success status for idempotency check on downstream calls
+        boolean wasAlreadySuccess = "FAILURE".equalsIgnoreCase(transaction.getPaymentStatus());
+
+        // 4. Update transaction status and gateway metadata
+        if ("failure".equalsIgnoreCase(status)) {
+            transaction.setPaymentStatus(DivAppConstants.PAYMENT_STATUS_FAILED);
+            if (!wasAlreadySuccess) {
+                log.info("Transitioning TxnID: {} status to SUCCESS via Webhook", txnid);
+            }
+        }
+
+        transaction.setGatewayPaymentId(mihpayid);
+        transaction.setGatewaySignature(payuParams.get("hash"));
+
+        transaction.setUpdatedAt(LocalDateTime.now());
+
+        // 5. Serialize raw JSON payload for audit logging
+        try {
+            transaction.setGatewayRawResponse(objectMapper.writeValueAsString(payuParams));
+        } catch (Exception e) {
+            log.warn("Failed to serialize raw PayU webhook params to JSON for TxnID: {}", txnid, e);
+        }
+
+        transactionRepository.saveAndFlush(transaction);
+        log.info("Successfully persisted PayU Webhook updates & bank reference metadata for TxnID: {} in DB.", txnid);
+
+        // 6. Trigger Order Status Update (Downstream / Feign Service) ONLY IF NOT ALREADY PROCESSED
+        if ("failure".equalsIgnoreCase(status) && !wasAlreadySuccess) {
+            log.info("Triggering downstream order status update for OrderID: {}", txnid);
+
+            Boolean paymentStatus = false;
+            //After payment successful/failed update order record in db
+            divUpdateOrderStatusService.updateOrderStatus(txnid,paymentStatus);
+        } else if (wasAlreadySuccess) {
+            log.info("Skipped downstream order status update for TxnID: {} — Order was already processed by verification API.", txnid);
+        }
+
+        return true;
+    }
+
+
 }

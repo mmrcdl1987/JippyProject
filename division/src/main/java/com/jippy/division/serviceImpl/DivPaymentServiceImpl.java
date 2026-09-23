@@ -65,8 +65,14 @@ public class DivPaymentServiceImpl implements DivPaymentService {
     @Value("${payu.merchant-key}")
     private String payUMerchantKey;
 
-    @Value("${payu.post-service-url}")
-    private String postServiceUrl;
+    @Value("${payu.payment-url}")
+    private String paymentUrl;
+
+    @Value("${payu.surl}")
+    private String surl;
+
+    @Value("${payu.furl}")
+    private String furl;
 
     private final PayUService payUService;
 
@@ -173,12 +179,14 @@ public class DivPaymentServiceImpl implements DivPaymentService {
           Map<String, String> payUParams = new HashMap<>();
           payUParams.put("email", customerResponseDto.getEmail());
           payUParams.put("firstname",customerResponseDto.getFirstName());
+          payUParams.put("lastname",customerResponseDto.getLastName());
+          payUParams.put("phoneNumber",customerResponseDto.getPhoneNumber());
           payUParams.put("productinfo", "Food ordered #" + orderDto.getOrderId());
-          payUParams.put("status","success");
           payUParams.put("amount", orderDto.getOrderTotalAmount().toString());
           payUParams.put("txnid",orderDto.getOrderId());
           payUParams.put("key", payUMerchantKey);
-          System.out.println("=============================="+payUService.verifyResponseHash(payUParams));
+          payUParams.put("surl",surl);
+          payUParams.put("furl",furl);
 
           log.info("Payment initiated successfully for order: {} with payU Hash {}", orderDto.getOrderId(), hashData.get("paymentHash"));
 
@@ -186,8 +194,10 @@ public class DivPaymentServiceImpl implements DivPaymentService {
           response.setOrderId(orderDto.getOrderId());
           response.setToPayAmount(orderDto.getOrderTotalAmount());
           response.setPayUHash(hashData.get("paymentHash"));
-          response.setPayUParams(payUParams);
-          response.setPayuUrl(postServiceUrl);
+          response.setPayload(payUParams);
+          response.setPayment_url(paymentUrl);
+          response.setSuccess(true);
+          response.setMessage("Payment Created");
 
           return  response;
 

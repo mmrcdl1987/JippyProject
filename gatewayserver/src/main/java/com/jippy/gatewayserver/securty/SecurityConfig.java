@@ -66,7 +66,9 @@ public class SecurityConfig {
                                 "/api/fm/outlets/public/outlet-details",
 
                                 //payu webhook url
-                                "/api/div/payment//webhook/payu",
+                                "/api/div/payment/webhook/payu",
+                                "/api/div/payments/payu/success",
+                                "/api/div/payments/payu/failure",
 
                                 //uber schedular calls this
                                 "/api/co/getOrderDetailsForDelivery",

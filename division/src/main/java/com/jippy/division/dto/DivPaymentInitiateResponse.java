@@ -13,6 +13,8 @@ public class DivPaymentInitiateResponse {
     private BigDecimal toPayAmount;
     private String paytmTxnToken;
     private String payUHash;
-    private Map<String, String> payUParams;
-    private String payuUrl;
+    private Map<String, String> payload;
+    private String payment_url;
+    private String message;
+    private Boolean success;
 }
