@@ -70,7 +70,8 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
             //payu webhook url
             "/api/div/payments/webhook/payu",
-            "/api/div/payments/response",
+            "/api/div/payments/payu/success",
+            "/api/div/payments/payu/failure",
             "/api/co/updateOrderStatus",
             "/api/fm/pricing/getProductMerchantPrices",
 
