@@ -42,6 +42,17 @@ public class FmOutletRequestDTO {
     private String outletName;
 
     @Schema(
+            description = "Business or outlet type",
+            example = "Restaurant"
+    )
+    @NotBlank(message = "Outlet type is required")
+    @Size(
+            max = 30,
+            message = "Outlet type must not exceed 30 characters"
+    )
+    private String outletType;
+
+    @Schema(
             description = "Merchant Id. Used for single outlet creation; "
                     + "resolved from merchantName during bulk upload.",
             example = "50"

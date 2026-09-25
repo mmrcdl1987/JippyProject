@@ -218,7 +218,7 @@ public class FmAutoApprovalSchedulerServiceImpl implements IFmAutoApprovalSchedu
         //----------------------------------------------------------
 
         Boolean triggerActivation = approvalSettingsRepository.findTriggerActivation
-                (approvalRequest.getEntityType(), currentLevel);
+                (approvalRequest.getEntityType(), currentLevel,approvalRequest.getApproverId());
 
         log.info("Trigger Activation for Entity Type : {}, Level : {} is : {}",
                 approvalRequest.getEntityType(), currentLevel, triggerActivation);

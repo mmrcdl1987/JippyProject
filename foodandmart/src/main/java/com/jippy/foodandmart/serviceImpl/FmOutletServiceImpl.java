@@ -3643,6 +3643,8 @@ public class FmOutletServiceImpl implements IFmOutletService {
 
             dto.setAreaName(projection.getAreaName());
 
+            dto.setIsGstApplied(projection.getIsGstApplied());
+
             response.add(dto);
         }
 
