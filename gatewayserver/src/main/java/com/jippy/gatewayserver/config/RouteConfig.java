@@ -103,6 +103,18 @@ public class RouteConfig     {
                         })
                         .uri("lb://NOTIFICATION"))
 
+                .route("expenses-docs", r -> r.path("/api/expenses/v3/api-docs")
+                        // Notice: NO AuthenticationFilter applied here!
+                        .uri("lb://EXPENSES"))
+
+                .route("expenses-protected", r -> r.path("/api/expenses/**")
+                        .filters(f -> {
+                            log.info("Applying AuthenticationFilter to /api/expenses request...");
+                            // This manually applies your custom filter
+                            return f.filter(authFilter.apply(new AuthenticationFilter.Config()));
+                        })
+                        .uri("lb://EXPENSES"))
+
                 .build();
     }
 }

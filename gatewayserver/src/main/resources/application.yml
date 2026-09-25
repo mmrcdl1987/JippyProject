@@ -48,6 +48,8 @@ springdoc:
        url: /api/co/v3/api-docs
      - name: driver Service
        url: /api/driver/v3/api-docs
+     - name: expenses Service
+       url: /api/expenses/v3/api-docs
 
 
 

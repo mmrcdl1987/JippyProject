@@ -29,7 +29,7 @@ public class DivAppConstants {
 
     public static final String PAYMENT_STATUS_CAPTURED_FAILED="CAPTURED_FAILED";
 
-    public static final String PAYMENT_STATUS_FAILED="FAILED";
+    public static final String PAYMENT_STATUS_FAILED="PAYMENT_FAILED";
 
     public static final String PAYMENT_STATUS_REFUND_INITIATED="REFUND_INITIATED";
 
