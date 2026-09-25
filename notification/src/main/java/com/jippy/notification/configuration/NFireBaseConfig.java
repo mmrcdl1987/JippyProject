@@ -26,7 +26,7 @@ public class NFireBaseConfig {
                 getClass()
                         .getClassLoader()
                         .getResourceAsStream(
-                                "jippy-firebase-key.json"
+                                "firebase-service-account.json"
                         );
 
         if (serviceAccount == null) {

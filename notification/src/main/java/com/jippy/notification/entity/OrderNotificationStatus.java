@@ -23,8 +23,8 @@ public class OrderNotificationStatus {
     @Column(name = "order_notification_status_id")
     private Integer orderNotificationStatusId;
 
-    @Column(name = "order_id", length = 50)
-        private String orderId;
+    @Column(name = "order_id", length = 30)
+    private String orderId;
 
     @Column(name = "reference_id")
     private Integer referenceId;
@@ -41,10 +41,11 @@ public class OrderNotificationStatus {
     @Column(name = "recipient_type", nullable = false, length = 30)
     private String recipientType;
 
+    @Builder.Default
     @Column(name = "notification_status")
-    private Boolean notificationStatus;
+    private Boolean notificationStatus = false;
 
-    @Column(name = "device_token_id")
+    @Column(name = "device_token_id", nullable = false)
     private Integer deviceTokenId;
 
     @Column(name = "firebase_message_id")

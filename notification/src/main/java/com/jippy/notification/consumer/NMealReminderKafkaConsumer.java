@@ -16,16 +16,14 @@ public class NMealReminderKafkaConsumer {
 
     @KafkaListener(
             topics = "meal-reminder-notification",
-            groupId = "notification-group"
+            groupId = "notification-meal-group",
+            containerFactory = "mealReminderKafkaListenerContainerFactory"
     )
     public void consume(NMealReminderDto reminder) {
-
-        log.info(
-                "KAFKA_MESSAGE_RECEIVED | CustomerId={} | MealType={}",
-                reminder.getCustomerId(),
-                reminder.getMealType()
-        );
-
-        mealReminderService.processMealReminder(reminder);
+        if (reminder != null) {
+            log.info("KAFKA_MESSAGE_RECEIVED | MealReminder | customerId={} | mealType={}",
+                    reminder.getCustomerId(), reminder.getMealType());
+            mealReminderService.processMealReminder(reminder);
+        }
     }
 }

@@ -294,17 +294,17 @@ public class CoCartService implements ICartService {
                     throw new CartException("Current price not found for product: " + cart.getProductId());
                 }
 
-                /*
-                 * ========================================================
-                 * 6. AVAILABILITY CHECK
-                 * ========================================================
-                 */
-                if (!Boolean.TRUE.equals(latestPrice.getAvailable())) {
-
-                    log.warn("PRODUCT_UNAVAILABLE | customerId={} | productId={} | variantOptionId={}", customerId, cart.getProductId(), cart.getVariantOptionId());
-
-                    throw new CartException("Product is currently unavailable: " + cart.getProductId());
-                }
+//                /*
+//                 * ========================================================
+//                 * 6. AVAILABILITY CHECK
+//                 * ========================================================
+//                 */
+//                if (!Boolean.TRUE.equals(latestPrice.getAvailable())) {
+//
+//                    log.warn("PRODUCT_UNAVAILABLE | customerId={} | productId={} | variantOptionId={}", customerId, cart.getProductId(), cart.getVariantOptionId());
+//
+//                    throw new CartException("Product is currently unavailable: " + cart.getProductId());
+//                }
 
                 BigDecimal latestUnitPrice = latestPrice.getOnlinePrice();
 

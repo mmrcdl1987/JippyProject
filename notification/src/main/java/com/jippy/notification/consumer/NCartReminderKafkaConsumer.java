@@ -16,12 +16,12 @@ public class NCartReminderKafkaConsumer {
 
     @KafkaListener(
             topics = "cart-reminder-notification",
-            groupId = "notification-group")
+            groupId = "notification-cart-group",
+            containerFactory = "cartReminderKafkaListenerContainerFactory")
     public void consume(NCartReminderDto reminder) {
-
-        log.info("Received Cart Reminder : {}", reminder.getCustomerId());
-
-        cartReminderService.processReminder(reminder);
-
+        log.info("KAFKA_MESSAGE_RECEIVED | CartReminder | customerId={}", reminder != null ? reminder.getCustomerId() : null);
+        if (reminder != null) {
+            cartReminderService.processReminder(reminder);
+        }
     }
 }

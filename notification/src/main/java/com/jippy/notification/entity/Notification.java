@@ -1,4 +1,5 @@
-package com.jippy.notification.entity;
+
+        package com.jippy.notification.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -7,7 +8,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notifications", schema = "jippy_notification")
+@Table(
+        name = "notifications",
+        schema = "jippy_notification"
+)
 @Getter
 @Setter
 public class Notification {
@@ -17,26 +21,26 @@ public class Notification {
     @Column(name = "notification_id")
     private Integer notificationId;
 
-    @Column(name = "role", nullable = false, length = 30)
-    private String role;
-
-    @Column(name = "subject", nullable = false, length = 255)
-    private String subject;
-
-    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
-    private String message;
-
-    @Column(name = "notification_type", length = 50)
+    @Column(name = "notification_type", nullable = false, length = 50)
     private String notificationType;
 
-    @Column(name = "image_url")
-    private String imageUrl;
+    @Column(name = "role", nullable = false, length = 100)
+    private String role;
 
-    @Column(name = "priority", length = 20)
-    private String priority;
+    @Column(name = "subject", nullable = false, length = 100)
+    private String subject;
+
+    @Column(name = "message", nullable = false, length = 100)
+    private String message;
+
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
 
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    @Column(name = "priority", length = 20)
+    private String priority;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

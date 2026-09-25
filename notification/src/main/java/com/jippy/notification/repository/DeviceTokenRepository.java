@@ -11,26 +11,31 @@ import java.util.Optional;
 public interface DeviceTokenRepository
         extends JpaRepository<NDeviceToken, Integer> {
 
-    Optional<NDeviceToken> findByUserIdAndUserType(
-            Integer userId,
-            String userType
-    );
+    /**
+     * Find a specific FCM token.
+     */
+    Optional<NDeviceToken> findByFcmToken(String fcmToken);
 
+    /**
+     * Find all FCM tokens belonging to a user.
+     * One user can have multiple devices/tokens.
+     */
     List<NDeviceToken> findAllByUserIdAndUserType(
             Integer userId,
             String userType
     );
 
-    Optional<NDeviceToken> findByFcmToken(String fcmToken);
-
-    void deleteByUserIdAndUserType(
-            Integer userId,
-            String userType
-    );
-    Optional<NDeviceToken> findByUserIdAndUserTypeAndDeviceType(
+    /**
+     * Find a specific token belonging to a specific user.
+     */
+    Optional<NDeviceToken> findByUserIdAndUserTypeAndFcmToken(
             Integer userId,
             String userType,
-            String deviceType
+            String fcmToken
     );
 
+    /**
+     * Delete one device/token during logout.
+     */
+    void deleteByFcmToken(String fcmToken);
 }

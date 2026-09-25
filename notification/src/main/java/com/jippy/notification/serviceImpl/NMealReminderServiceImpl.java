@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,118 +28,142 @@ public class NMealReminderServiceImpl implements IMealReminderService {
     @Override
     public void processMealReminder(NMealReminderDto reminder) {
 
-        log.info("SERVICE_START | PROCESS_MEAL_REMINDER");
+        log.info("SERVICE_START | PROCESS_MEAL_REMINDER | customerId={}", reminder != null ? reminder.getCustomerId() : null);
 
         try {
 
-            log.info("----------------------------------------------------");
-            log.info("Processing Customer : {}", reminder.getCustomerId());
-            log.info("Meal Type : {}", reminder.getMealType());
-            log.info("Reference Id : {}", reminder.getReferenceId());
+            // VALIDATE REQUEST
 
-            /*
-             * STEP-1
-             * Fetch Device Token
-             */
-            Optional<NDeviceToken> deviceTokenOptional =
-                    deviceTokenRepository.findByUserIdAndUserType(
-                            reminder.getCustomerId(),
-                            NConstants.ROLE_CUSTOMER
-                    );
+            if (reminder == null) {
 
-            if (deviceTokenOptional.isEmpty()) {
+                log.error("MEAL_REMINDER_FAILED | reminder is null");
 
-                log.warn("No device token found for customer {}", reminder.getCustomerId());
                 return;
             }
 
-            NDeviceToken deviceToken = deviceTokenOptional.get();
+            if (reminder.getCustomerId() == null || reminder.getCustomerId() <= 0) {
 
-            log.info("Device Token Found : {}", deviceToken.getDeviceTokenId());
+                log.error("MEAL_REMINDER_FAILED | Invalid customerId");
 
-            /*
-             * STEP-2
-             * Fetch Notification Template
-             */
-            Notification notification =
-                    notificationService.getNotificationTemplate(
-                            NConstants.ROLE_CUSTOMER,
-                            NConstants.MEAL_REMINDER
-                    );
+                return;
+            }
 
-            log.info("Notification Template Loaded");
-            log.info("Subject : {}", notification.getSubject());
+            if (reminder.getReferenceId() == null) {
 
-            /*
-             * STEP-3
-             * Duplicate Notification Check
-             */
-            boolean alreadySent =
-                    orderNotificationStatusRepository
-                            .existsByReferenceTypeAndReferenceIdAndNotificationRecipientId(
-                                    NConstants.REFERENCE_TYPE_MEAL_REMINDER,
-                                    reminder.getReferenceId(),
-                                    reminder.getCustomerId()
-                            );
+                log.error("MEAL_REMINDER_FAILED | ReferenceId is null | customerId={}", reminder.getCustomerId());
+
+                return;
+            }
+
+            if (reminder.getMealType() == null || reminder.getMealType().isBlank()) {
+
+                log.error("MEAL_REMINDER_FAILED | MealType is empty | customerId={}", reminder.getCustomerId());
+
+                return;
+            }
+
+            log.info("Processing Customer : {}", reminder.getCustomerId());
+
+            log.info("Meal Type : {}", reminder.getMealType());
+
+            log.info("Reference Id : {}", reminder.getReferenceId());
+
+            // FETCH ALL CUSTOMER DEVICE TOKENS
+            List<NDeviceToken> deviceTokens = deviceTokenRepository.findAllByUserIdAndUserType(reminder.getCustomerId(), NConstants.ROLE_CUSTOMER);
+
+            if (deviceTokens == null || deviceTokens.isEmpty()) {
+
+                log.warn("NO_DEVICE_TOKENS_FOUND | customerId={}", reminder.getCustomerId());
+
+                return;
+            }
+
+            log.info("DEVICE_TOKENS_FOUND | customerId={} | deviceCount={}", reminder.getCustomerId(), deviceTokens.size());
+
+
+            // FETCH NOTIFICATION TEMPLATE
+            Notification notification = notificationService.getNotificationTemplate(NConstants.ROLE_CUSTOMER, NConstants.MEAL_REMINDER);
+
+            log.info("NOTIFICATION_TEMPLATE_LOADED | " + "notificationId={} | subject={}", notification.getNotificationId(), notification.getSubject());
+
+
+            // DUPLICATE NOTIFICATION CHECK
+            boolean alreadySent = orderNotificationStatusRepository.existsByReferenceTypeAndReferenceIdAndNotificationRecipientId(NConstants.REFERENCE_TYPE_MEAL_REMINDER, reminder.getReferenceId(), reminder.getCustomerId());
 
             if (alreadySent) {
 
-                log.info("Meal reminder already sent for customer {}", reminder.getCustomerId());
+                log.info("MEAL_REMINDER_ALREADY_SENT | " + "customerId={} | referenceId={}", reminder.getCustomerId(), reminder.getReferenceId());
 
                 return;
             }
 
-            /*
-             * STEP-4
-             * Replace Template Variables
-             */
-            String message = notification.getMessage()
-                    .replace("{mealType}", reminder.getMealType());
+            // REPLACE TEMPLATE VARIABLES
+            String message = notification.getMessage().replace("{mealType}", reminder.getMealType());
 
-            /*
-             * STEP-5
-             * Save Notification Status
-             */
-            notificationService.saveNotificationStatus(
-                    notification.getNotificationId(),
-                    reminder.getCustomerId(),
-                    NConstants.ROLE_CUSTOMER,
-                    reminder.getReferenceId(),
-                    NConstants.REFERENCE_TYPE_MEAL_REMINDER,
-                    deviceToken.getDeviceTokenId()
-            );
+            log.info("MEAL_REMINDER_MESSAGE_CREATED | customerId={}", reminder.getCustomerId());
 
-            /*
-             * STEP-6
-             * Send Firebase Notification
-             */
-            String firebaseMessageId =
-                    notificationService.sendNotification(
-                            deviceToken.getFcmToken(),
-                            notification.getSubject(),
-                            message
-                    );
+            // SEND TO ALL CUSTOMER DEVICES
+            for (NDeviceToken deviceToken : deviceTokens) {
 
-            log.info("Firebase Message Id : {}", firebaseMessageId);
+                if (deviceToken == null) {
 
-            /*
-             * STEP-7
-             * Mark Notification As Sent
-             */
-            notificationService.markAsSent(
-                    NConstants.REFERENCE_TYPE_MEAL_REMINDER,
-                    reminder.getReferenceId(),
-                    reminder.getCustomerId(),
-                    firebaseMessageId
-            );
+                    log.warn("NULL_DEVICE_TOKEN_SKIPPED | customerId={}", reminder.getCustomerId());
 
-            log.info("Meal Reminder Sent Successfully For Customer : {}", reminder.getCustomerId());
+                    continue;
+                }
+
+                if (deviceToken.getFcmToken() == null || deviceToken.getFcmToken().isBlank()) {
+
+                    log.warn("INVALID_FCM_TOKEN_SKIPPED | " + "customerId={} | deviceTokenId={}", reminder.getCustomerId(), deviceToken.getDeviceTokenId());
+
+                    continue;
+                }
+
+                processDeviceNotification(reminder, notification, message, deviceToken);
+            }
+
+            log.info("MEAL_REMINDER_PROCESSING_COMPLETED | " + "customerId={} | deviceCount={}", reminder.getCustomerId(), deviceTokens.size());
 
         } catch (Exception ex) {
 
-            log.error("Failed Processing Meal Reminder For Customer : {}", reminder.getCustomerId(), ex);
+            log.error("MEAL_REMINDER_PROCESSING_FAILED | customerId={}", reminder != null ? reminder.getCustomerId() : null, ex);
         }
 
-        log.info("SERVICE_END | PROCESS_MEAL_REMINDER");
+        log.info("SERVICE_END | PROCESS_MEAL_REMINDER | customerId={}", reminder != null ? reminder.getCustomerId() : null);
+    }
+
+    // PROCESS ONE DEVICE
+    private void processDeviceNotification(NMealReminderDto reminder, Notification notification, String message, NDeviceToken deviceToken) {
+
+        Integer statusId = null;
+
+        try {
+
+            log.info("MEAL_REMINDER_DEVICE_PROCESSING | " + "customerId={} | deviceTokenId={} | deviceType={}", reminder.getCustomerId(), deviceToken.getDeviceTokenId(), deviceToken.getDeviceType());
+
+
+            // CREATE NOTIFICATION STATUS FOR THIS DEVICE
+            var status = notificationService.saveNotificationStatus(notification.getNotificationId(), reminder.getCustomerId(), NConstants.ROLE_CUSTOMER, reminder.getReferenceId(), NConstants.REFERENCE_TYPE_MEAL_REMINDER, deviceToken.getDeviceTokenId());
+
+            if (status != null) {
+                statusId = status.getOrderNotificationStatusId();
+            }
+
+            // SEND FIREBASE NOTIFICATION
+
+            String firebaseMessageId = notificationService.sendNotification(deviceToken.getFcmToken(), notification.getSubject(), message);
+
+            log.info("FIREBASE_NOTIFICATION_SENT | " + "customerId={} | deviceTokenId={} | " + "firebaseMessageId={}", reminder.getCustomerId(), deviceToken.getDeviceTokenId(), firebaseMessageId);
+
+
+            // MARK THIS EXACT DEVICE STATUS AS SENT
+            notificationService.markAsSent(statusId, firebaseMessageId);
+
+            log.info("MEAL_REMINDER_DEVICE_SENT | " + "customerId={} | deviceTokenId={} | statusId={}", reminder.getCustomerId(), deviceToken.getDeviceTokenId(), statusId);
+
+        } catch (Exception ex) {
+
+            log.error("MEAL_REMINDER_DEVICE_FAILED | " + "customerId={} | deviceTokenId={} | statusId={}", reminder.getCustomerId(), deviceToken.getDeviceTokenId(), statusId, ex);
+        }
     }
 }
