@@ -266,7 +266,7 @@ CREATE TABLE IF NOT EXISTS jippy_fm.approval_transactions
     updated_by integer,
     updated_at timestamp without time zone,
     CONSTRAINT approval_transactions_pkey PRIMARY KEY (approval_transactions_id),
-    CONSTRAINT approval_transactions_unique UNIQUE (entity_type,entity_id)
+    CONSTRAINT approval_transactions_unique UNIQUE (entity_type,entity_id,approval_level)
 );
 
 CREATE TABLE IF NOT EXISTS jippy_fm.approval_requests (
@@ -325,7 +325,7 @@ CREATE TABLE IF NOT EXISTS jippy_fm.outlets
     is_active character varying(1) DEFAULT 'Y',
     employee_id integer,
     is_approved boolean NOT NULL DEFAULT false,
-    accepts_scheduled_orders boolean NOT NULL DEFAULT true,
+    accepts_scheduled_orders boolean NOT NULL DEFAULT false,
     is_veg_outlet boolean not null default false,
     is_gst_applied boolean not null default false,
     is_toggle boolean not null default false,

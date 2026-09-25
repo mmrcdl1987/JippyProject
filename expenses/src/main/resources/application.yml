@@ -6,7 +6,7 @@ spring:
     name: expenses
 
   datasource:
-    URL: jdbc:postgresql://187.127.156.147:5432/expense_db
+    URL: jdbc:postgresql://187.127.156.147:5436/expense_db
     USERNAME: expense_user
     PASSWORD: expense_password
     driver-class-name: org.postgresql.Driver

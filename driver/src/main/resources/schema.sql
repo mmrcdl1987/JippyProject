@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS jippy_driver.driver(
     profile_pic_url character varying(500),
     is_approved boolean NOT NULL DEFAULT false,
     ready_to_accept_orders boolean NOT NULL DEFAULT false,
+    is_active character varying(1) NOT NULL DEFAULT 'Y',
     created_at timestamp without time zone,
     created_by integer,
     updated_at timestamp without time zone,
