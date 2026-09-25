@@ -1,0 +1,57 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: expenses
+
+  datasource:
+    URL: jdbc:postgresql://187.127.156.147:5432/expense_db
+    USERNAME: expense_user
+    PASSWORD: expense_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        default_schema: jippy_expenses
+        ddl-auto: update
+    show-sql: true
+
+
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://eureka-admin:eureka-admin123@localhost:8070/eureka/
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    # Forces the microservice to expose its docs at /api/fm/v3/api-docs
+    path: /api/expenses/v3/api-docs
+  swagger-ui:
+    path: /api/expenses/swagger-ui.html
+
+logging:
+  level:
+    org.springdoc: DEBUG
