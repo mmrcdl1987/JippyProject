@@ -26,6 +26,9 @@ public class FmOutletCreateResponseDTO {
     @Schema(description = "Outlet Name", example = "Mehfil Restaurant")
     private String outletName;
 
+    @Schema(description = "Business or outlet type", example = "Restaurant")
+    private String outletType;
+
     @Schema(description = "Merchant Id", example = "50")
     private Integer merchantId;
 

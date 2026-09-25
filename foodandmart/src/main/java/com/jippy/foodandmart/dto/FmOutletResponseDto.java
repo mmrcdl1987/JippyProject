@@ -16,6 +16,8 @@ public class FmOutletResponseDto {
 
     private String outletName;
 
+    private String outletType;
+
     private String outletEmail;
 
     private Integer merchantId;

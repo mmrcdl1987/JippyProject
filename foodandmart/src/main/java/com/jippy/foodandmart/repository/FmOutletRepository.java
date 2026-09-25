@@ -1450,17 +1450,18 @@ public interface FmOutletRepository extends JpaRepository<FmOutlet, Integer> {
             SELECT
                 o.outlet_id AS outletId,
                 o.outlet_name AS outletName,
-                a.area_name AS areaName
-            
+                a.area_name AS areaName,
+                o.is_gst_applied AS isGstApplied
+
             FROM "jippy_fm"."outlets" o
-            
+
             LEFT JOIN "jippy_fm"."address" addr
                 ON addr.jippy_address_id = o.outlet_id
                 AND addr.address_type = 'OUTLET'
-            
+
             LEFT JOIN "jippy_fm"."area" a
                 ON a.area_id = addr.area_id
-            
+
             WHERE o.outlet_id IN (:outletIds)
             """, nativeQuery = true)
     List<FmOutletDetailsProjection> getOutletDetailsByIds(@Param("outletIds") List<Integer> outletIds);

@@ -887,9 +887,24 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
         // 8. IMAGE
         // ========================================================
 
-        String masterPhoto =
-                masterProduct.getPhoto();
+        String masterPhoto = masterProduct.getPhoto();
+        String requestPhoto = entry.getImageLink();
 
+        product.setImageLink(
+                requestPhoto != null && !requestPhoto.isBlank()
+                        ? requestPhoto.trim()
+                        : masterPhoto != null && !masterPhoto.isBlank()
+                                ? masterPhoto.trim()
+                                : null
+        );
+
+        if (product.getImageLink() == null) {
+            log.info(
+                    "[PRODUCT-MAP] Mapping product without image | masterProductId={} | productName={}",
+                    masterProduct.getMasterProductId(),
+                    productName
+            );
+        }
         product.setImageLink(
                 masterPhoto
         );
@@ -964,6 +979,7 @@ public FmMapToProductResult mapToProducts(FmMapToProduct request) {
         product.setIsActive(
                 "Y"
         );
+        product.setIsToggle(true);
 
         Boolean productToggle = request.getIsToggle() != null
                 ? request.getIsToggle()

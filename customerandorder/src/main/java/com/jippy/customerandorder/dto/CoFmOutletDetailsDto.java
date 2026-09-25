@@ -15,4 +15,6 @@ public class CoFmOutletDetailsDto {
     private String outletName;
 
     private String areaName;
+
+    private Boolean isGstApplied;
 }

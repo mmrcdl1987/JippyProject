@@ -7,4 +7,6 @@ public interface FmOutletDetailsProjection {
     String getOutletName();
 
     String getAreaName();
+
+    Boolean getIsGstApplied();
 }

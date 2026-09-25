@@ -90,8 +90,9 @@ public interface FmApprovalSettingsRepository extends JpaRepository<FmApprovalSe
             """)
     Boolean findTriggerActivation(
             @Param("entityType") String entityType,
-            @Param("approvalLevel") String approvalLevel);
-
+            @Param("approvalLevel") String approvalLevel,
+            @Param("approverId") Integer approverId
+    );
     /**
      * Fetch Next Approval Level.
      */

@@ -66,6 +66,17 @@ public class FmUpdateOutletRequestDTO {
             message = "Alternate outlet phone must be a valid 10-digit Indian mobile number")
     private String alternateOutletPhone;
 
+    @Schema(
+            description = "Outlet active status. Y = active, N = inactive",
+            example = "Y",
+            allowableValues = {"Y", "N"}
+    )
+    @Pattern(
+            regexp = "Y|N",
+            message = "Is active must be Y or N"
+    )
+    private String isActive;
+
     private Boolean isGstApplied;
 
     // ------------------------------------------------------------------

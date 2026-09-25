@@ -441,7 +441,8 @@ public class FmApprovalRequestUpdateServiceImpl
             Boolean triggerActivation =
                     approvalSettingsRepository.findTriggerActivation(
                             approvalRequest.getEntityType(),
-                            currentLevel);
+                            currentLevel,
+                            requestDTO.getApproverId());
 
             //----------------------------------------------------------
             // Trigger Activation

@@ -5,7 +5,7 @@
 //import com.jippy.foodandmart.entity.FmOutlet;
 //import com.jippy.foodandmart.entity.FmOutletAddress;
 //
-/// **
+///**
 // * Static utility class for converting between {@link FmOutletRequestDTO} /
 // * {@link FmOutletCreatedDTO} and the {@link FmOutlet} / {@link FmOutletAddress} entities.
 // *
@@ -191,6 +191,7 @@ public final class FmOutletMapper {
         FmOutlet outlet = new FmOutlet();
 
         outlet.setOutletName(dto.getOutletName().trim());
+        outlet.setOutletType(dto.getOutletType().trim());
         outlet.setMerchantId(dto.getMerchantId());
         outlet.setCuisineType(dto.getCuisineType());
         outlet.setOutletPhone(dto.getOutletPhone().trim());
@@ -223,6 +224,7 @@ public final class FmOutletMapper {
         // Outlet Details
         dto.setOutletId(outlet.getOutletId());
         dto.setOutletName(outlet.getOutletName());
+        dto.setOutletType(outlet.getOutletType());
         dto.setOutletEmail(outlet.getOutletEmail());
         dto.setMerchantId(outlet.getMerchantId());
         dto.setCuisineType(outlet.getCuisineType());
@@ -433,6 +435,7 @@ public final class FmOutletMapper {
                 outlet.setOutletPhone(row.getOutletPhone());
                 outlet.setAlternateOutletPhone(row.getAlternateOutletPhone());
                 outlet.setOutletEmail(row.getOutletEmail());
+                outlet.setIsAvailable(row.getOutletAvailable());
 
                 /*
                  * Merchant users can view complete outlet configuration details.
@@ -1100,6 +1103,10 @@ public final class FmOutletMapper {
 
         outlet.setUpdatedBy(dto.getUpdatedBy());
 
+        if (dto.getIsActive() != null) {
+            outlet.setIsActive(dto.getIsActive().toUpperCase());
+        }
+
         if (dto.getIsGstApplied() != null) {
             outlet.setIsGstApplied(dto.getIsGstApplied());
         }
@@ -1259,6 +1266,7 @@ public final class FmOutletMapper {
 
         response.setOutletId(outlet.getOutletId());
         response.setOutletName(outlet.getOutletName());
+        response.setOutletType(outlet.getOutletType());
         response.setMerchantId(outlet.getMerchantId());
         response.setCuisineType(outlet.getCuisineType());
         response.setOutletPhone(outlet.getOutletPhone());
@@ -1330,6 +1338,7 @@ public final class FmOutletMapper {
         response.setCuisineType(outlet.getCuisineType());
         response.setOutletPhone(outlet.getOutletPhone());
         response.setAlternateOutletPhone(outlet.getAlternateOutletPhone());
+        response.setIsActive(outlet.getIsActive());
         response.setAadharNumber(request.getAadharNumber());
         response.setPanNumber(request.getPanNumber());
         response.setFssaiNumber(request.getFssaiNumber());
