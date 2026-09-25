@@ -147,6 +147,19 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
          */
         List<FmOutletDto> outlets = response.getOutlets();
 
+        /*
+        * PUBLISH REJECTION EVENT TO NOTIFICATION SERVICE
+        */
+        COOrderEvent rejectionNotifEvent = new COOrderEvent();
+        rejectionNotifEvent.setOrderId(order.getOrderId());
+        rejectionNotifEvent.setCustomerId(order.getCustomerId());
+        rejectionNotifEvent.setStatus(COConstants.ORDER_STATUS_REJECTED);
+        rejectionNotifEvent.setNotificationType("REJECTED_ORDER");
+        rejectionNotifEvent.setRejectedOutletId(request.getRejectedById());
+
+        kafkaTemplate.send("co-order-events", rejectionNotifEvent);
+        log.info("Rejection notification Kafka event published | orderId={} | customerId={}", order.getOrderId(), order.getCustomerId());
+
         if (outlets == null || outlets.isEmpty()) {
 
             log.warn("NO_SPECIALIZED_OUTLETS_FOUND | orderId={} | areaId={}", order.getOrderId(), areaId);
@@ -158,7 +171,7 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
         log.info("Total specialized outlets found={}", outlets.size());
 
         /*
-         * SEND NOTIFICATIONS
+         * SEND REASSIGNMENT NOTIFICATIONS
          */
         boolean reassignmentSent = false;
 
@@ -178,6 +191,7 @@ public class CoOrderRejectionServiceImpl implements CoOrderRejectionService {
             event.setOutletId(outlet.getOutletId());
             event.setDriverId(order.getDriverId());
             event.setStatus(COConstants.ORDER_STATUS_REJECTED);
+            event.setNotificationType("REJECTED_ORDER");
             event.setAreaId(areaId);
             event.setRejectedOutletId(request.getRejectedById());
 

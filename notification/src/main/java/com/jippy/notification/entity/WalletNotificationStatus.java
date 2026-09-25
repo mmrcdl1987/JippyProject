@@ -31,7 +31,7 @@ public class WalletNotificationStatus {
     @Column(name = "wallet_notification_status_id")
     private Integer walletNotificationStatusId;
 
-    @Column(name = "order_id", length = 50)
+    @Column(name = "order_id", length = 30)
     private String orderId;
 
     @Column(name = "reference_id")
@@ -49,10 +49,11 @@ public class WalletNotificationStatus {
     @Column(name = "recipient_type", nullable = false, length = 30)
     private String recipientType;
 
+    @Builder.Default
     @Column(name = "notification_status")
-    private Boolean notificationStatus;
+    private Boolean notificationStatus = false;
 
-    @Column(name = "device_token_id")
+    @Column(name = "device_token_id", nullable = false)
     private Integer deviceTokenId;
 
     @Column(name = "firebase_message_id")

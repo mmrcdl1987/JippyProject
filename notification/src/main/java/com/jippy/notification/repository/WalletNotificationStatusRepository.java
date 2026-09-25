@@ -10,6 +10,12 @@ import java.util.Optional;
 public interface WalletNotificationStatusRepository
         extends JpaRepository<WalletNotificationStatus, Integer> {
 
+    boolean existsByOrderIdAndNotificationIdAndNotificationRecipientId(
+            String orderId,
+            Integer notificationId,
+            Integer notificationRecipientId
+    );
+
     boolean existsByReferenceTypeAndReferenceIdAndNotificationRecipientId(
             String referenceType,
             Integer referenceId,

@@ -1,11 +1,7 @@
 package com.jippy.notification.service;
 
-import com.jippy.notification.dto.NDeviceTokenRequest;
 import com.jippy.notification.dto.NApiResponse;
-
-/**
- * Service Interface for Device Token Operations.
- */
+import com.jippy.notification.dto.NDeviceTokenRequest;
 public interface NDeviceTokenService {
 
     /**
@@ -16,4 +12,11 @@ public interface NDeviceTokenService {
      */
     NApiResponse saveDeviceToken(NDeviceTokenRequest request);
 
+    /**
+     * Delete FCM Device Token during logout.
+     *
+     * @param fcmToken FCM device token
+     * @return API Response
+     */
+    NApiResponse deleteDeviceToken(String fcmToken);
 }
