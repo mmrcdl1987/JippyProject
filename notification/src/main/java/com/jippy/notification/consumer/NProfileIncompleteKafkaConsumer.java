@@ -16,12 +16,13 @@ public class NProfileIncompleteKafkaConsumer {
 
     @KafkaListener(
             topics = "profile-incomplete-notification",
-            groupId = "profile_incomplete_notification_group"
+            groupId = "profile_incomplete_notification_group",
+            containerFactory = "profileIncompleteKafkaListenerContainerFactory"
     )
     public void consume(CoProfileIncompleteCustomer event) {
-
-        log.info("PROFILE_INCOMPLETE_NOTIFICATION_EVENT_RECEIVED : {}", event);
-
-        notificationService.processNotification(event);
+        if (event != null) {
+            log.info("KAFKA_MESSAGE_RECEIVED | ProfileIncomplete | customerId={}", event.getCustomerId());
+            notificationService.processNotification(event);
+        }
     }
 }

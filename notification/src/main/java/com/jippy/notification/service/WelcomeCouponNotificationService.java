@@ -1,8 +1,5 @@
 package com.jippy.notification.service;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingException;
-import com.google.firebase.messaging.Message;
 import com.jippy.notification.dto.WelcomeCouponNotificationEvent;
 import com.jippy.notification.entity.NDeviceToken;
 import com.jippy.notification.entity.Notification;
@@ -15,9 +12,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,141 +30,116 @@ public class WelcomeCouponNotificationService {
     private final DeviceTokenRepository deviceTokenRepository;
     private final NotificationRepository notificationRepository;
     private final OrderNotificationStatusRepository statusRepository;
+    private final FirebaseNotificationService firebaseNotificationService;
 
     @KafkaListener(
             topics = "welcome-coupon",
-            groupId = "welcome-coupon-group"
+            groupId = "welcome-coupon-group",
+            containerFactory = "welcomeCouponKafkaListenerContainerFactory"
     )
-    @Transactional
     public void consume(WelcomeCouponNotificationEvent event) {
-
-        log.info("KAFKA_START | WELCOME_COUPON_NOTIFICATION | customerId={}",
-                event != null ? event.getCustomerId() : null);
+        log.info("KAFKA_START | WELCOME_COUPON_NOTIFICATION | customerId={}", event != null ? event.getCustomerId() : null);
 
         try {
-
             validateEvent(event);
 
-            NDeviceToken deviceToken = deviceTokenRepository
-                    .findByUserIdAndUserType(event.getCustomerId(), CUSTOMER)
-                    .orElseThrow(() ->
-                            new NotificationException("Device token not found"));
+            Notification notification = notificationRepository.findByRoleAndSubject(CUSTOMER, SUBJECT)
+                    .or(() -> notificationRepository.findByRoleAndNotificationTypeAndIsActiveTrue(CUSTOMER, SUBJECT))
+                    .orElseThrow(() -> new NotificationException("Notification template not found"));
 
-            Notification notification = notificationRepository
-                    .findByRoleAndSubject(CUSTOMER, SUBJECT)
-                    .orElseThrow(() ->
-                            new NotificationException("Notification template not found"));
-
-            boolean alreadySent = statusRepository
-                    .existsByReferenceTypeAndReferenceIdAndNotificationRecipientId(
-                            REFERENCE_TYPE,
-                            event.getCouponId(),
-                            event.getCustomerId());
+            boolean alreadySent = statusRepository.existsByReferenceTypeAndReferenceIdAndNotificationRecipientId(
+                    REFERENCE_TYPE, event.getCouponId(), event.getCustomerId());
 
             if (alreadySent) {
-
-                log.info("WELCOME_COUPON_ALREADY_SENT | customerId={} | couponId={}",
-                        event.getCustomerId(),
-                        event.getCouponId());
-
+                log.info("WELCOME_COUPON_ALREADY_SENT | customerId={} | couponId={}", event.getCustomerId(), event.getCouponId());
                 return;
             }
 
-            sendFirebaseNotification(deviceToken, notification, event);
+            List<NDeviceToken> deviceTokens = deviceTokenRepository.findAllByUserIdAndUserType(event.getCustomerId(), CUSTOMER);
 
+            if (deviceTokens == null || deviceTokens.isEmpty()) {
+                log.warn("WELCOME_COUPON_NO_DEVICE_TOKENS | customerId={} | couponId={}", event.getCustomerId(), event.getCouponId());
+                return;
+            }
+
+            for (NDeviceToken deviceToken : deviceTokens) {
+                if (deviceToken == null || deviceToken.getFcmToken() == null || deviceToken.getFcmToken().isBlank()) {
+                    continue;
+                }
+                processDeviceNotification(event, notification, deviceToken);
+            }
+
+            log.info("KAFKA_END | WELCOME_COUPON_NOTIFICATION_COMPLETED | customerId={} | deviceCount={}",
+                    event.getCustomerId(), deviceTokens.size());
+
+        } catch (NotificationException ex) {
+            log.error("WELCOME_COUPON_NOTIFICATION_FAILED | customerId={} | error={}",
+                    event != null ? event.getCustomerId() : null, ex.getMessage(), ex);
+            throw ex;
+        } catch (Exception ex) {
+            log.error("UNEXPECTED_ERROR | WELCOME_COUPON_NOTIFICATION | customerId={} | error={}",
+                    event != null ? event.getCustomerId() : null, ex.getMessage(), ex);
+            throw new NotificationException("Failed to process welcome coupon notification", ex);
+        }
+    }
+
+    private void processDeviceNotification(WelcomeCouponNotificationEvent event, Notification notification, NDeviceToken deviceToken) {
+        Integer statusId = null;
+
+        try {
             OrderNotificationStatus status = new OrderNotificationStatus();
-
             status.setReferenceType(REFERENCE_TYPE);
             status.setReferenceId(event.getCouponId());
-            status.setOrderId(null);
-
             status.setNotificationId(notification.getNotificationId());
-
             status.setNotificationRecipientId(event.getCustomerId());
             status.setRecipientType(CUSTOMER);
-
-            status.setNotificationStatus(true);
-
+            status.setNotificationStatus(false);
             status.setDeviceTokenId(deviceToken.getDeviceTokenId());
-
             status.setCreatedAt(LocalDateTime.now());
             status.setCreatedBy(1);
 
-            statusRepository.save(status);
+            OrderNotificationStatus savedStatus = statusRepository.save(status);
+            statusId = savedStatus.getOrderNotificationStatusId();
 
-            log.info("KAFKA_END | WELCOME_COUPON_NOTIFICATION_SUCCESS | customerId={} | couponCode={}",
-                    event.getCustomerId(),
-                    event.getCouponCode());
+            Map<String, String> dataPayload = new HashMap<>();
+            dataPayload.put("customerId", String.valueOf(event.getCustomerId()));
+            dataPayload.put("couponId", String.valueOf(event.getCouponId()));
+            dataPayload.put("couponCode", String.valueOf(event.getCouponCode()));
+            dataPayload.put("discountValue", String.valueOf(event.getDiscountValue()));
+            dataPayload.put("minimumOrderValue", String.valueOf(event.getMinOrderValue()));
 
-        } catch (NotificationException ex) {
+            String firebaseMessageId = firebaseNotificationService.sendNotification(
+                    deviceToken.getFcmToken(), notification.getSubject(), notification.getMessage(), dataPayload);
 
-            log.error("WELCOME_COUPON_NOTIFICATION_FAILED | customerId={} | error={}",
-                    event != null ? event.getCustomerId() : null,
-                    ex.getMessage(),
-                    ex);
+            savedStatus.setNotificationStatus(true);
+            savedStatus.setFirebaseMessageId(firebaseMessageId);
+            savedStatus.setSentAt(LocalDateTime.now());
+            savedStatus.setUpdatedAt(LocalDateTime.now());
+            savedStatus.setUpdatedBy(1);
 
-            throw ex;
+            statusRepository.save(savedStatus);
+
+            log.info("WELCOME_COUPON_DEVICE_SUCCESS | customerId={} | deviceTokenId={} | statusId={}",
+                    event.getCustomerId(), deviceToken.getDeviceTokenId(), statusId);
 
         } catch (Exception ex) {
-
-            log.error("UNEXPECTED_ERROR | customerId={} | error={}",
-                    event != null ? event.getCustomerId() : null,
-                    ex.getMessage(),
-                    ex);
-
-            throw new NotificationException("Failed to process welcome coupon notification");
+            log.error("WELCOME_COUPON_DEVICE_FAILED | customerId={} | deviceTokenId={} | statusId={}",
+                    event.getCustomerId(), deviceToken.getDeviceTokenId(), statusId, ex);
         }
     }
 
     private void validateEvent(WelcomeCouponNotificationEvent event) {
-
         if (event == null) {
             throw new NotificationException("Event cannot be null");
         }
-
         if (event.getCustomerId() == null || event.getCustomerId() <= 0) {
             throw new NotificationException("Invalid customer id");
         }
-
         if (event.getCouponId() == null) {
             throw new NotificationException("Coupon id cannot be null");
         }
-
         if (event.getCouponCode() == null || event.getCouponCode().isBlank()) {
             throw new NotificationException("Coupon code cannot be empty");
-        }
-    }
-
-    private void sendFirebaseNotification(NDeviceToken deviceToken,
-                                          Notification notification,
-                                          WelcomeCouponNotificationEvent event) {
-
-        try {
-
-            Message message = Message.builder()
-                    .setToken(deviceToken.getFcmToken())
-                    .setNotification(
-                            com.google.firebase.messaging.Notification.builder()
-                                    .setTitle(notification.getSubject())
-                                    .setBody(notification.getMessage())
-                                    .build()
-                    )
-                    .putData("customerId", String.valueOf(event.getCustomerId()))
-                    .putData("couponId", String.valueOf(event.getCouponId()))
-                    .putData("couponCode", event.getCouponCode())
-                    .putData("discountValue", String.valueOf(event.getDiscountValue()))
-                    .putData("minimumOrderValue", String.valueOf(event.getMinOrderValue()))
-                    .build();
-
-            String response = FirebaseMessaging.getInstance().send(message);
-
-            log.info("FCM_NOTIFICATION_SENT | response={}", response);
-
-        } catch (FirebaseMessagingException ex) {
-
-            log.error("FCM_NOTIFICATION_FAILED", ex);
-
-            throw new NotificationException("Failed to send Firebase notification");
         }
     }
 }

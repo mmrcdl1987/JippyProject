@@ -1148,7 +1148,9 @@ public class COOrderService implements IOrderService {
         OrderAcceptedEvent event = new OrderAcceptedEvent();
 
         event.setOrderId(order.getOrderId());
+        event.setCustomerId(order.getCustomerId());
         event.setOutletId(order.getOutletId());
+        event.setNotificationType("ORDER_ACCEPTED");
         event.setMerchantAcceptedTime(order.getMerchantAcceptedTime());
         event.setPreparationTimeInMins(order.getPreparationTime());
         event.setDeliveryRequestAt(order.getDeliveryRequestAt());
@@ -1156,9 +1158,9 @@ public class COOrderService implements IOrderService {
         kafkaTemplate.send("accepted-orders", order.getOrderId(), event);
 
         log.info(
-                "ORDER_ACCEPTED_EVENT_PUBLISHED | orderId={} | " +
-                        "deliveryRequestAt={}",
+                "ORDER_ACCEPTED_EVENT_PUBLISHED | orderId={} | customerId={} | deliveryRequestAt={}",
                 order.getOrderId(),
+                order.getCustomerId(),
                 order.getDeliveryRequestAt()
         );
     }

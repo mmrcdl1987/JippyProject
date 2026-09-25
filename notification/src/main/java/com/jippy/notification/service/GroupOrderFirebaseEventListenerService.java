@@ -1,41 +1,47 @@
 package com.jippy.notification.service;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.Message;
 import com.jippy.notification.dto.GroupOrderEventDto;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class GroupOrderFirebaseEventListenerService {
 
-    @KafkaListener(topics = "group-order-events", groupId = "group_order_fcm_consumers")
-    public void listenAndPushToFirebase(GroupOrderEventDto event) {
-        log.info("Processing Kafka event {} for Firebase dispatch", event.getEventType());
+    private final FirebaseNotificationService firebaseNotificationService;
 
-        // We use a Firebase Topic name unique to this group room session
-        // e.g., "group_order_9842"
+    @KafkaListener(
+            topics = "group-order-events",
+            groupId = "group_order_fcm_consumers",
+            containerFactory = "groupOrderKafkaListenerContainerFactory"
+    )
+    public void listenAndPushToFirebase(GroupOrderEventDto event) {
+        if (event == null) {
+            return;
+        }
+
+        log.info("KAFKA_MESSAGE_RECEIVED | GroupOrderEvent | type={}", event.getEventType());
+
         String firebaseTopic = "group_order_" + event.getGroupOrdersInvitationId();
 
-        // 💡 CRITICAL: Use .putData() instead of .setNotification()
-        // This ensures the message is treated as a silent "Data Message"
-        // that your frontend code can intercept in the background/foreground without displaying a generic system banner.
-        Message message = Message.builder()
-                .setTopic(firebaseTopic)
-                .putData("eventType", event.getEventType())
-                .putData("groupOrdersInvitationId", String.valueOf(event.getGroupOrdersInvitationId()))
-                .putData("customerId", String.valueOf(event.getCustomerId()))
-                .putData("customerName", event.getCustomerName())
-                .putData("deliveryAddressId", String.valueOf(event.getDeliveryAddressId()))
-                .build();
+        Map<String, String> dataPayload = new HashMap<>();
+        dataPayload.put("eventType", String.valueOf(event.getEventType()));
+        dataPayload.put("groupOrdersInvitationId", String.valueOf(event.getGroupOrdersInvitationId()));
+        dataPayload.put("customerId", String.valueOf(event.getCustomerId()));
+        dataPayload.put("customerName", String.valueOf(event.getCustomerName()));
+        dataPayload.put("deliveryAddressId", String.valueOf(event.getDeliveryAddressId()));
 
         try {
-            String response = FirebaseMessaging.getInstance().send(message);
-            log.info("Successfully sent FCM data payload to topic {}. Response ID: {}", firebaseTopic, response);
+            String response = firebaseNotificationService.sendTopicDataMessage(firebaseTopic, dataPayload);
+            log.info("FCM_GROUP_TOPIC_DATA_DISPATCH_SUCCESS | topic={} | messageId={}", firebaseTopic, response);
         } catch (Exception e) {
-            log.error("Failed to dispatch FCM message to group topic", e);
+            log.error("FCM_GROUP_TOPIC_DATA_DISPATCH_FAILED | topic={}", firebaseTopic, e);
         }
     }
 }
