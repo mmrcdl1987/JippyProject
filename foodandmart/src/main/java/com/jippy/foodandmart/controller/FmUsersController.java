@@ -1,12 +1,11 @@
 package com.jippy.foodandmart.controller;
 
 
-import com.jippy.foodandmart.dto.FmAssignRoleToUserDto;
-import com.jippy.foodandmart.dto.FmCreateEmployeeDto;
-import com.jippy.foodandmart.dto.FmPasswordResetByAdminRequestDto;
-import com.jippy.foodandmart.dto.FmUserDto;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.service.IFmUsersService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
@@ -30,15 +29,14 @@ public class FmUsersController {
     // API For: DEACTIVATE DRIVER
     // -------------------------------
     @PostMapping("/deactivateDriver")
-    public String deactivateDriver( @Positive(message = "User Id must be greater than zero")
-                                               @RequestParam Integer userId) {
+    public String deactivateDriver(@Positive(message = "User Id must be greater than zero") @RequestParam Integer userId) {
 
         usersService.deactivateDriver(userId);
 
         return "Driver deactivated successfully in FM microservice Users table .";
     }
 
-//    for creating user in FM microservice, we will receive the user details from CO microservice
+    //    for creating user in FM microservice, we will receive the user details from CO microservice
 //    and then we will save the user details in FM microservice users table
     @PostMapping("/createUser")
     public ResponseEntity<FmUserDto> createUser(@RequestBody FmUserDto dto) {
@@ -46,11 +44,8 @@ public class FmUsersController {
     }
 
     @PostMapping("/passwordResetByAdminForRoles")
-    @Operation(summary = "Reset Password By Admin", description =
-                    "Allows admin to reset password for an existing user" +
-                            " by username and user type:1)DRIVER,2)MERCHANT,3)OUTLET s")
-    public ResponseEntity<String> passwordResetByAdminForRoles(
-           @Valid @RequestBody FmPasswordResetByAdminRequestDto dto) {
+    @Operation(summary = "Reset Password By Admin", description = "Allows admin to reset password for an existing user" + " by username and user type:1)DRIVER,2)MERCHANT,3)OUTLET s")
+    public ResponseEntity<String> passwordResetByAdminForRoles(@Valid @RequestBody FmPasswordResetByAdminRequestDto dto) {
 
         log.info("Password reset request received for username: {}", dto.getUsername());
 
@@ -60,9 +55,8 @@ public class FmUsersController {
 
 
     @GetMapping("/findByUserIdAndUserType")
-    public ResponseEntity<FmUserDto> findByUserIdAndUserType(@RequestParam Integer userId,
-                                                             @RequestParam String userType) {
-        return ResponseEntity.ok(usersService.findByUserIdAndUserType(userId,userType));
+    public ResponseEntity<FmUserDto> findByUserIdAndUserType(@RequestParam Integer userId, @RequestParam String userType) {
+        return ResponseEntity.ok(usersService.findByUserIdAndUserType(userId, userType));
     }
 
     @PostMapping("/assignRole")
@@ -71,6 +65,7 @@ public class FmUsersController {
         log.info("Received Assign Role Request");
 
         log.info("User Id : {}", dto.getUserId());
+
 
         log.info("Role Id : {}", dto.getRoleIds());
 
@@ -104,6 +99,28 @@ public class FmUsersController {
         return ResponseEntity.ok("Employee Created Successfully");
     }
 
+    //    ================================================================================
+//    ================================================================================
+    @PutMapping("/inActiveAccountForRoles")
+    @Operation(summary = "Deactivate user account", description = """
+            Deactivates a user account based on user ID and user type.
+            
+            Allowed user types:
+            EMPLOYEE, CUSTOMER, OUTLET, MERCHANT, DRIVER.
+            
+            The API checks the user using user_id and user_type.
+            If is_active is Y, it changes it to N.
+            If is_active is already N, an already inactive message is returned.
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "User account successfully deactivated"), @ApiResponse(responseCode = "400", description = "Invalid request or account already inactive"), @ApiResponse(responseCode = "404", description = "User not found")})
+    public ResponseEntity<String> inActiveAccountForRoles(@Valid @RequestBody FmInActiveAccountRequestDTO request) {
+
+        log.info("Received request to deactivate account. User ID: {}, User Type: {}", request.getUserId(), request.getUserType());
+
+        String response = usersService.inActiveAccountForRoles(request);
+
+        return ResponseEntity.ok(response);
+    }
 
 
 }

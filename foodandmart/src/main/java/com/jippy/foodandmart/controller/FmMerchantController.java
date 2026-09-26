@@ -38,32 +38,7 @@ public class FmMerchantController {
     public ResponseEntity<FmApiResponse<FmMerchant>> createMerchant(
 
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Single merchant creation request containing merchant, KYC, bank, and address details. State, city, and area are selected using dropdowns and their IDs are provided.", required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(name = "Single Merchant Create Request", summary = "Create merchant with dropdown-based address IDs", value = """
-                    {
-                      "firstName": "Rohan",
-                      "lastName": "Vadluri",
-                      "email": "rohan@gmail.com",
-                      "phone": "9876543210",
-                      "username": "rohan123",
-                      "password": "Rohan@123",
-                      "outletType": "Restaurant",
-                      "uploadedBy": "Admin",
-                      "pan": "ABCDE1234F",
-                      "adhar": "987654321012",
-                      "accountNumber": "1234567890123456",
-                      "ifscCode": "SBIN0001234",
-                      "bankLocation": "Kukatpally Branch",
-                      "nameInBankAccount": "Rohan Vadluri",
-                      "dob": "2002-08-15",
-                      "fssai": "12345678901234 (Optional)",
-                      "gstNumber": "36ABCDE1234F1Z5 (Optional)",
-                      "buildingNumber": "12-34 [complete ADDRESS]",
-                      "road": "Main Road - optional",
-                      "landmark": "Near Metro Station - optional",
-                      "stateId": 36,
-                      "cityId": 101,
-                      "areaId": 1001,
-                    
-                    }
+                   
                     """))) @Valid @RequestBody FmMerchantRequestDTO dto) {
 
         log.info("[MERCHANT] Creating merchant: email={}, phone={}", dto.getEmail(), dto.getPhone());
@@ -127,7 +102,8 @@ public class FmMerchantController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Merchant updated successfully")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Merchant or bank not found")
     @PutMapping("/updateMerchantProfile")
-    public ResponseEntity<FmMerchantWithBankDto> updateMerchantProfile(@Valid @RequestBody FmMerchantWithBankDto dto) {
+    public ResponseEntity<FmMerchantWithBankDto> updateMerchantProfile(
+            @Valid @RequestBody FmMerchantWithBankDto dto) {
         log.info("Updating merchant profile with data: {}", dto);
 
         FmMerchantWithBankDto updated = merchantService.updateMerchantProfile(dto);

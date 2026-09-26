@@ -8,7 +8,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "driver", schema = "jippy_driver")
@@ -25,9 +24,8 @@ public class Driver {
     @Column(name = "first_name", length = 50, nullable = false)
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
     @Size(max = 50, message = "Last name must be less than 50 characters")
-    @Column(name = "last_name", length = 50, nullable = false)
+    @Column(name = "last_name", length = 50)
     private String lastName;
 
     @NotBlank(message = "Phone number is required")
@@ -75,6 +73,9 @@ public class Driver {
      */
     @Column(name = "is_approved")
     private Boolean isApproved;
+
+    @Column(name = "is_active", length = 1)
+    private String isActive;
 
     @Column(name = "ready_to_accept_orders")
     private Boolean readyToAcceptOrders = false;

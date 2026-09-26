@@ -108,8 +108,6 @@ public interface FmMerchantRepository
             u.account_holder_name AS accountHolderName,
             u.user_type AS userType,
 
-            k.aadhaar_number AS aadhaarNumber,
-            k.pan_number AS panNumber,
             k.aadhaar_number AS aadharNumber,
             k.pan_number AS panNumber,
             k.aadhaar_number_url AS aadhaarNumberUrl,
@@ -117,7 +115,7 @@ public interface FmMerchantRepository
 
         FROM jippy_fm.merchants m
 
-        JOIN jippy_fm.user_bank_details u
+        LEFT JOIN jippy_fm.user_bank_details u
           ON u.recipient_id = m.merchant_id
          AND u.user_type = 'MERCHANT'
 

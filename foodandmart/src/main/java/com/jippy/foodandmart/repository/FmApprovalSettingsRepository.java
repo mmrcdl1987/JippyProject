@@ -82,12 +82,14 @@ public interface FmApprovalSettingsRepository extends JpaRepository<FmApprovalSe
     /**
      * Fetch Trigger Activation.
      */
-    @Query("""
-            SELECT a.triggersActivation
-            FROM FmApprovalSettings a
-            WHERE a.entityType = :entityType
-            AND a.approvalLevel = :approvalLevel
-            """)
+    @Query(value = """
+        SELECT COALESCE(bool_or(triggers_activation), false)
+        FROM jippy_fm.approval_settings
+        WHERE UPPER(entity_type) = UPPER(:entityType)
+          AND UPPER(approval_level) = UPPER(:approvalLevel)
+          AND is_active = true
+        """,
+            nativeQuery = true)
     Boolean findTriggerActivation(
             @Param("entityType") String entityType,
             @Param("approvalLevel") String approvalLevel,
