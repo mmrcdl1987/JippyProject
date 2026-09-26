@@ -97,5 +97,6 @@ public interface ICoCustomerService {
                 Pageable pageable
         );
 //     ====================================================================================
+    String inActiveCustomerAccount(Integer customerId);
 
 }

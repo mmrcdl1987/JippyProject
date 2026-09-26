@@ -1020,8 +1020,6 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
     }
 
 
-
-
     @Override
     public List<CoWalletTransactionHistoryDto> getWalletTransactionHistory(Integer customerId) {
 
@@ -2000,5 +1998,65 @@ public class CoCustomerServiceImpl implements ICoCustomerService {
         );
 
         return responsePage;
+    }
+
+    //    ================================================================================
+//    ================================================================================
+    @Override
+    @Transactional
+    public String inActiveCustomerAccount(Integer customerId) {
+
+        log.info(
+                "Deactivating customer account. Customer ID: {}",
+                customerId
+        );
+
+        /*
+         * First check whether customer exists.
+         */
+        if (!customerRepository.existsById(customerId)) {
+
+            log.warn(
+                    "Customer not found. Customer ID: {}",
+                    customerId
+            );
+
+            throw new RuntimeException(
+                    "Customer with ID "
+                            + customerId
+                            + " not found"
+            );
+        }
+
+        /*
+         * Update customer_status_id to 2.
+         *
+         * 2 = INACTIVE
+         */
+        int updatedRows =
+                customerRepository.deactivateCustomer(customerId);
+
+        if (updatedRows == 0) {
+
+            log.warn(
+                    "Customer account was not updated. Customer ID: {}",
+                    customerId
+            );
+
+            throw new RuntimeException(
+                    "Customer with ID "
+                            + customerId
+                            + " could not be deactivated"
+            );
+        }
+
+        log.info(
+                "Customer successfully deactivated. Customer ID: {}",
+                customerId
+        );
+
+        return "Customer with ID "
+                + customerId
+                + " is Successfully DeActivated";
     }
 }

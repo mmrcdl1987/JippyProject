@@ -22,13 +22,13 @@ public class FmAddress {
     @Column(name = "jippy_address_id", nullable = false)
     private Integer jippyAddressId;
 
-    @Column(name = "building_number", nullable = false)
+    @Column(name = "building_number")
     private String buildingNumber;
 
-    @Column(name = "road", nullable = false)
+    @Column(name = "road")
     private String road;
 
-    @Column(name = "landmark", nullable = false)
+    @Column(name = "landmark")
     private String landmark;
 
     @Column(name = "city_id", nullable = false)

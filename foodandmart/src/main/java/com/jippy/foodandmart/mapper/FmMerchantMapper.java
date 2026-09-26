@@ -125,6 +125,20 @@ public final class FmMerchantMapper {
         return address;
     }
 
+    public static void updateAddressEntity(
+            FmAddress address,
+            FmMerchantWithBankDto dto) {
+
+        address.setBuildingNumber(dto.getBuildingNumber());
+        address.setRoad(dto.getRoad());
+        address.setLandmark(dto.getLandmark());
+
+        address.setStateId(dto.getStateId());
+        address.setCityId(dto.getCityId());
+        address.setAreaId(dto.getAreaId());
+
+        address.setAddressType(FmAppConstants.TYPE_MERCHANT);
+    }
     // --- Merchant Entity Mappings ---
 
     /**
@@ -153,7 +167,9 @@ public final class FmMerchantMapper {
         );
 
         merchant.setMerchantBusinessType(
-                dto.getOutletType().trim()
+                dto.getOutletType() != null
+                        ? dto.getOutletType().trim()
+                        : null
         );
 
         merchant.setDob(dto.getDob());

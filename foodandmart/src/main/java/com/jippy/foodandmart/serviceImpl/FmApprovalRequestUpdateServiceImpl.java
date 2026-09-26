@@ -839,7 +839,7 @@ public class FmApprovalRequestUpdateServiceImpl
 
     /** HELPER METHOD 8
      * Validates that the same Approver has not already
-     * approved the same Entity at the same Approval Level.
+     * approved the same Entity at the  same Approval Level.
      *
      * <p>
      * Business Rule:

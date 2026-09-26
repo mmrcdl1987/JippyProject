@@ -1,16 +1,16 @@
 package com.jippy.foodandmart.serviceImpl;
 
 import com.jippy.foodandmart.constants.FmAppConstants;
-import com.jippy.foodandmart.dto.FmCreateEmployeeDto;
-import com.jippy.foodandmart.dto.FmPasswordResetByAdminRequestDto;
-import com.jippy.foodandmart.dto.FmUserDto;
-import com.jippy.foodandmart.dto.FmUserResponseDto;
+import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.BadRequestException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
+import com.jippy.foodandmart.feignClients.CustomerAndOrderFeignClient;
+import com.jippy.foodandmart.feignClients.DriverFeignClient;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
 import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.IFmUsersService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,10 +24,18 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FmUsersServiceImpl implements IFmUsersService {
 
-    @Autowired
-    private FmUserRepository usersRepo;
+    private final FmUserRepository usersRepo;
+
+    private final FmEmployeeRepository fmEmployeeRepository;
+    private final FmMerchantRepository fmMerchantRepository;
+    private final FmOutletRepository fmOutletRepository;
+
+    private final DriverFeignClient driverFeignClient;
+    private final CustomerAndOrderFeignClient customerAndOrderFeignClient;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -63,8 +71,7 @@ public class FmUsersServiceImpl implements IFmUsersService {
         // ----------------------------------------------------
         if (FmAppConstants.DEACTIVATE_DRIVER.equalsIgnoreCase(existingUser.getIsActive())) {
 
-            throw new BadRequestException(
-                    "Driver is already inactive.");
+            throw new BadRequestException("Driver is already inactive.");
         }
         //for updating the user record, we will set is_active = 'N' when orders lock in Co wallet table = false
         existingUser.setIsActive("N");
@@ -81,12 +88,10 @@ public class FmUsersServiceImpl implements IFmUsersService {
     public FmUserDto createUser(FmUserDto dto) {
 
 //  checking whether username with same role already exists or not
-        Optional<FmUser> existingUser = usersRepo.findByUsernameAndUserType
-                (dto.getUsername(), dto.getUserType());
+        Optional<FmUser> existingUser = usersRepo.findByUsernameAndUserType(dto.getUsername(), dto.getUserType());
 
         if (existingUser.isPresent()) {
-            throw new ResourceNotFoundException("Username already exists with this role." +
-                    " Please try a different username.");
+            throw new ResourceNotFoundException("Username already exists with this role." + " Please try a different username.");
         }
 
         String encodedPassword = passwordEncoder.encode(dto.getPassword());
@@ -98,35 +103,34 @@ public class FmUsersServiceImpl implements IFmUsersService {
         FmUser savedUser = usersRepo.save(user);
 
         FmRoles role = new FmRoles();
-        log.info("=-========================{}",dto.getUserType());
+        log.info("=-========================{}", dto.getUserType());
 
-        if(dto.getUserType().equals(FmAppConstants.TYPE_DRIVER)){
+        if (dto.getUserType().equals(FmAppConstants.TYPE_DRIVER)) {
             role = roleRepository.findByRoleName(FmAppConstants.ROLE_DRIVER);
             if (role == null) {
                 throw new RuntimeException("Role not found");
             }
-        }else if(dto.getUserType().equals(FmAppConstants.TYPE_CUSTOMER)){
-            log.info("=-========================{}",dto.getUserType());
+        } else if (dto.getUserType().equals(FmAppConstants.TYPE_CUSTOMER)) {
+            log.info("=-========================{}", dto.getUserType());
             role = roleRepository.findByRoleName(FmAppConstants.ROLE_CUSTOMER);
             if (role == null) {
                 throw new RuntimeException("Role not found");
             }
-            log.info("=-========================{}",role.getRoleName());
+            log.info("=-========================{}", role.getRoleName());
         }
 
         //  Fetch role_permissions
-        List<FmRolePermissions> rolePermissionsList
-                = rolePermissionsRepository.findByRole(role);
+        List<FmRolePermissions> rolePermissionsList = rolePermissionsRepository.findByRole(role);
 
         if (rolePermissionsList.isEmpty()) {
             throw new RuntimeException("No permissions mapped to role");
         }
-        log.info("=-========================{}",rolePermissionsList.size());
+        log.info("=-========================{}", rolePermissionsList.size());
         //  Map user → role_permissions
         for (FmRolePermissions rp : rolePermissionsList) {
             FmUserRolePermissions urp = FmMerchantMapper.toUserRolesEntity(savedUser, rp);
             userRolesRepository.save(urp);
-            log.info("=-========================{}",urp.getUserId());
+            log.info("=-========================{}", urp.getUserId());
         }
 
         FmUserDto userDto = new FmUserDto();
@@ -139,19 +143,15 @@ public class FmUsersServiceImpl implements IFmUsersService {
     }
 
     @Override
-    public String passwordResetByAdminForRoles (FmPasswordResetByAdminRequestDto dto) {
+    public String passwordResetByAdminForRoles(FmPasswordResetByAdminRequestDto dto) {
 
-    log.info("Admin password reset initiated for username: {}, userType: {}", dto.getUsername(),
-                dto.getUserType());
+        log.info("Admin password reset initiated for username: {}, userType: {}", dto.getUsername(), dto.getUserType());
 
-        FmUser user = usersRepo.findByUsernameAndUserType(dto.getUsername(), dto.getUserType())
-                .orElseThrow(() -> {
-                    log.error("User not found with username: {} and userType: {}", dto.getUsername(),
-                            dto.getUserType());
+        FmUser user = usersRepo.findByUsernameAndUserType(dto.getUsername(), dto.getUserType()).orElseThrow(() -> {
+            log.error("User not found with username: {} and userType: {}", dto.getUsername(), dto.getUserType());
 
-                    return new ResourceNotFoundException("User not found with username: "
-                                    + dto.getUsername() + " and userType: " + dto.getUserType());
-                });
+            return new ResourceNotFoundException("User not found with username: " + dto.getUsername() + " and userType: " + dto.getUserType());
+        });
 //       password Encoding
         String encodedPassword = passwordEncoder.encode(dto.getNewPassword());
 
@@ -162,17 +162,15 @@ public class FmUsersServiceImpl implements IFmUsersService {
 
         log.info("Password reset successful for username: {}", dto.getUsername());
 
-        return "Password reset successful for your UserName :" + dto.getUsername()
-                +" for your Role :" + dto.getUserType();
+        return "Password reset successful for your UserName :" + dto.getUsername() + " for your Role :" + dto.getUserType();
 
     }
 
     @Override
     public FmUserDto findByUserIdAndUserType(Integer userId, String userType) {
 
-        log.info("findByUserIdAndUserType API called with userId: {}, userType:{} ", userId,
-                userType);
-        Optional<FmUser> user = usersRepo.findByUserIdAndUserType(userId,userType);
+        log.info("findByUserIdAndUserType API called with userId: {}, userType:{} ", userId, userType);
+        Optional<FmUser> user = usersRepo.findByUserIdAndUserType(userId, userType);
                /* .orElseThrow(() -> {
                     log.error("User not found with userId: {} and userType: {}", userId,
                             userType);
@@ -181,7 +179,7 @@ public class FmUsersServiceImpl implements IFmUsersService {
                            +userId + " and userType: " +userType);
                 });*/
         FmUserDto userDto = new FmUserDto();
-        if(!user.isPresent()){
+        if (!user.isPresent()) {
             return userDto;
         }
 
@@ -191,7 +189,7 @@ public class FmUsersServiceImpl implements IFmUsersService {
         userDto.setUsername(user.get().getUsername());
         userDto.setIsActive(user.get().getIsActive());
 
-        return  userDto;
+        return userDto;
     }
 
     @Override
@@ -300,12 +298,13 @@ public class FmUsersServiceImpl implements IFmUsersService {
         }
     }
 //    ------------USED FOR APPROVALS--------------------------
+
     /**
      * Activates the User based on Entity Type and Entity Id.
      *
      * <p>
      * Business Rules:
-     *
+     * <p>
      * 1. Entity Type must be OUTLET, MERCHANT or DRIVER.
      * 2. User must exist for the given Entity Id and Entity Type.
      * 3. User Status will be updated from N to Y.
@@ -316,31 +315,19 @@ public class FmUsersServiceImpl implements IFmUsersService {
      * @param approverId Approver Id
      */
     @Override
-    public void activateUser(
-            String entityType,
-            Integer entityId,
-            Integer approverId) {
+    public void activateUser(String entityType, Integer entityId, Integer approverId) {
 
-        log.info(
-                "Started User Activation. Entity Type : {}, Entity Id : {}, Approver Id : {}",
-                entityType,
-                entityId,
-                approverId);
+        log.info("Started User Activation. Entity Type : {}, Entity Id : {}, Approver Id : {}", entityType, entityId, approverId);
 
         //----------------------------------------------------------
         // Validate Supported Entity Type
         //----------------------------------------------------------
 
-        if (!FmAppConstants.TYPE_OUTLET.equalsIgnoreCase(entityType)
-                && !FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(entityType)
-                && !FmAppConstants.TYPE_DRIVER.equalsIgnoreCase(entityType)) {
+        if (!FmAppConstants.TYPE_OUTLET.equalsIgnoreCase(entityType) && !FmAppConstants.TYPE_MERCHANT.equalsIgnoreCase(entityType) && !FmAppConstants.TYPE_DRIVER.equalsIgnoreCase(entityType)) {
 
-            log.error(
-                    "Unsupported Entity Type for User Activation : {}",
-                    entityType);
+            log.error("Unsupported Entity Type for User Activation : {}", entityType);
 
-            throw new IllegalArgumentException(
-                    FmAppConstants.MSG_UNSUPPORTED_ENTITY_TYPE + entityType);
+            throw new IllegalArgumentException(FmAppConstants.MSG_UNSUPPORTED_ENTITY_TYPE + entityType);
         }
 
         //----------------------------------------------------------
@@ -355,8 +342,7 @@ public class FmUsersServiceImpl implements IFmUsersService {
 
         if (updatedRows == 0) {
 
-            log.warn("No User found for activation. Entity Type : {}, Entity Id : {}",
-                    entityType, entityId);
+            log.warn("No User found for activation. Entity Type : {}, Entity Id : {}", entityType, entityId);
 
             return;
         }
@@ -365,7 +351,211 @@ public class FmUsersServiceImpl implements IFmUsersService {
         // User Activated Successfully
         //----------------------------------------------------------
 
-        log.info("User Activated Successfully. Entity Type : {}, Entity Id : {}, Updated By : {}",
-                entityType, entityId, approverId);
+        log.info("User Activated Successfully. Entity Type : {}, Entity Id : {}, Updated By : {}", entityType, entityId, approverId);
+    }
+
+    //    =======================================================================
+    //    =======================HELPER METHOD ==================================
+//    =======================================================================
+    private boolean isValidUserType(String userType) {
+
+        return FmAppConstants.TYPE_EMPLOYEE.equals(userType)
+                || FmAppConstants.TYPE_CUSTOMER.equals(userType)
+                || FmAppConstants.TYPE_OUTLET.equals(userType)
+                || FmAppConstants.TYPE_MERCHANT.equals(userType)
+                || FmAppConstants.TYPE_DRIVER.equals(userType);
+    }
+
+    //=========================================================================
+    @Override
+    public String inActiveAccountForRoles(FmInActiveAccountRequestDTO request) {
+
+        log.info("Deactivating account. User ID: {}, User Type: {}", request.getUserId(), request.getUserType());
+
+        String userType = request.getUserType().trim().toUpperCase();
+
+        // ============================================================
+        // 1. Validate user type
+        // ============================================================
+
+        if (!isValidUserType(userType)) {
+
+            log.warn("Invalid user type. User ID: {}, User Type: {}", request.getUserId(), userType);
+
+            throw new IllegalArgumentException("Invalid user type. Allowed values are EMPLOYEE, CUSTOMER, OUTLET, MERCHANT and DRIVER");
+        }
+
+        // ============================================================
+        // 2. Check user in FM users table
+        // ============================================================
+
+        Optional<FmUser> optionalUser = usersRepo.findByUserIdAndUserType(request.getUserId(), userType);
+
+        if (optionalUser.isEmpty()) {
+
+            log.warn("User not found in users table. User ID: {}, User Type: {}", request.getUserId(), userType);
+
+            throw new ResourceNotFoundException("User with User ID " + request.getUserId() + " and Role " + userType + " not found");
+        }
+
+        FmUser user = optionalUser.get();
+
+        log.info("FM user found. Users ID: {}, User ID: {}, User Type: {}, Is Active: {}", user.getUsersId(), user.getUserId(), user.getUserType(), user.getIsActive());
+
+        // ============================================================
+        // 3. Check whether FM login account is already inactive
+        // ============================================================
+
+        if (FmAppConstants.IS_ACTIVE_NO.equalsIgnoreCase(user.getIsActive())) {
+
+            log.warn("FM login account is already inactive. User ID: {}, User Type: {}", request.getUserId(), userType);
+
+            throw new IllegalArgumentException("This user for User ID " + request.getUserId() + " for " + userType + " Role is already in InActive Mode");
+        }
+
+        // ============================================================
+        // 4. Process according to USER TYPE
+        // ============================================================
+
+        switch (userType) {
+
+            // ========================================================
+            // EMPLOYEE
+            // ========================================================
+
+            case FmAppConstants.TYPE_EMPLOYEE:
+
+                log.info("Deactivating employee. Employee ID: {}", request.getUserId());
+
+                FmEmployee employee = fmEmployeeRepository.findById(request.getUserId()).orElseThrow(() -> {
+
+                    log.warn("Employee not found. Employee ID: {}", request.getUserId());
+
+                    return new ResourceNotFoundException("Employee with ID " + request.getUserId() + " not found");
+                });
+
+                if (FmAppConstants.IS_ACTIVE_NO.equalsIgnoreCase(employee.getIsActive())) {
+
+                    throw new IllegalArgumentException("Employee with ID " + request.getUserId() + " is already in InActive Mode");
+                }
+
+                employee.setIsActive(FmAppConstants.IS_ACTIVE_NO);
+
+                fmEmployeeRepository.save(employee);
+
+                log.info("Employee successfully deactivated. Employee ID: {}", request.getUserId());
+
+                break;
+
+            // ========================================================
+            // MERCHANT
+            // ========================================================
+
+            case FmAppConstants.TYPE_MERCHANT:
+
+                log.info("Deactivating merchant. Merchant ID: {}", request.getUserId());
+
+                FmMerchant merchant = fmMerchantRepository.findById(request.getUserId()).orElseThrow(() -> {
+
+                    log.warn("Merchant not found. Merchant ID: {}", request.getUserId());
+
+                    return new ResourceNotFoundException("Merchant with ID " + request.getUserId() + " not found");
+                });
+
+                if (FmAppConstants.IS_ACTIVE_NO.equalsIgnoreCase(merchant.getIsActive())) {
+
+                    throw new IllegalArgumentException("Merchant with ID " + request.getUserId() + " is already in InActive Mode");
+                }
+
+                merchant.setIsActive(FmAppConstants.IS_ACTIVE_NO);
+
+                fmMerchantRepository.save(merchant);
+
+                log.info("Merchant successfully deactivated. Merchant ID: {}", request.getUserId());
+
+                break;
+
+            // ========================================================
+            // OUTLET
+            // ========================================================
+
+            case FmAppConstants.TYPE_OUTLET:
+
+                log.info("Deactivating outlet. Outlet ID: {}", request.getUserId());
+
+                FmOutlet outlet = fmOutletRepository.findById(request.getUserId()).orElseThrow(() -> {
+
+                    log.warn("Outlet not found. Outlet ID: {}", request.getUserId());
+
+                    return new ResourceNotFoundException("Outlet with ID " + request.getUserId() + " not found");
+                });
+
+                if (FmAppConstants.IS_ACTIVE_NO.equalsIgnoreCase(outlet.getIsActive())) {
+
+                    throw new IllegalArgumentException("Outlet with ID " + request.getUserId() + " is already in InActive Mode");
+                }
+
+                outlet.setIsActive(FmAppConstants.IS_ACTIVE_NO);
+
+                fmOutletRepository.save(outlet);
+
+                log.info("Outlet successfully deactivated. Outlet ID: {}", request.getUserId());
+
+                break;
+
+            // ========================================================
+            // DRIVER
+            // ========================================================
+
+            case FmAppConstants.TYPE_DRIVER:
+
+                log.info("Deactivating driver through Driver Microservice. Driver ID: {}", request.getUserId());
+
+                FmDriverInActiveAccountRequestDTO driverRequest = new FmDriverInActiveAccountRequestDTO(request.getUserId());
+
+                String driverResponse = driverFeignClient.inActiveDriverAccount(driverRequest);
+
+                log.info("Driver deactivation response: {}", driverResponse);
+
+                break;
+
+            // ========================================================
+            // CUSTOMER
+            // ========================================================
+
+            case FmAppConstants.TYPE_CUSTOMER:
+
+                log.info("Deactivating customer through Customer & Order Microservice. Customer ID: {}", request.getUserId());
+
+                String customerResponse = customerAndOrderFeignClient.inActiveCustomerAccount(request.getUserId());
+
+                log.info("Customer deactivation response: {}", customerResponse);
+
+                break;
+
+            // ========================================================
+            // DEFAULT
+            // ========================================================
+
+            default:
+
+                throw new IllegalArgumentException("Invalid user type");
+        }
+
+        // ============================================================
+        // 5. Finally deactivate the FM users account
+        // ============================================================
+
+        user.setIsActive(FmAppConstants.IS_ACTIVE_NO);
+
+        usersRepo.save(user);
+
+        log.info("FM users account successfully deactivated. User ID: {}, User Type: {}", request.getUserId(), userType);
+
+        // ============================================================
+        // 6. Final response
+        // ============================================================
+
+        return "Your Account with User ID " + request.getUserId() + " for " + userType + " Role is Successfully DeActivated";
     }
 }

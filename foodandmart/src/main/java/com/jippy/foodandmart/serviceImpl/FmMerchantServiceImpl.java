@@ -4,7 +4,6 @@ import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;
 import com.jippy.foodandmart.exception.BadRequestException;
-import com.jippy.foodandmart.exception.DuplicateResourceException;
 import com.jippy.foodandmart.exception.MerchantAlreadyExistsException;
 import com.jippy.foodandmart.exception.ResourceNotFoundException;
 import com.jippy.foodandmart.mapper.FmMerchantMapper;
@@ -14,7 +13,6 @@ import com.jippy.foodandmart.repository.*;
 import com.jippy.foodandmart.service.EmailService;
 import com.jippy.foodandmart.service.IFmApprovalRequestService;
 import com.jippy.foodandmart.service.IFmMerchantService;
-import com.jippy.foodandmart.service.S3Service;
 import com.jippy.foodandmart.validation.FmFileParser;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -31,8 +29,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -1324,11 +1326,11 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
                 // ============================================================
                 // DUPLICATE EMAIL CHECK
                 // ============================================================
-
-                if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getMerchantEmail()) && merchantRepository.existsByMerchantEmail(dto.getMerchantEmail())) {
-
-                    throw new DuplicateResourceException("Merchant email already exists");
-                }
+//
+//                if (!merchant.getMerchantEmail().equalsIgnoreCase(dto.getMerchantEmail()) && merchantRepository.existsByMerchantEmail(dto.getMerchantEmail())) {
+//
+//                    throw new DuplicateResourceException("Merchant email already exists");
+//                }
 
 
                 // ============================================================
@@ -1358,21 +1360,37 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
                 log.info("Merchant KYC updated successfully for merchantId: {}", dto.getMerchantId());
 
 
-                // ============================================================
-                // FETCH BANK
-                // ============================================================
+            // ============================================================
+            // FETCH OR CREATE BANK DETAILS
+            // ============================================================
 
-                FmMerchantBankDetails bank = bankDetailsRepository.findByRecipientIdAndUserType(dto.getMerchantId(), "MERCHANT").orElseThrow(() -> new ResourceNotFoundException("Bank details not found"));
+                FmMerchantBankDetails bank =
+                        bankDetailsRepository
+                                .findByRecipientIdAndUserType(
+                                        dto.getMerchantId(),
+                                        FmAppConstants.TYPE_MERCHANT
+                                )
+                                .orElseGet(() -> {
 
+                                    FmMerchantBankDetails newBank =
+                                            new FmMerchantBankDetails();
+
+                                    newBank.setRecipientId(dto.getMerchantId());
+                                    newBank.setUserType(FmAppConstants.TYPE_MERCHANT);
+
+                                    return newBank;
+                                });
 
                 // ============================================================
                 // DUPLICATE ACCOUNT CHECK
                 // ============================================================
 
-                if (!bank.getAccountNumber().equals(dto.getAccountNumber()) && bankDetailsRepository.existsByAccountNumber(dto.getAccountNumber())) {
-
-                    throw new DuplicateResourceException("Account number already exists");
-                }
+//                if (bank.getAccountNumber() != null
+//                        && !bank.getAccountNumber().equals(dto.getAccountNumber())
+//                        && bankDetailsRepository.existsByAccountNumber(dto.getAccountNumber())) {
+//
+//                    throw new DuplicateResourceException("Account number already exists");
+//                }
 
 
                 // ============================================================
@@ -1387,6 +1405,33 @@ public class FmMerchantServiceImpl implements IFmMerchantService {
 
                 log.info("Bank details updated successfully " + "for merchantId: {}", dto.getMerchantId());
 
+                // ============================================================
+                // FETCH OR CREATE MERCHANT ADDRESS
+                // ============================================================
+
+                FmAddress address = addressRepository
+                        .findByJippyAddressIdAndAddressType(
+                                dto.getMerchantId(),
+                                FmAppConstants.TYPE_MERCHANT
+                        )
+                        .orElseGet(() -> {
+
+                            FmAddress newAddress = new FmAddress();
+
+                            newAddress.setJippyAddressId(dto.getMerchantId());
+                            newAddress.setAddressType(FmAppConstants.TYPE_MERCHANT);
+
+                            return newAddress;
+                        });
+
+                FmMerchantMapper.updateAddressEntity(address, dto);
+
+                addressRepository.save(address);
+
+                log.info(
+                        "Merchant address updated successfully for merchantId: {}",
+                        dto.getMerchantId()
+                );
 
                 // ============================================================
                 // RETURN UPDATED DATA

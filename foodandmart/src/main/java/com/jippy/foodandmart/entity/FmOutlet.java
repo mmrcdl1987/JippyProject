@@ -199,6 +199,9 @@ public class FmOutlet {
         if (this.isGstApplied == null) {
             this.isGstApplied = false;
         }
+        if (this.acceptsScheduledOrders == null) {
+            this.acceptsScheduledOrders = false;
+        }
     }
 
     // ============================================================

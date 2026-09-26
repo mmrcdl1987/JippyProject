@@ -1,220 +1,221 @@
-    package com.jippy.driver.controller;
-    import com.jippy.driver.constants.DConstants;
-    import com.jippy.driver.dto.*;
-    import com.jippy.driver.service.DriverService;
-    import com.jippy.driver.serviceImpl.DriverLocationService;
-    import io.swagger.v3.oas.annotations.Operation;
-    import io.swagger.v3.oas.annotations.Parameter;
-    import io.swagger.v3.oas.annotations.responses.ApiResponse;
-    import io.swagger.v3.oas.annotations.responses.ApiResponses;
-    import io.swagger.v3.oas.annotations.tags.Tag;
-    import jakarta.validation.Valid;
-    import jakarta.validation.constraints.Email;
-    import jakarta.validation.constraints.Positive;
-    import lombok.RequiredArgsConstructor;
-    import lombok.extern.slf4j.Slf4j;
-    import org.springframework.format.annotation.DateTimeFormat;
-    import org.springframework.http.HttpStatus;
-    import org.springframework.http.MediaType;
-    import org.springframework.http.ResponseEntity;
-    import org.springframework.validation.annotation.Validated;
-    import org.springframework.web.bind.annotation.*;
+package com.jippy.driver.controller;
 
-    import java.time.LocalDate;
-    import java.util.List;
+import com.jippy.driver.constants.DConstants;
+import com.jippy.driver.dto.*;
+import com.jippy.driver.service.DriverService;
+import com.jippy.driver.serviceImpl.DriverLocationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-    @RestController
-    @RequestMapping("/api/driver")
-    @RequiredArgsConstructor
-    @Slf4j
-    @Validated
-    @Tag(name = "Driver API", description = "Driver and KYC operations")
-    public class DriverController {
+import java.time.LocalDate;
+import java.util.List;
 
-        private final DriverService driverService;
-        private final DriverLocationService driverLocationService;
+@RestController
+@RequestMapping("/api/driver")
+@RequiredArgsConstructor
+@Slf4j
+@Validated
+@Tag(name = "Driver API", description = "Driver and KYC operations")
+public class DriverController {
 
-        @PostMapping("/postDriverDetails")
-        public ResponseEntity<DriverDto> postDriverDetails(
-                @Valid @RequestBody DriverDto dto) {
+    private final DriverService driverService;
+    private final DriverLocationService driverLocationService;
 
-            log.info("API_START: postDriverDetails");
+    @PostMapping("/postDriverDetails")
+    public ResponseEntity<DriverDto> postDriverDetails(
+            @Valid @RequestBody DriverDto dto) {
 
-            DriverDto response = driverService.postDriverDetails(dto);
+        log.info("API_START: postDriverDetails");
 
-            log.info("API_SUCCESS: postDriverDetails");
+        DriverDto response = driverService.postDriverDetails(dto);
 
-            return ResponseEntity.ok(response);
-        }
+        log.info("API_SUCCESS: postDriverDetails");
 
-        //    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
-        @GetMapping("/getDriverDetails")
-        @Operation(summary = "Get Driver", description = "Fetch driver by ID")
-        public ResponseEntity<DriverDto> getDriverDetails(
+        return ResponseEntity.ok(response);
+    }
 
-                @Positive(message = "Driver ID must be greater than zero")
-                @RequestParam Integer driverId) {
+    //    get driver details ,driver kyc from this this(Co Microservice) and address Details from (FM microservices)
+    @GetMapping("/getDriverDetails")
+    @Operation(summary = "Get Driver", description = "Fetch driver by ID")
+    public ResponseEntity<DriverDto> getDriverDetails(
 
-            log.info("GET API called with id to get all details of driver : {}", driverId);
+            @Positive(message = "Driver ID must be greater than zero")
+            @RequestParam Integer driverId) {
 
-            return ResponseEntity.ok(driverService.getDriverDetails(driverId));
-        }
+        log.info("GET API called with id to get all details of driver : {}", driverId);
 
-        @GetMapping("/getAllDrivers")
-        @Operation(
-                summary = "Get All Drivers",
-                description = "Fetches all drivers along with their address details"
-        )
-        @ApiResponse(
-                responseCode = "200",
-                description = "Drivers fetched successfully"
-        )
-        public ResponseEntity<List<DriverDto>> getAllDrivers() {
+        return ResponseEntity.ok(driverService.getDriverDetails(driverId));
+    }
 
-            log.info("GET_ALL_DRIVERS_API_CALLED");
+    @GetMapping("/getAllDrivers")
+    @Operation(
+            summary = "Get All Drivers",
+            description = "Fetches all drivers along with their address details"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Drivers fetched successfully"
+    )
+    public ResponseEntity<List<DriverDto>> getAllDrivers() {
 
-            return ResponseEntity.ok(
-                    driverService.getAllDrivers()
-            );
-        }
+        log.info("GET_ALL_DRIVERS_API_CALLED");
 
-        //    update driver details ,driver kyc from this this(Co Microservice)
+        return ResponseEntity.ok(
+                driverService.getAllDrivers()
+        );
+    }
+
+    //    update driver details ,driver kyc from this this(Co Microservice)
     //    and address Details from (FM microservices)
-        @PutMapping(path = "/updateDriverDetails")
-        @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields. Supports document uploads for KYC verification.")
-        public ResponseEntity<DriverDto> updateDriverDetails(
+    @PutMapping(path = "/updateDriverDetails")
+    @Operation(summary = "Update Driver Details", description = "Updates editable driver and address fields. Supports document uploads for KYC verification.")
+    public ResponseEntity<DriverDto> updateDriverDetails(
 
-                @RequestParam Integer driverId,
-                @RequestBody DriverDto dto) {
+            @RequestParam Integer driverId,
+            @RequestBody DriverDto dto) {
 
-            log.info("Updating driver with id: {}", driverId);
+        log.info("Updating driver with id: {}", driverId);
 
-            return ResponseEntity.ok(driverService.updateDriverDetails(
-                    driverId, dto));
-        }
+        return ResponseEntity.ok(driverService.updateDriverDetails(
+                driverId, dto));
+    }
 
-        @GetMapping("/fetchEarnings")
-        @Operation(summary = "Fetch Driver Earnings", description = "Fetch total earnings and orders count for a driver on a particular date")
-        public ResponseEntity<DriverEarningsDto> fetchEarnings
+    @GetMapping("/fetchEarnings")
+    @Operation(summary = "Fetch Driver Earnings", description = "Fetch total earnings and orders count for a driver on a particular date")
+    public ResponseEntity<DriverEarningsDto> fetchEarnings
 
-                (        @Positive(message = "Driver ID must be greater than zero.")
-                         @RequestParam Integer driverId,
-                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            (@Positive(message = "Driver ID must be greater than zero.")
+             @RequestParam Integer driverId,
+             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-            log.info("date format must be [YYYY-MM-dd] for date: {}", date);
-            log.info("Fetch earnings API called for driver id: {}", driverId);
+        log.info("date format must be [YYYY-MM-dd] for date: {}", date);
+        log.info("Fetch earnings API called for driver id: {}", driverId);
 
-            return ResponseEntity.ok(driverService.fetchEarnings(driverId, date));
-        }
+        return ResponseEntity.ok(driverService.fetchEarnings(driverId, date));
+    }
 
-        //    for api fetchOrderEarningsHistory to just fetch
+    //    for api fetchOrderEarningsHistory to just fetch
     //    outlet name based on outlet id which is mapped to driver id to
     //    use CoDriverController microservice
-        @GetMapping("/fetchOrderEarningsHistory")
-        @Operation(summary = "Fetch Order Earnings History",
-                description = "Fetch complete order earnings history of driver")
-        public ResponseEntity<List<DriverOrderHistoryDto>> fetchOrderEarningsHistory(
-                @Positive(message = "Driver ID must be greater than zero.")
-                @RequestParam Integer driverId){
+    @GetMapping("/fetchOrderEarningsHistory")
+    @Operation(summary = "Fetch Order Earnings History",
+            description = "Fetch complete order earnings history of driver")
+    public ResponseEntity<List<DriverOrderHistoryDto>> fetchOrderEarningsHistory(
+            @Positive(message = "Driver ID must be greater than zero.")
+            @RequestParam Integer driverId) {
 
-            log.info("Fetch order earnings history API called for driver id: {}", driverId);
+        log.info("Fetch order earnings history API called for driver id: {}", driverId);
 
-            return ResponseEntity.ok(driverService.fetchOrderEarningsHistory(driverId));
-        }
+        return ResponseEntity.ok(driverService.fetchOrderEarningsHistory(driverId));
+    }
 
     //    to fetch total earnings details of driver like total pick up charges,
     //    total delivery charges, total tips, total surge fee and total earnings
     //    which is sum of all these and also count of rejected orders for that driver
-        @GetMapping("/fetchTotalEarnings")
-        @Operation(summary = "Fetch Total Earnings", description = "Fetch total earnings details of driver")
-        public ResponseEntity<DriverTotalEarningsDto> fetchTotalEarnings(
-                @Positive(message = "Driver ID must be greater than zero.")
-                @RequestParam Integer driverId) {
+    @GetMapping("/fetchTotalEarnings")
+    @Operation(summary = "Fetch Total Earnings", description = "Fetch total earnings details of driver")
+    public ResponseEntity<DriverTotalEarningsDto> fetchTotalEarnings(
+            @Positive(message = "Driver ID must be greater than zero.")
+            @RequestParam Integer driverId) {
 
-            log.info("Fetch total earnings API called for driver id: {}", driverId);
+        log.info("Fetch total earnings API called for driver id: {}", driverId);
 
-            return ResponseEntity.ok(driverService.fetchTotalEarnings(driverId));
-        }
+        return ResponseEntity.ok(driverService.fetchTotalEarnings(driverId));
+    }
 
-        @PostMapping("/updatedDriverDeliveryLocation")
-        @Operation(summary = "Update Driver Location", description = "Call this API to update driver location when driver is on the way to deliver the order for every 5sec from driver Application")
-        public ResponseEntity<DriverResponseDto> updatedDriverDeliveryLocation(@Valid @RequestBody UpdateDriverLocationDto updateDriverLocationDto) {
+    @PostMapping("/updatedDriverDeliveryLocation")
+    @Operation(summary = "Update Driver Location", description = "Call this API to update driver location when driver is on the way to deliver the order for every 5sec from driver Application")
+    public ResponseEntity<DriverResponseDto> updatedDriverDeliveryLocation(@Valid @RequestBody UpdateDriverLocationDto updateDriverLocationDto) {
 
-            log.info("Update driver location API called for driver id: {}", updateDriverLocationDto.getDriverId());
-           String message = driverLocationService.updateLiveLocation(updateDriverLocationDto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
-        }
+        log.info("Update driver location API called for driver id: {}", updateDriverLocationDto.getDriverId());
+        String message = driverLocationService.updateLiveLocation(updateDriverLocationDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
+    }
 
-        @PostMapping("/driverDeliveredOrder")
-        @Operation(summary = "Driver Delivered Order", description = "After successful delivery of order driver will call this API to update the order status to delivered and also update the driver earnings details in driver_orders table")
-        public ResponseEntity<DriverResponseDto> driverDeliveredOrder(@Valid @RequestBody DriverOrderDto driverOrderDto) {
+    @PostMapping("/driverDeliveredOrder")
+    @Operation(summary = "Driver Delivered Order", description = "After successful delivery of order driver will call this API to update the order status to delivered and also update the driver earnings details in driver_orders table")
+    public ResponseEntity<DriverResponseDto> driverDeliveredOrder(@Valid @RequestBody DriverOrderDto driverOrderDto) {
 
-            log.info("Driver delivered order API called for driver id: {}", driverOrderDto.getDriverId());
-            String message = driverService.driverDeliveredOrder(driverOrderDto);
+        log.info("Driver delivered order API called for driver id: {}", driverOrderDto.getDriverId());
+        String message = driverService.driverDeliveredOrder(driverOrderDto);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
-        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(new DriverResponseDto(DConstants.STATUS_200, message));
+    }
 
-        @PostMapping(path = "/saveOrUpdateProfilePic",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-        @Operation(summary = "Upload Profile Pic", description = "Merchant,Driver,Customer can upload their profile pic using this API and the file will be stored in AWS S3 bucket and the URL of the file will be stored in database and also return the URL of the file in response")
-        public ResponseEntity<DriverResponseDto> saveOrUpdateProfilePic(@ModelAttribute UploadProfilePicDto uploadProfilePicDto) {
+    @PostMapping(path = "/saveOrUpdateProfilePic", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload Profile Pic", description = "Merchant,Driver,Customer can upload their profile pic using this API and the file will be stored in AWS S3 bucket and the URL of the file will be stored in database and also return the URL of the file in response")
+    public ResponseEntity<DriverResponseDto> saveOrUpdateProfilePic(@ModelAttribute UploadProfilePicDto uploadProfilePicDto) {
 
-            log.info("Upload Profile Pic API called for user id: {}", uploadProfilePicDto.getUserId());
-            DriverResponseDto response = driverService.saveOrUpdateProfilePic(uploadProfilePicDto);
+        log.info("Upload Profile Pic API called for user id: {}", uploadProfilePicDto.getUserId());
+        DriverResponseDto response = driverService.saveOrUpdateProfilePic(uploadProfilePicDto);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
-        @PutMapping("/readyToAcceptIsToggle")
-        @Operation(summary = "Toggle ready-to-accept orders", description = "Enables or disables a driver's availability to accept orders")
-        public ResponseEntity<DriverResponseDto> readyToAcceptIsToggle(@Valid @RequestBody DriverReadyToAcceptRequestDto requestDto) {
-            log.info("Ready to accept toggle API called for driver id: {}", requestDto.getDriverId());
-            return ResponseEntity.ok(driverService.readyToAcceptIsToggle(requestDto));
-        }
+    @PutMapping("/readyToAcceptIsToggle")
+    @Operation(summary = "Toggle ready-to-accept orders", description = "Enables or disables a driver's availability to accept orders")
+    public ResponseEntity<DriverResponseDto> readyToAcceptIsToggle(@Valid @RequestBody DriverReadyToAcceptRequestDto requestDto) {
+        log.info("Ready to accept toggle API called for driver id: {}", requestDto.getDriverId());
+        return ResponseEntity.ok(driverService.readyToAcceptIsToggle(requestDto));
+    }
 
-//        used for forget password api in Fm
-        @GetMapping("/findByEmail")
-        @Operation(summary = "Find Driver By Email")
-        public ResponseEntity<DriverDto> findByEmail(
-                @Email(message = "Please enter a valid email address.")
-                @RequestParam String email) {
+    //        used for forget password api in Fm
+    @GetMapping("/findByEmail")
+    @Operation(summary = "Find Driver By Email")
+    public ResponseEntity<DriverDto> findByEmail(
+            @Email(message = "Please enter a valid email address.")
+            @RequestParam String email) {
 
-            log.info("Finding driver by email : {}", email);
+        log.info("Finding driver by email : {}", email);
 
-            return ResponseEntity.ok(driverService.findByEmail(email));
-        }
-        //        --------------------------------------------------------------------------------------
+        return ResponseEntity.ok(driverService.findByEmail(email));
+    }
+    //        --------------------------------------------------------------------------------------
 
-        /**
-         * ===========================================================
-         * Get Driver Details by Driver Id
-         * ===========================================================
-         *
-         * This API is used by the Food & Mart (FM) microservice
-         * during the Level-1 Approval process.
-         *
-         * It fetches complete Driver information including:
-         * 1. Driver Details
-         * 2. Driver KYC Details
-         * 3. Driver Address Details
-         *
-         * @param driverId Driver Id
-         * @return Driver Approval Response
-         */
-        @GetMapping("/getDriverById/{driverId}")
-        public ResponseEntity<FmDriverApprovalResponseDTO> getDriverById(
-                @PathVariable Integer driverId) {
+    /**
+     * ===========================================================
+     * Get Driver Details by Driver Id
+     * ===========================================================
+     * <p>
+     * This API is used by the Food & Mart (FM) microservice
+     * during the Level-1 Approval process.
+     * <p>
+     * It fetches complete Driver information including:
+     * 1. Driver Details
+     * 2. Driver KYC Details
+     * 3. Driver Address Details
+     *
+     * @param driverId Driver Id
+     * @return Driver Approval Response
+     */
+    @GetMapping("/getDriverById/{driverId}")
+    public ResponseEntity<FmDriverApprovalResponseDTO> getDriverById(
+            @PathVariable Integer driverId) {
 
-            return ResponseEntity.ok(driverService.getDriverById(driverId));
-        }
+        return ResponseEntity.ok(driverService.getDriverById(driverId));
+    }
 
-        @GetMapping("/getZones")
-        public ResponseEntity<List<DriverZoneResponseDto>> getZones() {
+    @GetMapping("/getZones")
+    public ResponseEntity<List<DriverZoneResponseDto>> getZones() {
 
-            List<DriverZoneResponseDto> zones = driverService.getZones();
+        List<DriverZoneResponseDto> zones = driverService.getZones();
 
-            return ResponseEntity.status(HttpStatus.OK).body(zones);
-        }
+        return ResponseEntity.status(HttpStatus.OK).body(zones);
+    }
 
 //        @GetMapping("/findCommunityById")
 //        public ResponseEntity<DriverZoneResponseDto> findCommunityById(@RequestParam(value = "communityId") Integer communityId) {
@@ -249,113 +250,157 @@
 //
 //            return ResponseEntity.status(HttpStatus.OK).body(status);
 //        }
-        /**
-         * Approves the Driver.
-         *
-         * @param driverId Driver Id
-         */
-        @PutMapping("/approve/{driverId}")
-        public ResponseEntity<String> approveDriver(
-                @PathVariable Integer driverId,
-                @RequestParam String approvalLevel) {
 
-            log.info(
-                    "Driver approval request received | driverId={} | approvalLevel={}",
-                    driverId,
-                    approvalLevel
-            );
+    /**
+     * Approves the Driver.
+     *
+     * @param driverId Driver Id
+     */
+    @PutMapping("/approve/{driverId}")
+    public ResponseEntity<String> approveDriver(
+            @PathVariable Integer driverId,
+            @RequestParam String approvalLevel) {
 
-            driverService.approveDriver(driverId, approvalLevel);
+        log.info(
+                "Driver approval request received | driverId={} | approvalLevel={}",
+                driverId,
+                approvalLevel
+        );
 
-            return ResponseEntity.ok("Driver approved successfully.");
-        }
+        driverService.approveDriver(driverId, approvalLevel);
 
-        @PutMapping("/updateDriverDocuments")
-        public String updateDriverDocuments(@RequestBody DriverDocumentUpdateDTO driverDocumentUpdateDTO) {
-
-            log.info("Received request to update Driver documents Driver Id : {}", driverDocumentUpdateDTO.getDriverId());
-
-            return driverService.updateDriverDocuments(driverDocumentUpdateDTO);
-        }
-
-//        ===============================================================================
-//        ===============================================================================
-        /**
-         * Fetches driver details for multiple driver IDs. for feign.
-         */
-        @PostMapping("/getDriverDetailsByIds")
-        @Operation(
-                summary = "Get driver details by driver IDs",
-                description = "Fetches driver ID and driver full name for multiple driver IDs."
-        )
-        @ApiResponses(value = {
-                @ApiResponse(responseCode = "200", description = "Driver details fetched successfully"),
-                @ApiResponse(responseCode = "400", description = "Invalid driver IDs"),
-                @ApiResponse(responseCode = "500", description = "Internal server error")
-        })
-        public ResponseEntity<List<DriverDetailsResponseDto>> getDriverDetailsByIds(
-
-                @Parameter(
-                        description = "List of driver IDs",
-                        example = "[15, 16, 17]",
-                        required = true
-                )
-                @RequestBody DriverDetailsRequestDto request) {
-
-            log.info(
-                    "Received request to fetch driver details for {} driver IDs",
-                    request.getDriverIds().size()
-            );
-
-            List<DriverDetailsResponseDto> response = driverService.getDriverDetailsByIds(
-                            request.getDriverIds()
-                    );
-
-            log.info(
-                    "Returning {} driver details",
-                    response.size()
-            );
-
-            return ResponseEntity.ok(response);
-        }
-//        ==================================================================================
-//        ==================================================================================
-        @GetMapping("/getDriverDetailsForOrder")
-        public ResponseEntity<DriverDetailsResponseDto> getDriverDetailsForOrder(
-                @RequestParam Integer driverId) {
-
-            log.info(
-                    "Received request to fetch driver details for order. driverId={}",
-                    driverId
-            );
-
-            DriverDetailsResponseDto response =
-                    driverService.getDriverDetailsForOrder(driverId);
-
-            return ResponseEntity.ok(response);
-        }
-        @GetMapping("/phone/{phoneNumber}")
-        public ResponseEntity<DriverDto> findByPhoneNumber(
-                @PathVariable String phoneNumber
-        ) {
-
-            DriverDto driverDto =
-                    driverService.findByPhoneNumber(phoneNumber);
-
-            return ResponseEntity.ok(driverDto);
-        }
-
-
-        // ADMIN - GET ALL DRIVERS
-        @GetMapping("/admin/drivers")
-        public ResponseEntity<DriverFmApiResponse<AdminDriverPageResponseDto>> getAdminDrivers(@RequestParam(required = false) String search, @RequestParam(required = false) Integer areaId, @RequestParam(required = false) Boolean isApproved, @RequestParam(required = false) Boolean readyToAcceptOrders, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-            AdminDriverPageResponseDto drivers = driverService.getAdminDrivers(search, areaId, isApproved, readyToAcceptOrders, page, size);
-            DriverFmApiResponse<AdminDriverPageResponseDto> response = new DriverFmApiResponse<>();
-            response.setSuccess(true);
-            response.setMessage("Drivers fetched successfully");
-            response.setData(drivers);
-            return ResponseEntity.ok(response);
-        }
-
-
+        return ResponseEntity.ok("Driver approved successfully.");
     }
+
+    @PutMapping("/updateDriverDocuments")
+    public String updateDriverDocuments(@RequestBody DriverDocumentUpdateDTO driverDocumentUpdateDTO) {
+
+        log.info("Received request to update Driver documents Driver Id : {}", driverDocumentUpdateDTO.getDriverId());
+
+        return driverService.updateDriverDocuments(driverDocumentUpdateDTO);
+    }
+
+//        ===============================================================================
+//        ===============================================================================
+
+    /**
+     * Fetches driver details for multiple driver IDs. for feign.
+     */
+    @PostMapping("/getDriverDetailsByIds")
+    @Operation(
+            summary = "Get driver details by driver IDs",
+            description = "Fetches driver ID and driver full name for multiple driver IDs."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Driver details fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid driver IDs"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<List<DriverDetailsResponseDto>> getDriverDetailsByIds(
+
+            @Parameter(
+                    description = "List of driver IDs",
+                    example = "[15, 16, 17]",
+                    required = true
+            )
+            @RequestBody DriverDetailsRequestDto request) {
+
+        log.info(
+                "Received request to fetch driver details for {} driver IDs",
+                request.getDriverIds().size()
+        );
+
+        List<DriverDetailsResponseDto> response = driverService.getDriverDetailsByIds(
+                request.getDriverIds()
+        );
+
+        log.info(
+                "Returning {} driver details",
+                response.size()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    //        ==================================================================================
+//        ==================================================================================
+    @GetMapping("/getDriverDetailsForOrder")
+    public ResponseEntity<DriverDetailsResponseDto> getDriverDetailsForOrder(
+            @RequestParam Integer driverId) {
+
+        log.info(
+                "Received request to fetch driver details for order. driverId={}",
+                driverId
+        );
+
+        DriverDetailsResponseDto response =
+                driverService.getDriverDetailsForOrder(driverId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/phone/{phoneNumber}")
+    public ResponseEntity<DriverDto> findByPhoneNumber(
+            @PathVariable String phoneNumber
+    ) {
+
+        DriverDto driverDto =
+                driverService.findByPhoneNumber(phoneNumber);
+
+        return ResponseEntity.ok(driverDto);
+    }
+
+
+    // ADMIN - GET ALL DRIVERS
+    @GetMapping("/admin/drivers")
+    public ResponseEntity<DriverFmApiResponse<AdminDriverPageResponseDto>> getAdminDrivers(@RequestParam(required = false) String search, @RequestParam(required = false) Integer areaId, @RequestParam(required = false) Boolean isApproved, @RequestParam(required = false) Boolean readyToAcceptOrders, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        AdminDriverPageResponseDto drivers = driverService.getAdminDrivers(search, areaId, isApproved, readyToAcceptOrders, page, size);
+        DriverFmApiResponse<AdminDriverPageResponseDto> response = new DriverFmApiResponse<>();
+        response.setSuccess(true);
+        response.setMessage("Drivers fetched successfully");
+        response.setData(drivers);
+        return ResponseEntity.ok(response);
+    }
+
+    //    `====================================================================================
+//    `====================================================================================
+    @PutMapping("/inActiveAccount")
+    @Operation(
+            summary = "Deactivate driver account",
+            description = """
+                    Deactivates a driver account using driver ID.
+                    
+                    The API checks the driver's current is_active status.
+                    If the driver is active, is_active is changed from true to false.
+                    If the driver is already inactive, an appropriate message is returned.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Driver account successfully deactivated"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Driver is already inactive or invalid account status"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Driver not found"
+            )
+    })
+    public ResponseEntity<String> inActiveDriverAccount(
+            @Valid @RequestBody DriverInActiveAccountRequestDTO request) {
+
+        log.info(
+                "Received request to deactivate driver. Driver ID: {}",
+                request.getDriverId()
+        );
+
+        String response =
+                driverService.inActiveDriverAccount(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+}

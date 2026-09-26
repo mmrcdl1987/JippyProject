@@ -296,7 +296,7 @@ public class CoCustomerController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<Page<CoOrderDetailsByOrderStatusDto>>
-                                        getCompleteOrdersDetailsByOrderStatus(
+    getCompleteOrdersDetailsByOrderStatus(
             @Parameter(
                     name = "orderStatus",
                     description = "Order status filter. Supported values: ORDER_PLACED, ORDER_CONFIRMED, ORDER_SHIPPED, ORDER_COMPLETED, ORDER_REJECTED",
@@ -513,20 +513,20 @@ public class CoCustomerController {
 //    ===================================================================================
     @GetMapping("/getOrderDetailsOfDriver")
     @Operation(summary = "Get order details of driver", description = """
-            Fetches paginated order details assigned to a specific driverID.
-        CoOrderFlowCountForMerchantOutletOrDriverDto response = customerService.getOrderFlowCountForMerchantOrOutletOrDriver(merchantId, outletId, driverId);
+                Fetches paginated order details assigned to a specific driverID.
+            CoOrderFlowCountForMerchantOutletOrDriverDto response = customerService.getOrderFlowCountForMerchantOrOutletOrDriver(merchantId, outletId, driverId);
             
-        log.info("GET /getOrderFlowCountForMerchantOrOutletOrDriver completed successfully. " + "merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
-            Driver ID is used to find orders from the Customer & Order
-            microservice. Driver charges are calculated using pickup
-            charges and driver delivery fee from order price breakup.
+            log.info("GET /getOrderFlowCountForMerchantOrOutletOrDriver completed successfully. " + "merchantId={}, outletId={}, driverId={}", merchantId, outletId, driverId);
+                Driver ID is used to find orders from the Customer & Order
+                microservice. Driver charges are calculated using pickup
+                charges and driver delivery fee from order price breakup.
             """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Driver order details fetched successfully"),
             @ApiResponse(responseCode = "404", description = "No orders found for the driver"),
             @ApiResponse(responseCode = "500", description = "Internal server error")})
     public ResponseEntity<Page<CoOrderDetailsOfDriverDto>>
-                        getOrderDetailsOfDriver(@RequestParam
+    getOrderDetailsOfDriver(@RequestParam
                             @Parameter(description = "Driver ID", example = "15")
                             Integer driverId,
                             Pageable pageable) {
@@ -534,7 +534,47 @@ public class CoCustomerController {
         log.info("Received request to fetch orders for driverId={}", driverId);
 
         Page<CoOrderDetailsOfDriverDto> response
-                    = customerService.getOrderDetailsOfDriver(driverId, pageable);
+                = customerService.getOrderDetailsOfDriver(driverId, pageable);
+
+        return ResponseEntity.ok(response);
+    }
+
+    //    =====================================================================================
+//    =====================================================================================
+    @PutMapping("/inActiveAccount")
+    @Operation(
+            summary = "Deactivate customer account",
+            description = """
+                    Deactivates a customer account using customer ID.
+                    
+                    The customer_status_id is updated to 2,
+                    where 2 represents INACTIVE status.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Customer account successfully deactivated"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Customer not found"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Customer account could not be deactivated"
+            )
+    })
+    public ResponseEntity<String> inActiveCustomerAccount(
+            @RequestParam Integer customerId) {
+
+        log.info(
+                "Received request to deactivate customer. Customer ID: {}",
+                customerId
+        );
+
+        String response =
+                customerService.inActiveCustomerAccount(customerId);
 
         return ResponseEntity.ok(response);
     }

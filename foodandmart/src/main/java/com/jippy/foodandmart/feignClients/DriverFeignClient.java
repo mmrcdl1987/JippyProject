@@ -34,4 +34,10 @@ public interface DriverFeignClient {
     DriverDto findByPhoneNumber(
             @PathVariable("phoneNumber") String phoneNumber
     );
+
+//     Deactivate driver account
+    @PutMapping("/api/driver/inActiveAccount")
+    String inActiveDriverAccount(
+            @RequestBody FmDriverInActiveAccountRequestDTO request
+    );
 }

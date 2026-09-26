@@ -2,9 +2,7 @@ package com.jippy.driver.service;
 
 
 import com.jippy.driver.dto.*;
-import com.jippy.driver.entity.Driver;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -84,6 +82,10 @@ public interface DriverService {
             Boolean readyToAcceptOrders,
             int page,
             int size
+    );
+
+    String inActiveDriverAccount(
+            DriverInActiveAccountRequestDTO request
     );
 
 }
