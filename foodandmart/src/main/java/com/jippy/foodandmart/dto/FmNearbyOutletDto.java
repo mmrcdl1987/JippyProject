@@ -1,4 +1,4 @@
-            package com.jippy.division.dto;
+            package com.jippy.foodandmart.dto;
 
             import com.jippy.foodandmart.dto.FmActiveDiscountsDto;
             import io.swagger.v3.oas.annotations.media.Schema;

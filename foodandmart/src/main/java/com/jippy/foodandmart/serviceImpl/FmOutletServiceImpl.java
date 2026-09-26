@@ -1,7 +1,6 @@
  package com.jippy.foodandmart.serviceImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jippy.division.dto.FmNearbyOutletDto;
 import com.jippy.foodandmart.constants.FmAppConstants;
 import com.jippy.foodandmart.dto.*;
 import com.jippy.foodandmart.entity.*;

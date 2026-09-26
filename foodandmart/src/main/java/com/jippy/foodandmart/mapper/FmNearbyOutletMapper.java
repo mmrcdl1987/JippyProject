@@ -1,8 +1,7 @@
 package com.jippy.foodandmart.mapper;
 
 
-
-import com.jippy.division.dto.FmNearbyOutletDto;
+import com.jippy.foodandmart.dto.FmNearbyOutletDto;
 
 /**
  * Maps a raw query row from OutletRepository.findCustomerNearbyOutlets

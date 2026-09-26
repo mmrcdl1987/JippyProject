@@ -514,7 +514,7 @@ CREATE TABLE IF NOT EXISTS jippy_fm.master_products(
     --tags text,
     --display_order integer,
     --- is_available integer NOT NULL DEFAULT 0,
-    has_options integer NOT NULL DEFAULT 0,
+    has_options integer DEFAULT 0,
 --    options_enabled integer NOT NULL DEFAULT 0,
     options jsonb,
 --    publish integer NOT NULL DEFAULT 1,

@@ -29,5 +29,5 @@ public class FmCustomerNearbyResponseDto {
     private String message;
 
     @Schema(description = "Outlets sorted nearest-first")
-    private List<com.jippy.division.dto.FmNearbyOutletDto> outlets;
+    private List<FmNearbyOutletDto> outlets;
 }
